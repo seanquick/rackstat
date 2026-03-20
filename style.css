@@ -27,9 +27,10 @@ body {
 }
 
 .rackstat-logo {
-    height: 70px; /* Made slightly larger */
-    width: auto;
-    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.2)); /* Helps logo pop */
+    width: 600px; /* Increased from height: 70px */
+    height: auto; /* Keeps the proportions perfect */
+    margin-bottom: 1.5rem;
+    filter: drop-shadow(0 0 12px rgba(208, 0, 0, 0.2)); /* Added a slight red glow to match your theme */
 }
 
 /* --- THE LOGIN CONTAINER --- */
@@ -106,4 +107,14 @@ body {
 .text-link:hover {
     color: var(--rackstat-white);
     text-decoration: underline;
+}
+/* Mobile Optimization */
+@media (max-width: 480px) {
+    .rackstat-logo {
+        width: 200px; /* Slightly smaller for phones */
+    }
+    .container {
+        margin: 1.5rem; /* Reduces margin so the box fits better on small screens */
+        padding: 1.5rem;
+    }
 }

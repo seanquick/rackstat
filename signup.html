@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RACKSTAT | Join the Program</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#0a0a0b] min-h-screen flex flex-col items-center justify-center p-4">
+
+    <header class="mb-8 text-center">
+        <img src="images/rackstat-logo.png" alt="RACKSTAT" class="rackstat-logo mx-auto" style="width: 220px;">
+    </header>
+
+    <div class="container mt-0">
+        <div class="text-center mb-6">
+            <h2 id="reg-title" class="text-xl font-black italic uppercase tracking-widest text-white">Athlete Registration</h2>
+            <div id="school-id-badge" class="hidden mt-2 text-[10px] font-bold text-red-500 uppercase tracking-widest">Verified School Found</div>
+        </div>
+
+        <div class="space-y-4">
+            <div class="flex bg-black p-1 rounded border border-gray-800 mb-4">
+                <button onclick="setRole('player')" id="btn-player" class="flex-1 py-2 text-[10px] font-black uppercase rounded bg-red-700 text-white transition-all">Athlete</button>
+                <button onclick="setRole('coach')" id="btn-coach" class="flex-1 py-2 text-[10px] font-black uppercase text-gray-500 transition-all">Coach</button>
+            </div>
+
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="reg-name" placeholder="First & Last Name">
+            </div>
+
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="reg-email" placeholder="personal@email.com">
+            </div>
+
+            <div class="form-group">
+                <label>Create Password</label>
+                <input type="password" id="reg-pass" placeholder="••••••••">
+            </div>
+
+            <div class="form-group">
+                <label id="code-label">Athlete Registration Code</label>
+                <input type="text" id="school-code" placeholder="Enter Code" class="border-red-900/50 bg-red-900/10">
+            </div>
+
+            <div class="flex items-start gap-3 p-3 bg-black border border-gray-800 rounded mt-4">
+                <input type="checkbox" id="legal-agree" class="mt-1 accent-red-600">
+                <label for="legal-agree" class="text-[10px] leading-tight text-gray-400">
+                    I agree to the <button onclick="openTermsModal()" class="text-red-500 hover:underline">Terms</button> and 
+                    <button onclick="openPrivacyModal()" class="text-red-500 hover:underline">Privacy Policy (SB29)</button>.
+                </label>
+            </div>
+
+            <button onclick="handleSignUp()" id="signup-btn" class="btn-primary">
+                Create My Profile
+            </button>
+        </div>
+
+        <p class="text-center text-[10px] text-gray-600 mt-6 uppercase font-bold tracking-widest">
+            Already registered? <a href="index.html" class="text-red-600 hover:underline">Sign In</a>
+        </p>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // USE YOUR PRODUCTION CONFIG (Same as index.html)
+        const firebaseConfig = { 
+            apiKey: "YOUR_PRODUCTION_KEY", 
+            authDomain: "rackstat-production.firebaseapp.com", 
+            projectId: "rackstat-production"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentRole = 'player';
+
+        window.setRole = (role) => {
+            currentRole = role;
+            const pBtn = document.getElementById('btn-player');
+            const cBtn = document.getElementById('btn-coach');
+            const title = document.getElementById('reg-title');
+            const codeLabel = document.getElementById('code-label');
+
+            if (role === 'coach') {
+                cBtn.className = "flex-1 py-2 text-[10px] font-black uppercase rounded bg-white text-black transition-all";
+                pBtn.className = "flex-1 py-2 text-[10px] font-black uppercase text-gray-500 transition-all";
+                title.innerText = "Coach Registration";
+                codeLabel.innerText = "Coach Access Code";
+            } else {
+                pBtn.className = "flex-1 py-2 text-[10px] font-black uppercase rounded bg-red-700 text-white transition-all";
+                cBtn.className = "flex-1 py-2 text-[10px] font-black uppercase text-gray-500 transition-all";
+                title.innerText = "Athlete Registration";
+                codeLabel.innerText = "Athlete Registration Code";
+            }
+        };
+
+        window.handleSignUp = async () => {
+            const isAgreed = document.getElementById('legal-agree').checked;
+            const fullName = document.getElementById('reg-name').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
+            const pass = document.getElementById('reg-pass').value;
+            const inputCode = document.getElementById('school-code').value.trim();
+
+            if (!fullName || !email || !pass || !inputCode) return alert("All fields required.");
+            if (!isAgreed) return alert("Please accept the terms (SB29 Compliance).");
+
+            const signupBtn = document.getElementById('signup-btn');
+            signupBtn.innerText = "VERIFYING CODE...";
+            signupBtn.disabled = true;
+
+            try {
+                // --- SCALABLE CODE CHECK ---
+                // We look for a school where the player_code OR coach_code matches
+                const schoolsRef = collection(db, "schools");
+                const codeField = currentRole === 'coach' ? "coach_code" : "player_code";
+                const q = query(schoolsRef, where(codeField, "==", inputCode));
+                const querySnapshot = await getDocs(q);
+
+                if (querySnapshot.empty) {
+                    throw new Error(`Invalid ${currentRole} code. Please contact your coach.`);
+                }
+
+                const schoolDoc = querySnapshot.docs[0];
+                const schoolData = schoolDoc.data();
+
+                // Create User
+                const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+                const user = userCredential.user;
+
+                // Save to recruiting_profiles
+                await setDoc(doc(db, "recruiting_profiles", user.uid), {
+                    firstName: fullName.split(' ')[0],
+                    lastName: fullName.split(' ').slice(1).join(' ') || '',
+                    email: email,
+                    role: currentRole,
+                    school_id: schoolDoc.id, // Links to Fairbanks/etc
+                    school_name: schoolData.name,
+                    createdAt: new Date().getTime()
+                });
+
+                alert(`Welcome to the program, ${fullName}!`);
+                window.location.href = 'index.html';
+
+            } catch (e) {
+                alert(e.message);
+                signupBtn.innerText = "Create My Profile";
+                signupBtn.disabled = false;
+            }
+        };
+    </script>
+</body>
+</html>
