@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RACKSTAT | Athlete Lobby</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+
+    <header class="brand-header">
+        <img src="images/rackstat-logo.png" alt="RACKSTAT" class="rackstat-logo">
+        
+        <div id="school-branding" class="school-section" style="display: none;">
+            <img id="school-logo-1" src="images/panther-logo1.png" class="school-logo-primary">
+            <div id="school-name-display" class="school-name">Fairbanks High School</div>
+            <img id="school-logo-2" src="images/panther-logo2.png" class="school-logo-secondary">
+        </div>
+    </header>
+
+    <div class="container">
+        <div id="auth-section">
+            <h2 class="text-center font-black uppercase tracking-widest text-sm mb-6">Athlete Login</h2>
+            <div id="login-form" class="space-y-4">
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="email" placeholder="coach@school.edu">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password" placeholder="••••••••">
+                </div>
+                <button type="button" onclick="handleLogin()" class="btn-primary">Login to Rackstat</button>
+            </div>
+            
+            <div class="mt-8 text-center">
+                <p class="text-gray-500 text-xs font-bold uppercase tracking-widest">
+                    New Athlete? <a href="signup.html" class="text-red-600 hover:underline">Create Account</a>
+                </p>
+            </div>
+        </div>
+
+        <div id="main-menu" class="hidden space-y-3">
+            <h2 id="welcome-msg" class="text-center font-black italic uppercase text-gray-400 mb-4 tracking-widest text-xs">Welcome, Athlete</h2>
+            
+            <button onclick="location.href='next-level.html'" class="btn-primary" style="background-color: var(--rackstat-black);">
+                Next Level Recruiting
+            </button>
+
+            <button onclick="location.href='recruiting-card.html'" class="btn-primary">
+                My Recruiting Card
+            </button>
+            
+            <button onclick="handleLogout()" class="w-full py-8 text-[10px] font-black uppercase text-gray-400 tracking-widest hover:text-red-600">Sign Out</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // IMPORTANT: Swap these with your NEW PRODUCTION keys
+        const firebaseConfig = { 
+            apiKey: "YOUR_NEW_PRODUCTION_API_KEY", 
+            authDomain: "rackstat-production.firebaseapp.com", 
+            projectId: "rackstat-production", 
+            storageBucket: "rackstat-production.firebasestorage.app", 
+            messagingSenderId: "...", 
+            appId: "..." 
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // LOGIN FUNCTION
+        window.handleLogin = async () => {
+            const email = document.getElementById('email').value.trim();
+            const pass = document.getElementById('password').value;
+            
+            try { 
+                await signInWithEmailAndPassword(auth, email, pass);
+                location.reload(); 
+            } catch (e) { 
+                alert("Login failed: " + e.message); 
+            }
+        };
+
+        // LOGOUT FUNCTION
+        window.handleLogout = async () => {
+            await signOut(auth);
+            location.reload();
+        };
+
+        // AUTH WATCHER & DYNAMIC BRANDING
+        onAuthStateChanged(auth, async (user) => {
+            const authSection = document.getElementById('auth-section');
+            const mainMenu = document.getElementById('main-menu');
+            const schoolBranding = document.getElementById('school-branding');
+            
+            if (user) {
+                // 1. Get the user's profile
+                const userSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+                
+                if (userSnap.exists()) {
+                    const userData = userSnap.data();
+                    
+                    // 2. Switch UI
+                    authSection.classList.add('hidden');
+                    mainMenu.classList.remove('hidden');
+                    document.getElementById('welcome-msg').innerText = `Welcome, ${userData.firstName || 'Athlete'}`;
+
+                    // 3. Load School Identity (Scalability!)
+                    if (userData.school_id) {
+                        const schoolSnap = await getDoc(doc(db, "schools", userData.school_id));
+                        if (schoolSnap.exists()) {
+                            const schoolData = schoolSnap.data();
+                            document.getElementById('school-name-display').innerText = schoolData.name;
+                            schoolBranding.style.display = 'flex';
+                            // We use the logos from your images/ folder as defined in Firestore
+                            document.getElementById('school-logo-1').src = schoolData.logo_primary;
+                            document.getElementById('school-logo-2').src = schoolData.logo_secondary;
+                        }
+                    }
+                }
+            } else {
+                authSection.classList.remove('hidden');
+                mainMenu.classList.add('hidden');
+                schoolBranding.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

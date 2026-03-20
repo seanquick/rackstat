@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "rackstat-production",
+    "dev": "panthertracker-b8ff6"
+  },
+  "targets": {},
+  "etags": {}
+}
