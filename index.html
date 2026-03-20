@@ -44,7 +44,7 @@
         <div id="main-menu" class="hidden space-y-3">
             <h2 id="welcome-msg" class="text-center font-black italic uppercase text-gray-400 mb-4 tracking-widest text-xs">Welcome, Athlete</h2>
             
-            <button onclick="location.href='next-level.html'" class="btn-primary" style="background-color: var(--rackstat-black);">
+            <button onclick="location.href='next-level.html'" class="btn-primary" style="background-color: transparent; border: 2px solid var(--rackstat-red);">
                 Next Level Recruiting
             </button>
 
@@ -62,14 +62,15 @@
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // IMPORTANT: Swap these with your NEW PRODUCTION keys
-        const firebaseConfig = { 
-            apiKey: "YOUR_NEW_PRODUCTION_API_KEY", 
-            authDomain: "rackstat-production.firebaseapp.com", 
-            projectId: "rackstat-production", 
-            storageBucket: "rackstat-production.firebasestorage.app", 
-            messagingSenderId: "...", 
-            appId: "..." 
-        };
+        const firebaseConfig = {
+          apiKey: "AIzaSyBOQFeokKaNQKwaUhXMCA0oEm4W9G0qafE",
+          authDomain: "rackstat-production.firebaseapp.com",
+          projectId: "rackstat-production",
+          storageBucket: "rackstat-production.firebasestorage.app",
+          messagingSenderId: "345003825117",
+          appId: "1:345003825117:web:2ad86b1902dfdebe0c8834",
+          measurementId: "G-W421R68J54"
+          };
         
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);

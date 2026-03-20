@@ -69,11 +69,15 @@
         import { getFirestore, doc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // USE YOUR PRODUCTION CONFIG (Same as index.html)
-        const firebaseConfig = { 
-            apiKey: "YOUR_PRODUCTION_KEY", 
-            authDomain: "rackstat-production.firebaseapp.com", 
-            projectId: "rackstat-production"
-        };
+        const firebaseConfig = {
+            apiKey: "AIzaSyBOQFeokKaNQKwaUhXMCA0oEm4W9G0qafE",
+            authDomain: "rackstat-production.firebaseapp.com",
+            projectId: "rackstat-production",
+            storageBucket: "rackstat-production.firebasestorage.app",
+            messagingSenderId: "345003825117",
+            appId: "1:345003825117:web:2ad86b1902dfdebe0c8834",
+            measurementId: "G-W421R68J54"
+            };
         
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -108,9 +112,17 @@
             const pass = document.getElementById('reg-pass').value;
             const inputCode = document.getElementById('school-code').value.trim();
 
-            if (!fullName || !email || !pass || !inputCode) return alert("All fields required.");
-            if (!isAgreed) return alert("Please accept the terms (SB29 Compliance).");
+            // 1. Check for empty fields
+                if (!fullName || !email || !pass || !inputCode) return alert("All fields required.");
+                
+            // 2. NEW: Check for First AND Last name
+                if (fullName.split(' ').length < 2) {
+                    return alert("Please enter both your First and Last name (e.g., 'Joe Panther').");
+                }
 
+            // 3. Check for legal agreement
+                if (!isAgreed) return alert("Please accept the terms (SB29 Compliance).");
+                
             const signupBtn = document.getElementById('signup-btn');
             signupBtn.innerText = "VERIFYING CODE...";
             signupBtn.disabled = true;
