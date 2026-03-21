@@ -1,85 +1,117 @@
-/* Global variables for Dark Mode */
 :root {
+    --rackstat-red: #b91c1c;
     --rackstat-black: #0a0a0b;
-    --rackstat-dark-gray: #161618;
-    --rackstat-red: #d00000; /* Brighter red for dark mode contrast */
-    --rackstat-white: #ffffff;
-    --border-glow: rgba(208, 0, 0, 0.3);
-    --transition: all 0.2s ease-in-out;
+    --rackstat-gray: #1a1a1c;
+    --rackstat-border: #2a2a2c;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
 }
 
 body {
-    margin: 0;
-    font-family: 'Inter', sans-serif;
     background-color: var(--rackstat-black);
-    color: var(--rackstat-white);
+    color: white;
+    min-height: 100vh;
 }
 
-/* --- THE MASTER HEADER --- */
+/* --- BRANDING HEADER --- */
 .brand-header {
-    background-color: var(--rackstat-black);
-    padding: 2rem 1rem;
+    background: linear-gradient(to bottom, #000, var(--rackstat-black));
+    padding: 20px;
+    border-bottom: 1px solid var(--rackstat-border);
     display: flex;
     flex-direction: column;
     align-items: center;
-    border-bottom: 2px solid var(--rackstat-red);
-    box-shadow: 0 4px 20px var(--border-glow);
+    gap: 15px;
 }
 
 .rackstat-logo {
-    width: 600px; /* Increased from height: 70px */
-    height: auto; /* Keeps the proportions perfect */
-    margin-bottom: 1.5rem;
-    filter: drop-shadow(0 0 12px rgba(208, 0, 0, 0.2)); /* Added a slight red glow to match your theme */
+    height: 40px; /* Consistent height for main logo */
+    width: auto;
 }
 
-/* --- THE LOGIN CONTAINER --- */
+/* --- SCHOOL IDENTITY SECTION --- */
+.school-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 25px; /* Spacing between logos and text */
+    padding: 10px;
+    width: 100%;
+}
+
+.school-logo-primary, 
+.school-logo-secondary {
+    height: 65px;     /* Set a professional fixed height */
+    width: auto;      /* Maintain aspect ratio */
+    object-fit: contain;
+    filter: drop-shadow(0 0 10px rgba(185, 28, 28, 0.2)); /* Subtle red glow */
+}
+
+.school-name {
+    font-size: 1.1rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    font-style: italic;
+    letter-spacing: 2px;
+    color: #ffffff;
+    text-align: center;
+    border-left: 2px solid var(--rackstat-red);
+    border-right: 2px solid var(--rackstat-red);
+    padding: 0 15px;
+}
+
+/* --- CONTAINERS & FORMS --- */
 .container {
     max-width: 450px;
-    margin: 3rem auto;
-    padding: 2.5rem;
-    background: var(--rackstat-dark-gray);
-    border: 1px solid #333; /* Sublte white/gray outline */
-    border-top: 4px solid var(--rackstat-red); /* Strong red accent top */
-    border-radius: 8px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    margin: 40px auto;
+    padding: 30px;
+    background: var(--rackstat-gray);
+    border: 1px solid var(--rackstat-border);
+    border-radius: 4px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
 }
 
-/* --- FORM STYLING --- */
+.form-group {
+    margin-bottom: 20px;
+}
+
 .form-group label {
     display: block;
-    font-weight: 700;
+    font-size: 10px;
+    font-weight: 900;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    font-size: 0.75rem;
-    margin-bottom: 0.5rem;
-    color: #999;
+    letter-spacing: 1.5px;
+    color: #666;
+    margin-bottom: 8px;
 }
 
 .form-group input {
     width: 100%;
-    padding: 1rem;
-    background-color: #000;
-    border: 1px solid #444; /* Dark outline */
+    background: #000;
+    border: 1px solid var(--rackstat-border);
+    padding: 14px;
+    color: white;
+    font-size: 14px;
     border-radius: 4px;
-    color: var(--rackstat-white);
-    font-size: 1rem;
-    transition: var(--transition);
-    box-sizing: border-box;
+    transition: border 0.3s ease;
 }
 
 .form-group input:focus {
     outline: none;
-    border-color: var(--rackstat-white); /* White outline on focus */
-    box-shadow: 0 0 10px rgba(255,255,255,0.1);
+    border-color: var(--rackstat-red);
 }
 
-/* --- THE RED BUTTON --- */
+/* --- BUTTONS --- */
 .btn-primary {
     width: 100%;
-    padding: 1.2rem;
     background-color: var(--rackstat-red);
-    color: var(--white);
+    color: white;
+    padding: 16px;
     border: none;
     border-radius: 4px;
     font-weight: 900;
@@ -87,34 +119,15 @@ body {
     font-style: italic;
     letter-spacing: 2px;
     cursor: pointer;
-    margin-top: 1rem;
-    transition: var(--transition);
+    transition: all 0.2s ease;
 }
 
 .btn-primary:hover {
-    background-color: #ff0000;
-    transform: scale(1.02);
-    box-shadow: 0 0 20px var(--border-glow);
+    background-color: #991b1b;
+    transform: translateY(-2px);
 }
 
-/* --- LINKS --- */
-.text-link {
-    color: var(--rackstat-red);
-    text-decoration: none;
-    font-weight: bold;
-}
-
-.text-link:hover {
-    color: var(--rackstat-white);
-    text-decoration: underline;
-}
-/* Mobile Optimization */
-@media (max-width: 480px) {
-    .rackstat-logo {
-        width: 200px; /* Slightly smaller for phones */
-    }
-    .container {
-        margin: 1.5rem; /* Reduces margin so the box fits better on small screens */
-        padding: 1.5rem;
-    }
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
