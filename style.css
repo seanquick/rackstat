@@ -30,7 +30,7 @@ body {
 }
 
 .rackstat-logo {
-    height: 40px; /* Consistent height for main logo */
+    height: 300px; /* Consistent height for main logo */
     width: auto;
 }
 
@@ -46,14 +46,14 @@ body {
 
 .school-logo-primary, 
 .school-logo-secondary {
-    height: 65px;     /* Set a professional fixed height */
+    height: 200px;     /* Set a professional fixed height */
     width: auto;      /* Maintain aspect ratio */
     object-fit: contain;
     filter: drop-shadow(0 0 10px rgba(185, 28, 28, 0.2)); /* Subtle red glow */
 }
 
 .school-name {
-    font-size: 1.1rem;
+    font-size: 3rem;
     font-weight: 900;
     text-transform: uppercase;
     font-style: italic;
