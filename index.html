@@ -41,18 +41,30 @@
             </div>
         </div>
 
-        <div id="main-menu" class="hidden space-y-3">
-            <h2 id="welcome-msg" class="text-center font-black italic uppercase text-gray-400 mb-4 tracking-widest text-xs">Welcome, Athlete</h2>
+        <div id="main-menu" class="hidden space-y-4 p-6">
+            <h2 id="welcome-msg" class="text-xl font-black italic uppercase text-center mb-6"></h2>
             
-            <button onclick="location.href='next-level.html'" class="btn-primary" style="background-color: transparent; border: 2px solid var(--rackstat-red);">
-                Next Level Recruiting
-            </button>
+            <div class="grid grid-cols-1 gap-4">
+                <button onclick="location.href='board.html'" class="btn-primary w-full py-4 text-lg">
+                    THE BOARD
+                </button>
+                
+                <button onclick="location.href='rack.html'" class="btn-primary w-full py-4 text-lg bg-gray-800 border-gray-700">
+                    THE RACK
+                </button>
+                
+                <button onclick="location.href='kitchen.html'" class="btn-primary w-full py-4 text-lg bg-green-700 border-green-900">
+                    THE KITCHEN
+                </button>
+                
+                <button onclick="location.href='profile.html'" class="btn-primary w-full py-4 text-lg bg-blue-700 border-blue-900">
+                    MY PROFILE
+                </button>
+            </div>
 
-            <button onclick="location.href='recruiting-card.html'" class="btn-primary">
-                My Recruiting Card
+            <button onclick="handleLogout()" class="w-full mt-8 text-[10px] font-bold uppercase text-gray-500 hover:text-white transition-colors">
+                Sign Out / Switch User
             </button>
-            
-            <button onclick="handleLogout()" class="w-full py-8 text-[10px] font-black uppercase text-gray-400 tracking-widest hover:text-red-600">Sign Out</button>
         </div>
     </div>
 
@@ -61,16 +73,15 @@
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // IMPORTANT: Swap these with your NEW PRODUCTION keys
         const firebaseConfig = {
-          apiKey: "AIzaSyBOQFeokKaNQKwaUhXMCA0oEm4W9G0qafE",
-          authDomain: "rackstat-production.firebaseapp.com",
-          projectId: "rackstat-production",
-          storageBucket: "rackstat-production.firebasestorage.app",
-          messagingSenderId: "345003825117",
-          appId: "1:345003825117:web:2ad86b1902dfdebe0c8834",
-          measurementId: "G-W421R68J54"
-          };
+            apiKey: "AIzaSyBOQFeokKaNQKwaUhXMCA0oEm4W9G0qafE",
+            authDomain: "rackstat-production.firebaseapp.com",
+            projectId: "rackstat-production",
+            storageBucket: "rackstat-production.firebasestorage.app",
+            messagingSenderId: "345003825117",
+            appId: "1:345003825117:web:2ad86b1902dfdebe0c8834",
+            measurementId: "G-W421R68J54"
+        };
         
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -83,7 +94,7 @@
             
             try { 
                 await signInWithEmailAndPassword(auth, email, pass);
-                location.reload(); 
+                // location.reload() is fine, but checking auth state will handle the rest
             } catch (e) { 
                 alert("Login failed: " + e.message); 
             }
@@ -102,34 +113,43 @@
             const schoolBranding = document.getElementById('school-branding');
             
             if (user) {
-                // 1. Get the user's profile
-                const userSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
-                
-                if (userSnap.exists()) {
-                    const userData = userSnap.data();
+                try {
+                    const userSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
                     
-                    // 2. Switch UI
-                    authSection.classList.add('hidden');
-                    mainMenu.classList.remove('hidden');
-                    document.getElementById('welcome-msg').innerText = `Welcome, ${userData.firstName || 'Athlete'}`;
+                    if (userSnap.exists()) {
+                        const userData = userSnap.data();
+                        
+                        // Toggle UI visibility
+                        authSection.classList.add('hidden');
+                        mainMenu.classList.remove('hidden');
+                        
+                        // Set Welcome Text
+                        document.getElementById('welcome-msg').innerText = `Welcome, ${userData.firstName || 'Athlete'}`;
 
-                    // 3. Load School Identity (Scalability!)
-                    if (userData.school_id) {
-                        const schoolSnap = await getDoc(doc(db, "schools", userData.school_id));
-                        if (schoolSnap.exists()) {
-                            const schoolData = schoolSnap.data();
-                            document.getElementById('school-name-display').innerText = schoolData.name;
-                            schoolBranding.style.display = 'flex';
-                            // We use the logos from your images/ folder as defined in Firestore
-                            document.getElementById('school-logo-1').src = schoolData.logo_primary;
-                            document.getElementById('school-logo-2').src = schoolData.logo_secondary;
+                        // Load School Identity
+                        if (userData.school_id) {
+                            const schoolSnap = await getDoc(doc(db, "schools", userData.school_id));
+                            if (schoolSnap.exists()) {
+                                const schoolData = schoolSnap.data();
+                                document.getElementById('school-name-display').innerText = schoolData.name;
+                                schoolBranding.style.display = 'flex';
+                                
+                                // Load logos - ensuring fallback if paths are missing
+                                if(schoolData.logo_primary) document.getElementById('school-logo-1').src = schoolData.logo_primary;
+                                if(schoolData.logo_secondary) document.getElementById('school-logo-2').src = schoolData.logo_secondary;
+                            }
                         }
+                    } else {
+                        console.error("No profile found for this user UID.");
                     }
+                } catch (err) {
+                    console.error("Error fetching user profile:", err);
                 }
             } else {
+                // User is signed out
                 authSection.classList.remove('hidden');
                 mainMenu.classList.add('hidden');
-                schoolBranding.style.display = 'none';
+                if(schoolBranding) schoolBranding.style.display = 'none';
             }
         });
     </script>

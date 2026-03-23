@@ -1,32 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    </head>
-<body class="font-sans">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE BOARD | RACKSTAT</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: var(--rackstat-black); color: white; }
+        .club-card { 
+            background: var(--rackstat-gray); 
+            border-radius: 8px; 
+            padding: 1rem; 
+            margin-bottom: 1rem; 
+            border: 1px solid var(--rackstat-border);
+        }
+        /* Custom scrollbar for clean UI */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="pb-24">
 
-    <header class="bg-black p-6 border-b-4 border-red-700 text-center">
+    <header class="bg-black p-6 border-b-4 border-red-700 text-center sticky top-0 z-40">
         <div class="flex justify-between items-center max-w-md mx-auto mb-2">
             <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1 rounded">← Lobby</button>
             <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-8">
-            
-            <button onclick="location.href='record-max.html'" class="text-[10px] font-black uppercase bg-red-700 px-3 py-1 rounded text-white">+ Record</button>
+            <button onclick="location.href='rack.html'" class="text-[10px] font-black uppercase bg-red-700 px-3 py-1 rounded text-white">+ Record</button>
         </div>
         <h1 class="text-2xl font-black italic uppercase tracking-tighter text-white">THE <span class="text-red-600">BOARD</span></h1>
         <p id="school-tag" class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] mt-1">FAIRBANKS WEIGHTROOM</p>
     </header>
 
-    <div class="content-wrapper">
-        <div id="player-club-grid" class="max-w-md mx-auto">
-            <p class="text-center text-xs animate-pulse text-red-600 font-black uppercase">Analyzing Lifts...</p>
+    <div class="max-w-md mx-auto px-4 py-6">
+        <div id="player-club-grid">
+            <p class="text-center text-xs animate-pulse text-red-600 font-black uppercase py-20">Analyzing Lifts...</p>
         </div>
     </div>
+
+    <nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-red-900/30 px-6 py-4 flex justify-between items-center z-50">
+        <button onclick="location.href='board.html'" class="text-red-600 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Board</span></button>
+        <button onclick="location.href='rack.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">The Rack</span></button>
+        <button onclick="location.href='kitchen.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Kitchen</span></button>
+        <button onclick="location.href='profile.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
+    </nav>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, doc, getDoc, collection, query, where, getDocs, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-        // Use your production config
         const firebaseConfig = { 
             apiKey: "AIzaSyBOQFeokKaNQKwaUhXMCA0oEm4W9G0qafE", 
             authDomain: "rackstat-production.firebaseapp.com", 
@@ -42,34 +64,29 @@
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // 1. Get User's School
                 const userSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
                 if (userSnap.exists()) {
                     const userData = userSnap.data();
                     loadBoard(userData.school_id);
                 }
-            } else {
-                window.location.href = 'index.html';
-            }
+            } else { window.location.href = 'index.html'; }
         });
 
         async function loadBoard(schoolId) {
             const grid = document.getElementById('player-club-grid');
-            
-            // 2. Fetch School Preferences
             const schoolSnap = await getDoc(doc(db, "schools", schoolId));
             if (!schoolSnap.exists()) return;
             const school = schoolSnap.data();
             
             document.getElementById('school-tag').innerText = `${school.name} Weightroom`;
 
-            // 3. Fetch all athletes in this school
             const q = query(collection(db, "recruiting_profiles"), where("school_id", "==", schoolId));
             const pSnap = await getDocs(q);
             
             let scores = [];
 
             for (const d of pSnap.docs) {
+                // Fetch the absolute latest max entry for this athlete
                 const maxSnap = await getDocs(query(
                     collection(db, "recruiting_profiles", d.id, "maxes"), 
                     orderBy("timestamp", "desc"), 
@@ -78,37 +95,35 @@
                 
                 if(!maxSnap.empty) {
                     const m = maxSnap.docs[0].data();
-                    let finalScore = 0;
-
-                    // DYNAMIC CALCULATION based on school preference
-                    const totalLifts = (school.tracked_lifts || ["bench", "squat", "clean"]).reduce((acc, lift) => {
+                    const trackedLifts = school.preferences?.tracked_lifts || ["bench", "squat", "clean"];
+                    
+                    const totalLifts = trackedLifts.reduce((acc, lift) => {
                         return acc + (Number(m[lift]) || 0);
                     }, 0);
 
-                    if (school.formula_type === "power_index") {
-                        const bw = Number(m.bodyWeight) || 0;
-                        const bwPenalty = (Math.min(bw, 200) * 4);
-                        finalScore = totalLifts - bwPenalty;
-                    } else {
-                        finalScore = totalLifts; // Pure Total
+                    // P4P Logic if school prefers it
+                    let finalScore = totalLifts;
+                    if (school.preferences?.formula_type === "power_index") {
+                        const bw = Number(m.bodyWeight) || 1;
+                        finalScore = (totalLifts / bw).toFixed(2); 
                     }
 
-                    if(finalScore >= (school.club_end || 300)) {
-                        scores.push({ 
-                            name: `${d.data().firstName} ${d.data().lastName}`, 
-                            total: Math.round(finalScore), 
-                            placed: false 
-                        });
-                    }
+                    scores.push({ 
+                        id: d.id,
+                        name: `${d.data().firstName} ${d.data().lastName}`, 
+                        total: totalLifts, 
+                        displayScore: finalScore,
+                        placed: false 
+                    });
                 }
             }
 
+            // Sort by the raw total for club placement
             scores.sort((a, b) => b.total - a.total);
             grid.innerHTML = '';
 
-            // DYNAMIC CLUB TIERS
-            const start = school.club_start || 1000;
-            const end = school.club_end || 300;
+            const start = school.preferences?.club_start || 1000;
+            const end = school.preferences?.club_end || 300;
             
             for(let level = start; level >= end; level -= 50) {
                 const qualifiers = scores.filter(s => !s.placed && s.total >= level);
@@ -120,7 +135,10 @@
                             <p class="font-black italic text-lg border-b border-gray-800 mb-3 pb-1" style="color: ${school.colors?.primary || '#b91c1c'}">${level} LB CLUB</p>
                             ${qualifiers.map(q => `
                                 <div class="flex justify-between items-center text-sm py-2 border-b border-white/5 last:border-0">
-                                    <span class="font-bold uppercase tracking-tight">${q.name}</span>
+                                    <div class="flex flex-col">
+                                        <span class="font-bold uppercase tracking-tight">${q.name}</span>
+                                        <button onclick="location.href='player-card.html?id=${q.id}'" class="text-[8px] text-blue-500 text-left font-bold uppercase">View Card →</button>
+                                    </div>
                                     <span class="text-white font-black">${q.total}</span>
                                 </div>`).join('')}
                         </div>`;
