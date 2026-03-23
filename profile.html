@@ -9,64 +9,69 @@
     <style>
         body { background-color: var(--rackstat-black); color: white; }
         .profile-card { background: var(--rackstat-gray); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--rackstat-border); }
-        .goal-progress { background: #334155; border-radius: 10px; height: 8px; width: 100%; overflow: hidden; margin-top: 8px; }
-        .progress-fill { background: var(--rackstat-red); height: 100%; transition: width 0.5s ease; }
+        .goal-progress { background: #334155; border-radius: 10px; height: 10px; width: 100%; overflow: hidden; margin-top: 8px; }
+        .progress-fill { background: var(--rackstat-red); height: 100%; transition: width 0.8s ease-in-out; }
         input, select { 
             background: #000 !important; border: 1px solid var(--rackstat-border) !important; 
-            color: white !important; padding: 0.5rem !important; border-radius: 4px !important; width: 100%;
+            color: white !important; padding: 0.6rem !important; border-radius: 4px !important; width: 100%; font-size: 14px;
         }
-        label { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #94a3b8; margin-left: 2px; }
+        label { font-size: 9px; font-weight: 800; text-transform: uppercase; color: #94a3b8; margin-left: 2px; margin-bottom: 4px; display: block; }
     </style>
 </head>
-<body class="pb-20">
+<body class="pb-24">
 
-    <header class="brand-header">
-        <img id="school-logo" src="images/rackstat-logo.png" alt="Logo" class="rackstat-logo">
-        <h1 class="text-2xl font-black italic uppercase tracking-tighter">PLAYER <span class="text-red-600">PROFILE</span></h1>
-        <button onclick="location.href='board.html'" class="btn-primary text-[10px] py-2 w-auto px-6">← Board</button>
-    </header>
+    <header class="brand-header flex justify-between items-center p-4 border-b border-red-900/30">
+        <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1 rounded">← Lobby</button>
+        <img id="school-logo" src="images/rackstat-logo.png" alt="Logo" class="h-8">
+        <div class="w-12"></div> </header>
 
     <div class="max-w-md mx-auto px-4 py-6 space-y-6">
 
         <section class="profile-card">
             <h2 class="text-red-600 font-black uppercase italic mb-4">Recruiting Essentials</h2>
-            <div class="grid grid-cols-2 gap-4">
-                <div><label>Height</label><input id="height" placeholder="e.g. 6'2"></div>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div><label>Height</label><input id="height" placeholder="6'2"></div>
                 <div><label>Weight (LBS)</label><input id="weight" type="number"></div>
                 <div><label>GPA</label><input id="gpa" type="number" step="0.01"></div>
-                <div><label>SAT/ACT</label><input id="test-score" placeholder="Score"></div>
             </div>
-            <div class="mt-4">
-                <label>Hudl / Highlight Link</label>
-                <input id="highlight-link" placeholder="https://hudl.com/video/...">
+            <div class="grid grid-cols-2 gap-4">
+                <div><label>SAT Score</label><input id="sat" type="number" placeholder="Total"></div>
+                <div><label>ACT Score</label><input id="act" type="number" placeholder="Composite"></div>
             </div>
         </section>
 
         <section class="profile-card">
-            <h2 class="text-blue-500 font-black uppercase italic mb-4">Performance Goals</h2>
-            <div id="goals-container" class="space-y-6">
-                </div>
-            <button onclick="openGoalModal()" class="w-full mt-6 border-2 border-dashed border-gray-600 py-3 rounded-lg text-[10px] font-bold uppercase text-gray-400">+ Set New Goal</button>
+            <h2 class="text-blue-500 font-black uppercase italic mb-4">Film & Socials</h2>
+            <div class="space-y-3">
+                <div><label>Hudl Link</label><input id="hudl-link" placeholder="hudl.com/video/..."></div>
+                <div><label>Twitter / X Handle</label><input id="twitter-link" placeholder="@Username"></div>
+                <div><label>YouTube Highlight</label><input id="youtube-link" placeholder="youtube.com/watch?v=..."></div>
+                <div><label>Other (Linktree/Instagram)</label><input id="other-link" placeholder="https://..."></div>
+            </div>
         </section>
 
-        <button onclick="saveProfile()" id="save-btn" class="btn-primary">Save Recruiting Card</button>
+        <section class="profile-card">
+            <h2 class="text-green-500 font-black uppercase italic mb-4">Goal Tracker</h2>
+            <div id="goals-container" class="space-y-6">
+                </div>
+            <button onclick="openGoalModal()" class="w-full mt-6 border-2 border-dashed border-gray-600 py-3 rounded-lg text-[10px] font-bold uppercase text-gray-400 hover:border-red-600">+ Set New Performance Goal</button>
+        </section>
+
+        <button onclick="saveProfile()" id="save-btn" class="btn-primary w-full py-4 font-black italic uppercase">Save Recruiting Card</button>
     </div>
 
-    <div id="goal-modal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-6 z-50">
-        <div class="bg-[#1a1a1c] border border-red-700 p-8 rounded-2xl w-full max-w-sm shadow-2xl">
-            <h3 class="font-black italic uppercase text-white mb-6">Set Performance Goal</h3>
-            
-            <label>Select Lift / Category</label>
+    <div id="goal-modal" class="fixed inset-0 bg-black/95 backdrop-blur-md hidden flex items-center justify-center p-6 z-50">
+        <div class="bg-[#111] border border-red-700 p-8 rounded-2xl w-full max-w-sm shadow-2xl">
+            <h3 class="font-black italic uppercase text-white mb-6">New Goal</h3>
+            <label>Category</label>
             <select id="goal-category" class="mb-4">
                 <option value="bodyWeight">Body Weight</option>
-                </select>
-
+            </select>
             <label>Target Weight (LBS)</label>
-            <input id="goal-target" type="number" placeholder="Enter target" class="mb-6">
-
+            <input id="goal-target" type="number" class="mb-6">
             <div class="flex gap-2">
                 <button onclick="closeGoalModal()" class="flex-1 bg-gray-800 py-3 rounded-lg font-bold text-[10px] uppercase">Cancel</button>
-                <button onclick="addGoal()" class="flex-1 bg-red-700 py-3 rounded-lg font-bold text-[10px] uppercase">Save Goal</button>
+                <button onclick="addGoal()" class="flex-1 bg-red-700 py-3 rounded-lg font-bold text-[10px] uppercase">Set Goal</button>
             </div>
         </div>
     </div>
@@ -76,6 +81,7 @@
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, updateDoc, collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+        // CONFIG (Same as yours)
         const firebaseConfig = { 
             apiKey: "AIzaSyBOQFeokKaNQKwaUhXMCA0oEm4W9G0qafE", 
             authDomain: "rackstat-production.firebaseapp.com", 
@@ -84,7 +90,6 @@
             messagingSenderId: "345003825117",
             appId: "1:345003825117:web:2ad86b1902dfdebe0c8834"
         };
-        
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -96,33 +101,31 @@
                 const snap = await getDoc(doc(db, "recruiting_profiles", user.uid));
                 if(snap.exists()) {
                     const data = snap.data();
+                    // Load Data into fields
                     document.getElementById('height').value = data.height || '';
                     document.getElementById('weight').value = data.weight || '';
                     document.getElementById('gpa').value = data.gpa || '';
-                    document.getElementById('test-score').value = data.testScore || '';
-                    document.getElementById('highlight-link').value = data.highlightLink || '';
+                    document.getElementById('sat').value = data.sat || '';
+                    document.getElementById('act').value = data.act || '';
+                    document.getElementById('hudl-link').value = data.hudlLink || '';
+                    document.getElementById('twitter-link').value = data.twitterLink || '';
+                    document.getElementById('youtube-link').value = data.youtubeLink || '';
+                    document.getElementById('other-link').value = data.otherLink || '';
                     
                     currentGoals = data.goals || [];
                     
-                    // 1. Fetch school logo and lift preferences
+                    // Fetch school info for lifts
                     if(data.school_id) {
                         const schoolSnap = await getDoc(doc(db, "schools", data.school_id));
                         if(schoolSnap.exists()){
-                            const schoolData = schoolSnap.data();
-                            if(schoolData.logo_primary) document.getElementById('school-logo').src = schoolData.logo_primary;
-                            
-                            // Populate Dropdown with School's preferred lifts
+                            const sData = schoolSnap.data();
                             const select = document.getElementById('goal-category');
-                            const lifts = schoolData.preferences?.tracked_lifts || ['bench', 'squat', 'clean'];
-                            lifts.forEach(lift => {
-                                const option = document.createElement('option');
-                                option.value = lift;
-                                option.textContent = lift.replace('_', ' ').toUpperCase();
-                                select.appendChild(option);
+                            const lifts = sData.preferences?.tracked_lifts || ['bench', 'squat', 'clean'];
+                            lifts.forEach(l => {
+                                select.innerHTML += `<option value="${l}">${l.toUpperCase()}</option>`;
                             });
                         }
                     }
-
                     renderGoals(user.uid, currentGoals);
                 }
             } else { location.href = 'index.html'; }
@@ -132,22 +135,26 @@
             const container = document.getElementById('goals-container');
             container.innerHTML = '';
             
+            // Get latest maxes to calculate progress
             const q = query(collection(db, "recruiting_profiles", uid, "maxes"), orderBy("timestamp", "desc"), limit(1));
             const maxSnap = await getDocs(q);
-            const currentMaxes = !maxSnap.empty ? maxSnap.docs[0].data() : {};
+            const latestStats = !maxSnap.empty ? maxSnap.docs[0].data() : {};
 
             goals.forEach(goal => {
-                const current = currentMaxes[goal.type] || 0;
-                const progress = Math.min((current / goal.target) * 100, 100);
+                const currentVal = latestStats[goal.type] || 0;
+                const progress = Math.min((currentVal / goal.target) * 100, 100);
                 
                 container.innerHTML += `
-                    <div>
-                        <div class="flex justify-between items-end">
+                    <div class="animate-fade-in">
+                        <div class="flex justify-between items-end mb-1">
                             <div>
-                                <p class="text-[10px] font-bold text-gray-400 uppercase">${goal.type.replace('_', ' ')} Goal</p>
+                                <p class="text-[9px] font-black text-gray-500 uppercase">${goal.type.replace('_', ' ')}</p>
                                 <p class="text-lg font-black italic uppercase">${goal.target} LBS</p>
                             </div>
-                            <p class="text-[10px] font-black ${progress >= 100 ? 'text-green-500' : 'text-red-600'}">${Math.round(progress)}%</p>
+                            <div class="text-right">
+                                <p class="text-[9px] font-bold text-gray-400 uppercase">Current: ${currentVal}</p>
+                                <p class="text-xs font-black ${progress >= 100 ? 'text-green-500' : 'text-red-600'}">${Math.round(progress)}%</p>
+                            </div>
                         </div>
                         <div class="goal-progress"><div class="progress-fill" style="width: ${progress}%"></div></div>
                     </div>
@@ -160,35 +167,34 @@
             const btn = document.getElementById('save-btn');
             btn.innerText = "UPDATING...";
             
-            try {
-                await updateDoc(doc(db, "recruiting_profiles", user.uid), {
-                    height: document.getElementById('height').value,
-                    weight: Number(document.getElementById('weight').value),
-                    gpa: Number(document.getElementById('gpa').value),
-                    testScore: document.getElementById('test-score').value,
-                    highlightLink: document.getElementById('highlight-link').value
-                });
-                alert("Profile Updated!");
-            } catch (e) { alert("Error: " + e.message); }
-            btn.innerText = "Save Recruiting Card";
+            await updateDoc(doc(db, "recruiting_profiles", user.uid), {
+                height: document.getElementById('height').value,
+                weight: Number(document.getElementById('weight').value),
+                gpa: Number(document.getElementById('gpa').value),
+                sat: document.getElementById('sat').value,
+                act: document.getElementById('act').value,
+                hudlLink: document.getElementById('hudl-link').value,
+                twitterLink: document.getElementById('twitter-link').value,
+                youtubeLink: document.getElementById('youtube-link').value,
+                otherLink: document.getElementById('other-link').value
+            });
+
+            btn.innerText = "SAVED!";
+            setTimeout(() => { btn.innerText = "Save Recruiting Card"; }, 2000);
         };
 
-        // Modal Logic
         window.openGoalModal = () => document.getElementById('goal-modal').classList.remove('hidden');
         window.closeGoalModal = () => document.getElementById('goal-modal').classList.add('hidden');
 
         window.addGoal = async () => {
             const type = document.getElementById('goal-category').value;
             const target = Number(document.getElementById('goal-target').value);
-            if(!target) return alert("Enter a target weight");
+            if(!target) return;
 
             const updatedGoals = currentGoals.filter(g => g.type !== type);
             updatedGoals.push({ type, target });
 
-            await updateDoc(doc(db, "recruiting_profiles", auth.currentUser.uid), {
-                goals: updatedGoals
-            });
-
+            await updateDoc(doc(db, "recruiting_profiles", auth.currentUser.uid), { goals: updatedGoals });
             location.reload();
         };
     </script>
