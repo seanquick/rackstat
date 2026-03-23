@@ -9,8 +9,28 @@
 </head>
 <body class="bg-[#0a0a0b] min-h-screen flex flex-col items-center justify-center p-4">
 
-    <header class="mb-8 text-center">
-        <img src="images/rackstat-logo.png" alt="RACKSTAT" class="rackstat-logo mx-auto" style="width: 220px;">
+    <header class="bg-black border-b-2 border-red-700 p-4 sticky top-0 z-50">
+        <div class="flex justify-between items-center max-w-5xl mx-auto">
+            <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1.5 rounded text-gray-400 hover:text-white transition-all">
+                ← Lobby
+            </button>
+            
+            <div class="flex items-center gap-5">
+                <img id="school-logo" src="images/panther-logo1.png" alt="School" class="h-10 w-auto">
+                
+                <div class="h-6 w-[1px] bg-gray-800"></div>
+                
+                <span class="text-sm font-black italic uppercase tracking-[0.15em] text-white">
+                    FAIRBANKS
+                </span>
+                
+                <div class="h-6 w-[1px] bg-gray-800"></div>
+                
+                <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-10 w-auto">
+            </div>
+
+            <div class="w-[65px]"></div>
+        </div>
     </header>
 
     <div class="container mt-0">

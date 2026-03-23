@@ -21,14 +21,20 @@
 </head>
 <body class="pb-24">
 
-    <header class="bg-black p-6 border-b-4 border-red-700 text-center sticky top-0 z-40">
-        <div class="flex justify-between items-center max-w-md mx-auto mb-2">
-            <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1 rounded">← Lobby</button>
-            <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-8">
-            <button onclick="location.href='rack.html'" class="text-[10px] font-black uppercase bg-red-700 px-3 py-1 rounded text-white">+ Record</button>
+    <header class="bg-black border-b-2 border-red-700 p-4">
+        <div class="flex justify-between items-center max-w-4xl mx-auto mb-4">
+            <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1 rounded text-gray-300 hover:text-white transition-colors">← Lobby</button>
+            
+            <div class="flex items-center gap-4">
+                <img id="school-logo" src="images/panther-logo.png" alt="School Logo" class="h-10 w-auto">
+                <div class="h-6 w-[1px] bg-gray-700"></div>
+                <span class="text-sm font-black italic uppercase tracking-widest text-white">FAIRBANKS</span>
+                <div class="h-6 w-[1px] bg-gray-700"></div>
+                <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-10 w-auto">
+            </div>
+
+            <div class="w-[60px]"></div> 
         </div>
-        <h1 class="text-2xl font-black italic uppercase tracking-tighter text-white">THE <span class="text-red-600">BOARD</span></h1>
-        <p id="school-tag" class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] mt-1">FAIRBANKS WEIGHTROOM</p>
     </header>
 
     <div class="max-w-md mx-auto px-4 py-6">

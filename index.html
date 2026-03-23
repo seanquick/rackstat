@@ -9,15 +9,23 @@
 </head>
 <body>
 
-    <header class="brand-header">
-        <img src="images/rackstat-logo.png" alt="RACKSTAT" class="rackstat-logo">
+<header class="brand-header flex flex-col items-center py-10 space-y-10">
+    <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-28 w-auto drop-shadow-[0_0_20px_rgba(185,28,28,0.4)] transition-transform duration-500 hover:scale-105">
+
+    <div id="school-branding" class="flex items-center justify-center gap-8" style="display: none;">
+        <img id="school-logo-1" src="images/panther-logo1.png" class="h-16 w-auto opacity-90 object-contain">
         
-        <div id="school-branding" class="school-section" style="display: none;">
-            <img id="school-logo-1" src="images/panther-logo1.png" class="school-logo-primary">
-            <div id="school-name-display" class="school-name">Fairbanks High School</div>
-            <img id="school-logo-2" src="images/panther-logo2.png" class="school-logo-secondary">
+        <div class="flex items-center">
+            <div class="h-8 w-[2px] bg-red-700"></div>
+            <h2 id="school-name-display" class="text-3xl font-black italic uppercase tracking-tighter text-white px-6">
+                Fairbanks High School
+            </h2>
+            <div class="h-8 w-[2px] bg-red-700"></div>
         </div>
-    </header>
+
+        <img id="school-logo-2" src="images/panther-logo2.png" class="h-16 w-auto opacity-90 object-contain">
+    </div>
+</header>
 
     <div class="container">
         <div id="auth-section">
