@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE KITCHEN | RACKSTAT</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: var(--rackstat-black); color: white; }
+        .stat-card { background: var(--rackstat-gray); border-radius: 1rem; padding: 1rem; text-align: center; border: 1px solid var(--rackstat-border); }
+        .progress-container { background: #334155; border-radius: 20px; height: 14px; width: 100%; overflow: hidden; margin: 10px 0; border: 1px solid #475569; }
+        #progress-fill { background: linear-gradient(90deg, #22c55e, #16a34a); height: 100%; width: 0%; transition: width 0.8s ease-in-out; }
+        input, select, textarea { 
+            background-color: #000 !important; color: white !important; 
+            border: 1px solid var(--rackstat-border) !important; padding: 0.75rem !important; 
+            border-radius: 4px !important; width: 100%; margin-bottom: 0.75rem; 
+        }
+    </style>
+</head>
+<body class="pb-20">
+
+    <header class="brand-header">
+        <img id="school-logo" src="images/rackstat-logo.png" alt="School Logo" class="rackstat-logo">
+        <h1 class="text-2xl font-black italic uppercase tracking-tighter text-white">THE <span class="text-orange-500">KITCHEN</span></h1>
+        <button onclick="location.href='board.html'" class="btn-primary text-[10px] py-2 w-auto px-6">← Back to Board</button>
+    </header>
+
+    <div class="max-w-md mx-auto px-4 py-8 space-y-6">
+        
+        <div class="bg-green-900/10 border border-green-700/30 p-5 rounded-2xl shadow-xl">
+            <div class="flex justify-between items-center mb-4">
+                <span class="text-[10px] font-black uppercase text-green-500 italic tracking-widest">Daily Fuel Progress</span>
+                <button onclick="setCalorieGoal()" class="text-[9px] bg-green-700 px-3 py-1 rounded-full font-black uppercase">Set Target</button>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 mb-4">
+                <div class="stat-card">
+                    <p class="text-[8px] text-gray-500 uppercase font-bold">Current</p>
+                    <p id="day-cal" class="text-xl font-black">0</p>
+                </div>
+                <div class="stat-card border-green-500/50">
+                    <p class="text-[8px] text-green-500 uppercase font-bold">Target</p>
+                    <p id="target-display" class="text-xl font-black text-green-400">---</p>
+                </div>
+                <div class="stat-card">
+                    <p class="text-[8px] text-gray-500 uppercase font-bold">Protein</p>
+                    <p id="day-pro" class="text-xl font-black text-red-500">0g</p>
+                </div>
+            </div>
+
+            <div class="progress-container"><div id="progress-fill"></div></div>
+            <p id="progress-text" class="text-[9px] text-center text-gray-400 font-bold uppercase tracking-tighter mt-1">Target Not Set</p>
+        </div>
+
+        <section class="bg-[#1a1a1c] p-6 rounded-2xl border border-[#2a2a2c] shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="font-black uppercase italic text-blue-400 tracking-tight">Update Weight</h2>
+                <div class="text-right">
+                    <p class="text-[8px] uppercase font-bold text-gray-500">Last Recorded</p>
+                    <p id="last-weight-display" class="text-xs font-black text-white">-- lbs</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <input id="quick-weight" type="number" placeholder="Lbs" class="flex-1">
+                <button onclick="saveQuickWeight()" class="bg-blue-700 hover:bg-blue-600 px-6 rounded-xl font-black uppercase text-xs transition-all active:scale-95">Update</button>
+            </div>
+        </section>
+
+        <section class="bg-[#1a1a1c] p-6 rounded-2xl border border-[#2a2a2c] shadow-2xl">
+            <h2 class="text-center font-black uppercase italic text-green-500 mb-6 tracking-tight">Log Your Fuel</h2>
+            
+            <label class="text-[9px] uppercase font-bold text-gray-400 ml-1">Entry Date</label>
+            <input id="entry-date" type="date">
+
+            <select id="meal-type">
+                <option value="Breakfast">Breakfast</option>
+                <option value="Lunch">Lunch</option>
+                <option value="Dinner">Dinner</option>
+                <option value="Snack">Snack/Shake</option>
+            </select>
+
+            <div class="grid grid-cols-2 gap-2">
+                <input id="calories" type="number" placeholder="Calories">
+                <input id="protein" type="number" placeholder="Protein (g)">
+            </div>
+            
+            <textarea id="meal-desc" placeholder="What did you eat?" rows="2"></textarea>
+            
+            <button onclick="saveMeal()" class="w-full bg-green-600 hover:bg-green-700 py-4 rounded-xl font-black uppercase shadow-lg transition-all active:scale-95">Record Meal</button>
+        </section>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // Production Config
+        const firebaseConfig = { 
+            apiKey: "AIzaSyBOQFeokKaNQKwaUhXMCA0oEm4W9G0qafE", 
+            authDomain: "rackstat-production.firebaseapp.com", 
+            projectId: "rackstat-production",
+            storageBucket: "rackstat-production.firebasestorage.app",
+            messagingSenderId: "345003825117",
+            appId: "1:345003825117:web:2ad86b1902dfdebe0c8834"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        let userGoal = 0;
+
+        document.getElementById('entry-date').valueAsDate = new Date();
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const snap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+                if(snap.exists()) {
+                    const data = snap.data();
+                    userGoal = data.dailyCalorieGoal || 0;
+                    document.getElementById('target-display').innerText = userGoal || '---';
+                    
+                    // Dynamic branding
+                    const schoolSnap = await getDoc(doc(db, "schools", data.school_id));
+                    if(schoolSnap.exists()) {
+                        document.getElementById('school-logo').src = schoolSnap.data().logo_primary;
+                    }
+
+                    updateDailyTotals();
+                    fetchLastWeight();
+                }
+            } else { location.href = 'index.html'; }
+        });
+
+        async function fetchLastWeight() {
+            const weightQuery = query(
+                collection(db, "recruiting_profiles", auth.currentUser.uid, "maxes"),
+                orderBy("timestamp", "desc"),
+                limit(1)
+            );
+            const querySnapshot = await getDocs(weightQuery);
+            const display = document.getElementById('last-weight-display');
+            if (!querySnapshot.empty) {
+                const lastData = querySnapshot.docs[0].data();
+                display.innerText = lastData.bodyWeight ? `${lastData.bodyWeight} lbs` : "-- lbs";
+            }
+        }
+
+        window.saveQuickWeight = async () => {
+            const bw = document.getElementById('quick-weight').value;
+            if(!bw) return alert("Enter weight");
+
+            const q = query(collection(db, "recruiting_profiles", auth.currentUser.uid, "maxes"), orderBy("timestamp", "desc"), limit(1));
+            const snap = await getDocs(q);
+            
+            let lastData = {};
+            if(!snap.empty) { lastData = snap.docs[0].data(); }
+
+            await addDoc(collection(db, "recruiting_profiles", auth.currentUser.uid, "maxes"), {
+                ...lastData,
+                bodyWeight: Number(bw),
+                timestamp: Date.now(),
+                isWeightOnly: true
+            });
+            alert("Weight Updated!");
+            location.reload();
+        };
+
+        window.setCalorieGoal = async () => {
+            const goal = prompt("Enter your daily calorie target:", userGoal || 3000);
+            if(goal && !isNaN(goal)) {
+                await updateDoc(doc(db, "recruiting_profiles", auth.currentUser.uid), { dailyCalorieGoal: Number(goal) });
+                location.reload();
+            }
+        };
+
+        async function updateDailyTotals() {
+            const todayStr = new Date().toLocaleDateString();
+            const q = query(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), where("date", "==", todayStr));
+            const snap = await getDocs(q);
+            
+            let c = 0, p = 0;
+            snap.forEach(d => {
+                c += Number(d.data().calories || 0);
+                p += Number(d.data().protein || 0);
+            });
+
+            document.getElementById('day-cal').innerText = c;
+            document.getElementById('day-pro').innerText = p + "g";
+
+            if(userGoal > 0) {
+                let perc = Math.min((c / userGoal) * 100, 100);
+                document.getElementById('progress-fill').style.width = perc + "%";
+                document.getElementById('progress-text').innerText = `${Math.round(perc)}% OF DAILY FUEL TARGET REACHED`;
+            }
+        }
+
+        window.saveMeal = async () => {
+            const selectedDate = document.getElementById('entry-date').value;
+            const dateObj = new Date(selectedDate);
+            dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
+            const dateStr = dateObj.toLocaleDateString();
+
+            await addDoc(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), {
+                mealType: document.getElementById('meal-type').value,
+                calories: Number(document.getElementById('calories').value) || 0,
+                protein: Number(document.getElementById('protein').value) || 0,
+                description: document.getElementById('meal-desc').value || "",
+                date: dateStr,
+                timestamp: serverTimestamp()
+            });
+
+            alert("Meal Logged!");
+            location.reload();
+        };
+    </script>
+</body>
+</html>

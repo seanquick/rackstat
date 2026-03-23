@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE RACK | RACKSTAT</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: var(--rackstat-black); color: white; }
+        .max-card { 
+            background: var(--rackstat-gray); 
+            border-radius: 1rem; 
+            padding: 1rem; 
+            text-align: center; 
+            border-bottom: 4px solid var(--rackstat-red); 
+        }
+        input { 
+            background-color: #000 !important; 
+            color: white !important; 
+            border: 1px solid var(--rackstat-border) !important; 
+            padding: 0.75rem !important; 
+            border-radius: 4px !important; 
+            width: 100%; 
+            margin-bottom: 0.75rem; 
+        }
+    </style>
+</head>
+<body class="font-sans pb-20">
+
+    <header class="brand-header">
+        <img id="school-logo" src="images/rackstat-logo.png" alt="School Logo" class="rackstat-logo">
+        <h1 class="text-2xl font-black italic uppercase tracking-tighter text-white">THE <span class="text-red-600">RACK</span></h1>
+        <button onclick="location.href='board.html'" class="btn-primary text-[10px] py-2 w-auto px-6">← Back to Board</button>
+    </header>
+
+    <div class="max-w-md mx-auto px-4 space-y-6 mt-8">
+        
+        <section>
+            <p id="school-tag" class="text-[10px] font-black uppercase text-gray-500 mb-3 italic tracking-widest text-center">Loading Weightroom...</p>
+            <div class="grid grid-cols-3 gap-2" id="maxes-display">
+                </div>
+            <div class="max-card mt-2 border-blue-600 w-full">
+                <p class="text-[8px] uppercase text-blue-400">Board Score</p>
+                <p id="view-total" class="text-2xl font-black text-blue-400">0</p>
+            </div>
+        </section>
+
+        <section class="bg-[#1a1a1c] p-6 rounded-2xl border border-[#2a2a2c] shadow-2xl">
+            <h2 class="text-center font-black uppercase italic text-red-600 mb-6 tracking-tight">Lock In Your Numbers</h2>
+            
+            <div class="form-group">
+                <label class="text-[9px] uppercase font-bold text-gray-400 ml-1">Current Bodyweight</label>
+                <input id="bodyWeight" type="number" placeholder="Lbs (Required for Index)">
+            </div>
+
+            <div id="dynamic-inputs" class="grid grid-cols-2 gap-2">
+                </div>
+
+            <button id="save-btn" onclick="saveMaxes()" class="btn-primary mt-4">Log New Maxes</button>
+        </section>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, collection, addDoc, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // Using your Production Config
+        const firebaseConfig = { 
+            apiKey: "AIzaSyBOQFeokKaNQKwaUhXMCA0oEm4W9G0qafE", 
+            authDomain: "rackstat-production.firebaseapp.com", 
+            projectId: "rackstat-production",
+            storageBucket: "rackstat-production.firebasestorage.app",
+            messagingSenderId: "345003825117",
+            appId: "1:345003825117:web:2ad86b1902dfdebe0c8834"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let schoolPrefs = null;
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const profileSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+                if (profileSnap.exists()) {
+                    const schoolId = profileSnap.data().school_id;
+                    await fetchSchoolData(schoolId);
+                    loadCurrentMaxes(user.uid);
+                }
+            } else { location.href = 'index.html'; }
+        });
+
+        async function fetchSchoolData(schoolId) {
+            const schoolSnap = await getDoc(doc(db, "schools", schoolId));
+            if (schoolSnap.exists()) {
+                const data = schoolSnap.data();
+                schoolPrefs = data.preferences;
+                document.getElementById('school-tag').innerText = `${data.name} PRs`;
+                document.getElementById('school-logo').src = data.logo_primary;
+
+                // Build Inputs dynamically
+                const container = document.getElementById('dynamic-inputs');
+                schoolPrefs.tracked_lifts.forEach(lift => {
+                    container.innerHTML += `
+                        <div>
+                            <label class="text-[9px] uppercase font-bold text-gray-400 ml-1">${lift}</label>
+                            <input id="input-${lift}" type="number" placeholder="Lbs" class="lift-entry">
+                        </div>`;
+                });
+            }
+        }
+
+        async function loadCurrentMaxes(uid) {
+            const q = query(collection(db, "recruiting_profiles", uid, "maxes"), orderBy("timestamp", "desc"), limit(1));
+            const snap = await getDocs(q);
+            const display = document.getElementById('maxes-display');
+            display.innerHTML = '';
+
+            if(!snap.empty) {
+                const data = snap.docs[0].data();
+                let totalLifts = 0;
+
+                schoolPrefs.tracked_lifts.forEach(lift => {
+                    const val = data[lift] || 0;
+                    totalLifts += val;
+                    display.innerHTML += `
+                        <div class="max-card">
+                            <p class="text-[8px] uppercase text-gray-400">${lift}</p>
+                            <p class="text-xl font-black">${val}</p>
+                        </div>`;
+                });
+
+                // Calculate Score based on formula type
+                let finalScore = totalLifts;
+                if (schoolPrefs.formula_type === "power_index") {
+                    const bw = data.bodyWeight || 0;
+                    finalScore = totalLifts - (Math.min(bw, 200) * 4);
+                }
+                document.getElementById('view-total').innerText = Math.round(finalScore);
+                document.getElementById('bodyWeight').value = data.bodyWeight || '';
+            }
+        }
+
+        window.saveMaxes = async () => {
+            const saveBtn = document.getElementById('save-btn');
+            saveBtn.disabled = true;
+            saveBtn.innerText = "UPDATING...";
+
+            const newMax = {
+                timestamp: Date.now(),
+                bodyWeight: Number(document.getElementById('bodyWeight').value) || 0
+            };
+
+            // Grab all dynamic values
+            schoolPrefs.tracked_lifts.forEach(lift => {
+                const val = document.getElementById(`input-${lift}`).value;
+                newMax[lift] = Number(val) || 0;
+            });
+
+            try {
+                await addDoc(collection(db, "recruiting_profiles", auth.currentUser.uid, "maxes"), newMax);
+                alert("Stats Locked In!");
+                location.reload();
+            } catch (e) {
+                alert("Error saving: " + e.message);
+                saveBtn.disabled = false;
+            }
+        };
+    </script>
+</body>
+</html>

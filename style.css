@@ -21,17 +21,18 @@ body {
 /* --- BRANDING HEADER --- */
 .brand-header {
     background: linear-gradient(to bottom, #000, var(--rackstat-black));
-    padding: 20px;
-    border-bottom: 1px solid var(--rackstat-border);
+    padding: 40px 20px; /* Increased padding for the larger logos */
+    border-bottom: 2px solid var(--rackstat-border);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 15px;
+    gap: 30px;
 }
 
 .rackstat-logo {
-    height: 300px; /* Consistent height for main logo */
+    height: 180px; /* Scaled down from 300px to prevent massive scrolling */
     width: auto;
+    filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.1));
 }
 
 /* --- SCHOOL IDENTITY SECTION --- */
@@ -39,31 +40,35 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 25px; /* Spacing between logos and text */
-    padding: 10px;
+    gap: 40px; 
+    padding: 20px;
     width: 100%;
+    flex-wrap: wrap; /* Ensures it looks good on phones */
 }
 
 .school-logo-primary, 
 .school-logo-secondary {
-    height: 200px;     /* Set a professional fixed height */
-    width: auto;      /* Maintain aspect ratio */
+    height: 140px;    /* Scaled from 200px for better vertical balance */
+    width: auto;
     object-fit: contain;
-    filter: drop-shadow(0 0 10px rgba(185, 28, 28, 0.2)); /* Subtle red glow */
+    filter: drop-shadow(0 0 15px rgba(185, 28, 28, 0.4));
 }
 
 .school-name {
-    font-size: 3rem;
+    font-size: 2.5rem; /* Slightly reduced from 3rem to keep it on one line */
     font-weight: 900;
     text-transform: uppercase;
     font-style: italic;
-    letter-spacing: 2px;
+    letter-spacing: 3px;
     color: #ffffff;
     text-align: center;
-    border-left: 2px solid var(--rackstat-red);
-    border-right: 2px solid var(--rackstat-red);
-    padding: 0 15px;
+    border-left: 4px solid var(--rackstat-red);
+    border-right: 4px solid var(--rackstat-red);
+    padding: 0 25px;
+    line-height: 1;
 }
+
+/* Rest of your CSS remains the same... */
 
 /* --- CONTAINERS & FORMS --- */
 .container {
