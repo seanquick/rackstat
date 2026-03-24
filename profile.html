@@ -60,15 +60,61 @@
         </section>
 
         <section class="profile-card">
-            <h2 class="text-red-600 font-black uppercase italic mb-4">Recruiting Essentials</h2>
-            <div class="grid grid-cols-2 gap-4 mb-4">
-                <div><label>Height</label><input id="height" placeholder="6'2"></div>
-                <div><label>Weight (LBS)</label><input id="weight" type="number"></div>
-                <div class="col-span-2"><label>GPA</label><input id="gpa" type="number" step="0.01"></div>
+            <h2 class="text-red-600 font-black uppercase italic mb-6">Recruiting Essentials</h2>
+            
+            <div class="mb-6">
+                <label class="text-[10px] font-black uppercase tracking-widest text-gray-500">Athlete Full Name</label>
+                <input id="full-name" type="text" placeholder="First & Last Name" 
+                       class="w-full bg-transparent border-b-2 border-gray-800 py-2 focus:border-red-600 outline-none font-black uppercase italic text-lg transition-all">
             </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div><label>SAT Score</label><input id="sat" type="number" placeholder="Total"></div>
-                <div><label>ACT Score</label><input id="act" type="number" placeholder="Composite"></div>
+
+            <div class="grid grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label class="text-[10px] font-black uppercase tracking-widest text-gray-500">Height</label>
+                    <input id="height" placeholder="6'2" class="w-full bg-transparent border-b border-gray-800 py-1 focus:border-red-600 outline-none">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase tracking-widest text-gray-500">Weight (LBS)</label>
+                    <input id="weight" type="number" placeholder="215" class="w-full bg-transparent border-b border-gray-800 py-1 focus:border-red-600 outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label class="text-[10px] font-black uppercase tracking-widest text-red-900/50">Offense (Prim / Sec)</label>
+                    <div class="flex gap-2">
+                        <input id="off-primary" placeholder="QB" class="w-1/2 bg-transparent border-b border-gray-800 py-1 focus:border-red-600 outline-none text-sm font-bold uppercase">
+                        <input id="off-secondary" placeholder="WR" class="w-1/2 bg-transparent border-b border-gray-800 py-1 focus:border-red-600 outline-none text-sm font-bold uppercase">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase tracking-widest text-red-900/50">Defense (Prim / Sec)</label>
+                    <div class="flex gap-2">
+                        <input id="def-primary" placeholder="LB" class="w-1/2 bg-transparent border-b border-gray-800 py-1 focus:border-red-600 outline-none text-sm font-bold uppercase">
+                        <input id="def-secondary" placeholder="S" class="w-1/2 bg-transparent border-b border-gray-800 py-1 focus:border-red-600 outline-none text-sm font-bold uppercase">
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-6 mb-6">
+                <div>
+                    <label class="text-[10px] font-black uppercase tracking-widest text-gray-500">GPA</label>
+                    <input id="gpa" type="number" step="0.01" placeholder="4.0" class="w-full bg-transparent border-b border-gray-800 py-1 focus:border-red-600 outline-none">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase tracking-widest text-gray-500">SAT</label>
+                    <input id="sat" type="number" placeholder="Total" class="w-full bg-transparent border-b border-gray-800 py-1 focus:border-red-600 outline-none">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase tracking-widest text-gray-500">ACT</label>
+                    <input id="act" type="number" placeholder="Comp" class="w-full bg-transparent border-b border-gray-800 py-1 focus:border-red-600 outline-none">
+                </div>
+            </div>
+
+            <div>
+                <label class="text-[10px] font-black uppercase tracking-widest text-gray-500">Character Statement / Quote</label>
+                <textarea id="character-statement" rows="3" placeholder="I am a leader in the weightroom and a student of the game..." 
+                          class="w-full bg-black/40 border border-gray-800 rounded p-3 mt-2 text-sm italic focus:border-red-600 outline-none text-gray-300"></textarea>
             </div>
         </section>
 
@@ -130,51 +176,60 @@
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const snap = await getDoc(doc(db, "recruiting_profiles", user.uid));
-                if (snap.exists()) {
+                if(snap.exists()) {
                     const data = snap.data();
                     
-                    // Populate Basic Info Fields
+                    // 1. Identity & Positions
+                    document.getElementById('full-name').value = data.fullName || '';
+                    document.getElementById('off-primary').value = data.offPrimary || '';
+                    document.getElementById('off-secondary').value = data.offSecondary || '';
+                    document.getElementById('def-primary').value = data.defPrimary || '';
+                    document.getElementById('def-secondary').value = data.defSecondary || '';
+                    
+                    // 2. Physical & Academic Stats
                     document.getElementById('height').value = data.height || '';
                     document.getElementById('weight').value = data.weight || '';
                     document.getElementById('gpa').value = data.gpa || '';
                     document.getElementById('sat').value = data.sat || '';
                     document.getElementById('act').value = data.act || '';
+                    
+                    // 3. Character Statement
+                    document.getElementById('character-statement').value = data.statement || '';
+                    
+                    // 4. Recruiting Links
                     document.getElementById('hudl-link').value = data.hudlLink || '';
                     document.getElementById('twitter-link').value = data.twitterLink || '';
                     document.getElementById('youtube-link').value = data.youtubeLink || '';
                     document.getElementById('other-link').value = data.otherLink || '';
                     
-                    // Set current goals from database
+                    // 5. Load School-Specific Lifts for the Goal Modal
                     currentGoals = data.goals || [];
                     
-                    // DYNAMIC SCHOOL CONFIGURATION
-                    // Ensure your recruiting_profiles document has: schoolId: "fairbanks_hs"
                     const schoolId = data.schoolId || data.school_id; 
-                    
-                    if (schoolId) {
+                    if(schoolId) {
                         const schoolSnap = await getDoc(doc(db, "schools", schoolId));
-                        if (schoolSnap.exists()) {
+                        if(schoolSnap.exists()){
                             const sData = schoolSnap.data();
                             const select = document.getElementById('goal-category');
                             
-                            // Pulling directly from the trackedLifts array we just created
+                            // Uses the trackedLifts array you created in the console
                             const lifts = sData.trackedLifts || ['bench', 'squat', 'clean'];
                             
-                            // Clear and rebuild the select to ensure only school-approved lifts appear
                             select.innerHTML = lifts.map(l => {
                                 const display = l.replace('_', ' ').toUpperCase();
                                 return `<option value="${l}">${display}</option>`;
                             }).join('');
                         }
                     }
-                    
-                    // Render the goals onto the UI
+
+                    // 6. Final Render of Goal Progress Bars
                     renderGoals(user.uid, currentGoals);
                 }
             } else { 
                 location.href = 'index.html'; 
             }
         });
+
     async function renderGoals(uid, goals) {
         const container = document.getElementById('goals-container');
         
@@ -296,20 +351,36 @@
             
             try {
                 await updateDoc(doc(db, "recruiting_profiles", user.uid), {
+                    // New Identity and Position Fields
+                    fullName: document.getElementById('full-name').value,
+                    offPrimary: document.getElementById('off-primary').value,
+                    offSecondary: document.getElementById('off-secondary').value,
+                    defPrimary: document.getElementById('def-primary').value,
+                    defSecondary: document.getElementById('def-secondary').value,
+                    
+                    // Stats and Academics
                     height: document.getElementById('height').value,
                     weight: Number(document.getElementById('weight').value),
                     gpa: Number(document.getElementById('gpa').value),
                     sat: document.getElementById('sat').value,
                     act: document.getElementById('act').value,
+                    
+                    // Character Statement
+                    statement: document.getElementById('character-statement').value,
+                    
+                    // Social Media Links
                     hudlLink: document.getElementById('hudl-link').value,
                     twitterLink: document.getElementById('twitter-link').value,
                     youtubeLink: document.getElementById('youtube-link').value,
                     otherLink: document.getElementById('other-link').value
                 });
+                
                 btn.innerText = "PROFILE SAVED!";
             } catch (e) {
+                console.error("Save Error:", e);
                 btn.innerText = "ERROR SAVING";
             }
+            
             setTimeout(() => { btn.innerText = originalText; }, 2000);
         };
 
