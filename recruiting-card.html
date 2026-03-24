@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recruiting Card | RACKSTAT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #000000; color: #ffffff; font-family: sans-serif; }
+        .stat-card { background: #111111; border: 1px solid #222222; padding: 1.25rem; border-radius: 1rem; }
+        .label { font-size: 0.6rem; font-weight: 900; text-transform: uppercase; color: #b91c1c; letter-spacing: 0.1em; margin-bottom: 2px; }
+        .value { font-size: 1.15rem; font-weight: 900; font-style: italic; text-transform: uppercase; }
+        .section-header { border-left: 4px solid #b91c1c; padding-left: 1rem; margin: 2rem 0 1rem 0; font-weight: 900; text-transform: uppercase; font-style: italic; font-size: 1.1rem; }
+        
+        /* Goal Progress Bars */
+        .goal-bar-bg { background: #222; height: 8px; border-radius: 4px; margin-top: 8px; overflow: hidden; border: 1px solid #333; }
+        .goal-bar-fill { background: #b91c1c; height: 100%; transition: width 1s ease-in-out; }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; color: black !important; padding: 0 !important; }
+            .stat-card { border: 1px solid #ddd !important; background: white !important; color: black !important; }
+            .section-header { color: black !important; border-left: 4px solid #b91c1c !important; }
+            .value { color: black !important; }
+            .label { color: #b91c1c !important; }
+        }
+    </style>
+</head>
+<body class="pb-20">
+
+    <header class="bg-black border-b-2 border-red-700 p-4 sticky top-0 z-50 no-print">
+        <div class="flex justify-between items-center max-w-5xl mx-auto">
+            <button onclick="history.back()" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1.5 rounded text-gray-400 hover:text-white transition-all">
+                ← Back
+            </button>
+            
+            <div class="flex items-center gap-5">
+                <img id="school-logo-header" src="images/panther-logo1.png" alt="School" class="h-8 w-auto">
+                <div class="h-6 w-[1px] bg-gray-800"></div>
+                <span id="header-school-name" class="text-xs font-black italic uppercase tracking-widest text-white">FAIRBANKS</span>
+                <div class="h-6 w-[1px] bg-gray-800"></div>
+                <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-8 w-auto">
+            </div>
+
+            <button onclick="window.print()" class="text-[10px] font-black uppercase bg-red-700 px-3 py-1.5 rounded text-white shadow-lg">
+                PDF / Print
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto p-6">
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="stat-card text-center"><p class="label">Athlete Name</p><p id="card-name" class="value">---</p></div>
+                <div class="stat-card text-center"><p class="label">Grad Year</p><p id="card-class" class="value">---</p></div>
+                <div class="stat-card text-center"><p class="label">HT / WT</p><p id="card-htwt" class="value">---</p></div>
+                <div class="stat-card text-center"><p class="label">Position</p><p id="card-pos" class="value">---</p></div>
+            </div>
+
+            <h2 class="section-header">Media & Highlights</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <a id="link-hudl" href="#" target="_blank" class="stat-card text-center hover:border-red-600">
+                    <p class="label">Film</p><p class="text-[10px] font-black">HUDL →</p>
+                </a>
+                <a id="link-twitter" href="#" target="_blank" class="stat-card text-center hover:border-blue-500">
+                    <p class="label">Twitter</p><p class="text-[10px] font-black italic">@VIEW →</p>
+                </a>
+                <a id="link-youtube" href="#" target="_blank" class="stat-card text-center hover:border-red-500">
+                    <p class="label">YouTube</p><p class="text-[10px] font-black">WATCH →</p>
+                </a>
+                <a id="link-other" href="#" target="_blank" class="stat-card text-center hover:border-gray-500">
+                    <p class="label">Other</p><p class="text-[10px] font-black uppercase">LINK →</p>
+                </a>
+            </div>
+
+            <h2 class="section-header text-green-500">Performance Tracking</h2>
+            <div id="goals-display" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <p class="text-xs text-gray-500 italic">No specific goals shared on public card.</p>
+            </div>
+
+            <h2 class="section-header">Academic Profile</h2>
+            <div class="stat-card">
+                <div class="grid grid-cols-3 md:grid-cols-3 gap-6">
+                    <div><p class="label">Cumulative GPA</p><p id="card-gpa" class="value text-2xl">---</p></div>
+                    <div><p class="label">SAT Score</p><p id="card-sat" class="value">---</p></div>
+                    <div><p class="label">ACT Score</p><p id="card-act" class="value">---</p></div>
+                </div>
+            </div>
+
+            <h2 class="section-header">Character Statement</h2>
+            <div class="stat-card bg-red-900/10 border-red-900/30">
+                <p id="card-statement" class="text-sm italic leading-relaxed text-gray-300">"Athlete has not provided a personal statement."</p>
+            </div>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        // Your RACKSTAT Production Config
+        const firebaseConfig = { 
+            apiKey: "AIzaSyBOQFeokKaNQKwaUhXMCA0oEm4W9G0qafE", 
+            authDomain: "rackstat-production.firebaseapp.com", 
+            projectId: "rackstat-production",
+            appId: "1:345003825117:web:2ad86b1902dfdebe0c8834"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const targetUid = urlParams.get('uid') || user.uid; 
+
+                const docRef = doc(db, "recruiting_profiles", targetUid);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    
+                    // Basic Info
+                    document.getElementById('card-name').innerText = data.fullName || "---";
+                    document.getElementById('card-class').innerText = data.gradYear || "---";
+                    document.getElementById('card-htwt').innerText = `${data.height || '--'} / ${data.weight || '--'}`;
+                    document.getElementById('card-pos').innerText = data.primaryPos || "---";
+                    
+                    // Socials
+                    const setupLink = (id, url) => {
+                        const el = document.getElementById(id);
+                        if(url) { el.href = url; el.style.opacity = "1"; }
+                        else { el.style.opacity = "0.2"; el.style.pointerEvents = "none"; }
+                    };
+                    setupLink('link-hudl', data.hudlLink);
+                    setupLink('link-twitter', data.twitterLink);
+                    setupLink('link-youtube', data.youtubeLink);
+                    setupLink('link-other', data.otherLink);
+
+                    // Academics
+                    document.getElementById('card-gpa').innerText = data.gpa || "---";
+                    document.getElementById('card-sat').innerText = data.sat || "---";
+                    document.getElementById('card-act').innerText = data.act || "---";
+
+                    // Statement
+                    if(data.statement) document.getElementById('card-statement').innerText = `"${data.statement}"`;
+
+                    // Performance & Progress Bars
+                    const q = query(collection(db, "recruiting_profiles", targetUid, "maxes"), orderBy("timestamp", "desc"), limit(1));
+                    const maxSnap = await getDocs(q);
+                    const latestStats = !maxSnap.empty ? maxSnap.docs[0].data() : {};
+
+                    if(data.goals && data.goals.length > 0) {
+                        const goalBox = document.getElementById('goals-display');
+                        goalBox.innerHTML = "";
+                        data.goals.forEach(goal => {
+                            const current = latestStats[goal.type] || 0;
+                            const pct = Math.min((current / goal.target) * 100, 100);
+                            goalBox.innerHTML += `
+                                <div class="stat-card">
+                                    <div class="flex justify-between items-end">
+                                        <div><p class="label">${goal.type}</p><p class="text-sm font-black italic">${goal.target} LB GOAL</p></div>
+                                        <div class="text-right"><p class="text-[9px] text-gray-500">Current: ${current}</p><p class="text-xs font-black text-red-600">${Math.round(pct)}%</p></div>
+                                    </div>
+                                    <div class="goal-bar-bg"><div class="goal-bar-fill" style="width: ${pct}%"></div></div>
+                                </div>
+                            `;
+                        });
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
