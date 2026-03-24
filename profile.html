@@ -82,9 +82,14 @@
             </div>
         </section>
 
-        <button onclick="saveProfile()" id="save-btn" class="w-full py-4 font-black italic uppercase bg-red-700 rounded-lg hover:bg-red-600 transition-all shadow-lg shadow-red-900/20">
-            Save Recruiting Card
-        </button>
+        <div class="space-y-3">
+            <button onclick="saveProfile()" id="save-btn" class="w-full py-4 font-black italic uppercase bg-red-700 rounded-lg hover:bg-red-600 transition-all shadow-lg shadow-red-900/20">
+                Save Recruiting Card
+            </button>
+            <button onclick="viewCard()" class="w-full py-4 font-black italic uppercase bg-gray-900 border border-gray-700 rounded-lg hover:bg-gray-800 transition-all text-gray-300">
+                View My Recruiting Card →
+            </button>
+        </div>
     </div>
 
     <div id="goal-modal" class="fixed inset-0 bg-black/95 backdrop-blur-md hidden flex items-center justify-center p-6 z-50">
@@ -93,7 +98,7 @@
             <label>Category</label>
             <select id="goal-category" class="mb-4">
                 <option value="bodyWeight">Body Weight</option>
-                </select>
+            </select>
             <label>Target Weight (LBS)</label>
             <input id="goal-target" type="number" class="mb-6">
             <div class="flex gap-2">
@@ -159,21 +164,31 @@
 
         async function renderGoals(uid, goals) {
             const container = document.getElementById('goals-container');
-            if (goals.length > 0) container.innerHTML = '';
+            if (!goals || goals.length === 0) {
+                container.innerHTML = '<p class="text-center text-[10px] text-gray-600 uppercase font-bold py-4 italic">No goals active</p>';
+                return;
+            }
             
+            container.innerHTML = '';
+            
+            // Fetch latest maxes to calculate progress
             const q = query(collection(db, "recruiting_profiles", uid, "maxes"), orderBy("timestamp", "desc"), limit(1));
             const maxSnap = await getDocs(q);
             const latestStats = !maxSnap.empty ? maxSnap.docs[0].data() : {};
 
-            goals.forEach(goal => {
+            goals.forEach((goal, index) => {
                 const currentVal = Number(latestStats[goal.type]) || 0;
-                const progress = Math.min((currentVal / goal.target) * 100, 100);
+                const progress = goal.target > 0 ? Math.min((currentVal / goal.target) * 100, 100) : 0;
+                const displayName = goal.type.replace('_', ' ').replace(/([A-Z])/g, ' $1').trim();
                 
                 container.innerHTML += `
-                    <div class="animate-fade-in">
+                    <div class="animate-fade-in group">
                         <div class="flex justify-between items-end mb-1">
                             <div>
-                                <p class="text-[10px] font-black text-gray-500 uppercase tracking-wider">${goal.type.replace('_', ' ')}</p>
+                                <div class="flex items-center gap-2">
+                                    <p class="text-[10px] font-black text-gray-500 uppercase tracking-wider">${displayName}</p>
+                                    <button onclick="removeGoal(${index})" class="text-[9px] text-red-900 opacity-0 group-hover:opacity-100 transition-opacity font-bold uppercase">[Remove]</button>
+                                </div>
                                 <p class="text-lg font-black italic uppercase leading-none">${goal.target} LBS</p>
                             </div>
                             <div class="text-right">
@@ -186,6 +201,20 @@
                 `;
             });
         }
+
+        window.viewCard = () => {
+            const user = auth.currentUser;
+            if(user) {
+                window.location.href = `recruiting-card.html?uid=${user.uid}`;
+            }
+        };
+
+        window.removeGoal = async (index) => {
+            if(!confirm("Remove this goal?")) return;
+            currentGoals.splice(index, 1);
+            await updateDoc(doc(db, "recruiting_profiles", auth.currentUser.uid), { goals: currentGoals });
+            renderGoals(auth.currentUser.uid, currentGoals);
+        };
 
         window.saveProfile = async () => {
             const user = auth.currentUser;
@@ -220,11 +249,14 @@
             const target = Number(document.getElementById('goal-target').value);
             if(!target) return;
 
+            // Update local state and Firebase
             const updatedGoals = currentGoals.filter(g => g.type !== type);
             updatedGoals.push({ type, target });
 
             await updateDoc(doc(db, "recruiting_profiles", auth.currentUser.uid), { goals: updatedGoals });
-            location.reload();
+            currentGoals = updatedGoals;
+            renderGoals(auth.currentUser.uid, currentGoals);
+            closeGoalModal();
         };
     </script>
 </body>
