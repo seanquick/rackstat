@@ -130,8 +130,10 @@
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const snap = await getDoc(doc(db, "recruiting_profiles", user.uid));
-                if(snap.exists()) {
+                if (snap.exists()) {
                     const data = snap.data();
+                    
+                    // Populate Basic Info Fields
                     document.getElementById('height').value = data.height || '';
                     document.getElementById('weight').value = data.weight || '';
                     document.getElementById('gpa').value = data.gpa || '';
@@ -142,26 +144,37 @@
                     document.getElementById('youtube-link').value = data.youtubeLink || '';
                     document.getElementById('other-link').value = data.otherLink || '';
                     
+                    // Set current goals from database
                     currentGoals = data.goals || [];
                     
-                    if(data.school_id) {
-                        const schoolSnap = await getDoc(doc(db, "schools", data.school_id));
-                        if(schoolSnap.exists()){
+                    // DYNAMIC SCHOOL CONFIGURATION
+                    // Ensure your recruiting_profiles document has: schoolId: "fairbanks_hs"
+                    const schoolId = data.schoolId || data.school_id; 
+                    
+                    if (schoolId) {
+                        const schoolSnap = await getDoc(doc(db, "schools", schoolId));
+                        if (schoolSnap.exists()) {
                             const sData = schoolSnap.data();
                             const select = document.getElementById('goal-category');
-                            const lifts = sData.preferences?.tracked_lifts || ['bench', 'squat', 'clean'];
-                            lifts.forEach(l => {
-                                if (![...select.options].some(opt => opt.value === l)) {
-                                    select.innerHTML += `<option value="${l}">${l.toUpperCase()}</option>`;
-                                }
-                            });
+                            
+                            // Pulling directly from the trackedLifts array we just created
+                            const lifts = sData.trackedLifts || ['bench', 'squat', 'clean'];
+                            
+                            // Clear and rebuild the select to ensure only school-approved lifts appear
+                            select.innerHTML = lifts.map(l => {
+                                const display = l.replace('_', ' ').toUpperCase();
+                                return `<option value="${l}">${display}</option>`;
+                            }).join('');
                         }
                     }
+                    
+                    // Render the goals onto the UI
                     renderGoals(user.uid, currentGoals);
                 }
-            } else { location.href = 'index.html'; }
+            } else { 
+                location.href = 'index.html'; 
+            }
         });
-
     async function renderGoals(uid, goals) {
         const container = document.getElementById('goals-container');
         
@@ -244,6 +257,23 @@
         });
     }
 
+    async function loadSchoolLifts(schoolId) {
+        const schoolRef = doc(db, "schools", schoolId);
+        const schoolSnap = await getDoc(schoolRef);
+
+        if (schoolSnap.exists()) {
+            const data = schoolSnap.data();
+            const lifts = data.trackedLifts || [];
+            const select = document.getElementById('goal-category');
+            
+            // Clear the existing dropdown and map the new lifts
+            select.innerHTML = lifts.map(lift => {
+                // Pretty format: "push_press" -> "PUSH PRESS"
+                const display = lift.replace('_', ' ').toUpperCase();
+                return `<option value="${lift}">${display}</option>`;
+            }).join('');
+        }
+    }
         window.viewCard = () => {
             const user = auth.currentUser;
             if(user) {
