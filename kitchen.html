@@ -7,106 +7,229 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: var(--rackstat-black); color: white; }
-        .stat-card { background: var(--rackstat-gray); border-radius: 1rem; padding: 1rem; text-align: center; border: 1px solid var(--rackstat-border); }
-        .progress-container { background: #334155; border-radius: 20px; height: 14px; width: 100%; overflow: hidden; margin: 10px 0; border: 1px solid #475569; }
-        #progress-fill { background: linear-gradient(90deg, #22c55e, #16a34a); height: 100%; width: 0%; transition: width 0.8s ease-in-out; }
+        body { background-color: #000; color: white; font-family: 'Inter', sans-serif; }
+        .stat-card { background: #1a1a1c; border-radius: 1rem; padding: 0.75rem; text-align: center; border: 1px solid #2a2a2c; }
+        .progress-container { background: #334155; border-radius: 20px; height: 10px; width: 100%; overflow: hidden; margin: 8px 0; border: 1px solid #475569; }
+        .fill-green { background: linear-gradient(90deg, #22c55e, #16a34a); height: 100%; width: 0%; transition: width 0.5s ease; }
+        .fill-red { background: linear-gradient(90deg, #ef4444, #b91c1c); height: 100%; width: 0%; transition: width 0.5s ease; }
         input, select, textarea { 
-            background-color: #000 !important; color: white !important; 
-            border: 1px solid var(--rackstat-border) !important; padding: 0.75rem !important; 
-            border-radius: 4px !important; width: 100%; margin-bottom: 0.75rem; 
+            background-color: #0c0c0e !important; color: white !important; 
+            border: 1px solid #2a2a2c !important; padding: 0.75rem !important; 
+            border-radius: 8px !important; width: 100%; margin-bottom: 0.75rem; 
         }
     </style>
 </head>
-<body class="pb-20">
+<body class="pb-24">
 
     <header class="bg-black border-b-2 border-red-700 p-4 sticky top-0 z-50">
         <div class="flex justify-between items-center max-w-5xl mx-auto">
-            <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1.5 rounded text-gray-400 hover:text-white transition-all">
-                ← Lobby
-            </button>
-            
+            <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1.5 rounded text-gray-400 hover:text-white transition-all">← Lobby</button>
             <div class="flex items-center gap-5">
-                <img id="school-logo" src="images/panther-logo1.png" alt="School" class="h-10 w-auto">
-                
-                <div class="h-6 w-[1px] bg-gray-800"></div>
-                
-                <span class="text-sm font-black italic uppercase tracking-[0.15em] text-white">
-                    FAIRBANKS
-                </span>
-                
-                <div class="h-6 w-[1px] bg-gray-800"></div>
-                
-                <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-10 w-auto">
+                <img id="school-logo" src="images/panther-logo1.png" alt="School" class="h-8 w-auto">
+                <span class="text-xs font-black italic uppercase tracking-widest text-white">THE KITCHEN</span>
+                <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-8 w-auto">
             </div>
-
-            <div class="w-[65px]"></div>
+            <div class="w-[40px]"></div>
         </div>
     </header>
 
-    <div class="max-w-md mx-auto px-4 py-8 space-y-6">
+    <div class="max-w-md mx-auto px-4 py-6 space-y-6">
         
-        <div class="bg-green-900/10 border border-green-700/30 p-5 rounded-2xl shadow-xl">
-            <div class="flex justify-between items-center mb-4">
-                <span class="text-[10px] font-black uppercase text-green-500 italic tracking-widest">Daily Fuel Progress</span>
-                <button onclick="setCalorieGoal()" class="text-[9px] bg-green-700 px-3 py-1 rounded-full font-black uppercase">Set Target</button>
+        <div class="bg-[#111] border border-gray-800 p-5 rounded-2xl shadow-xl">
+            <div id="streak-container" class="hidden flex items-center justify-center gap-2 mb-4 bg-orange-500/10 border border-orange-500/30 p-2 rounded-lg w-fit mx-auto">
+                <span class="text-sm">🔥</span>
+                <span id="streak-count" class="text-[10px] font-black text-orange-500 uppercase italic tracking-tighter">0 DAY STREAK</span>
             </div>
 
-            <div class="grid grid-cols-3 gap-2 mb-4">
-                <div class="stat-card">
-                    <p class="text-[8px] text-gray-500 uppercase font-bold">Current</p>
-                    <p id="day-cal" class="text-xl font-black">0</p>
+            <div class="flex justify-between items-end mb-4">
+                <div>
+                    <span class="text-[10px] font-black uppercase text-green-500 italic tracking-widest">Macro Command Center</span>
+                    <h2 id="display-date-label" class="text-xs font-bold text-gray-400 uppercase">Today</h2>
                 </div>
-                <div class="stat-card border-green-500/50">
-                    <p class="text-[8px] text-green-500 uppercase font-bold">Target</p>
-                    <p id="target-display" class="text-xl font-black text-green-400">---</p>
+                <button onclick="setTargets()" class="text-[9px] bg-white text-black px-3 py-1 rounded font-black uppercase hover:bg-gray-200">Set Targets</button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div class="stat-card border-green-900/50">
+                    <p class="text-[9px] text-green-500 uppercase font-bold">Calories</p>
+                    <p class="text-xl font-black"><span id="day-cal">0</span> <span class="text-[10px] text-gray-500">/ <span id="target-cal-display">0</span></span></p>
+                    <div class="progress-container"><div id="cal-fill" class="fill-green"></div></div>
                 </div>
-                <div class="stat-card">
-                    <p class="text-[8px] text-gray-500 uppercase font-bold">Protein</p>
-                    <p id="day-pro" class="text-xl font-black text-red-500">0g</p>
+                <div class="stat-card border-red-900/50">
+                    <p class="text-[9px] text-red-500 uppercase font-bold">Protein</p>
+                    <p class="text-xl font-black"><span id="day-pro">0</span>g <span class="text-[10px] text-gray-500">/ <span id="target-pro-display">0</span>g</span></p>
+                    <div class="progress-container"><div id="pro-fill" class="fill-red"></div></div>
                 </div>
             </div>
 
-            <div class="progress-container"><div id="progress-fill"></div></div>
-            <p id="progress-text" class="text-[9px] text-center text-gray-400 font-bold uppercase tracking-tighter mt-1">Target Not Set</p>
+            <div class="grid grid-cols-3 gap-2">
+                <div class="stat-card bg-black">
+                    <p class="text-[8px] text-gray-500 uppercase">Carbs</p>
+                    <p id="day-carb" class="text-sm font-black text-blue-400">0g</p>
+                </div>
+                <div class="stat-card bg-black">
+                    <p class="text-[8px] text-gray-500 uppercase">Fats</p>
+                    <p id="day-fat" class="text-sm font-black text-yellow-500">0g</p>
+                </div>
+                <div class="stat-card bg-black border-blue-500/30">
+                    <p class="text-[8px] text-blue-400 uppercase">Water</p>
+                    <p id="day-water" class="text-sm font-black text-white">0 Cups</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+            <section class="bg-[#1a1a1c] p-4 rounded-2xl border border-blue-900/30">
+                <h2 class="text-[10px] font-black uppercase italic text-blue-400 mb-3">Add Water</h2>
+                <div class="flex gap-2">
+                    <button onclick="addWater(1)" class="flex-1 bg-blue-900/40 border border-blue-500/50 py-2 rounded font-black text-xs">+1</button>
+                    <button onclick="addWater(4)" class="flex-1 bg-blue-900/40 border border-blue-500/50 py-2 rounded font-black text-xs">+4</button>
+                </div>
+            </section>
+            
+            <section class="bg-[#1a1a1c] p-4 rounded-2xl border border-gray-800">
+                <div class="flex justify-between items-center mb-1">
+                    <h2 class="text-[10px] font-black uppercase italic text-white">Body Weight</h2>
+                    <span id="last-weight-display" class="text-[10px] font-bold text-gray-500">-- lbs</span>
+                </div>
+                <div class="flex gap-1">
+                    <input id="quick-weight" type="number" placeholder="Lbs" class="!m-0 !py-1 text-sm">
+                    <button onclick="saveQuickWeight()" class="bg-white text-black px-3 rounded font-black uppercase text-[9px]">Fix</button>
+                </div>
+            </section>
         </div>
 
         <section class="bg-[#1a1a1c] p-6 rounded-2xl border border-[#2a2a2c] shadow-2xl">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="font-black uppercase italic text-blue-400 tracking-tight">Update Weight</h2>
-                <div class="text-right">
-                    <p class="text-[8px] uppercase font-bold text-gray-500">Last Recorded</p>
-                    <p id="last-weight-display" class="text-xs font-black text-white">-- lbs</p>
-                </div>
-            </div>
-            <div class="flex gap-2">
-                <input id="quick-weight" type="number" placeholder="Lbs" class="flex-1">
-                <button onclick="saveQuickWeight()" class="bg-blue-700 hover:bg-blue-600 px-6 rounded-xl font-black uppercase text-xs transition-all active:scale-95">Update</button>
-            </div>
-        </section>
-
-        <section class="bg-[#1a1a1c] p-6 rounded-2xl border border-[#2a2a2c] shadow-2xl">
-            <h2 class="text-center font-black uppercase italic text-green-500 mb-6 tracking-tight">Log Your Fuel</h2>
+            <h2 class="text-center font-black uppercase italic text-green-500 mb-6 tracking-tight">Log Fuel Entry</h2>
             
-            <label class="text-[9px] uppercase font-bold text-gray-400 ml-1">Entry Date</label>
-            <input id="entry-date" type="date">
+            <label class="text-[9px] uppercase font-bold text-gray-400 ml-1">Entry Date (Select if logging previous day)</label>
+            <input id="entry-date" type="date" onchange="updateDailyTotals()">
 
             <select id="meal-type">
                 <option value="Breakfast">Breakfast</option>
                 <option value="Lunch">Lunch</option>
                 <option value="Dinner">Dinner</option>
-                <option value="Snack">Snack/Shake</option>
+                <option value="Snack">Snack / Shake</option>
             </select>
 
             <div class="grid grid-cols-2 gap-2">
-                <input id="calories" type="number" placeholder="Calories">
-                <input id="protein" type="number" placeholder="Protein (g)">
+                <div>
+                    <label class="text-[8px] uppercase font-bold text-gray-500 ml-1">Calories</label>
+                    <input id="calories" type="number" placeholder="0">
+                </div>
+                <div>
+                    <label class="text-[8px] uppercase font-bold text-gray-500 ml-1">Protein (g)</label>
+                    <input id="protein" type="number" placeholder="0">
+                </div>
+                <div>
+                    <label class="text-[8px] uppercase font-bold text-gray-500 ml-1">Carbs (g)</label>
+                    <input id="carbs" type="number" placeholder="0">
+                </div>
+                <div>
+                    <label class="text-[8px] uppercase font-bold text-gray-500 ml-1">Fats (g)</label>
+                    <input id="fats" type="number" placeholder="0">
+                </div>
             </div>
             
             <textarea id="meal-desc" placeholder="What did you eat?" rows="2"></textarea>
             
-            <button onclick="saveMeal()" class="w-full bg-green-600 hover:bg-green-700 py-4 rounded-xl font-black uppercase shadow-lg transition-all active:scale-95">Record Meal</button>
+            <button onclick="saveMeal()" id="log-btn" class="w-full bg-green-600 hover:bg-green-700 py-4 rounded-xl font-black uppercase shadow-lg transition-all active:scale-95">Record Meal</button>
         </section>
+
+        <section class="bg-[#111] p-6 rounded-2xl border border-gray-800 shadow-2xl mt-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="font-black uppercase italic text-gray-400 tracking-tight text-sm">Recent Fuel Log</h2>
+                <span class="text-[9px] text-gray-600 font-bold uppercase">Last 5 Entries</span>
+            </div>
+            
+            <div id="history-list" class="space-y-3">
+                <p class="text-[10px] text-gray-600 italic text-center py-4">Loading history...</p>
+            </div>
+        </section>
+
+        <div class="max-w-md mx-auto px-4 pb-8">
+            <button onclick="showWeeklySummary()" class="w-full bg-gray-900 border border-gray-700 text-gray-400 py-3 rounded-xl font-black uppercase text-xs hover:text-white transition-all">
+                View 7-Day Performance Report
+            </button>
+        </div>
+
+        <div id="weekly-modal" class="hidden fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4">
+            <div class="bg-[#1a1a1c] border border-gray-800 w-full max-w-sm rounded-3xl p-6 relative overflow-y-auto max-h-[90vh]">
+                <button onclick="closeWeekly()" class="absolute top-4 right-4 text-gray-500 hover:text-white">✕</button>
+                
+                <div class="flex justify-between items-start mb-1">
+                    <h2 class="text-xl font-black uppercase italic text-green-500">Weekly Report</h2>
+                    <div class="bg-orange-500/10 border border-orange-500/30 px-2 py-1 rounded flex items-center gap-1">
+                        <span class="text-[10px]">🔥</span>
+                        <span id="pb-streak-display" class="text-[9px] font-black text-orange-500 uppercase">PB: 0</span>
+                    </div>
+                </div>
+                <p class="text-[10px] text-gray-500 uppercase font-bold mb-6 tracking-widest text-left">Last 7 Days Consistency</p>
+
+                <div class="space-y-4">
+                    <div class="bg-black p-4 rounded-xl border border-gray-800">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[10px] font-bold text-gray-400 uppercase">Avg Calories</span>
+                            <span id="avg-cal-val" class="text-lg font-black text-white">0</span>
+                        </div>
+                        <div class="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
+                            <div id="avg-cal-bar" class="h-full bg-green-500 transition-all duration-1000" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-black p-4 rounded-xl border border-gray-800">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[10px] font-bold text-gray-400 uppercase">Avg Protein</span>
+                            <span id="avg-pro-val" class="text-lg font-black text-white">0g</span>
+                        </div>
+                        <div class="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
+                            <div id="avg-pro-bar" class="h-full bg-red-500 transition-all duration-1000" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="bg-black p-3 rounded-xl border border-gray-800">
+                            <p class="text-[8px] font-bold text-gray-500 uppercase">Total Water</p>
+                            <p id="total-water-val" class="text-sm font-black text-blue-400">0 Cups</p>
+                        </div>
+                        <div class="bg-black p-3 rounded-xl border border-gray-800">
+                            <p class="text-[8px] font-bold text-gray-500 uppercase">Avg Weight</p>
+                            <p id="avg-weight-val" class="text-sm font-black text-white">-- lbs</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-black p-4 rounded-xl border border-gray-800">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase mb-4 text-center">Weekly Macro Distribution</p>
+                        <div class="flex items-center justify-around">
+                            <div id="macro-pie" class="w-20 h-20 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)]" 
+                                style="background: conic-gradient(#ef4444 0% 33%, #3b82f6 33% 66%, #eab308 66% 100%);">
+                            </div>
+                            
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2 text-[9px] font-black uppercase">
+                                    <div class="w-2 h-2 bg-red-500 rounded-full"></div> Protein: <span id="pie-pro-pct">0%</span>
+                                </div>
+                                <div class="flex items-center gap-2 text-[9px] font-black uppercase">
+                                    <div class="w-2 h-2 bg-blue-500 rounded-full"></div> Carbs: <span id="pie-carb-pct">0%</span>
+                                </div>
+                                <div class="flex items-center gap-2 text-[9px] font-black uppercase">
+                                    <div class="w-2 h-2 bg-yellow-500 rounded-full"></div> Fats: <span id="pie-fat-pct">0%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="coach-insight" class="mt-4 p-3 bg-[#111] rounded-lg border-l-2 border-green-500">
+                            <p class="text-[8px] font-black text-green-500 uppercase mb-1">Coach's Insight</p>
+                            <p id="insight-text" class="text-[10px] italic text-gray-400 leading-tight">
+                                Gathering data to analyze your fuel performance...
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="closeWeekly()" class="w-full mt-6 bg-white text-black py-4 rounded-xl font-black uppercase text-xs shadow-lg active:scale-95 transition-all">Back to Kitchen</button>
+            </div>
+        </div>
     </div>
 
     <script type="module">
@@ -114,7 +237,6 @@
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // Production Config
         const firebaseConfig = { 
             apiKey: "AIzaSyBOQFeokKaNQKwaUhXMCA0oEm4W9G0qafE", 
             authDomain: "rackstat-production.firebaseapp.com", 
@@ -127,111 +249,402 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        let userGoal = 0;
+        
+        let calGoal = 0;
+        let proGoal = 0;
 
         document.getElementById('entry-date').valueAsDate = new Date();
 
         onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                const snap = await getDoc(doc(db, "recruiting_profiles", user.uid));
-                if(snap.exists()) {
-                    const data = snap.data();
-                    userGoal = data.dailyCalorieGoal || 0;
-                    document.getElementById('target-display').innerText = userGoal || '---';
-                    
-                    // Dynamic branding
-                    const schoolSnap = await getDoc(doc(db, "schools", data.school_id));
-                    if(schoolSnap.exists()) {
-                        document.getElementById('school-logo').src = schoolSnap.data().logo_primary;
+                    if (user) {
+                        const snap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+                        if(snap.exists()) {
+                            const data = snap.data();
+                            calGoal = data.dailyCalorieGoal || 0;
+                            proGoal = data.dailyProteinGoal || 0;
+                            
+                            document.getElementById('target-cal-display').innerText = calGoal;
+                            document.getElementById('target-pro-display').innerText = proGoal;
+
+                            // 1. Run the daily math
+                            updateDailyTotals();
+                            
+                            // 2. Load the bottom history list
+                            fetchMealHistory();
+                            
+                            // 3. Calculate the "Fire" streak
+                            updateStreak();
+                            
+                            // 4. Show the last weigh-in
+                            fetchLastWeight();
+                        }
+                    } else { 
+                        location.href = 'index.html'; 
                     }
+                });
 
-                    updateDailyTotals();
-                    fetchLastWeight();
-                }
-            } else { location.href = 'index.html'; }
-        });
+        async function updateStreak() {
+            const streakContainer = document.getElementById('streak-container');
+            const streakCountLabel = document.getElementById('streak-count');
 
-        async function fetchLastWeight() {
-            const weightQuery = query(
-                collection(db, "recruiting_profiles", auth.currentUser.uid, "maxes"),
-                orderBy("timestamp", "desc"),
-                limit(1)
+            // Fetch all meals for this user, ordered by timestamp
+            const q = query(
+                collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"),
+                orderBy("date", "desc")
             );
-            const querySnapshot = await getDocs(weightQuery);
-            const display = document.getElementById('last-weight-display');
-            if (!querySnapshot.empty) {
-                const lastData = querySnapshot.docs[0].data();
-                display.innerText = lastData.bodyWeight ? `${lastData.bodyWeight} lbs` : "-- lbs";
+
+            const snap = await getDocs(q);
+            if (snap.empty) return;
+
+            // Create a unique set of dates that have entries
+            const loggedDates = new Set();
+            snap.forEach(doc => loggedDates.add(doc.data().date));
+
+            const sortedDates = Array.from(loggedDates).map(d => new Date(d)).sort((a, b) => b - a);
+            
+            let streak = 0;
+            let today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            let checkDate = new Date(today);
+
+            // Check if they logged today or yesterday to keep the streak alive
+            const lastLog = sortedDates[0];
+            const diffInDays = Math.floor((today - lastLog) / (1000 * 60 * 60 * 24));
+
+            if (diffInDays > 1) {
+                // Streak is broken (more than 1 day since last log)
+                streak = 0;
+            } else {
+                // Start counting backwards from the most recent log
+                for (let i = 0; i < sortedDates.length; i++) {
+                    const logDate = sortedDates[i];
+                    const expectedDate = new Date(lastLog);
+                    expectedDate.setDate(lastLog.getDate() - i);
+
+                    if (logDate.toLocaleDateString() === expectedDate.toLocaleDateString()) {
+                        streak++;
+                    } else {
+                        break; // Gap found, streak ends
+                    }
+                }
+            }
+
+            if (streak > 0) {
+                streakContainer.classList.remove('hidden');
+                streakCountLabel.innerText = `${streak} DAY STREAK`;
+            } else {
+                streakContainer.classList.add('hidden');
+            }
+        }
+        // RE-CALCULATE TOTALS BASED ON SELECTED DATE
+        async function updateDailyTotals() {
+            const selectedDate = document.getElementById('entry-date').value;
+            const dateObj = new Date(selectedDate);
+            // Fix for timezone offset to ensure the date matches the picker
+            dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
+            const dateStr = dateObj.toLocaleDateString();
+            
+            // UI Label update
+            const todayStr = new Date().toLocaleDateString();
+            document.getElementById('display-date-label').innerText = (dateStr === todayStr) ? "Today's Progress" : dateStr;
+
+            const q = query(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), where("date", "==", dateStr));
+            const snap = await getDocs(q);
+            
+            let c = 0, p = 0, carb = 0, fat = 0, water = 0;
+            
+            snap.forEach(d => {
+                const m = d.data();
+                if(m.mealType === 'Water') {
+                    water += Number(m.cups || 0);
+                } else {
+                    c += Number(m.calories || 0);
+                    p += Number(m.protein || 0);
+                    carb += Number(m.carbs || 0);
+                    fat += Number(m.fats || 0);
+                }
+            });
+
+            // Update Text
+            document.getElementById('day-cal').innerText = c;
+            document.getElementById('day-pro').innerText = p;
+            document.getElementById('day-carb').innerText = carb + "g";
+            document.getElementById('day-fat').innerText = fat + "g";
+            document.getElementById('day-water').innerText = water + " Cups";
+
+            // Update Bars
+            if(calGoal > 0) {
+                let cPerc = Math.min((c / calGoal) * 100, 100);
+                document.getElementById('cal-fill').style.width = cPerc + "%";
+            }
+            if(proGoal > 0) {
+                let pPerc = Math.min((p / proGoal) * 100, 100);
+                document.getElementById('pro-fill').style.width = pPerc + "%";
             }
         }
 
-        window.saveQuickWeight = async () => {
-            const bw = document.getElementById('quick-weight').value;
-            if(!bw) return alert("Enter weight");
-
-            const q = query(collection(db, "recruiting_profiles", auth.currentUser.uid, "maxes"), orderBy("timestamp", "desc"), limit(1));
-            const snap = await getDocs(q);
+        window.setTargets = async () => {
+            const newCal = prompt("Daily Calorie Target:", calGoal || 3000);
+            const newPro = prompt("Daily Protein Target (g):", proGoal || 200);
             
-            let lastData = {};
-            if(!snap.empty) { lastData = snap.docs[0].data(); }
-
-            await addDoc(collection(db, "recruiting_profiles", auth.currentUser.uid, "maxes"), {
-                ...lastData,
-                bodyWeight: Number(bw),
-                timestamp: Date.now(),
-                isWeightOnly: true
-            });
-            alert("Weight Updated!");
-            location.reload();
-        };
-
-        window.setCalorieGoal = async () => {
-            const goal = prompt("Enter your daily calorie target:", userGoal || 3000);
-            if(goal && !isNaN(goal)) {
-                await updateDoc(doc(db, "recruiting_profiles", auth.currentUser.uid), { dailyCalorieGoal: Number(goal) });
+            if(newCal && newPro) {
+                await updateDoc(doc(db, "recruiting_profiles", auth.currentUser.uid), { 
+                    dailyCalorieGoal: Number(newCal),
+                    dailyProteinGoal: Number(newPro)
+                });
                 location.reload();
             }
         };
 
-        async function updateDailyTotals() {
-            const todayStr = new Date().toLocaleDateString();
-            const q = query(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), where("date", "==", todayStr));
-            const snap = await getDocs(q);
-            
-            let c = 0, p = 0;
-            snap.forEach(d => {
-                c += Number(d.data().calories || 0);
-                p += Number(d.data().protein || 0);
-            });
-
-            document.getElementById('day-cal').innerText = c;
-            document.getElementById('day-pro').innerText = p + "g";
-
-            if(userGoal > 0) {
-                let perc = Math.min((c / userGoal) * 100, 100);
-                document.getElementById('progress-fill').style.width = perc + "%";
-                document.getElementById('progress-text').innerText = `${Math.round(perc)}% OF DAILY FUEL TARGET REACHED`;
-            }
-        }
-
-        window.saveMeal = async () => {
+        window.addWater = async (cups) => {
             const selectedDate = document.getElementById('entry-date').value;
             const dateObj = new Date(selectedDate);
             dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
             const dateStr = dateObj.toLocaleDateString();
 
             await addDoc(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), {
-                mealType: document.getElementById('meal-type').value,
-                calories: Number(document.getElementById('calories').value) || 0,
-                protein: Number(document.getElementById('protein').value) || 0,
-                description: document.getElementById('meal-desc').value || "",
+                mealType: 'Water',
+                cups: Number(cups),
                 date: dateStr,
                 timestamp: serverTimestamp()
             });
+            updateDailyTotals();
+        };
 
-            alert("Meal Logged!");
+        window.saveMeal = async () => {
+            const btn = document.getElementById('log-btn');
+            btn.disabled = true;
+            btn.innerText = "RECORDING...";
+
+            const selectedDate = document.getElementById('entry-date').value;
+            const dateObj = new Date(selectedDate);
+            dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
+            const dateStr = dateObj.toLocaleDateString();
+
+            try {
+                await addDoc(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), {
+                    mealType: document.getElementById('meal-type').value,
+                    calories: Number(document.getElementById('calories').value) || 0,
+                    protein: Number(document.getElementById('protein').value) || 0,
+                    carbs: Number(document.getElementById('carbs').value) || 0,
+                    fats: Number(document.getElementById('fats').value) || 0,
+                    description: document.getElementById('meal-desc').value || "",
+                    date: dateStr,
+                    timestamp: serverTimestamp()
+                });
+                
+                // Reset form fields
+                document.getElementById('calories').value = '';
+                document.getElementById('protein').value = '';
+                document.getElementById('carbs').value = '';
+                document.getElementById('fats').value = '';
+                document.getElementById('meal-desc').value = '';
+                
+                btn.disabled = false;
+                btn.innerText = "RECORD MEAL";
+                updateDailyTotals();
+                alert("Fuel Recorded!");
+            } catch(e) {
+                alert("Error: " + e.message);
+                btn.disabled = false;
+            }
+        };
+
+        // Standard Utility Functions
+        async function fetchLastWeight() {
+            const q = query(collection(db, "recruiting_profiles", auth.currentUser.uid, "maxes"), orderBy("timestamp", "desc"), limit(1));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                document.getElementById('last-weight-display').innerText = snap.docs[0].data().bodyWeight + " lbs";
+            }
+        }
+
+        window.saveQuickWeight = async () => {
+            const bw = document.getElementById('quick-weight').value;
+            if(!bw) return;
+            const q = query(collection(db, "recruiting_profiles", auth.currentUser.uid, "maxes"), orderBy("timestamp", "desc"), limit(1));
+            const snap = await getDocs(q);
+            let lastData = snap.empty ? {} : snap.docs[0].data();
+            await addDoc(collection(db, "recruiting_profiles", auth.currentUser.uid, "maxes"), {
+                ...lastData,
+                bodyWeight: Number(bw),
+                timestamp: Date.now()
+            });
             location.reload();
         };
+
+        // 1. FETCH AND RENDER HISTORY
+        async function fetchMealHistory() {
+            const historyContainer = document.getElementById('history-list');
+            const selectedDate = document.getElementById('entry-date').value;
+            const dateObj = new Date(selectedDate);
+            dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
+            const dateStr = dateObj.toLocaleDateString();
+
+            const q = query(
+                collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"),
+                where("date", "==", dateStr),
+                orderBy("timestamp", "desc"),
+                limit(5)
+            );
+
+            const snap = await getDocs(q);
+            historyContainer.innerHTML = ''; // Clear loading text
+
+            if (snap.empty) {
+                historyContainer.innerHTML = `<p class="text-[10px] text-gray-600 italic text-center py-4">No entries for this date.</p>`;
+                return;
+            }
+
+            snap.forEach(docSnap => {
+                const meal = docSnap.data();
+                const id = docSnap.id;
+                
+                const div = document.createElement('div');
+                div.className = "bg-black border border-gray-800 p-3 rounded-lg flex justify-between items-center";
+                
+                // Handle display for Water vs Food
+                const isWater = meal.mealType === 'Water';
+                const title = isWater ? `💧 ${meal.cups} Cups Water` : `🍴 ${meal.mealType}`;
+                const subtitle = isWater ? "" : `<span class="text-green-500">${meal.calories}cal</span> • <span class="text-red-500">${meal.protein}g P</span>`;
+
+                div.innerHTML = `
+                    <div>
+                        <p class="text-[11px] font-black uppercase text-white">${title}</p>
+                        <p class="text-[9px] font-bold text-gray-500 uppercase">${subtitle}</p>
+                    </div>
+                    <button onclick="deleteMeal('${id}')" class="text-gray-700 hover:text-red-500 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                `;
+                historyContainer.appendChild(div);
+            });
+        }
+
+        // 2. DELETE ENTRY
+        window.deleteMeal = async (id) => {
+            if (!confirm("Remove this entry?")) return;
+            
+            try {
+                const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+                await deleteDoc(doc(db, "recruiting_profiles", auth.currentUser.uid, "meals", id));
+                
+                // Refresh everything
+                updateDailyTotals();
+                fetchMealHistory();
+            } catch (e) {
+                console.error("Delete error:", e);
+                alert("Could not delete entry.");
+            }
+        };
+
+        window.showWeeklySummary = async () => {
+            const modal = document.getElementById('weekly-modal');
+            modal.classList.remove('hidden');
+
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+            // Fetch meals from last 7 days
+            const q = query(
+                collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"),
+                where("timestamp", ">=", sevenDaysAgo)
+            );
+
+            const snap = await getDocs(q);
+            
+            let totalCals = 0, totalPro = 0, totalCarb = 0, totalFat = 0, totalWater = 0;
+            let daysActive = new Set();
+
+            snap.forEach(doc => {
+                const d = doc.data();
+                daysActive.add(d.date);
+                if(d.mealType === 'Water') {
+                    totalWater += Number(d.cups || 0);
+                } else {
+                    totalCals += Number(d.calories || 0);
+                    totalPro += Number(d.protein || 0);
+                    totalCarb += Number(d.carbs || 0);
+                    totalFat += Number(d.fats || 0);
+                }
+            });
+
+            const divisor = daysActive.size || 1;
+            const avgCal = Math.round(totalCals / divisor);
+            const avgPro = Math.round(totalPro / divisor);
+            const avgCarb = Math.round(totalCarb / divisor);
+            const avgFat = Math.round(totalFat / divisor);
+
+            // 1. Update Basic UI Values
+            document.getElementById('avg-cal-val').innerText = avgCal;
+            document.getElementById('avg-pro-val').innerText = avgPro + "g";
+            document.getElementById('total-water-val').innerText = totalWater + " Cups";
+
+            // 2. Update Progress Bars
+            if(calGoal > 0) {
+                const calWidth = Math.min((avgCal / calGoal) * 100, 100);
+                document.getElementById('avg-cal-bar').style.width = calWidth + "%";
+            }
+            if(proGoal > 0) {
+                const proWidth = Math.min((avgPro / proGoal) * 100, 100);
+                document.getElementById('avg-pro-bar').style.width = proWidth + "%";
+            }
+
+            // 3. Macro Pie Chart Logic
+            const totalGrams = avgPro + avgCarb + avgFat || 1;
+            const pPct = Math.round((avgPro / totalGrams) * 100);
+            const cPct = Math.round((avgCarb / totalGrams) * 100);
+            const fPct = Math.round((avgFat / totalGrams) * 100);
+
+            document.getElementById('pie-pro-pct').innerText = pPct + "%";
+            document.getElementById('pie-carb-pct').innerText = cPct + "%";
+            document.getElementById('pie-fat-pct').innerText = fPct + "%";
+
+            const pie = document.getElementById('macro-pie');
+            pie.style.background = `conic-gradient(
+                #ef4444 0% ${pPct}%, 
+                #3b82f6 ${pPct}% ${pPct + cPct}%, 
+                #eab308 ${pPct + cPct}% 100%
+            )`;
+
+            // 4. Fetch Body Weight for Coach's Insight
+            const weightText = document.getElementById('last-weight-display').innerText;
+            const currentWeight = parseFloat(weightText) || 0;
+            document.getElementById('avg-weight-val').innerText = currentWeight > 0 ? currentWeight + " lbs" : "-- lbs";
+
+            let insight = "";
+            if (currentWeight > 0) {
+                const proPerLb = avgPro / currentWeight;
+                if (proPerLb < 0.8) {
+                    insight = "You're averaging " + proPerLb.toFixed(1) + "g protein/lb. Increase intake to at least 0.8g to prevent muscle breakdown during training.";
+                } else if (proPerLb > 1.3) {
+                    insight = "High protein efficiency (" + proPerLb.toFixed(1) + "g/lb). Ensure you're also hitting your carb targets for explosive energy.";
+                } else {
+                    insight = "Optimal protein intake (" + proPerLb.toFixed(1) + "g/lb). You are fueling correctly for recovery and growth. Keep this pace.";
+                }
+            } else {
+                insight = "Record your body weight in the Kitchen to unlock personalized macro-ratio insights.";
+            }
+            document.getElementById('insight-text').innerText = insight;
+
+            // 5. Fetch PB Streak from User Profile
+            const profileSnap = await getDoc(doc(db, "recruiting_profiles", auth.currentUser.uid));
+            if (profileSnap.exists()) {
+                const pb = profileSnap.data().maxKitchenStreak || 0;
+                document.getElementById('pb-streak-display').innerText = "PB: " + pb;
+            }
+        };
+
+        window.closeWeekly = () => {
+            document.getElementById('weekly-modal').classList.add('hidden');
+        };
+
+        // Attach function to global scope for date picker trigger
+        window.updateDailyTotals = updateDailyTotals;
+
     </script>
 </body>
 </html>
