@@ -246,35 +246,66 @@
             saveBtn.disabled = true;
             saveBtn.innerText = "UPDATING...";
 
-            const bodyWeight = Number(document.getElementById('bodyWeight').value) || 0;
-            const newMax = {
-                timestamp: Date.now(),
-                bodyWeight: bodyWeight
-            };
-
-            schoolPrefs.tracked_lifts.forEach(lift => {
-                const val = document.getElementById(`input-${lift}`).value;
-                newMax[lift] = Number(val) || 0;
-            });
-
             try {
-                // 1. Save History
-                await addDoc(collection(db, "recruiting_profiles", user.uid, "maxes"), newMax);
+                // 1. Fetch current profile to get "Last Known" values
+                const profileRef = doc(db, "recruiting_profiles", user.uid);
+                const profileSnap = await getDoc(profileRef);
+                const currentData = profileSnap.exists() ? profileSnap.data() : {};
 
-                // 2. Propagate to Main Profile
-                await updateDoc(doc(db, "recruiting_profiles", user.uid), {
-                    ...newMax,
-                    weight: bodyWeight,
-                    boardScore: Math.round(finalScore) // ADD THIS LINE
+                // 2. Handle Body Weight (Use input OR fallback to DB)
+                const weightInput = document.getElementById('bodyWeight').value;
+                const bodyWeight = weightInput ? Number(weightInput) : (currentData.weight || 0);
+
+                // 3. Prepare the New Max object with merged data
+                const newMax = {
+                    timestamp: Date.now(),
+                    bodyWeight: bodyWeight
+                };
+
+                // Loop through school-specific lifts
+                schoolPrefs.tracked_lifts.forEach(lift => {
+                    const inputField = document.getElementById(`input-${lift}`);
+                    const val = inputField ? inputField.value : "";
+                    
+                    // If input is empty, use database value; otherwise use new input
+                    if (val !== "") {
+                        newMax[lift] = Number(val);
+                    } else {
+                        newMax[lift] = currentData[lift] || 0;
+                    }
                 });
 
-                // 3. Goal check
-                await checkGoalAchievement(newMax);
+                // 4. RE-CALCULATE SCORE using the merged data
+                // This ensures the Board Score doesn't drop to 0 if they skip a lift input
+                let totalLifted = 0;
+                schoolPrefs.tracked_lifts.forEach(lift => {
+                    totalLifted += (newMax[lift] || 0);
+                });
+
+                // Your formula: (Total Lifts / Body Weight) * 100
+                const calculatedScore = bodyWeight > 0 ? (totalLifted / bodyWeight) * 100 : 0;
+
+                // 5. Save History Entry
+                await addDoc(collection(db, "recruiting_profiles", user.uid, "maxes"), newMax);
+
+                // 6. Propagate to Main Profile
+                await updateDoc(profileRef, {
+                    ...newMax,
+                    weight: bodyWeight,
+                    boardScore: Math.round(calculatedScore),
+                    lastUpdated: Date.now() // Adds the current timestamp
+                });
+
+                // 7. Goal check (if exists)
+                if (typeof checkGoalAchievement === "function") {
+                    await checkGoalAchievement(newMax);
+                }
 
                 alert("Stats Synchronized Successfully!");
                 location.reload();
+
             } catch (e) {
-                console.error(e);
+                console.error("Save Error:", e);
                 alert("Error saving: " + e.message);
                 saveBtn.disabled = false;
                 saveBtn.innerText = "LOG NEW MAXES";
