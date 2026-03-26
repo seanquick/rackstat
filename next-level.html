@@ -105,41 +105,51 @@
     </form>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+            // 1. Pull the config from your central file
+            import { firebaseConfig } from './firebase-config.js';
 
-        // CONFIG (Replace with your RACKSTAT Project Config)
-        const firebaseConfig = { 
-            apiKey: "AIzaSyBdY26nH0CAn05IpjzoFvG5E1H-bv8fPwA", 
-            authDomain: "panthertracker-b8ff6.firebaseapp.com", 
-            projectId: "panthertracker-b8ff6", 
-            appId: "1:647881105335:web:bbb79bb3fe9740de1e1232" 
-        };
+            // 2. Pull the tools from Google's servers
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+            import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+            import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
+            // 3. Initialize using the imported config
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+            const auth = getAuth(app);
+            
+            // ... rest of your code ...
 
         let currentUser = null;
 
-        onAuthStateChanged(auth, async (user) => { 
-            if (user) {
-                currentUser = user;
-                // PRE-FILL EXISTING DATA
-                const snap = await getDoc(doc(db, "recruiting_profiles", user.uid));
-                if(snap.exists()){
-                    const d = snap.data();
-                    document.getElementById('fullName').value = d.fullName || "";
-                    document.getElementById('height').value = d.height || "";
-                    document.getElementById('weight').value = d.weight || "";
-                    document.getElementById('primaryPos').value = d.primaryPos || "";
-                    document.getElementById('gradYear').value = d.gradYear || "";
-                }
-            } else { 
-                window.location.href='index.html'; 
-            } 
-        });
+    // 1. Set a "Checking" flag
+            let isAuthChecked = false;
+
+            onAuthStateChanged(auth, async (user) => { 
+                if (user) {
+                    isAuthChecked = true; // Confirmation received
+                    currentUser = user;
+                    
+                    // PRE-FILL EXISTING DATA
+                    const snap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+                    if(snap.exists()){
+                        const d = snap.data();
+                        document.getElementById('fullName').value = d.fullName || "";
+                        document.getElementById('height').value = d.height || "";
+                        document.getElementById('weight').value = d.weight || "";
+                        document.getElementById('primaryPos').value = d.primaryPos || "";
+                        document.getElementById('gradYear').value = d.gradYear || "";
+                    }
+                } else { 
+                    // 2. Only redirect if we've actually checked and found no one
+                    // We add a tiny delay to give the SDK a chance to settle
+                    setTimeout(() => {
+                        if (!isAuthChecked) {
+                            window.location.href='index.html';
+                        }
+                    }, 1000); 
+                } 
+            });
 
         document.getElementById('recruitingForm').addEventListener('submit', async (e) => {
             e.preventDefault();

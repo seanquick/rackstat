@@ -233,22 +233,20 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs, updateDoc, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+            // 1. Pull the config from your central file
+            import { firebaseConfig } from './firebase-config.js';
 
-        const firebaseConfig = { 
-            apiKey: "AIzaSyBOQFeokKaNQKwaUhXMCA0oEm4W9G0qafE", 
-            authDomain: "rackstat-production.firebaseapp.com", 
-            projectId: "rackstat-production",
-            storageBucket: "rackstat-production.firebasestorage.app",
-            messagingSenderId: "345003825117",
-            appId: "1:345003825117:web:2ad86b1902dfdebe0c8834"
-        };
-        
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+            // 2. Pull the tools from Google's servers
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+            import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+            import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+            // 3. Initialize using the imported config
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+            const auth = getAuth(app);
+            
+            // ... rest of your code ...
         
         let calGoal = 0;
         let proGoal = 0;
