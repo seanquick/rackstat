@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Next Level Recruiting | RACKSTAT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #000; color: #fff; font-family: 'Inter', sans-serif; }
+        .form-section { background: #0a0a0a; border: 1px solid #1a1a1a; padding: 2rem; border-radius: 2rem; margin-bottom: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .section-header { color: #ef4444; font-weight: 900; text-transform: uppercase; font-style: italic; margin-bottom: 1.5rem; border-left: 4px solid #ef4444; padding-left: 12px; font-size: 1.1rem; letter-spacing: 1px; }
+        .sub-label { display: block; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; margin-bottom: 0.5rem; color: #444; letter-spacing: 0.1em; }
+        input, select, textarea { width: 100%; background: #111; border: 1px solid #222; padding: 0.75rem; border-radius: 0.75rem; color: white; margin-bottom: 1.25rem; outline: none; font-size: 0.9rem; transition: all 0.2s; }
+        input:focus, select:focus, textarea:focus { border-color: #ef4444; background: #151515; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .checkbox-group { display: grid; grid-template-columns: 1fr; gap: 0.75rem; background: #111; padding: 1.25rem; border-radius: 1rem; border: 1px solid #222; }
+        .check-item { display: flex; align-items: center; gap: 12px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: #888; cursor: pointer; }
+        .check-item input { width: auto; margin: 0; accent-color: #ef4444; }
+        .btn-submit { background: #ef4444; color: white; font-weight: 900; text-transform: uppercase; padding: 1.25rem; border-radius: 1rem; width: 100%; border-bottom: 4px solid #991b1b; transition: all 0.2s; cursor: pointer; letter-spacing: 1px; }
+        .btn-submit:hover { background: #f87171; transform: translateY(-2px); }
+        .btn-submit:active { transform: translateY(2px); border-bottom-width: 0; }
+    </style>
+</head>
+<body class="p-4 pb-20 bg-radial-at-t from-gray-900 to-black">
+
+    <header class="max-w-3xl mx-auto py-12 text-center">
+        <div class="inline-block bg-red-600/10 border border-red-600/20 px-3 py-1 rounded-full mb-4">
+            <span class="text-[9px] font-black text-red-500 uppercase tracking-widest">Recruiting Engine v2.0</span>
+        </div>
+        <h1 class="text-4xl font-black italic uppercase italic tracking-tighter text-white">Next Level <span class="text-red-600">Recruiting</span></h1>
+        <p class="text-gray-500 text-[10px] font-bold uppercase tracking-[0.4em] mt-3">Elite Athlete Profile & College Interest</p>
+    </header>
+
+    <form id="recruitingForm" class="max-w-3xl mx-auto">
+        
+        <div class="form-section">
+            <h2 class="section-header">01 Personal Profile</h2>
+            <div class="grid-2">
+                <div><span class="sub-label">Full Name</span><input type="text" id="fullName" required></div>
+                <div><span class="sub-label">Grad Year</span><input type="text" id="gradYear" placeholder="2027" required></div>
+            </div>
+            <div class="grid-2">
+                <div><span class="sub-label">Height</span><input type="text" id="height" placeholder="6'2"></div>
+                <div><span class="sub-label">Weight</span><input type="text" id="weight" placeholder="215 lbs"></div>
+            </div>
+            <div class="grid-2">
+                <div><span class="sub-label">Primary Position</span><input type="text" id="primaryPos" required></div>
+                <div><span class="sub-label">Secondary</span><input type="text" id="secondaryPos"></div>
+            </div>
+            <div class="grid-2">
+                <div><span class="sub-label">Phone</span><input type="tel" id="playerPhone"></div>
+                <div><span class="sub-label">Twitter/X Handle</span><input type="text" id="twitter" placeholder="@handle"></div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2 class="section-header">02 College Aspirations</h2>
+            <span class="sub-label">Ambition Level</span>
+            <select id="wantsToPlay">
+                <option value="D1 Bound">Scholarship Athlete (D1/D2)</option>
+                <option value="College Bound">College Level (D3/NAIA)</option>
+                <option value="Exploring">Undecided / Exploring</option>
+                <option value="No">High School Career Only</option>
+            </select>
+            <span class="sub-label">The "Why" (Coaches read this first)</span>
+            <textarea id="whyPlay" rows="3" placeholder="What drives you to play at the next level?"></textarea>
+        </div>
+
+        <div class="form-section">
+            <h2 class="section-header">03 Academic Standing</h2>
+            <div class="grid-2">
+                <div><span class="sub-label">Core GPA</span><input type="text" id="gpa" placeholder="4.0"></div>
+                <div><span class="sub-label">NCAA ID #</span><input type="text" id="ncaaId" placeholder="Registered?"></div>
+            </div>
+            <span class="sub-label">Intended Major</span>
+            <input type="text" id="major" placeholder="Business, Engineering, etc.">
+        </div>
+
+        <div class="form-section">
+            <h2 class="section-header">04 Testing & Film</h2>
+            <div class="grid grid-cols-3 gap-3">
+                <div><span class="sub-label">40-Yard</span><input type="text" id="forty"></div>
+                <div><span class="sub-label">Pro-Agility</span><input type="text" id="shuttle"></div>
+                <div><span class="sub-label">Vertical</span><input type="text" id="vert"></div>
+            </div>
+            <span class="sub-label">Highlight Tape Link</span>
+            <input type="url" id="highlightLink" placeholder="Hudl or YouTube Link">
+        </div>
+
+        <div class="form-section">
+            <h2 class="section-header">05 Character & Commitment</h2>
+            <span class="sub-label">What does RACKSTAT mean to you?</span>
+            <textarea id="rackstatMeaning" rows="4" placeholder="Toughness, Discipline, Love... how do you live it?"></textarea>
+            
+            <span class="sub-label">Elite Commitments</span>
+            <div class="checkbox-group" id="commitmentChecks">
+                <label class="check-item"><input type="checkbox" value="Year Round Training"> Year-Round Performance Training</label>
+                <label class="check-item"><input type="checkbox" value="Camp Circuit"> National Camp & Showcase Circuit</label>
+                <label class="check-item"><input type="checkbox" value="Direct Coach Contact"> Proactive College Coach Outreach</label>
+            </div>
+        </div>
+
+        <button type="submit" class="btn-submit">Sync Elite Profile</button>
+    </form>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        // CONFIG (Replace with your RACKSTAT Project Config)
+        const firebaseConfig = { 
+            apiKey: "AIzaSyBdY26nH0CAn05IpjzoFvG5E1H-bv8fPwA", 
+            authDomain: "panthertracker-b8ff6.firebaseapp.com", 
+            projectId: "panthertracker-b8ff6", 
+            appId: "1:647881105335:web:bbb79bb3fe9740de1e1232" 
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let currentUser = null;
+
+        onAuthStateChanged(auth, async (user) => { 
+            if (user) {
+                currentUser = user;
+                // PRE-FILL EXISTING DATA
+                const snap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+                if(snap.exists()){
+                    const d = snap.data();
+                    document.getElementById('fullName').value = d.fullName || "";
+                    document.getElementById('height').value = d.height || "";
+                    document.getElementById('weight').value = d.weight || "";
+                    document.getElementById('primaryPos').value = d.primaryPos || "";
+                    document.getElementById('gradYear').value = d.gradYear || "";
+                }
+            } else { 
+                window.location.href='index.html'; 
+            } 
+        });
+
+        document.getElementById('recruitingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentUser) return;
+
+            const commitments = Array.from(document.querySelectorAll('#commitmentChecks input:checked')).map(cb => cb.value);
+
+            const profileData = {
+                fullName: document.getElementById('fullName').value,
+                gradYear: document.getElementById('gradYear').value,
+                height: document.getElementById('height').value,
+                weight: document.getElementById('weight').value,
+                primaryPos: document.getElementById('primaryPos').value,
+                secondaryPos: document.getElementById('secondaryPos').value,
+                twitter: document.getElementById('twitter').value,
+                wantsToPlay: document.getElementById('wantsToPlay').value,
+                whyPlay: document.getElementById('whyPlay').value,
+                gpa: document.getElementById('gpa').value,
+                ncaaId: document.getElementById('ncaaId').value,
+                major: document.getElementById('major').value,
+                forty: document.getElementById('forty').value,
+                shuttle: document.getElementById('shuttle').value,
+                vert: document.getElementById('vert').value,
+                highlightLink: document.getElementById('highlightLink').value,
+                rackstatMeaning: document.getElementById('rackstatMeaning').value,
+                commitments: commitments,
+                lastUpdated: new Date().toISOString()
+            };
+
+            try {
+                await setDoc(doc(db, "recruiting_profiles", currentUser.uid), profileData, { merge: true });
+                alert("RACKSTAT PROFILE SYNCED!");
+                window.location.href = 'recruiting-card.html';
+            } catch (err) { alert("Sync Error: " + err.message); }
+        });
+    </script>
+</body>
+</html>
