@@ -63,12 +63,19 @@
     <div class="max-w-md mx-auto px-4 space-y-6 mt-8">
         
         <section>
-            <p class="text-[10px] font-black uppercase text-gray-500 mb-3 italic tracking-widest text-center">Current Personal Records</p>
+            <p class="text-[10px] font-black uppercase text-gray-500 mb-3 italic tracking-widest text-center">Your Personal Records</p>
             <div class="grid grid-cols-3 gap-2 mb-2" id="maxes-display">
                 </div>
-            <div class="max-card border-blue-600 w-full flex justify-between items-center px-6">
-                <p class="text-[10px] font-black uppercase text-blue-400 tracking-tighter">Board Score</p>
-                <p id="view-total" class="text-3xl font-black text-blue-400">0</p>
+            
+            <div class="max-card border-blue-600 w-full flex flex-col justify-center items-center py-4 px-6 relative overflow-hidden group">
+                <div class="flex justify-between items-center w-full">
+                    <p class="text-[10px] font-black uppercase text-blue-400 tracking-tighter">Board Score</p>
+                    <p id="view-total" class="text-3xl font-black text-blue-400">0</p>
+                </div>
+                
+                <div id="formula-detail" class="w-full mt-2 pt-2 border-t border-blue-900/50 text-[9px] font-bold text-gray-500 uppercase tracking-tighter text-center">
+                    Calculating Index...
+                </div>
             </div>
         </section>
 
@@ -158,16 +165,26 @@
             const q = query(collection(db, "recruiting_profiles", uid, "maxes"), orderBy("timestamp", "desc"), limit(1));
             const snap = await getDocs(q);
             const display = document.getElementById('maxes-display');
+            const formulaDisplay = document.getElementById('formula-detail');
             display.innerHTML = '';
 
             if(!snap.empty) {
                 const data = snap.docs[0].data();
-                let totalLifts = 0;
+                let scoringSum = 0;
+
+                // Use school-specific scoring lifts, or default to all tracked if missing
+                const scoringList = schoolPrefs.scoring_lifts || schoolPrefs.tracked_lifts || [];
 
                 schoolPrefs.tracked_lifts.forEach(lift => {
                     const val = data[lift] || 0;
-                    totalLifts += val;
                     const displayLabel = lift.replace('_', ' ').toUpperCase();
+                    
+                    // Add to the sum ONLY if the lift is in the scoring_lifts array
+                    if (scoringList.includes(lift)) {
+                        scoringSum += val;
+                    }
+
+                    // Always display the PR card for all tracked lifts (including Push Press)
                     display.innerHTML += `
                         <div class="max-card">
                             <p class="text-[8px] uppercase text-gray-400">${displayLabel}</p>
@@ -175,13 +192,31 @@
                         </div>`;
                 });
 
-                let finalScore = totalLifts;
+                // Calculate Final Board Score & Formula Breakdown
+                let finalScore = scoringSum; 
+                let formulaText = "";
+
                 if (schoolPrefs.formula_type === "power_index") {
                     const bw = data.bodyWeight || 0;
-                    finalScore = totalLifts - (Math.min(bw, 200) * 4);
+                    const bwCap = Math.min(bw, 200);
+                    const deduction = bwCap * 4;
+                    
+                    finalScore = scoringSum - deduction;
+                    
+                    // Visual breakdown for Fairbanks style
+                    formulaText = `Lifts: ${scoringSum} — (BW: ${bwCap} × 4) = ${Math.round(finalScore)}`;
+                } else {
+                    // Standard total breakdown
+                    formulaText = `Total of scoring lifts: ${scoringSum}`;
                 }
+
+                // Update UI Elements
                 document.getElementById('view-total').innerText = Math.round(finalScore);
+                if (formulaDisplay) formulaDisplay.innerText = formulaText;
                 document.getElementById('bodyWeight').value = data.bodyWeight || '';
+            } else {
+                // Fallback if no history exists yet
+                if (formulaDisplay) formulaDisplay.innerText = "No data recorded yet";
             }
         }
 
@@ -226,10 +261,11 @@
                 // 1. Save History
                 await addDoc(collection(db, "recruiting_profiles", user.uid, "maxes"), newMax);
 
-                // 2. Propagate to Main Profile (Matches RACKSTAT scalable schema)
+                // 2. Propagate to Main Profile
                 await updateDoc(doc(db, "recruiting_profiles", user.uid), {
                     ...newMax,
-                    weight: bodyWeight
+                    weight: bodyWeight,
+                    boardScore: Math.round(finalScore) // ADD THIS LINE
                 });
 
                 // 3. Goal check
