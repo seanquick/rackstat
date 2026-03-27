@@ -100,14 +100,23 @@
             <section class="bg-[#1a1a1c] p-4 rounded-2xl border border-gray-800">
                 <div class="flex justify-between items-center mb-2">
                     <div class="flex items-center gap-2">
-                        <h2 class="text-[8px] font-black uppercase italic text-white leading-none">Body Weight</h2>
-                        <span id="last-weight-display" class="text-[10px] font-bold text-gray-500 leading-none">-- lbs</span>
+                        <h2 class="text-[8px] font-black uppercase italic text-white">Body Weight</h2>
+                        <span id="last-weight-display" class="text-[10px] font-bold text-gray-500">-- lbs</span>
                     </div>
                     <div class="flex items-center gap-2 text-right">
-                        <h2 class="text-[8px] font-black uppercase italic text-white leading-none">Height</h2>
-                        <span id="last-height-display" class="text-[10px] font-bold text-gray-500 leading-none">-- in</span>
+                        <h2 class="text-[8px] font-black uppercase italic text-white">Height</h2>
+                        <span id="last-height-display" class="text-[10px] font-bold text-gray-500">-- in</span>
                     </div>
                 </div>
+
+                <div class="flex flex-col gap-2">
+                    <div class="flex gap-1">
+                        <input id="quick-weight" type="number" placeholder="Lbs" class="flex-1 !m-0 !py-2 text-sm text-center bg-black border-gray-800 text-white rounded">
+                        <input id="quick-height" type="number" placeholder="Inches" class="flex-1 !m-0 !py-2 text-sm text-center bg-black border-gray-800 text-white rounded">
+                    </div>
+                    <button onclick="saveQuickStats()" class="w-full bg-white text-black py-2 rounded-lg font-black uppercase text-[10px] tracking-wider shadow-md hover:bg-gray-200 transition-colors">Update</button>
+                </div>
+            </section>
 
                 <div class="flex flex-col gap-2">
                     <div class="flex gap-1">
@@ -263,7 +272,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { 
             getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, 
-            query, orderBy, limit, getDocs, deleteDoc 
+            query, orderBy, limit, getDocs, deleteDoc, onSnapshot 
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
@@ -368,18 +377,30 @@
                 if (hVal) syncData.height = hVal;
                 if (wVal) syncData.weight = wVal;
 
-                // Update Master 'users'
                 await setDoc(doc(db, "users", user.uid), syncData, { merge: true });
-                // Update 'recruiting_profiles'
                 await setDoc(doc(db, "recruiting_profiles", user.uid), syncData, { merge: true });
 
-                // 2. LOG TO HISTORY (Only if weight was entered)
+                // 2. LOG TO HISTORY
                 if (wVal) {
                     await addDoc(collection(db, "recruiting_profiles", user.uid, "maxes"), {
                         bodyWeight: wVal,
                         timestamp: Date.now(),
-                        type: "weight_check" // Labeling it helps filter history later
+                        type: "weight_check"
                     });
+                }
+
+                // 3. UI UPDATE: MANUALLY PUSH TO LABELS
+                if (wVal) {
+                    const wDisp = document.getElementById('last-weight-display');
+                    if (wDisp) wDisp.innerText = wVal + " lbs";
+                }
+                if (hVal) {
+                    const hDisp = document.getElementById('last-height-display');
+                    if (hDisp) {
+                        const ft = Math.floor(hVal / 12);
+                        const inch = hVal % 12;
+                        hDisp.innerText = `${ft}'${inch}"`;
+                    }
                 }
 
                 alert("Tale of the Tape Synced!");
@@ -389,6 +410,19 @@
             } catch (e) {
                 console.error("Sync Error:", e);
                 alert("Sync failed. Check console.");
+            }
+            // --- ADD THIS TO saveQuickStats ---
+            const weightLabel = document.getElementById('last-weight-display');
+            const heightLabel = document.getElementById('last-height-display');
+
+            if (weightLabel && wVal) {
+                weightLabel.innerText = `${wVal} lbs`;
+            }
+
+            if (heightLabel && hVal) {
+                const feet = Math.floor(hVal / 12);
+                const inches = hVal % 12;
+                heightLabel.innerText = `${feet}'${inches}"`;
             }
         };
 
@@ -495,21 +529,31 @@
         };
 
         window.addWater = async (cups) => {
-            if (!auth.currentUser) return;
-            const selectedDate = document.getElementById('entry-date').value;
+            const user = auth.currentUser;
+            if (!user) return;
+
+            // 1. Get the date. Fallback to 'today' if the ID 'entry-date' isn't found
+            const dateInput = document.getElementById('entry-date');
+            const selectedDate = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
+            
             const dateObj = new Date(selectedDate);
             dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
             const dateStr = dateObj.toLocaleDateString();
 
             try {
-                await addDoc(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), {
-                    mealType: 'Water',
-                    cups: Number(cups),
+                // 2. Save to the 'water' sub-collection (where updateDailyTotals looks)
+                const waterRef = collection(db, "recruiting_profiles", user.uid, "water");
+                await addDoc(waterRef, {
+                    amount: Number(cups), // Ensure this is 'amount' to match your total calculation
                     date: dateStr,
-                    timestamp: serverTimestamp()
+                    timestamp: Date.now() // Use Date.now() so the 'Midnight' math works correctly
                 });
-                updateDailyTotals();
-                fetchMealHistory();
+
+                // 3. Trigger UI Refresh
+                if (typeof updateDailyTotals === "function") await updateDailyTotals();
+                if (typeof fetchMealHistory === "function") fetchMealHistory();
+                
+                console.log(`Added ${cups} cups of water.`);
             } catch (e) {
                 console.error("Water Error:", e);
             }
@@ -757,20 +801,19 @@
                 }
 
                 // 4. Update the Progress Bar (16 Cups = 128oz Goal)
-                const goal = 16; 
-                const progressPercentage = Math.min((totalCups / waterGoal) * 100, 100);
+                // 4. Update the Progress Bar
+                const goal = waterGoal || 16; // Use the live goal from your profile, or 16 as a backup
+                const progressPercentage = Math.min((totalCups / goal) * 100, 100);
                 const progressBar = document.getElementById('water-progress-bar');
 
                 if (progressBar) {
                     progressBar.style.width = `${progressPercentage}%`;
                     
+                    // Change color to green if goal is hit
                     if (progressPercentage >= 100) {
-                        // Only replaces if the class exists, otherwise adds the new one
-                        progressBar.classList.add('bg-green-500');
-                        progressBar.classList.remove('bg-blue-500');
+                        progressBar.classList.replace('bg-blue-500', 'bg-green-500');
                     } else {
-                        progressBar.classList.add('bg-blue-500');
-                        progressBar.classList.remove('bg-green-500');
+                        progressBar.classList.replace('bg-green-500', 'bg-blue-500');
                     }
                 }
 
