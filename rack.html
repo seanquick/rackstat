@@ -116,6 +116,23 @@
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
+                // --- 1. REAL-TIME WEIGHT SYNC ---
+                // Listens to the master 'users' doc so weight stays synced across all pages
+                onSnapshot(doc(db, "users", user.uid), (userDoc) => {
+                    if (userDoc.exists() && userDoc.data().weight) {
+                        const weight = userDoc.data().weight;
+                        
+                        // Update the weight display in the RACK (ensure this ID exists in your HTML)
+                        const rackWeightDisplay = document.getElementById('rack-body-weight');
+                        if (rackWeightDisplay) rackWeightDisplay.innerText = weight + " lbs";
+                        
+                        // If you have an input field for body weight, update it too
+                        const rackWeightInput = document.getElementById('body-weight-input');
+                        if (rackWeightInput) rackWeightInput.value = weight;
+                    }
+                });
+
+                // --- 2. EXISTING PROFILE & SCHOOL LOGIC ---
                 const profileSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
                 if (profileSnap.exists()) {
                     const pData = profileSnap.data();
@@ -126,10 +143,13 @@
                         await fetchSchoolData(schoolId);
                         loadCurrentMaxes(user.uid);
                     } else {
-                        document.getElementById('school-tag').innerText = "Assign School";
+                        const schoolTag = document.getElementById('school-tag');
+                        if (schoolTag) schoolTag.innerText = "Assign School";
                     }
                 }
-            } else { location.href = 'index.html'; }
+            } else { 
+                location.href = 'index.html'; 
+            }
         });
 
         async function fetchSchoolData(schoolId) {
@@ -265,7 +285,6 @@
                     const inputField = document.getElementById(`input-${lift}`);
                     const val = inputField ? inputField.value : "";
                     
-                    // If input is empty, use database value; otherwise use new input
                     if (val !== "") {
                         newMax[lift] = Number(val);
                     } else {
@@ -273,28 +292,32 @@
                     }
                 });
 
-                // 4. RE-CALCULATE SCORE using the merged data
-                // This ensures the Board Score doesn't drop to 0 if they skip a lift input
+                // 4. RE-CALCULATE SCORE
                 let totalLifted = 0;
                 schoolPrefs.tracked_lifts.forEach(lift => {
                     totalLifted += (newMax[lift] || 0);
                 });
 
-                // Your formula: (Total Lifts / Body Weight) * 100
                 const calculatedScore = bodyWeight > 0 ? (totalLifted / bodyWeight) * 100 : 0;
 
                 // 5. Save History Entry
                 await addDoc(collection(db, "recruiting_profiles", user.uid, "maxes"), newMax);
 
-                // 6. Propagate to Main Profile
+                // 6. Propagate to Main Profile & MASTER SYNC
+                // This is the "Magic" part that syncs with the Kitchen
+                await setDoc(doc(db, "users", user.uid), { 
+                    weight: bodyWeight,
+                    lastWeightUpdate: serverTimestamp() 
+                }, { merge: true });
+
                 await updateDoc(profileRef, {
                     ...newMax,
                     weight: bodyWeight,
                     boardScore: Math.round(calculatedScore),
-                    lastUpdated: Date.now() // Adds the current timestamp
+                    lastUpdated: Date.now()
                 });
 
-                // 7. Goal check (if exists)
+                // 7. Goal check
                 if (typeof checkGoalAchievement === "function") {
                     await checkGoalAchievement(newMax);
                 }

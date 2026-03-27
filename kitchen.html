@@ -92,10 +92,11 @@
                     <h2 class="text-[10px] font-black uppercase italic text-white">Body Weight</h2>
                     <span id="last-weight-display" class="text-[10px] font-bold text-gray-500">-- lbs</span>
                 </div>
-                <div class="flex gap-1">
-                    <input id="quick-weight" type="number" placeholder="Lbs" class="!m-0 !py-1 text-sm">
-                    <button onclick="saveQuickWeight()" class="bg-white text-black px-3 rounded font-black uppercase text-[9px]">Fix</button>
-                </div>
+                    <div class="flex gap-1 items-center">
+                        <input id="quick-height" type="number" placeholder="Ht (in)" class="!m-0 !py-1 text-sm w-14 text-center">
+                        <input id="quick-weight" type="number" placeholder="Lbs" class="!m-0 !py-1 text-sm w-14 text-center">
+                        <button onclick="saveQuickStats()" class="bg-white text-black px-3 py-1 rounded font-black uppercase text-[9px]">Fix</button>
+                    </div>
             </section>
         </div>
 
@@ -233,59 +234,124 @@
     </div>
 
     <script type="module">
-            // 1. Pull the config from your central file
-            import { firebaseConfig } from './firebase-config.js';
+        // 1. Pull the config from your central file
+        import { firebaseConfig } from './firebase-config.js';
 
-            // 2. Pull the tools from Google's servers
-            import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-            import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-            import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        // 2. Pull the tools from Google's servers
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { 
+            getFirestore, doc, setDoc, getDoc, updateDoc, collection, 
+            addDoc, query, where, getDocs, orderBy, limit, serverTimestamp, onSnapshot 
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-            // 3. Initialize using the imported config
-            const app = initializeApp(firebaseConfig);
-            const db = getFirestore(app);
-            const auth = getAuth(app);
-            
-            // ... rest of your code ...
-        
+        // 3. Initialize using the imported config
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
         let calGoal = 0;
         let proGoal = 0;
 
         document.getElementById('entry-date').valueAsDate = new Date();
 
         onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        const snap = await getDoc(doc(db, "recruiting_profiles", user.uid));
-                        if(snap.exists()) {
-                            const data = snap.data();
-                            calGoal = data.dailyCalorieGoal || 0;
-                            proGoal = data.dailyProteinGoal || 0;
-                            
-                            document.getElementById('target-cal-display').innerText = calGoal;
-                            document.getElementById('target-pro-display').innerText = proGoal;
-
-                            // 1. Run the daily math
-                            updateDailyTotals();
-                            
-                            // 2. Load the bottom history list
-                            fetchMealHistory();
-                            
-                            // 3. Calculate the "Fire" streak
-                            updateStreak();
-                            
-                            // 4. Show the last weigh-in
-                            fetchLastWeight();
-                        }
-                    } else { 
-                        location.href = 'index.html'; 
+            if (user) {
+                // 1. SYNCED WEIGHT LISTENER: Pulls from master profile 'users' collection
+                // This stays active so weight updates everywhere instantly
+                onSnapshot(doc(db, "users", user.uid), (userDoc) => {
+                    if (userDoc.exists() && userDoc.data().weight) {
+                        const weight = userDoc.data().weight;
+                        const weightDisplay = document.getElementById('last-weight-display');
+                        const weightInput = document.getElementById('quick-weight');
+                        
+                        if (weightDisplay) weightDisplay.innerText = weight + " lbs";
+                        if (weightInput) weightInput.value = weight;
                     }
                 });
+
+                // 2. FETCH RECRUITING DATA: Load Goals & Init Page
+                try {
+                    const snap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+                    
+                    if (snap.exists()) {
+                        const data = snap.data();
+                        
+                        // Set global goals
+                        calGoal = data.dailyCalorieGoal || 0;
+                        proGoal = data.dailyProteinGoal || 0;
+
+                        // Update UI displays
+                        document.getElementById('target-cal-display').innerText = calGoal;
+                        document.getElementById('target-pro-display').innerText = proGoal;
+
+                        // Trigger data fetches after goals are confirmed
+                        updateDailyTotals();
+                        fetchMealHistory();
+                        updateStreak();
+                    } else {
+                        console.log("No recruiting profile found. Using default goals.");
+                        updateDailyTotals();
+                        fetchMealHistory();
+                    }
+                } catch (error) {
+                    console.error("Error loading profile:", error);
+                }
+
+            } else {
+                // 3. AUTH PROTECTION
+                location.href = 'index.html';
+            }
+        });
+
+        // --- NEW CONSOLIDATED SYNC FUNCTION ---
+        window.saveQuickStats = async () => {
+            const htInput = document.getElementById('quick-height');
+            const bwInput = document.getElementById('quick-weight');
+            const user = auth.currentUser;
+
+            if (!user || (!htInput.value && !bwInput.value)) {
+                alert("Enter Height or Weight to update.");
+                return;
+            }
+
+            try {
+                const hVal = htInput.value ? Number(htInput.value) : null;
+                const wVal = bwInput.value ? Number(bwInput.value) : null;
+
+                // 1. Update MASTER RECORD & RECRUITING PROFILE
+                const syncData = { lastSync: serverTimestamp() };
+                if (hVal) syncData.height = hVal;
+                if (wVal) syncData.weight = wVal;
+
+                // Update Master 'users'
+                await setDoc(doc(db, "users", user.uid), syncData, { merge: true });
+                // Update 'recruiting_profiles'
+                await setDoc(doc(db, "recruiting_profiles", user.uid), syncData, { merge: true });
+
+                // 2. LOG TO HISTORY (Only if weight was entered)
+                if (wVal) {
+                    await addDoc(collection(db, "recruiting_profiles", user.uid, "maxes"), {
+                        bodyWeight: wVal,
+                        timestamp: Date.now(),
+                        type: "weight_check" // Labeling it helps filter history later
+                    });
+                }
+
+                alert("Tale of the Tape Synced!");
+                htInput.value = '';
+                bwInput.value = '';
+
+            } catch (e) {
+                console.error("Sync Error:", e);
+                alert("Sync failed. Check console.");
+            }
+        };
 
         async function updateStreak() {
             const streakContainer = document.getElementById('streak-container');
             const streakCountLabel = document.getElementById('streak-count');
 
-            // Fetch all meals for this user, ordered by timestamp
             const q = query(
                 collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"),
                 orderBy("date", "desc")
@@ -294,27 +360,19 @@
             const snap = await getDocs(q);
             if (snap.empty) return;
 
-            // Create a unique set of dates that have entries
             const loggedDates = new Set();
             snap.forEach(doc => loggedDates.add(doc.data().date));
 
             const sortedDates = Array.from(loggedDates).map(d => new Date(d)).sort((a, b) => b - a);
-            
+
             let streak = 0;
             let today = new Date();
             today.setHours(0, 0, 0, 0);
-            
-            let checkDate = new Date(today);
 
-            // Check if they logged today or yesterday to keep the streak alive
             const lastLog = sortedDates[0];
             const diffInDays = Math.floor((today - lastLog) / (1000 * 60 * 60 * 24));
 
-            if (diffInDays > 1) {
-                // Streak is broken (more than 1 day since last log)
-                streak = 0;
-            } else {
-                // Start counting backwards from the most recent log
+            if (diffInDays <= 1) {
                 for (let i = 0; i < sortedDates.length; i++) {
                     const logDate = sortedDates[i];
                     const expectedDate = new Date(lastLog);
@@ -323,7 +381,7 @@
                     if (logDate.toLocaleDateString() === expectedDate.toLocaleDateString()) {
                         streak++;
                     } else {
-                        break; // Gap found, streak ends
+                        break;
                     }
                 }
             }
@@ -335,26 +393,25 @@
                 streakContainer.classList.add('hidden');
             }
         }
-        // RE-CALCULATE TOTALS BASED ON SELECTED DATE
+
         async function updateDailyTotals() {
+            if (!auth.currentUser) return;
             const selectedDate = document.getElementById('entry-date').value;
             const dateObj = new Date(selectedDate);
-            // Fix for timezone offset to ensure the date matches the picker
             dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
             const dateStr = dateObj.toLocaleDateString();
-            
-            // UI Label update
+
             const todayStr = new Date().toLocaleDateString();
             document.getElementById('display-date-label').innerText = (dateStr === todayStr) ? "Today's Progress" : dateStr;
 
             const q = query(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), where("date", "==", dateStr));
             const snap = await getDocs(q);
-            
+
             let c = 0, p = 0, carb = 0, fat = 0, water = 0;
-            
+
             snap.forEach(d => {
                 const m = d.data();
-                if(m.mealType === 'Water') {
+                if (m.mealType === 'Water') {
                     water += Number(m.cups || 0);
                 } else {
                     c += Number(m.calories || 0);
@@ -364,19 +421,17 @@
                 }
             });
 
-            // Update Text
             document.getElementById('day-cal').innerText = c;
             document.getElementById('day-pro').innerText = p;
             document.getElementById('day-carb').innerText = carb + "g";
             document.getElementById('day-fat').innerText = fat + "g";
             document.getElementById('day-water').innerText = water + " Cups";
 
-            // Update Bars
-            if(calGoal > 0) {
+            if (calGoal > 0) {
                 let cPerc = Math.min((c / calGoal) * 100, 100);
                 document.getElementById('cal-fill').style.width = cPerc + "%";
             }
-            if(proGoal > 0) {
+            if (proGoal > 0) {
                 let pPerc = Math.min((p / proGoal) * 100, 100);
                 document.getElementById('pro-fill').style.width = pPerc + "%";
             }
@@ -385,9 +440,9 @@
         window.setTargets = async () => {
             const newCal = prompt("Daily Calorie Target:", calGoal || 3000);
             const newPro = prompt("Daily Protein Target (g):", proGoal || 200);
-            
-            if(newCal && newPro) {
-                await updateDoc(doc(db, "recruiting_profiles", auth.currentUser.uid), { 
+
+            if (newCal && newPro) {
+                await updateDoc(doc(db, "recruiting_profiles", auth.currentUser.uid), {
                     dailyCalorieGoal: Number(newCal),
                     dailyProteinGoal: Number(newPro)
                 });
@@ -396,18 +451,24 @@
         };
 
         window.addWater = async (cups) => {
+            if (!auth.currentUser) return;
             const selectedDate = document.getElementById('entry-date').value;
             const dateObj = new Date(selectedDate);
             dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
             const dateStr = dateObj.toLocaleDateString();
 
-            await addDoc(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), {
-                mealType: 'Water',
-                cups: Number(cups),
-                date: dateStr,
-                timestamp: serverTimestamp()
-            });
-            updateDailyTotals();
+            try {
+                await addDoc(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), {
+                    mealType: 'Water',
+                    cups: Number(cups),
+                    date: dateStr,
+                    timestamp: serverTimestamp()
+                });
+                updateDailyTotals();
+                fetchMealHistory();
+            } catch (e) {
+                console.error("Water Error:", e);
+            }
         };
 
         window.saveMeal = async () => {
@@ -431,50 +492,28 @@
                     date: dateStr,
                     timestamp: serverTimestamp()
                 });
-                
-                // Reset form fields
+
                 document.getElementById('calories').value = '';
                 document.getElementById('protein').value = '';
                 document.getElementById('carbs').value = '';
                 document.getElementById('fats').value = '';
                 document.getElementById('meal-desc').value = '';
-                
+
                 btn.disabled = false;
                 btn.innerText = "RECORD MEAL";
                 updateDailyTotals();
+                fetchMealHistory();
                 alert("Fuel Recorded!");
-            } catch(e) {
+            } catch (e) {
                 alert("Error: " + e.message);
                 btn.disabled = false;
             }
         };
 
-        // Standard Utility Functions
-        async function fetchLastWeight() {
-            const q = query(collection(db, "recruiting_profiles", auth.currentUser.uid, "maxes"), orderBy("timestamp", "desc"), limit(1));
-            const snap = await getDocs(q);
-            if (!snap.empty) {
-                document.getElementById('last-weight-display').innerText = snap.docs[0].data().bodyWeight + " lbs";
-            }
-        }
-
-        window.saveQuickWeight = async () => {
-            const bw = document.getElementById('quick-weight').value;
-            if(!bw) return;
-            const q = query(collection(db, "recruiting_profiles", auth.currentUser.uid, "maxes"), orderBy("timestamp", "desc"), limit(1));
-            const snap = await getDocs(q);
-            let lastData = snap.empty ? {} : snap.docs[0].data();
-            await addDoc(collection(db, "recruiting_profiles", auth.currentUser.uid, "maxes"), {
-                ...lastData,
-                bodyWeight: Number(bw),
-                timestamp: Date.now()
-            });
-            location.reload();
-        };
-
-        // 1. FETCH AND RENDER HISTORY
         async function fetchMealHistory() {
             const historyContainer = document.getElementById('history-list');
+            if (!auth.currentUser) return;
+            
             const selectedDate = document.getElementById('entry-date').value;
             const dateObj = new Date(selectedDate);
             dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
@@ -484,11 +523,11 @@
                 collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"),
                 where("date", "==", dateStr),
                 orderBy("timestamp", "desc"),
-                limit(5)
+                limit(10)
             );
 
             const snap = await getDocs(q);
-            historyContainer.innerHTML = ''; // Clear loading text
+            historyContainer.innerHTML = '';
 
             if (snap.empty) {
                 historyContainer.innerHTML = `<p class="text-[10px] text-gray-600 italic text-center py-4">No entries for this date.</p>`;
@@ -498,11 +537,9 @@
             snap.forEach(docSnap => {
                 const meal = docSnap.data();
                 const id = docSnap.id;
-                
                 const div = document.createElement('div');
-                div.className = "bg-black border border-gray-800 p-3 rounded-lg flex justify-between items-center";
-                
-                // Handle display for Water vs Food
+                div.className = "bg-black border border-gray-800 p-3 rounded-lg flex justify-between items-center mb-2";
+
                 const isWater = meal.mealType === 'Water';
                 const title = isWater ? `💧 ${meal.cups} Cups Water` : `🍴 ${meal.mealType}`;
                 const subtitle = isWater ? "" : `<span class="text-green-500">${meal.calories}cal</span> • <span class="text-red-500">${meal.protein}g P</span>`;
@@ -522,19 +559,14 @@
             });
         }
 
-        // 2. DELETE ENTRY
         window.deleteMeal = async (id) => {
             if (!confirm("Remove this entry?")) return;
-            
             try {
                 const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
                 await deleteDoc(doc(db, "recruiting_profiles", auth.currentUser.uid, "meals", id));
-                
-                // Refresh everything
                 updateDailyTotals();
                 fetchMealHistory();
             } catch (e) {
-                console.error("Delete error:", e);
                 alert("Could not delete entry.");
             }
         };
@@ -546,21 +578,19 @@
             const sevenDaysAgo = new Date();
             sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-            // Fetch meals from last 7 days
             const q = query(
                 collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"),
                 where("timestamp", ">=", sevenDaysAgo)
             );
 
             const snap = await getDocs(q);
-            
             let totalCals = 0, totalPro = 0, totalCarb = 0, totalFat = 0, totalWater = 0;
             let daysActive = new Set();
 
             snap.forEach(doc => {
                 const d = doc.data();
                 daysActive.add(d.date);
-                if(d.mealType === 'Water') {
+                if (d.mealType === 'Water') {
                     totalWater += Number(d.cups || 0);
                 } else {
                     totalCals += Number(d.calories || 0);
@@ -576,22 +606,19 @@
             const avgCarb = Math.round(totalCarb / divisor);
             const avgFat = Math.round(totalFat / divisor);
 
-            // 1. Update Basic UI Values
             document.getElementById('avg-cal-val').innerText = avgCal;
             document.getElementById('avg-pro-val').innerText = avgPro + "g";
             document.getElementById('total-water-val').innerText = totalWater + " Cups";
 
-            // 2. Update Progress Bars
-            if(calGoal > 0) {
+            if (calGoal > 0) {
                 const calWidth = Math.min((avgCal / calGoal) * 100, 100);
                 document.getElementById('avg-cal-bar').style.width = calWidth + "%";
             }
-            if(proGoal > 0) {
+            if (proGoal > 0) {
                 const proWidth = Math.min((avgPro / proGoal) * 100, 100);
                 document.getElementById('avg-pro-bar').style.width = proWidth + "%";
             }
 
-            // 3. Macro Pie Chart Logic
             const totalGrams = avgPro + avgCarb + avgFat || 1;
             const pPct = Math.round((avgPro / totalGrams) * 100);
             const cPct = Math.round((avgCarb / totalGrams) * 100);
@@ -602,13 +629,8 @@
             document.getElementById('pie-fat-pct').innerText = fPct + "%";
 
             const pie = document.getElementById('macro-pie');
-            pie.style.background = `conic-gradient(
-                #ef4444 0% ${pPct}%, 
-                #3b82f6 ${pPct}% ${pPct + cPct}%, 
-                #eab308 ${pPct + cPct}% 100%
-            )`;
+            pie.style.background = `conic-gradient(#ef4444 0% ${pPct}%, #3b82f6 ${pPct}% ${pPct + cPct}%, #eab308 ${pPct + cPct}% 100%)`;
 
-            // 4. Fetch Body Weight for Coach's Insight
             const weightText = document.getElementById('last-weight-display').innerText;
             const currentWeight = parseFloat(weightText) || 0;
             document.getElementById('avg-weight-val').innerText = currentWeight > 0 ? currentWeight + " lbs" : "-- lbs";
@@ -617,32 +639,21 @@
             if (currentWeight > 0) {
                 const proPerLb = avgPro / currentWeight;
                 if (proPerLb < 0.8) {
-                    insight = "You're averaging " + proPerLb.toFixed(1) + "g protein/lb. Increase intake to at least 0.8g to prevent muscle breakdown during training.";
-                } else if (proPerLb > 1.3) {
-                    insight = "High protein efficiency (" + proPerLb.toFixed(1) + "g/lb). Ensure you're also hitting your carb targets for explosive energy.";
+                    insight = `You're averaging ${proPerLb.toFixed(1)}g protein/lb. Increase intake to 0.8g+ for optimal recovery.`;
                 } else {
-                    insight = "Optimal protein intake (" + proPerLb.toFixed(1) + "g/lb). You are fueling correctly for recovery and growth. Keep this pace.";
+                    insight = `Optimal protein intake (${proPerLb.toFixed(1)}g/lb). Recovery and growth are on track.`;
                 }
             } else {
-                insight = "Record your body weight in the Kitchen to unlock personalized macro-ratio insights.";
+                insight = "Record your body weight to unlock macro-ratio insights.";
             }
             document.getElementById('insight-text').innerText = insight;
-
-            // 5. Fetch PB Streak from User Profile
-            const profileSnap = await getDoc(doc(db, "recruiting_profiles", auth.currentUser.uid));
-            if (profileSnap.exists()) {
-                const pb = profileSnap.data().maxKitchenStreak || 0;
-                document.getElementById('pb-streak-display').innerText = "PB: " + pb;
-            }
         };
 
         window.closeWeekly = () => {
             document.getElementById('weekly-modal').classList.add('hidden');
         };
 
-        // Attach function to global scope for date picker trigger
         window.updateDailyTotals = updateDailyTotals;
-
     </script>
 </body>
 </html>

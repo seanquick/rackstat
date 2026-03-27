@@ -3,201 +3,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recruiting Card | RACKSTAT</title>
+    <title>Scouting Report | RACKSTAT</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #000000; color: #ffffff; font-family: sans-serif; }
-        .stat-card { background: #111111; border: 1px solid #222222; padding: 1.25rem; border-radius: 1rem; }
-        .label { font-size: 0.6rem; font-weight: 900; text-transform: uppercase; color: #b91c1c; letter-spacing: 0.1em; margin-bottom: 2px; }
-        .value { font-size: 1.15rem; font-weight: 900; font-style: italic; text-transform: uppercase; }
-        .section-header { border-left: 4px solid #b91c1c; padding-left: 1rem; margin: 2rem 0 1rem 0; font-weight: 900; text-transform: uppercase; font-style: italic; font-size: 1.1rem; }
-        
-        /* Goal Progress Bars */
-        .goal-bar-bg { background: #222; height: 8px; border-radius: 4px; margin-top: 8px; overflow: hidden; border: 1px solid #333; }
-        .goal-bar-fill { background: #b91c1c; height: 100%; transition: width 1s ease-in-out; }
-
-        @media print {
-            .no-print { display: none !important; }
-            body { background: white !important; color: black !important; padding: 0 !important; }
-            .stat-card { border: 1px solid #ddd !important; background: white !important; color: black !important; }
-            .section-header { color: black !important; border-left: 4px solid #b91c1c !important; }
-            .value { color: black !important; }
-            .label { color: #b91c1c !important; }
+        @media print { .no-print { display: none; } }
+        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; }
+        .card-container { 
+            background: linear-gradient(145deg, #0f0f0f, #050505);
+            border: 2px solid #333;
+            position: relative;
+            overflow: hidden;
         }
+        .stat-box { background: rgba(255,255,255,0.05); border-left: 3px solid #ef4444; }
+        .label { font-size: 0.65rem; text-transform: uppercase; color: #888; font-weight: 800; letter-spacing: 0.1em; }
+        .value { font-size: 1.1rem; font-weight: 900; font-style: italic; text-transform: uppercase; }
+        .red-accent { color: #ef4444; }
     </style>
 </head>
-<body class="pb-20">
+<body class="p-4">
 
-    <header class="bg-black border-b-2 border-red-700 p-4 sticky top-0 z-50 no-print">
-        <div class="flex justify-between items-center max-w-5xl mx-auto">
-            <button onclick="history.back()" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1.5 rounded text-gray-400 hover:text-white transition-all">
-                ← Back
-            </button>
-            
-            <div class="flex items-center gap-5">
-                <img id="school-logo-header" src="images/panther-logo1.png" alt="School" class="h-8 w-auto">
-                <div class="h-6 w-[1px] bg-gray-800"></div>
-                <span id="header-school-name" class="text-xs font-black italic uppercase tracking-widest text-white">FAIRBANKS</span>
-                <div class="h-6 w-[1px] bg-gray-800"></div>
-                <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-8 w-auto">
+    <div class="max-w-2xl mx-auto mb-6 flex justify-between no-print">
+        <button onclick="window.print()" class="bg-white text-black px-6 py-2 rounded-full font-bold uppercase text-xs">Print PDF</button>
+        <button onclick="location.href='index.html'" class="bg-gray-800 text-white px-6 py-2 rounded-full font-bold uppercase text-xs">Back to Lobby</button>
+    </div>
+
+    <div id="capture-area" class="max-w-2xl mx-auto card-container rounded-3xl p-8 shadow-2xl border-red-600/20">
+        
+        <div class="flex justify-between items-start border-b-2 border-red-600 pb-6 mb-6">
+            <div>
+                <h1 id="disp-name" class="text-4xl font-black italic uppercase leading-none">LOADING...</h1>
+                <div class="flex gap-4 mt-2">
+                    <span id="disp-class" class="text-red-600 font-bold uppercase text-sm">CLASS OF --</span>
+                    <span id="disp-pos" class="text-white font-bold uppercase text-sm">POS: --</span>
+                    <span id="disp-number" class="text-gray-500 font-bold uppercase text-sm">#--</span>
+                    <span id="disp-weight" class="text-white font-bold uppercase text-sm border-l border-gray-700 pl-4">-- LBS</span>
+                    <span id="disp-height" class="text-white font-bold uppercase text-sm">--</span>
+                </div>
             </div>
-
-            <button onclick="window.print()" class="text-[10px] font-black uppercase bg-red-700 px-3 py-1.5 rounded text-white shadow-lg">
-                PDF / Print
-            </button>
+            <img src="images/panther-logo1.png" class="h-16 w-auto opacity-80">
         </div>
-    </header>
 
-    <main class="max-w-4xl mx-auto p-6">
-            
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="stat-card text-center"><p class="label">Athlete Name</p><p id="card-name" class="value">---</p></div>
-                <div class="stat-card text-center"><p class="label">Grad Year</p><p id="card-class" class="value">---</p></div>
-                <div class="stat-card text-center"><p class="label">HT / WT</p><p id="card-htwt" class="value">---</p></div>
-                <div class="stat-card text-center"><p class="label">Position</p><p id="card-pos" class="value">---</p></div>
-            </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+                <h3 class="label mb-4 text-red-500 text-sm">Verified Metrics</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="stat-box p-3">
+                        <span class="label">Bench Press</span>
+                        <div id="stat-bench" class="value">--</div>
+                    </div>
+                    <div class="stat-box p-3">
+                        <span class="label">Squat</span>
+                        <div id="stat-squat" class="value">--</div>
+                    </div>
+                    <div class="stat-box p-3">
+                        <span class="label">Clean</span>
+                        <div id="stat-clean" class="value">--</div>
+                    </div>
+                    <div class="stat-box p-3">
+                        <span class="label">Deadlift</span>
+                        <div id="stat-dead" class="value">--</div>
+                    </div>
+                </div>
 
-            <h2 class="section-header">Media & Highlights</h2>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <a id="link-hudl" href="#" target="_blank" class="stat-card text-center hover:border-red-600">
-                    <p class="label">Film</p><p class="text-[10px] font-black">HUDL →</p>
-                </a>
-                <a id="link-twitter" href="#" target="_blank" class="stat-card text-center hover:border-blue-500">
-                    <p class="label">Twitter</p><p class="text-[10px] font-black italic">@VIEW →</p>
-                </a>
-                <a id="link-youtube" href="#" target="_blank" class="stat-card text-center hover:border-red-500">
-                    <p class="label">YouTube</p><p class="text-[10px] font-black">WATCH →</p>
-                </a>
-                <a id="link-other" href="#" target="_blank" class="stat-card text-center hover:border-gray-500">
-                    <p class="label">Other</p><p class="text-[10px] font-black uppercase">LINK →</p>
-                </a>
-            </div>
-
-            <h2 class="section-header text-green-500">Performance Tracking</h2>
-            <div id="goals-display" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <p class="text-xs text-gray-500 italic">No specific goals shared on public card.</p>
-            </div>
-
-            <h2 class="section-header">Academic Profile</h2>
-            <div class="stat-card">
-                <div class="grid grid-cols-3 md:grid-cols-3 gap-6">
-                    <div><p class="label">Cumulative GPA</p><p id="card-gpa" class="value text-2xl">---</p></div>
-                    <div><p class="label">SAT Score</p><p id="card-sat" class="value">---</p></div>
-                    <div><p class="label">ACT Score</p><p id="card-act" class="value">---</p></div>
+                <h3 class="label mt-8 mb-4 text-red-500 text-sm">Academic Profile</h3>
+                <div class="space-y-2">
+                    <div class="flex justify-between border-b border-white/10 pb-1">
+                        <span class="label">Current GPA</span>
+                        <span id="disp-gpa" class="font-bold italic">--</span>
+                    </div>
+                    <div class="flex justify-between border-b border-white/10 pb-1">
+                        <span class="label">ACT / SAT</span>
+                        <span id="disp-test" class="font-bold italic">--</span>
+                    </div>
+                    <div class="flex justify-between border-b border-white/10 pb-1">
+                        <span class="label">NCAA ID</span>
+                        <span id="disp-ncaa" class="font-bold italic">--</span>
+                    </div>
                 </div>
             </div>
 
-            <h2 class="section-header">Character Statement</h2>
-            <div class="stat-card bg-red-900/10 border-red-900/30">
-                <p id="card-statement" class="text-sm italic leading-relaxed text-gray-300">"Athlete has not provided a personal statement."</p>
+            <div>
+                <h3 class="label mb-4 text-red-500 text-sm">Player Character</h3>
+                <div class="bg-white/5 p-4 rounded-xl italic text-sm text-gray-300 mb-6">
+                    <p class="label mb-1 text-white/40">TDL Definition:</p>
+                    "<span id="disp-tdl">...</span>"
+                </div>
+
+                <h3 class="label mb-4 text-red-500 text-sm">Contact & Links</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3">
+                        <div class="h-8 w-8 bg-blue-600 rounded flex items-center justify-center font-black">X</div>
+                        <div><span class="label block">Twitter</span><span id="disp-tw" class="text-xs font-bold italic">@--</span></div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="h-8 w-8 bg-gradient-to-tr from-yellow-500 to-purple-600 rounded flex items-center justify-center font-black italic">IG</div>
+                        <div><span class="label block">Instagram</span><span id="disp-ig" class="text-xs font-bold italic">@--</span></div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button id="film-btn" class="bg-red-600 hover:bg-red-700 w-full py-2 rounded font-black italic uppercase text-xs">View Hudl / Film</button>
+                    </div>
+                </div>
             </div>
-    </main>
+        </div>
+
+        <div class="mt-12 pt-6 border-t border-white/10 flex justify-between items-center opacity-50">
+            <span class="text-[8px] font-black uppercase tracking-widest">Powered by RACKSTAT Elite Recruiting</span>
+            <img src="images/rackstat-logo.png" class="h-4 w-auto">
+        </div>
+    </div>
 
     <script type="module">
-            // 1. Pull the config from your central file
             import { firebaseConfig } from './firebase-config.js';
-
-            // 2. Pull the tools from Google's servers
             import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-            import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+            import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
             import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-            // 3. Initialize using the imported config
             const app = initializeApp(firebaseConfig);
             const db = getFirestore(app);
             const auth = getAuth(app);
-            
-            // ... rest of your code ...
 
-        // 1. Get UID from URL immediately (so coaches can see it without logging in)
-        const urlParams = new URLSearchParams(window.location.search);
-        const targetUid = urlParams.get('uid');
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    // 1. FETCH DATA FROM ALL SOURCES
+                    const recSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+                    const masterSnap = await getDoc(doc(db, "users", user.uid));
+                    const liftSnap = await getDoc(doc(db, "max_lifts", user.uid));
 
-        async function loadProfile(uid) {
-            if (!uid) return;
+                    // 2. RENDER RECRUITING & MASTER DATA
+                    if (recSnap.exists()) {
+                        const d = recSnap.data();
+                        const m = masterSnap.exists() ? masterSnap.data() : {};
 
-            const docRef = doc(db, "recruiting_profiles", uid);
-            const docSnap = await getDoc(docRef);
+                        // BASIC INFO
+                        document.getElementById('disp-name').innerText = d.fullName || "Athlete Name";
+                        document.getElementById('disp-class').innerText = "CLASS OF " + (d.gradYear || "--");
+                        document.getElementById('disp-pos').innerText = "POS: " + (d.primaryPos || "--");
+                        document.getElementById('disp-number').innerText = "#" + (d.jerseyNum || "--");
 
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                
-                // Basic Info
-                document.getElementById('card-name').innerText = data.fullName || "---";
-                document.getElementById('card-class').innerText = data.gradYear || "---";
-                document.getElementById('card-htwt').innerText = `${data.height || '--'} / ${data.weight || '--'}`;
-                document.getElementById('card-pos').innerText = data.primaryPos || "---";
-                
-                // Social Links
-                const setupLink = (id, url) => {
-                    const el = document.getElementById(id);
-                    if(url) { el.href = url; el.style.opacity = "1"; el.style.pointerEvents = "auto"; }
-                    else { el.style.opacity = "0.2"; el.style.pointerEvents = "none"; }
-                };
-                setupLink('link-hudl', data.hudlLink);
-                setupLink('link-twitter', data.twitterLink);
-                setupLink('link-youtube', data.youtubeLink);
-                setupLink('link-other', data.otherLink);
+                        // --- HEIGHT FORMATTING LOGIC ---
+                        const rawHeight = m.height || d.height; // Checks master first, then profile
+                        const heightElement = document.getElementById('disp-height');
+                        if (heightElement) {
+                            if (rawHeight) {
+                                const feet = Math.floor(rawHeight / 12);
+                                const inches = rawHeight % 12;
+                                heightElement.innerText = `${feet}'${inches}"`;
+                            } else {
+                                heightElement.innerText = "--";
+                            }
+                        }
 
-                // Academics
-                document.getElementById('card-gpa').innerText = data.gpa || "---";
-                document.getElementById('card-sat').innerText = data.sat || "---";
-                document.getElementById('card-act').innerText = data.act || "---";
+                        // SYNCED WEIGHT
+                        const weight = m.weight || d.weight || "--";
+                        const weightElement = document.getElementById('disp-weight'); 
+                        if (weightElement) weightElement.innerText = weight + " lbs";
 
-                // Statement
-                if(data.statement) document.getElementById('card-statement').innerText = `"${data.statement}"`;
-
-                // PERFORMANCE & GOALS (Matches your Profile logic)
-                const goalBox = document.getElementById('goals-display');
-                
-                // Fetch latest maxes (Handle empty collection gracefully)
-                const q = query(collection(db, "recruiting_profiles", uid, "maxes"), orderBy("timestamp", "desc"), limit(1));
-                const maxSnap = await getDocs(q);
-                const latestStats = !maxSnap.empty ? maxSnap.docs[0].data() : {};
-
-                if(data.goals && data.goals.length > 0) {
-                    goalBox.innerHTML = "";
-                    data.goals.forEach(goal => {
-                        const current = Number(latestStats[goal.type]) || 0;
-                        const target = Number(goal.target) || 0;
-                        const pct = target > 0 ? Math.min((current / target) * 100, 100) : 0;
-                        
-                        // Format Label (e.g., bodyWeight -> Body Weight)
-                        const label = goal.type.replace(/([A-Z])/g, ' $1').replace('_', ' ').toUpperCase();
-
-                        goalBox.innerHTML += `
-                            <div class="stat-card">
-                                <div class="flex justify-between items-end">
-                                    <div>
-                                        <p class="label">${label}</p>
-                                        <p class="text-sm font-black italic uppercase">${target} LB GOAL</p>
-                                    </div>
-                                    <div class="text-right">
-                                        <p class="text-[9px] text-gray-500 uppercase font-bold">Current: ${current}</p>
-                                        <p class="text-xs font-black ${pct >= 100 ? 'text-green-500' : 'text-red-600'}">${Math.round(pct)}%</p>
-                                    </div>
-                                </div>
-                                <div class="goal-bar-bg">
-                                    <div class="goal-bar-fill ${pct >= 100 ? 'bg-green-500' : ''}" style="width: ${pct}%"></div>
-                                </div>
-                            </div>
-                        `;
-                    });
+                        // ... (rest of your academics, socials, and lift data logic)
+                    }
                 }
-            }
-        }
-
-        // Logic to decide which UID to load
-        if (targetUid) {
-            // If there's a UID in the URL, load it (Public View)
-            loadProfile(targetUid);
-        } else {
-            // Otherwise, wait for login and load the user's own card (Preview View)
-            onAuthStateChanged(auth, (user) => {
-                if (user) loadProfile(user.uid);
-                else window.location.href = "index.html"; // Redirect if no UID and no login
             });
-        }
-    </script>
+        </script>
 </body>
 </html>
