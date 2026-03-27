@@ -20,9 +20,17 @@
 </head>
 <body class="p-4 pb-20">
 
-    <header class="max-w-3xl mx-auto py-8 text-center">
+    <header class="bg-black border-b-2 border-red-700 p-4 sticky top-0 z-50">
+        <div class="flex justify-between items-center max-w-5xl mx-auto">
+            <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1.5 rounded text-gray-400 hover:text-white transition-all">← Lobby</button>
+            <div class="flex items-center gap-5">
+                <img id="school-logo" src="images/panther-logo1.png" alt="School" class="h-8 w-auto">
         <h1 class="text-3xl font-black italic uppercase italic">Next Level <span class="text-red-600">Recruiting</span></h1>
         <p class="text-gray-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-2">Elite Athlete Scouting Profile</p>
+            <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-8 w-auto">
+            </div>
+            <div class="w-[40px]"></div>
+        </div>
     </header>
 
     <form id="recruitingForm" class="max-w-3xl mx-auto">
@@ -187,10 +195,10 @@
             </div>
             <span class="sub-label">Willing to...</span>
             <div class="checkbox-group" id="commitmentChecks">
-                <label class="check-item"><input type="checkbox" value="Lift Year Round" class="w-auto m-0"> Lift Year-Round</label>
-                <label class="check-item"><input type="checkbox" value="Attend Camps" class="w-auto m-0"> Attend Camps/Showcases</label>
-                <label class="check-item"><input type="checkbox" value="Travel Visits" class="w-auto m-0"> Travel for Visits</label>
-                <label class="check-item"><input type="checkbox" value="Coach Contact" class="w-auto m-0"> Communicate with Coaches</label>
+                <label class="check-item"><input type="checkbox" value="Lift Year Round"> Lift Year-Round</label>
+                <label class="check-item"><input type="checkbox" value="Attend Camps"> Attend Camps/Showcases</label>
+                <label class="check-item"><input type="checkbox" value="Travel Visits"> Travel for Visits</label>
+                <label class="check-item"><input type="checkbox" value="Coach Contact"> Communicate with Coaches</label>
             </div>
         </div>
 
@@ -222,23 +230,62 @@
         onAuthStateChanged(auth, async (user) => { 
             if (user) {
                 currentUser = user;
-                // PRE-FILL FROM PROFILE & RECRUITING DATA
-                const profileSnap = await getDoc(doc(db, "users", user.uid)); // Check main profile for name
-                const recruitingSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
-
+                
+                // 1. First, check the main 'users' collection for the Display Name
+                const profileSnap = await getDoc(doc(db, "users", user.uid));
                 if (profileSnap.exists()) {
                     document.getElementById('fullName').value = profileSnap.data().displayName || "";
                 }
 
+                // 2. Then, check the 'recruiting_profiles' collection for the deep data
+                const recruitingSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+
                 if (recruitingSnap.exists()) {
                     const d = recruitingSnap.data();
-                    // Auto-fill logic for existing entries...
-                    if(d.fullName) document.getElementById('fullName').value = d.fullName;
-                    if(d.jerseyNum) document.getElementById('jerseyNum').value = d.jerseyNum;
-                    // ... (Add other pre-fill fields here)
+                    
+                    // SECTION 01: PERSONAL & SOCIAL
+                    document.getElementById('fullName').value = d.fullName || document.getElementById('fullName').value;
+                    document.getElementById('jerseyNum').value = d.jerseyNum || "";
+                    document.getElementById('playerPhone').value = d.playerPhone || "";
+                    document.getElementById('playerEmail').value = d.playerEmail || "";
+                    document.getElementById('twitter').value = d.twitter || "";
+                    document.getElementById('instagram').value = d.instagram || "";
+                    document.getElementById('tiktok').value = d.tiktok || "";
+                    document.getElementById('parentNames').value = d.parentNames || "";
+                    document.getElementById('parentContact').value = d.parentContact || "";
+
+                    // SECTION 02: ASPIRATIONS
+                    document.getElementById('wantsToPlay').value = d.wantsToPlay || "Yes-Definitely";
+                    document.getElementById('whyPlay').value = d.whyPlay || "";
+                    document.getElementById('seriousness').value = d.seriousness || "Very Serious";
+                    document.getElementById('perceivedLevel').value = d.perceivedLevel || "D1";
+
+                    // SECTION 03-05: ACADEMICS & GOALS
+                    document.getElementById('postCollegeGoals').value = d.postCollegeGoals || "";
+                    document.getElementById('major').value = d.major || "";
+                    document.getElementById('acadImportance').value = d.acadImportance || "Extremely";
+                    document.getElementById('gpa').value = d.gpa || "";
+                    document.getElementById('coreGpa').value = d.coreGpa || "";
+                    document.getElementById('ncaaReg').value = d.ncaaReg || "No";
+
+                    // SECTION 06-08: TESTING & CHARACTER
+                    document.getElementById('isStarter').value = d.isStarter || "No";
+                    document.getElementById('highlightUrl').value = d.highlightUrl || "";
+                    document.getElementById('tdlMeaning').value = d.tdlMeaning || "";
+                    
+                    // Re-check the commitment boxes
+                    if (d.commitments && Array.isArray(d.commitments)) {
+                        const checkboxes = document.querySelectorAll('#commitmentChecks input');
+                        checkboxes.forEach(cb => {
+                            if (d.commitments.includes(cb.value)) cb.checked = true;
+                        });
+                    }
                 }
             } else { 
-                setTimeout(() => { if(!auth.currentUser) window.location.href='index.html'; }, 2000);
+                // Small delay to prevent the "flash and boot" on slow connections
+                setTimeout(() => { 
+                    if(!auth.currentUser) window.location.href='index.html'; 
+                }, 2000);
             } 
         });
 
