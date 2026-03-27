@@ -5,31 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Next Level Recruiting | RACKSTAT</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #000; color: #fff; font-family: 'Inter', sans-serif; }
-        .form-section { background: #0a0a0a; border: 1px solid #1a1a1a; padding: 2rem; border-radius: 2rem; margin-bottom: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .section-header { color: #ef4444; font-weight: 900; text-transform: uppercase; font-style: italic; margin-bottom: 1.5rem; border-left: 4px solid #ef4444; padding-left: 12px; font-size: 1.1rem; letter-spacing: 1px; }
-        .sub-label { display: block; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; margin-bottom: 0.5rem; color: #444; letter-spacing: 0.1em; }
-        input, select, textarea { width: 100%; background: #111; border: 1px solid #222; padding: 0.75rem; border-radius: 0.75rem; color: white; margin-bottom: 1.25rem; outline: none; font-size: 0.9rem; transition: all 0.2s; }
-        input:focus, select:focus, textarea:focus { border-color: #ef4444; background: #151515; }
+        body { background-color: #000; color: #fff; font-family: sans-serif; }
+        .form-section { background: #0a0a0a; border: 1px solid #1a1a1a; padding: 2rem; border-radius: 1.5rem; margin-bottom: 2rem; }
+        .section-header { color: #ef4444; font-weight: 900; text-transform: uppercase; font-style: italic; margin-bottom: 1.5rem; border-left: 4px solid #ef4444; padding-left: 10px; font-size: 1.1rem; }
+        .sub-label { display: block; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem; color: #666; letter-spacing: 0.05em; }
+        input, select, textarea { width: 100%; background: #050505; border: 1px solid #222; padding: 0.85rem; border-radius: 0.5rem; color: white; margin-bottom: 1rem; outline: none; font-size: 0.9rem; }
+        input:focus, select:focus, textarea:focus { border-color: #ef4444; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-        .checkbox-group { display: grid; grid-template-columns: 1fr; gap: 0.75rem; background: #111; padding: 1.25rem; border-radius: 1rem; border: 1px solid #222; }
-        .check-item { display: flex; align-items: center; gap: 12px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: #888; cursor: pointer; }
-        .check-item input { width: auto; margin: 0; accent-color: #ef4444; }
-        .btn-submit { background: #ef4444; color: white; font-weight: 900; text-transform: uppercase; padding: 1.25rem; border-radius: 1rem; width: 100%; border-bottom: 4px solid #991b1b; transition: all 0.2s; cursor: pointer; letter-spacing: 1px; }
-        .btn-submit:hover { background: #f87171; transform: translateY(-2px); }
-        .btn-submit:active { transform: translateY(2px); border-bottom-width: 0; }
+        .checkbox-group { display: grid; grid-template-columns: 1fr; gap: 0.5rem; background: #080808; padding: 1rem; border-radius: 0.5rem; border: 1px solid #222; }
+        .check-item { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; }
+        .btn-submit { background: #ef4444; color: white; font-weight: 900; text-transform: uppercase; padding: 1.5rem; border-radius: 1rem; width: 100%; border-bottom: 4px solid #991b1b; transition: all 0.2s; cursor: pointer; }
     </style>
 </head>
-<body class="p-4 pb-20 bg-radial-at-t from-gray-900 to-black">
+<body class="p-4 pb-20">
 
-    <header class="max-w-3xl mx-auto py-12 text-center">
-        <div class="inline-block bg-red-600/10 border border-red-600/20 px-3 py-1 rounded-full mb-4">
-            <span class="text-[9px] font-black text-red-500 uppercase tracking-widest">Recruiting Engine v2.0</span>
-        </div>
-        <h1 class="text-4xl font-black italic uppercase italic tracking-tighter text-white">Next Level <span class="text-red-600">Recruiting</span></h1>
-        <p class="text-gray-500 text-[10px] font-bold uppercase tracking-[0.4em] mt-3">Elite Athlete Profile & College Interest</p>
+    <header class="max-w-3xl mx-auto py-8 text-center">
+        <h1 class="text-3xl font-black italic uppercase italic">Next Level <span class="text-red-600">Recruiting</span></h1>
+        <p class="text-gray-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-2">Elite Athlete Scouting Profile</p>
     </header>
 
     <form id="recruitingForm" class="max-w-3xl mx-auto">
@@ -38,118 +31,203 @@
             <h2 class="section-header">01 Personal Profile</h2>
             <div class="grid-2">
                 <div><span class="sub-label">Full Name</span><input type="text" id="fullName" required></div>
-                <div><span class="sub-label">Grad Year</span><input type="text" id="gradYear" placeholder="2027" required></div>
+                <div><span class="sub-label">Jersey #</span><input type="text" id="jerseyNum"></div>
             </div>
-            <div class="grid-2">
-                <div><span class="sub-label">Height</span><input type="text" id="height" placeholder="6'2"></div>
-                <div><span class="sub-label">Weight</span><input type="text" id="weight" placeholder="215 lbs"></div>
-            </div>
-            <div class="grid-2">
-                <div><span class="sub-label">Primary Position</span><input type="text" id="primaryPos" required></div>
-                <div><span class="sub-label">Secondary</span><input type="text" id="secondaryPos"></div>
-            </div>
-            <div class="grid-2">
-                <div><span class="sub-label">Phone</span><input type="tel" id="playerPhone"></div>
-                <div><span class="sub-label">Twitter/X Handle</span><input type="text" id="twitter" placeholder="@handle"></div>
-            </div>
+            <span class="sub-label">Email Address</span>
+            <input type="email" id="playerEmail">
+            <span class="sub-label">Parent/Guardian Name(s)</span>
+            <input type="text" id="parentNames">
+            <span class="sub-label">Parent Contact Info (Phone/Email)</span>
+            <textarea id="parentContact" rows="2"></textarea>
         </div>
 
         <div class="form-section">
             <h2 class="section-header">02 College Aspirations</h2>
-            <span class="sub-label">Ambition Level</span>
+            <span class="sub-label">Do you want to play after high school?</span>
             <select id="wantsToPlay">
-                <option value="D1 Bound">Scholarship Athlete (D1/D2)</option>
-                <option value="College Bound">College Level (D3/NAIA)</option>
-                <option value="Exploring">Undecided / Exploring</option>
-                <option value="No">High School Career Only</option>
+                <option value="Yes-Definitely">Yes – Definitely</option>
+                <option value="Yes-Maybe">Yes – Maybe</option>
+                <option value="Unsure">Unsure</option>
+                <option value="No">No</option>
             </select>
-            <span class="sub-label">The "Why" (Coaches read this first)</span>
-            <textarea id="whyPlay" rows="3" placeholder="What drives you to play at the next level?"></textarea>
+            <span class="sub-label">Why do you want to play college football?</span>
+            <textarea id="whyPlay" rows="3"></textarea>
+            <span class="sub-label">How serious are you?</span>
+            <select id="seriousness">
+                <option value="Very Serious">Very serious (Whatever it takes)</option>
+                <option value="Somewhat Serious">Somewhat serious</option>
+                <option value="Exploring">Just exploring the idea</option>
+            </select>
+            <span class="sub-label">What level do you believe you can play?</span>
+            <select id="perceivedLevel">
+                <option value="D1">Division I (FBS/FCS)</option>
+                <option value="D2">Division II</option>
+                <option value="D3">Division III</option>
+                <option value="NAIA">NAIA</option>
+                <option value="JUCO">Junior College (JUCO)</option>
+                <option value="Unsure">Unsure</option>
+            </select>
         </div>
 
         <div class="form-section">
-            <h2 class="section-header">03 Academic Standing</h2>
+            <h2 class="section-header">03 Long-Term Goals</h2>
+            <span class="sub-label">Goals after college?</span>
+            <textarea id="postCollegeGoals" rows="2"></textarea>
+            <span class="sub-label">Intended Major / Career</span>
+            <input type="text" id="major">
             <div class="grid-2">
-                <div><span class="sub-label">Core GPA</span><input type="text" id="gpa" placeholder="4.0"></div>
-                <div><span class="sub-label">NCAA ID #</span><input type="text" id="ncaaId" placeholder="Registered?"></div>
+                <div>
+                    <span class="sub-label">Academic Importance</span>
+                    <select id="acadImportance">
+                        <option value="Extremely">Extremely Important</option>
+                        <option value="Important">Important</option>
+                        <option value="Somewhat">Somewhat</option>
+                        <option value="Low">Not a priority</option>
+                    </select>
+                </div>
+                <div>
+                    <span class="sub-label">Prioritize Academics?</span>
+                    <select id="acadPrioritize">
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                        <option value="Unsure">Unsure</option>
+                    </select>
+                </div>
             </div>
-            <span class="sub-label">Intended Major</span>
-            <input type="text" id="major" placeholder="Business, Engineering, etc.">
         </div>
 
         <div class="form-section">
-            <h2 class="section-header">04 Testing & Film</h2>
-            <div class="grid grid-cols-3 gap-3">
-                <div><span class="sub-label">40-Yard</span><input type="text" id="forty"></div>
-                <div><span class="sub-label">Pro-Agility</span><input type="text" id="shuttle"></div>
-                <div><span class="sub-label">Vertical</span><input type="text" id="vert"></div>
+            <h2 class="section-header">04 College Preferences</h2>
+            <span class="sub-label">Interest Level (0=None, 5=High)</span>
+            <div class="grid grid-cols-5 gap-2 mb-4">
+                <div><span class="text-[8px] text-gray-500">D1</span><input type="number" id="pref_d1" min="0" max="5" value="0"></div>
+                <div><span class="text-[8px] text-gray-500">D2</span><input type="number" id="pref_d2" min="0" max="5" value="0"></div>
+                <div><span class="text-[8px] text-gray-500">D3</span><input type="number" id="pref_d3" min="0" max="5" value="0"></div>
+                <div><span class="text-[8px] text-gray-500">NAIA</span><input type="number" id="pref_naia" min="0" max="5" value="0"></div>
+                <div><span class="text-[8px] text-gray-500">JUCO</span><input type="number" id="pref_juco" min="0" max="5" value="0"></div>
             </div>
-            <span class="sub-label">Highlight Tape Link</span>
-            <input type="url" id="highlightLink" placeholder="Hudl or YouTube Link">
+            <div class="grid-2">
+                <div>
+                    <span class="sub-label">School Size</span>
+                    <select id="prefSize">
+                        <option value="Small">Small (< 5k)</option>
+                        <option value="Medium">Medium (5-15k)</option>
+                        <option value="Large">Large (15k+)</option>
+                        <option value="None">No Preference</option>
+                    </select>
+                </div>
+                <div>
+                    <span class="sub-label">Location</span>
+                    <select id="prefLoc">
+                        <option value="Close">Close to home</option>
+                        <option value="State">Same State</option>
+                        <option value="Midwest">Midwest</option>
+                        <option value="Anywhere">Anywhere U.S.</option>
+                    </select>
+                </div>
+            </div>
+            <span class="sub-label">Other (Faith, HBCU, Military, etc.)</span>
+            <input type="text" id="prefOther">
         </div>
 
         <div class="form-section">
-            <h2 class="section-header">05 Character & Commitment</h2>
-            <span class="sub-label">What does RACKSTAT mean to you?</span>
-            <textarea id="rackstatMeaning" rows="4" placeholder="Toughness, Discipline, Love... how do you live it?"></textarea>
-            
-            <span class="sub-label">Elite Commitments</span>
+            <h2 class="section-header">05 Academic Information</h2>
+            <div class="grid-2">
+                <div><span class="sub-label">Current GPA</span><input type="text" id="gpa"></div>
+                <div><span class="sub-label">Core GPA</span><input type="text" id="coreGpa"></div>
+            </div>
+            <div class="grid-2">
+                <div><span class="sub-label">ACT</span><input type="text" id="act"></div>
+                <div><span class="sub-label">SAT</span><input type="text" id="sat"></div>
+            </div>
+            <span class="sub-label">NCAA Eligibility Registered?</span>
+            <select id="ncaaReg">
+                <option value="No">No</option>
+                <option value="Yes">Yes</option>
+            </select>
+            <span class="sub-label">Academic Strengths</span>
+            <textarea id="acadStrengths" rows="2"></textarea>
+        </div>
+
+        <div class="form-section">
+            <h2 class="section-header">06 Testing & Film</h2>
+            <div class="grid-2">
+                <div><span class="sub-label">Starter?</span><select id="isStarter"><option value="Yes">Yes</option><option value="No">No</option></select></div>
+                <div><span class="sub-label">Highlight Link</span><input type="url" id="highlightUrl"></div>
+            </div>
+            <span class="sub-label">Honors / Awards</span>
+            <textarea id="honors" rows="2" placeholder="All-Conference, Captain, etc."></textarea>
+        </div>
+
+        <div class="form-section">
+            <h2 class="section-header">07 Training & Commitment</h2>
+            <span class="sub-label">Weekly extra training days?</span>
+            <select id="trainFreq">
+                <option value="0-1">0–1</option>
+                <option value="2-3">2–3</option>
+                <option value="4-5">4–5</option>
+                <option value="6+">6+</option>
+            </select>
+            <div class="grid-2">
+                <div><span class="sub-label">Nutrition Plan?</span><select id="hasNutrition"><option value="No">No</option><option value="Yes">Yes</option><option value="Sometimes">Sometimes</option></select></div>
+                <div><span class="sub-label">7-8+ Hours Sleep?</span><select id="hasSleep"><option value="Yes">Yes</option><option value="No">No</option></select></div>
+            </div>
+            <span class="sub-label">Willing to...</span>
             <div class="checkbox-group" id="commitmentChecks">
-                <label class="check-item"><input type="checkbox" value="Year Round Training"> Year-Round Performance Training</label>
-                <label class="check-item"><input type="checkbox" value="Camp Circuit"> National Camp & Showcase Circuit</label>
-                <label class="check-item"><input type="checkbox" value="Direct Coach Contact"> Proactive College Coach Outreach</label>
+                <label class="check-item"><input type="checkbox" value="Lift Year Round" class="w-auto m-0"> Lift Year-Round</label>
+                <label class="check-item"><input type="checkbox" value="Attend Camps" class="w-auto m-0"> Attend Camps/Showcases</label>
+                <label class="check-item"><input type="checkbox" value="Travel Visits" class="w-auto m-0"> Travel for Visits</label>
+                <label class="check-item"><input type="checkbox" value="Coach Contact" class="w-auto m-0"> Communicate with Coaches</label>
             </div>
         </div>
 
-        <button type="submit" class="btn-submit">Sync Elite Profile</button>
+        <div class="form-section">
+            <h2 class="section-header">08 Character & Leadership</h2>
+            <span class="sub-label">What type of teammate are you?</span>
+            <textarea id="teammateType" rows="2"></textarea>
+            <span class="sub-label">What does TDL (Toughness, Discipline, Love) mean to you?</span>
+            <textarea id="tdlMeaning" rows="3"></textarea>
+            <span class="sub-label">What are you willing to sacrifice?</span>
+            <textarea id="sacrifice" rows="2"></textarea>
+        </div>
+
+        <button type="submit" class="btn-submit">Sync Scouting Profile</button>
     </form>
 
     <script type="module">
-            // 1. Pull the config from your central file
-            import { firebaseConfig } from './firebase-config.js';
+        import { firebaseConfig } from './firebase-config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-            // 2. Pull the tools from Google's servers
-            import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-            import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-            import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-            // 3. Initialize using the imported config
-            const app = initializeApp(firebaseConfig);
-            const db = getFirestore(app);
-            const auth = getAuth(app);
-            
-            // ... rest of your code ...
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
 
         let currentUser = null;
 
-    // 1. Set a "Checking" flag
-            let isAuthChecked = false;
+        onAuthStateChanged(auth, async (user) => { 
+            if (user) {
+                currentUser = user;
+                // PRE-FILL FROM PROFILE & RECRUITING DATA
+                const profileSnap = await getDoc(doc(db, "users", user.uid)); // Check main profile for name
+                const recruitingSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
 
-            onAuthStateChanged(auth, async (user) => { 
-                if (user) {
-                    isAuthChecked = true; // Confirmation received
-                    currentUser = user;
-                    
-                    // PRE-FILL EXISTING DATA
-                    const snap = await getDoc(doc(db, "recruiting_profiles", user.uid));
-                    if(snap.exists()){
-                        const d = snap.data();
-                        document.getElementById('fullName').value = d.fullName || "";
-                        document.getElementById('height').value = d.height || "";
-                        document.getElementById('weight').value = d.weight || "";
-                        document.getElementById('primaryPos').value = d.primaryPos || "";
-                        document.getElementById('gradYear').value = d.gradYear || "";
-                    }
-                } else { 
-                    // 2. Only redirect if we've actually checked and found no one
-                    // We add a tiny delay to give the SDK a chance to settle
-                    setTimeout(() => {
-                        if (!isAuthChecked) {
-                            window.location.href='index.html';
-                        }
-                    }, 1000); 
-                } 
-            });
+                if (profileSnap.exists()) {
+                    document.getElementById('fullName').value = profileSnap.data().displayName || "";
+                }
+
+                if (recruitingSnap.exists()) {
+                    const d = recruitingSnap.data();
+                    // Auto-fill logic for existing entries...
+                    if(d.fullName) document.getElementById('fullName').value = d.fullName;
+                    if(d.jerseyNum) document.getElementById('jerseyNum').value = d.jerseyNum;
+                    // ... (Add other pre-fill fields here)
+                }
+            } else { 
+                setTimeout(() => { if(!auth.currentUser) window.location.href='index.html'; }, 2000);
+            } 
+        });
 
         document.getElementById('recruitingForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -159,31 +237,32 @@
 
             const profileData = {
                 fullName: document.getElementById('fullName').value,
-                gradYear: document.getElementById('gradYear').value,
-                height: document.getElementById('height').value,
-                weight: document.getElementById('weight').value,
-                primaryPos: document.getElementById('primaryPos').value,
-                secondaryPos: document.getElementById('secondaryPos').value,
-                twitter: document.getElementById('twitter').value,
+                jerseyNum: document.getElementById('jerseyNum').value,
+                playerEmail: document.getElementById('playerEmail').value,
+                parentNames: document.getElementById('parentNames').value,
+                parentContact: document.getElementById('parentContact').value,
                 wantsToPlay: document.getElementById('wantsToPlay').value,
                 whyPlay: document.getElementById('whyPlay').value,
-                gpa: document.getElementById('gpa').value,
-                ncaaId: document.getElementById('ncaaId').value,
+                seriousness: document.getElementById('seriousness').value,
+                perceivedLevel: document.getElementById('perceivedLevel').value,
+                postCollegeGoals: document.getElementById('postCollegeGoals').value,
                 major: document.getElementById('major').value,
-                forty: document.getElementById('forty').value,
-                shuttle: document.getElementById('shuttle').value,
-                vert: document.getElementById('vert').value,
-                highlightLink: document.getElementById('highlightLink').value,
-                rackstatMeaning: document.getElementById('rackstatMeaning').value,
+                acadImportance: document.getElementById('acadImportance').value,
+                gpa: document.getElementById('gpa').value,
+                coreGpa: document.getElementById('coreGpa').value,
+                ncaaReg: document.getElementById('ncaaReg').value,
+                isStarter: document.getElementById('isStarter').value,
+                highlightUrl: document.getElementById('highlightUrl').value,
                 commitments: commitments,
+                tdlMeaning: document.getElementById('tdlMeaning').value,
                 lastUpdated: new Date().toISOString()
             };
 
             try {
                 await setDoc(doc(db, "recruiting_profiles", currentUser.uid), profileData, { merge: true });
-                alert("RACKSTAT PROFILE SYNCED!");
-                window.location.href = 'recruiting-card.html';
-            } catch (err) { alert("Sync Error: " + err.message); }
+                alert("SCOUTING PROFILE SYNCED!");
+                window.location.href = 'index.html';
+            } catch (err) { alert("Error: " + err.message); }
         });
     </script>
 </body>
