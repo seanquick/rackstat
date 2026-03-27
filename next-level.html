@@ -28,13 +28,26 @@
     <form id="recruitingForm" class="max-w-3xl mx-auto">
         
         <div class="form-section">
-            <h2 class="section-header">01 Personal Profile</h2>
+            <h2 class="section-header">01 Personal & Social Profile</h2>
             <div class="grid-2">
                 <div><span class="sub-label">Full Name</span><input type="text" id="fullName" required></div>
                 <div><span class="sub-label">Jersey #</span><input type="text" id="jerseyNum"></div>
             </div>
-            <span class="sub-label">Email Address</span>
-            <input type="email" id="playerEmail">
+            
+            <div class="grid-2">
+                <div><span class="sub-label">Player Cell Phone</span><input type="tel" id="playerPhone" placeholder="(555) 555-5555"></div>
+                <div><span class="sub-label">Email Address</span><input type="email" id="playerEmail"></div>
+            </div>
+
+            <div class="bg-[#0f0f0f] p-4 rounded-xl border border-red-900/20 mb-4">
+                <span class="sub-label text-red-500">Social Recruiting (Coaches Will Check These)</span>
+                <div class="grid-2">
+                    <input type="text" id="twitter" placeholder="X / Twitter Handle (@...) ">
+                    <input type="text" id="instagram" placeholder="Instagram Handle">
+                </div>
+                <input type="text" id="tiktok" placeholder="TikTok Link / Handle">
+            </div>
+
             <span class="sub-label">Parent/Guardian Name(s)</span>
             <input type="text" id="parentNames">
             <span class="sub-label">Parent Contact Info (Phone/Email)</span>
@@ -185,7 +198,7 @@
             <h2 class="section-header">08 Character & Leadership</h2>
             <span class="sub-label">What type of teammate are you?</span>
             <textarea id="teammateType" rows="2"></textarea>
-            <span class="sub-label">What does TDL (Toughness, Discipline, Love) mean to you?</span>
+            <span class="sub-label">What does being a good teammate mean to you?</span>
             <textarea id="tdlMeaning" rows="3"></textarea>
             <span class="sub-label">What are you willing to sacrifice?</span>
             <textarea id="sacrifice" rows="2"></textarea>
@@ -236,27 +249,40 @@
             const commitments = Array.from(document.querySelectorAll('#commitmentChecks input:checked')).map(cb => cb.value);
 
             const profileData = {
-                fullName: document.getElementById('fullName').value,
-                jerseyNum: document.getElementById('jerseyNum').value,
-                playerEmail: document.getElementById('playerEmail').value,
-                parentNames: document.getElementById('parentNames').value,
-                parentContact: document.getElementById('parentContact').value,
-                wantsToPlay: document.getElementById('wantsToPlay').value,
-                whyPlay: document.getElementById('whyPlay').value,
-                seriousness: document.getElementById('seriousness').value,
-                perceivedLevel: document.getElementById('perceivedLevel').value,
-                postCollegeGoals: document.getElementById('postCollegeGoals').value,
-                major: document.getElementById('major').value,
-                acadImportance: document.getElementById('acadImportance').value,
-                gpa: document.getElementById('gpa').value,
-                coreGpa: document.getElementById('coreGpa').value,
-                ncaaReg: document.getElementById('ncaaReg').value,
-                isStarter: document.getElementById('isStarter').value,
-                highlightUrl: document.getElementById('highlightUrl').value,
-                commitments: commitments,
-                tdlMeaning: document.getElementById('tdlMeaning').value,
-                lastUpdated: new Date().toISOString()
-            };
+            // 01 PERSONAL & SOCIAL
+            fullName: document.getElementById('fullName').value,
+            jerseyNum: document.getElementById('jerseyNum').value,
+            playerPhone: document.getElementById('playerPhone').value, // NEW
+            playerEmail: document.getElementById('playerEmail').value,
+            twitter: document.getElementById('twitter').value,         // NEW
+            instagram: document.getElementById('instagram').value,     // NEW
+            tiktok: document.getElementById('tiktok').value,           // NEW
+            parentNames: document.getElementById('parentNames').value,
+            parentContact: document.getElementById('parentContact').value,
+
+            // 02 ASPIRATIONS
+            wantsToPlay: document.getElementById('wantsToPlay').value,
+            whyPlay: document.getElementById('whyPlay').value,
+            seriousness: document.getElementById('seriousness').value,
+            perceivedLevel: document.getElementById('perceivedLevel').value,
+
+            // 03-05 ACADEMICS & GOALS
+            postCollegeGoals: document.getElementById('postCollegeGoals').value,
+            major: document.getElementById('major').value,
+            acadImportance: document.getElementById('acadImportance').value,
+            gpa: document.getElementById('gpa').value,
+            coreGpa: document.getElementById('coreGpa').value,
+            ncaaReg: document.getElementById('ncaaReg').value,
+
+            // 06-08 TESTING & CHARACTER
+            isStarter: document.getElementById('isStarter').value,
+            highlightUrl: document.getElementById('highlightUrl').value,
+            commitments: commitments,
+            tdlMeaning: document.getElementById('tdlMeaning').value,
+            
+            // SYSTEM DATA
+            lastUpdated: new Date().toISOString()
+        };
 
             try {
                 await setDoc(doc(db, "recruiting_profiles", currentUser.uid), profileData, { merge: true });
