@@ -102,7 +102,7 @@
 
             // 2. Pull the tools from Google's servers
             import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-            import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+            import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, orderBy, limit, getDocs, onSnapshot, updateDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
             import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
             // 3. Initialize using the imported config
