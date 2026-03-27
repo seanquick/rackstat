@@ -98,18 +98,27 @@
             </section>
             
             <section class="bg-[#1a1a1c] p-4 rounded-2xl border border-gray-800">
-                <div class="flex justify-between items-center mb-1">
-                    <h2 class="text-[8px] font-black uppercase italic text-white">Body Weight</h2>
-                    <span id="last-weight-display" class="text-[10px] font-bold text-gray-500">-- lbs</span>
-                    <h2 class="text-[8px] font-black uppercase italic text-white">Height</h2>
-                    <span id="last-height-display" class="text-[10px] font-bold text-gray-500">-- lbs</span>
-                </div>
-                    <div class="flex gap-1 items-center">
-                        <input id="quick-height" type="number" placeholder="Inches" class="!m-0 !py-1 text-sm w-20 text-center">
-                        <input id="quick-weight" type="number" placeholder="Lbs" class="!m-0 !py-1 text-sm w-20 text-center">
+                <div class="flex justify-between items-center mb-2">
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-[8px] font-black uppercase italic text-white leading-none">Body Weight</h2>
+                        <span id="last-weight-display" class="text-[10px] font-bold text-gray-500 leading-none">-- lbs</span>
                     </div>
-                        <button onclick="saveQuickStats()" class="w-full bg-white text-black py-2 rounded-lg font-black uppercase text-xs tracking-wider shadow-md hover:bg-gray-200 transition-colors">Update</button>
-                    
+                    <div class="flex items-center gap-2 text-right">
+                        <h2 class="text-[8px] font-black uppercase italic text-white leading-none">Height</h2>
+                        <span id="last-height-display" class="text-[10px] font-bold text-gray-500 leading-none">-- in</span>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <div class="flex gap-1">
+                        <input id="quick-weight" type="number" placeholder="Lbs" class="flex-1 !m-0 !py-2 text-sm text-center bg-black border-gray-800 text-white rounded">
+                        <input id="quick-height" type="number" placeholder="Inches" class="flex-1 !m-0 !py-2 text-sm text-center bg-black border-gray-800 text-white rounded">
+                    </div>
+
+                    <button onclick="saveQuickStats()" class="w-full bg-white text-black py-2 rounded-lg font-black uppercase text-[10px] tracking-wider shadow-md hover:bg-gray-200 transition-colors">
+                        Update
+                    </button>
+                </div>
             </section>
         </div>
 
@@ -263,56 +272,78 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        let calGoal = 0;
-        let proGoal = 0;
+        // Global Goals (with safe defaults to prevent 0% errors on load)
+        let calGoal = 2500; 
+        let proGoal = 150;
+        let waterGoal = 16; // Added for your new "Cups" tracker
 
         document.getElementById('entry-date').valueAsDate = new Date();
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // 1. SYNCED WEIGHT LISTENER: Pulls from master profile 'users' collection
-                // This stays active so weight updates everywhere instantly
+                // 1. MASTER DATA LISTENER (Weight & Height)
                 onSnapshot(doc(db, "users", user.uid), (userDoc) => {
-                    if (userDoc.exists() && userDoc.data().weight) {
-                        const weight = userDoc.data().weight;
-                        const weightDisplay = document.getElementById('last-weight-display');
-                        const weightInput = document.getElementById('quick-weight');
-                        
-                        if (weightDisplay) weightDisplay.innerText = weight + " lbs";
-                        if (weightInput) weightInput.value = weight;
+                    if (userDoc.exists()) {
+                        const userData = userDoc.data();
+
+                        // Sync Weight
+                        if (userData.weight) {
+                            const wDisplay = document.getElementById('last-weight-display');
+                            const wInput = document.getElementById('quick-weight');
+                            if (wDisplay) wDisplay.innerText = userData.weight + " lbs";
+                            if (wInput) wInput.value = userData.weight;
+                        }
+
+                        // Sync Height (Formatted)
+                        if (userData.height) {
+                            const hDisplay = document.getElementById('last-height-display');
+                            const hInput = document.getElementById('quick-height');
+                            if (hDisplay) {
+                                const ft = Math.floor(userData.height / 12);
+                                const inch = userData.height % 12;
+                                hDisplay.innerText = `${ft}'${inch}"`;
+                            }
+                            if (hInput) hInput.value = userData.height;
+                        }
                     }
                 });
 
-                // 2. FETCH RECRUITING DATA: Load Goals & Init Page
-                try {
-                    const snap = await getDoc(doc(db, "recruiting_profiles", user.uid));
-                    
+                // 2. RECRUITING PROFILE LISTENER (Goals & Progress)
+                // This replaces the old 'getDoc' with an active 'onSnapshot'
+                onSnapshot(doc(db, "recruiting_profiles", user.uid), (snap) => {
                     if (snap.exists()) {
                         const data = snap.data();
                         
-                        // Set global goals
-                        calGoal = data.dailyCalorieGoal || 0;
-                        proGoal = data.dailyProteinGoal || 0;
+                        // Update Global Variables
+                        calGoal = data.dailyCalorieGoal || 2500;
+                        proGoal = data.dailyProteinGoal || 150;
+                        waterGoal = data.dailyWaterGoal || 16; // Add this line!
 
-                        // Update UI displays
-                        document.getElementById('target-cal-display').innerText = calGoal;
-                        document.getElementById('target-pro-display').innerText = proGoal;
+                        // Update UI Goal Displays
+                        const targetCal = document.getElementById('target-cal-display');
+                        const targetPro = document.getElementById('target-pro-display');
+                        // If you have a span for the water goal text, update it here:
+                        const targetWater = document.getElementById('target-water-display'); 
 
-                        // Trigger data fetches after goals are confirmed
+                        if (targetCal) targetCal.innerText = calGoal;
+                        if (targetPro) targetPro.innerText = proGoal;
+                        if (targetWater) targetWater.innerText = waterGoal; // Add this line!
+
+                        // Re-calculate everything
                         updateDailyTotals();
                         fetchMealHistory();
-                        updateStreak();
+                        if (typeof updateStreak === "function") updateStreak();
                     } else {
-                        console.log("No recruiting profile found. Using default goals.");
+                        console.log("No profile found. Loading defaults...");
+                        // Set defaults if no profile exists yet
+                        calGoal = 2500;
+                        proGoal = 150;
+                        waterGoal = 16;
                         updateDailyTotals();
-                        fetchMealHistory();
                     }
-                } catch (error) {
-                    console.error("Error loading profile:", error);
-                }
+                });
 
             } else {
-                // 3. AUTH PROTECTION
                 location.href = 'index.html';
             }
         });
@@ -727,7 +758,7 @@
 
                 // 4. Update the Progress Bar (16 Cups = 128oz Goal)
                 const goal = 16; 
-                const progressPercentage = Math.min((totalCups / goal) * 100, 100);
+                const progressPercentage = Math.min((totalCups / waterGoal) * 100, 100);
                 const progressBar = document.getElementById('water-progress-bar');
 
                 if (progressBar) {
