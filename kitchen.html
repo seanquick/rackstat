@@ -71,9 +71,18 @@
                     <p class="text-[8px] text-gray-500 uppercase">Fats</p>
                     <p id="day-fat" class="text-sm font-black text-yellow-500">0g</p>
                 </div>
-                <div class="stat-card bg-black border-blue-500/30">
-                    <p class="text-[8px] text-blue-400 uppercase">Water</p>
+                <div class="stat-card bg-black border-blue-500/30 p-3 rounded-lg border">
+                    <p class="text-[8px] text-blue-400 uppercase tracking-widest leading-none mb-1">Water</p>
                     <p id="day-water" class="text-sm font-black text-white">0 Cups</p>
+
+                    <div class="w-full bg-blue-900/20 h-1.5 rounded-full mt-2 overflow-hidden">
+                        
+                        <div id="water-progress-bar" 
+                            class="bg-blue-500 h-full transition-all duration-500 ease-out" 
+                            style="width: 0%">
+                        </div>
+
+                    </div>
                 </div>
             </div>
         </div>
@@ -84,6 +93,7 @@
                 <div class="flex gap-2">
                     <button onclick="addWater(1)" class="flex-1 bg-blue-900/40 border border-blue-500/50 py-2 rounded font-black text-xs">+1</button>
                     <button onclick="addWater(4)" class="flex-1 bg-blue-900/40 border border-blue-500/50 py-2 rounded font-black text-xs">+4</button>
+                    <button onclick="undoLastWater()" class="text-red-500 text-[10px] font-black uppercase ml-2 opacity-70 hover:opacity-100">Undo Last</button>
                 </div>
             </section>
             
@@ -91,11 +101,13 @@
                 <div class="flex justify-between items-center mb-1">
                     <h2 class="text-[10px] font-black uppercase italic text-white">Body Weight</h2>
                     <span id="last-weight-display" class="text-[10px] font-bold text-gray-500">-- lbs</span>
+                    <h2 class="text-[10px] font-black uppercase italic text-white">Height</h2>
+                    <span id="last-height-display" class="text-[10px] font-bold text-gray-500">-- lbs</span>
                 </div>
                     <div class="flex gap-1 items-center">
-                        <input id="quick-height" type="number" placeholder="Ht (in)" class="!m-0 !py-1 text-sm w-14 text-center">
+                        <input id="quick-height" type="number" placeholder="Inches" class="!m-0 !py-1 text-sm w-14 text-center">
                         <input id="quick-weight" type="number" placeholder="Lbs" class="!m-0 !py-1 text-sm w-14 text-center">
-                        <button onclick="saveQuickStats()" class="bg-white text-black px-3 py-1 rounded font-black uppercase text-[9px]">Fix</button>
+                        <button onclick="saveQuickStats()" class="bg-white text-black px-3 py-1 rounded font-black uppercase text-[9px]">Update</button>
                     </div>
             </section>
         </div>
@@ -240,8 +252,8 @@
         // 2. Pull the tools from Google's servers
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { 
-            getFirestore, doc, setDoc, getDoc, updateDoc, collection, 
-            addDoc, query, where, getDocs, orderBy, limit, serverTimestamp, onSnapshot 
+            getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, 
+            query, orderBy, limit, getDocs, deleteDoc 
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
@@ -471,6 +483,37 @@
             }
         };
 
+        window.undoLastWater = async () => {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            try {
+                // 1. Reference the water sub-collection
+                const waterRef = collection(db, "recruiting_profiles", user.uid, "water");
+                
+                // 2. Create a query to find the very last entry added
+                const q = query(waterRef, orderBy("timestamp", "desc"), limit(1));
+                const snap = await getDocs(q);
+
+                if (!snap.empty) {
+                    // 3. Get the ID of that last entry and delete it
+                    const lastDocId = snap.docs[0].id;
+                    await deleteDoc(doc(db, "recruiting_profiles", user.uid, "water", lastDocId));
+                    
+                    // 4. Refresh the numbers on the screen
+                    if (typeof updateDailyTotals === "function") {
+                        updateDailyTotals(); 
+                    }
+                    console.log("Last water entry removed.");
+                } else {
+                    alert("No water entries to undo.");
+                }
+            } catch (e) {
+                console.error("Undo Error:", e);
+                alert("Undo failed: " + e.message);
+            }
+        };
+
         window.saveMeal = async () => {
             const btn = document.getElementById('log-btn');
             btn.disabled = true;
@@ -653,7 +696,56 @@
             document.getElementById('weekly-modal').classList.add('hidden');
         };
 
-        window.updateDailyTotals = updateDailyTotals;
+        window.updateDailyTotals = async () => {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            try {
+                // 1. Calculate the start of "Today" (Midnight)
+                const now = new Date();
+                const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+                // 2. Query Water entries for TODAY
+                const waterRef = collection(db, "recruiting_profiles", user.uid, "water");
+                const q = query(waterRef, orderBy("timestamp", "desc"));
+                const snap = await getDocs(q);
+
+                let totalCups = 0;
+                snap.forEach(doc => {
+                    const data = doc.data();
+                    if (data.timestamp >= startOfToday) {
+                        totalCups += (data.amount || 0);
+                    }
+                });
+
+                // 3. Update the UI Text (Matches your 'day-water' ID)
+                const display = document.getElementById('day-water');
+                if (display) {
+                    display.innerText = totalCups + (totalCups === 1 ? " Cup" : " Cups");
+                }
+
+                // 4. Update the Progress Bar (16 Cups = 128oz Goal)
+                const goal = 16; 
+                const progressPercentage = Math.min((totalCups / goal) * 100, 100);
+                const progressBar = document.getElementById('water-progress-bar');
+
+                if (progressBar) {
+                    progressBar.style.width = `${progressPercentage}%`;
+                    
+                    if (progressPercentage >= 100) {
+                        // Only replaces if the class exists, otherwise adds the new one
+                        progressBar.classList.add('bg-green-500');
+                        progressBar.classList.remove('bg-blue-500');
+                    } else {
+                        progressBar.classList.add('bg-blue-500');
+                        progressBar.classList.remove('bg-green-500');
+                    }
+                }
+
+            } catch (e) {
+                console.error("Update Totals Error:", e);
+            }
+        };
     </script>
 </body>
 </html>
