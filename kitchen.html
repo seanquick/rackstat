@@ -118,15 +118,6 @@
                 </div>
             </section>
 
-                <div class="flex flex-col gap-2">
-                    <div class="flex gap-1">
-                        <input id="quick-weight" type="number" placeholder="Lbs" class="flex-1 !m-0 !py-2 text-sm text-center bg-black border-gray-800 text-white rounded">
-                        <input id="quick-height" type="number" placeholder="Inches" class="flex-1 !m-0 !py-2 text-sm text-center bg-black border-gray-800 text-white rounded">
-                    </div>
-
-                    <button onclick="saveQuickStats()" class="w-full bg-white text-black py-2 rounded-lg font-black uppercase text-[10px] tracking-wider shadow-md hover:bg-gray-200 transition-colors">
-                        Update
-                    </button>
                 </div>
             </section>
         </div>
@@ -272,7 +263,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { 
             getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, 
-            query, orderBy, limit, getDocs, deleteDoc, onSnapshot 
+            query, orderBy, limit, getDocs, deleteDoc, onSnapshot, where 
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
@@ -357,12 +348,12 @@
             }
         });
 
-        // --- NEW CONSOLIDATED SYNC FUNCTION ---
         window.saveQuickStats = async () => {
             const htInput = document.getElementById('quick-height');
             const bwInput = document.getElementById('quick-weight');
             const user = auth.currentUser;
 
+            // 1. Validation check
             if (!user || (!htInput.value && !bwInput.value)) {
                 alert("Enter Height or Weight to update.");
                 return;
@@ -372,7 +363,7 @@
                 const hVal = htInput.value ? Number(htInput.value) : null;
                 const wVal = bwInput.value ? Number(bwInput.value) : null;
 
-                // 1. Update MASTER RECORD & RECRUITING PROFILE
+                // 2. Prepare and update MASTER RECORD & RECRUITING PROFILE
                 const syncData = { lastSync: serverTimestamp() };
                 if (hVal) syncData.height = hVal;
                 if (wVal) syncData.weight = wVal;
@@ -380,7 +371,7 @@
                 await setDoc(doc(db, "users", user.uid), syncData, { merge: true });
                 await setDoc(doc(db, "recruiting_profiles", user.uid), syncData, { merge: true });
 
-                // 2. LOG TO HISTORY
+                // 3. LOG TO HISTORY (Only if weight was entered)
                 if (wVal) {
                     await addDoc(collection(db, "recruiting_profiles", user.uid, "maxes"), {
                         bodyWeight: wVal,
@@ -389,20 +380,21 @@
                     });
                 }
 
-                // 3. UI UPDATE: MANUALLY PUSH TO LABELS
-                if (wVal) {
-                    const wDisp = document.getElementById('last-weight-display');
-                    if (wDisp) wDisp.innerText = wVal + " lbs";
-                }
-                if (hVal) {
-                    const hDisp = document.getElementById('last-height-display');
-                    if (hDisp) {
-                        const ft = Math.floor(hVal / 12);
-                        const inch = hVal % 12;
-                        hDisp.innerText = `${ft}'${inch}"`;
-                    }
+                // 4. UI UPDATE: Instant Feedback
+                const weightLabel = document.getElementById('last-weight-display');
+                const heightLabel = document.getElementById('last-height-display');
+
+                if (weightLabel && wVal) {
+                    weightLabel.innerText = `${wVal} lbs`;
                 }
 
+                if (heightLabel && hVal) {
+                    const feet = Math.floor(hVal / 12);
+                    const inches = hVal % 12;
+                    heightLabel.innerText = `${feet}'${inches}"`;
+                }
+
+                // 5. Cleanup
                 alert("Tale of the Tape Synced!");
                 htInput.value = '';
                 bwInput.value = '';
@@ -410,19 +402,6 @@
             } catch (e) {
                 console.error("Sync Error:", e);
                 alert("Sync failed. Check console.");
-            }
-            // --- ADD THIS TO saveQuickStats ---
-            const weightLabel = document.getElementById('last-weight-display');
-            const heightLabel = document.getElementById('last-height-display');
-
-            if (weightLabel && wVal) {
-                weightLabel.innerText = `${wVal} lbs`;
-            }
-
-            if (heightLabel && hVal) {
-                const feet = Math.floor(hVal / 12);
-                const inches = hVal % 12;
-                heightLabel.innerText = `${feet}'${inches}"`;
             }
         };
 
@@ -777,12 +756,11 @@
             if (!user) return;
 
             try {
-                // 1. Calculate the start of "Today" (Midnight)
                 const now = new Date();
                 const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
-                // 2. Query Water entries for TODAY
                 const waterRef = collection(db, "recruiting_profiles", user.uid, "water");
+                // We use a simple query here, filtering in the loop to avoid needing complex indexes
                 const q = query(waterRef, orderBy("timestamp", "desc"));
                 const snap = await getDocs(q);
 
@@ -790,30 +768,30 @@
                 snap.forEach(doc => {
                     const data = doc.data();
                     if (data.timestamp >= startOfToday) {
-                        totalCups += (data.amount || 0);
+                        totalCups += (Number(data.amount) || 0);
                     }
                 });
 
-                // 3. Update the UI Text (Matches your 'day-water' ID)
+                // 3. Update Text
                 const display = document.getElementById('day-water');
                 if (display) {
                     display.innerText = totalCups + (totalCups === 1 ? " Cup" : " Cups");
                 }
 
-                // 4. Update the Progress Bar (16 Cups = 128oz Goal)
-                // 4. Update the Progress Bar
-                const goal = waterGoal || 16; // Use the live goal from your profile, or 16 as a backup
+                // 4. Update Progress Bar
+                const goal = (typeof waterGoal !== 'undefined' && waterGoal > 0) ? waterGoal : 16; 
                 const progressPercentage = Math.min((totalCups / goal) * 100, 100);
                 const progressBar = document.getElementById('water-progress-bar');
 
                 if (progressBar) {
                     progressBar.style.width = `${progressPercentage}%`;
                     
-                    // Change color to green if goal is hit
                     if (progressPercentage >= 100) {
-                        progressBar.classList.replace('bg-blue-500', 'bg-green-500');
+                        progressBar.classList.add('bg-green-500');
+                        progressBar.classList.remove('bg-blue-500');
                     } else {
-                        progressBar.classList.replace('bg-green-500', 'bg-blue-500');
+                        progressBar.classList.add('bg-blue-500');
+                        progressBar.classList.remove('bg-green-500');
                     }
                 }
 
