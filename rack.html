@@ -77,6 +77,10 @@
                     Calculating Index...
                 </div>
             </div>
+
+            <div id="sync-timestamp" class="text-[8px] font-bold text-gray-500 uppercase mt-2 text-center italic">
+                Last Sync: --
+            </div>
         </section>
 
         <section class="bg-[#111827] p-6 rounded-2xl border border-[#1f2937] shadow-2xl">
@@ -127,7 +131,7 @@
                         if (rackWeightDisplay) rackWeightDisplay.innerText = weight + " lbs";
                         
                         // If you have an input field for body weight, update it too
-                        const rackWeightInput = document.getElementById('body-weight-input');
+                        const rackWeightInput = document.getElementById('bodyWeight');
                         if (rackWeightInput) rackWeightInput.value = weight;
                     }
                 });
@@ -261,26 +265,35 @@
         window.saveMaxes = async () => {
             const user = auth.currentUser;
             const saveBtn = document.getElementById('save-btn');
+            if (!user || !schoolPrefs) return;
+
             saveBtn.disabled = true;
             saveBtn.innerText = "UPDATING...";
 
             try {
-                // 1. Fetch current profile to get "Last Known" values
+                // 1. Fetch current profile for merging
                 const profileRef = doc(db, "recruiting_profiles", user.uid);
                 const profileSnap = await getDoc(profileRef);
                 const currentData = profileSnap.exists() ? profileSnap.data() : {};
 
-                // 2. Handle Body Weight (Use input OR fallback to DB)
+                // 2. Handle Body Weight (Safety check for 0)
                 const weightInput = document.getElementById('bodyWeight').value;
-                const bodyWeight = weightInput ? Number(weightInput) : (currentData.weight || 0);
+                const bodyWeight = weightInput ? Number(weightInput) : (currentData.bodyWeight || currentData.weight || 0);
 
-                // 3. Prepare the New Max object with merged data
+                if (bodyWeight <= 0) {
+                    alert("Please enter a valid body weight to calculate scores.");
+                    saveBtn.disabled = false;
+                    saveBtn.innerText = "SYNC STATS TO PROFILE";
+                    return;
+                }
+
+                // 3. Prepare the New Max object
                 const newMax = {
                     timestamp: Date.now(),
                     bodyWeight: bodyWeight
                 };
 
-                // Loop through school-specific lifts
+                // Loop through lifts and merge with existing data if input is blank
                 schoolPrefs.tracked_lifts.forEach(lift => {
                     const inputField = document.getElementById(`input-${lift}`);
                     const val = inputField ? inputField.value : "";
@@ -292,44 +305,56 @@
                     }
                 });
 
-                // 4. RE-CALCULATE SCORE
-                let totalLifted = 0;
+                // 4. CALCULATE BOARD SCORE (Matching Fairbanks/Standard Logic)
+                let scoringSum = 0;
+                const scoringList = schoolPrefs.scoring_lifts || schoolPrefs.tracked_lifts || [];
+
                 schoolPrefs.tracked_lifts.forEach(lift => {
-                    totalLifted += (newMax[lift] || 0);
+                    if (scoringList.includes(lift)) {
+                        scoringSum += (newMax[lift] || 0);
+                    }
                 });
 
-                const calculatedScore = bodyWeight > 0 ? (totalLifted / bodyWeight) * 100 : 0;
+                let finalBoardScore = scoringSum;
+                if (schoolPrefs.formula_type === "power_index") {
+                    const bwCap = Math.min(bodyWeight, 200);
+                    finalBoardScore = scoringSum - (bwCap * 4);
+                }
 
                 // 5. Save History Entry
                 await addDoc(collection(db, "recruiting_profiles", user.uid, "maxes"), newMax);
 
-                // 6. Propagate to Main Profile & MASTER SYNC
-                // This is the "Magic" part that syncs with the Kitchen
+                // 6. Global Sync (Master User Doc & Recruiting Profile)
+                const now = new Date();
+                const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
                 await setDoc(doc(db, "users", user.uid), { 
                     weight: bodyWeight,
                     lastWeightUpdate: serverTimestamp() 
                 }, { merge: true });
 
-                await updateDoc(profileRef, {
+                await setDoc(profileRef, {
                     ...newMax,
                     weight: bodyWeight,
-                    boardScore: Math.round(calculatedScore),
-                    lastUpdated: Date.now()
-                });
+                    boardScore: Math.round(finalBoardScore),
+                    lastUpdated: Date.now(),
+                    lastUpdatedStr: timeString
+                }, { merge: true });
 
-                // 7. Goal check
-                if (typeof checkGoalAchievement === "function") {
-                    await checkGoalAchievement(newMax);
-                }
+                // 7. Update UI Timestamp Label
+                const syncLabel = document.getElementById('sync-timestamp');
+                if (syncLabel) syncLabel.innerText = `Last Sync: Today at ${timeString}`;
 
                 alert("Stats Synchronized Successfully!");
+                
+                // Optional: reload to refresh all PR cards, or just clear inputs
                 location.reload();
 
             } catch (e) {
                 console.error("Save Error:", e);
                 alert("Error saving: " + e.message);
                 saveBtn.disabled = false;
-                saveBtn.innerText = "LOG NEW MAXES";
+                saveBtn.innerText = "SYNC STATS TO PROFILE";
             }
         };
     </script>
