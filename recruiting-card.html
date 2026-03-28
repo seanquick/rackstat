@@ -115,7 +115,7 @@
     <script type="module">
             import { firebaseConfig } from './firebase-config.js';
             import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-            import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+            import { getFirestore, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
             import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
             const app = initializeApp(firebaseConfig);
@@ -124,42 +124,59 @@
 
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
-                    // 1. FETCH DATA FROM ALL SOURCES
-                    const recSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
-                    const masterSnap = await getDoc(doc(db, "users", user.uid));
-                    const liftSnap = await getDoc(doc(db, "max_lifts", user.uid));
+                    try {
+                        // 1. FETCH DATA
+                        const recSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+                        const masterSnap = await getDoc(doc(db, "users", user.uid));
+                        // Note: If you don't have a "max_lifts" collection, this line might be the one crashing it
+                        const liftSnap = await getDoc(doc(db, "max_lifts", user.uid));
 
-                    // 2. RENDER RECRUITING & MASTER DATA
-                    if (recSnap.exists()) {
-                        const d = recSnap.data();
-                        const m = masterSnap.exists() ? masterSnap.data() : {};
+                        if (recSnap.exists()) {
+                            const d = recSnap.data();
+                            const m = masterSnap.exists() ? masterSnap.data() : {};
 
-                        // BASIC INFO
-                        document.getElementById('disp-name').innerText = d.fullName || "Athlete Name";
-                        document.getElementById('disp-class').innerText = "CLASS OF " + (d.gradYear || "--");
-                        document.getElementById('disp-pos').innerText = "POS: " + (d.primaryPos || "--");
-                        document.getElementById('disp-number').innerText = "#" + (d.jerseyNum || "--");
+                            // Helper function to safely set text without crashing the whole script
+                            const safeSet = (id, text) => {
+                                const el = document.getElementById(id);
+                                if (el) el.innerText = text;
+                            };
 
-                        // --- HEIGHT FORMATTING LOGIC ---
-                        const rawHeight = m.height || d.height; // Checks master first, then profile
-                        const heightElement = document.getElementById('disp-height');
-                        if (heightElement) {
-                            if (rawHeight) {
-                                const feet = Math.floor(rawHeight / 12);
-                                const inches = rawHeight % 12;
-                                heightElement.innerText = `${feet}'${inches}"`;
-                            } else {
-                                heightElement.innerText = "--";
+                            // 2. RENDER BASIC INFO
+                            safeSet('disp-name', d.fullName || "Athlete Name");
+                            safeSet('disp-class', "CLASS OF " + (d.gradYear || "--"));
+                            safeSet('disp-pos', "POS: " + (d.primaryPos || "--"));
+                            safeSet('disp-number', "#" + (d.jerseyNum || "--"));
+
+                            // HEIGHT FORMATTING
+                            const rawHeight = m.height || d.height;
+                            const heightElement = document.getElementById('disp-height');
+                            if (heightElement) {
+                                heightElement.innerText = rawHeight ? `${Math.floor(rawHeight/12)}'${rawHeight%12}"` : "--";
                             }
+
+                            // WEIGHT
+                            const weight = m.weight || d.weight || "--";
+                            safeSet('disp-weight', weight + (weight !== "--" ? " lbs" : ""));
+
+                            // 3. ADD THIS: HIDE THE LOADING SCREEN
+                            const loader = document.getElementById('loading-screen');
+                            if (loader) loader.classList.add('hidden'); 
+                            
+                            // If you have a container that starts as 'hidden', show it now
+                            const card = document.getElementById('main-card-container');
+                            if (card) card.classList.remove('hidden');
+
+                        } else {
+                            console.warn("No profile found for this user.");
+                            document.getElementById('loading-screen').innerText = "Profile not found.";
                         }
-
-                        // SYNCED WEIGHT
-                        const weight = m.weight || d.weight || "--";
-                        const weightElement = document.getElementById('disp-weight'); 
-                        if (weightElement) weightElement.innerText = weight + " lbs";
-
-                        // ... (rest of your academics, socials, and lift data logic)
+                    } catch (err) {
+                        console.error("Card Render Error:", err);
+                        // Emergency: hide loader anyway so you can see what failed
+                        document.getElementById('loading-screen').classList.add('hidden');
                     }
+                } else {
+                    location.href = 'login.html';
                 }
             });
         </script>
