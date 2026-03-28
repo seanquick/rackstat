@@ -263,7 +263,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { 
             getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, 
-            query, orderBy, limit, getDocs, deleteDoc, onSnapshot, where 
+            query, orderBy, limit, getDocs, deleteDoc, onSnapshot, where as fbWhere
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
@@ -461,7 +461,7 @@
             const todayStr = new Date().toLocaleDateString();
             document.getElementById('display-date-label').innerText = (dateStr === todayStr) ? "Today's Progress" : dateStr;
 
-            const q = query(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), where("date", "==", dateStr));
+            const q = query(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), fbWhere("date", "==", dateStr));
             const snap = await getDocs(q);
 
             let c = 0, p = 0, carb = 0, fat = 0, water = 0;
@@ -619,7 +619,7 @@
 
             const q = query(
                 collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"),
-                where("date", "==", dateStr),
+                fbWhere("date", "==", dateStr), // Changed to fbWhere
                 orderBy("timestamp", "desc"),
                 limit(10)
             );
@@ -678,7 +678,7 @@
 
             const q = query(
                 collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"),
-                where("timestamp", ">=", sevenDaysAgo)
+                fbWhere("timestamp", ">=", sevenDaysAgo) // Changed to fbWhere
             );
 
             const snap = await getDocs(q);

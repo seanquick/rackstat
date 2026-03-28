@@ -129,8 +129,7 @@
                         const recSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
                         const masterSnap = await getDoc(doc(db, "users", user.uid));
                         // Note: If you don't have a "max_lifts" collection, this line might be the one crashing it
-                        const liftSnap = await getDoc(doc(db, "max_lifts", user.uid));
-
+                        
                         if (recSnap.exists()) {
                             const d = recSnap.data();
                             const m = masterSnap.exists() ? masterSnap.data() : {};
@@ -159,7 +158,7 @@
                             safeSet('disp-weight', weight + (weight !== "--" ? " lbs" : ""));
 
                             // 3. ADD THIS: HIDE THE LOADING SCREEN
-                            const loader = document.getElementById('loading-screen');
+                            const loader = document.getElementById('loader');
                             if (loader) loader.classList.add('hidden'); 
                             
                             // If you have a container that starts as 'hidden', show it now
@@ -168,12 +167,12 @@
 
                         } else {
                             console.warn("No profile found for this user.");
-                            document.getElementById('loading-screen').innerText = "Profile not found.";
+                            document.getElementById('loader').innerText = "Profile not found.";
                         }
                     } catch (err) {
                         console.error("Card Render Error:", err);
                         // Emergency: hide loader anyway so you can see what failed
-                        document.getElementById('loading-screen').classList.add('hidden');
+                        document.getElementById('loader').classList.add('hidden');
                     }
                 } else {
                     location.href = 'login.html';
