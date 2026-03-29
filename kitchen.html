@@ -261,9 +261,11 @@
 
         // 2. Pull the tools from Google's servers
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        // Near the top of kitchen.html
         import { 
             getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, 
-            query, orderBy, limit, getDocs, deleteDoc, onSnapshot, where as fbWhere
+            query, orderBy, limit, getDocs, deleteDoc, onSnapshot, 
+            where as fbWhere // <--- Change this one line
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
@@ -461,7 +463,8 @@
             const todayStr = new Date().toLocaleDateString();
             document.getElementById('display-date-label').innerText = (dateStr === todayStr) ? "Today's Progress" : dateStr;
 
-            const q = query(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), fbWhere("date", "==", dateStr));
+            // Change where to fbWhere inside this function
+            const q = query(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), fbWhere("date", "==", dateStr)); // <--- Update here
             const snap = await getDocs(q);
 
             let c = 0, p = 0, carb = 0, fat = 0, water = 0;
@@ -511,7 +514,6 @@
             const user = auth.currentUser;
             if (!user) return;
 
-            // 1. Get the date. Fallback to 'today' if the ID 'entry-date' isn't found
             const dateInput = document.getElementById('entry-date');
             const selectedDate = dateInput ? dateInput.value : new Date().toISOString().split('T')[0];
             
@@ -520,17 +522,17 @@
             const dateStr = dateObj.toLocaleDateString();
 
             try {
-                // 2. Save to the 'water' sub-collection (where updateDailyTotals looks)
-                const waterRef = collection(db, "recruiting_profiles", user.uid, "water");
-                await addDoc(waterRef, {
-                    amount: Number(cups), // Ensure this is 'amount' to match your total calculation
+                // SAVE TO 'meals' collection so updateDailyTotals can find it
+                const mealsRef = collection(db, "recruiting_profiles", user.uid, "meals");
+                await addDoc(mealsRef, {
+                    mealType: 'Water', // Crucial: This tells your loader it's water
+                    cups: Number(cups), // updateDailyTotals looks for 'm.cups'
                     date: dateStr,
-                    timestamp: Date.now() // Use Date.now() so the 'Midnight' math works correctly
+                    timestamp: Date.now()
                 });
 
-                // 3. Trigger UI Refresh
+                // Trigger UI Refresh using our new safe name
                 if (typeof updateDailyTotals === "function") await updateDailyTotals();
-                if (typeof fetchMealHistory === "function") fetchMealHistory();
                 
                 console.log(`Added ${cups} cups of water.`);
             } catch (e) {
@@ -543,29 +545,30 @@
             if (!user) return;
 
             try {
-                // 1. Reference the water sub-collection
-                const waterRef = collection(db, "recruiting_profiles", user.uid, "water");
+                const mealsRef = collection(db, "recruiting_profiles", user.uid, "meals");
                 
-                // 2. Create a query to find the very last entry added
-                const q = query(waterRef, orderBy("timestamp", "desc"), limit(1));
+                // Query for the last entry that is specifically 'Water'
+                // Use fbWhere here since we are in kitchen.html
+                const q = query(
+                    mealsRef, 
+                    fbWhere("mealType", "==", "Water"), 
+                    orderBy("timestamp", "desc"), 
+                    limit(1)
+                );
+                
                 const snap = await getDocs(q);
 
                 if (!snap.empty) {
-                    // 3. Get the ID of that last entry and delete it
                     const lastDocId = snap.docs[0].id;
-                    await deleteDoc(doc(db, "recruiting_profiles", user.uid, "water", lastDocId));
+                    await deleteDoc(doc(db, "recruiting_profiles", user.uid, "meals", lastDocId));
                     
-                    // 4. Refresh the numbers on the screen
-                    if (typeof updateDailyTotals === "function") {
-                        updateDailyTotals(); 
-                    }
+                    if (typeof updateDailyTotals === "function") updateDailyTotals(); 
                     console.log("Last water entry removed.");
                 } else {
                     alert("No water entries to undo.");
                 }
             } catch (e) {
                 console.error("Undo Error:", e);
-                alert("Undo failed: " + e.message);
             }
         };
 
@@ -756,47 +759,89 @@
             if (!user) return;
 
             try {
+                // 1. SETUP DATE CONSTANTS
+                const selectedDate = document.getElementById('entry-date').value;
+                const dateObj = new Date(selectedDate);
+                dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
+                const dateStr = dateObj.toLocaleDateString();
+
                 const now = new Date();
                 const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
+                // 2. FETCH DATA FROM BOTH COLLECTIONS
+                const mealsRef = collection(db, "recruiting_profiles", user.uid, "meals");
                 const waterRef = collection(db, "recruiting_profiles", user.uid, "water");
-                // We use a simple query here, filtering in the loop to avoid needing complex indexes
-                const q = query(waterRef, orderBy("timestamp", "desc"));
-                const snap = await getDocs(q);
 
+                // Use fbWhere to avoid global naming conflicts in kitchen.html
+                const mealQuery = query(mealsRef, fbWhere("date", "==", dateStr));
+                const waterQuery = query(waterRef, orderBy("timestamp", "desc"));
+
+                const [mealSnap, waterSnap] = await Promise.all([
+                    getDocs(mealQuery),
+                    getDocs(waterQuery)
+                ]);
+
+                // 3. CALCULATE MACROS (Calories, Protein, Carbs, Fats)
+                let c = 0, p = 0, carb = 0, fat = 0;
+                mealSnap.forEach(d => {
+                    const m = d.data();
+                    // We ignore 'Water' type here because we handle it in the next step
+                    if (m.mealType !== 'Water') {
+                        c += Number(m.calories || 0);
+                        p += Number(m.protein || 0);
+                        carb += Number(m.carbs || 0);
+                        fat += Number(m.fats || 0);
+                    }
+                });
+
+                // 4. CALCULATE WATER
                 let totalCups = 0;
-                snap.forEach(doc => {
-                    const data = doc.data();
+                waterSnap.forEach(d => {
+                    const data = d.data();
                     if (data.timestamp >= startOfToday) {
                         totalCups += (Number(data.amount) || 0);
                     }
                 });
 
-                // 3. Update Text
-                const display = document.getElementById('day-water');
-                if (display) {
-                    display.innerText = totalCups + (totalCups === 1 ? " Cup" : " Cups");
+                // 5. UPDATE UI - TEXT ELEMENTS
+                const safeSet = (id, val) => { if(document.getElementById(id)) document.getElementById(id).innerText = val; };
+                
+                safeSet('day-cal', c);
+                safeSet('day-pro', p);
+                safeSet('day-carb', carb + "g");
+                safeSet('day-fat', fat + "g");
+                safeSet('day-water', totalCups + (totalCups === 1 ? " Cup" : " Cups"));
+
+                // Update the date label
+                const todayStr = new Date().toLocaleDateString();
+                safeSet('display-date-label', (dateStr === todayStr) ? "Today's Progress" : dateStr);
+
+                // 6. UPDATE PROGRESS BARS
+                // Macros
+                if (typeof calGoal !== 'undefined' && calGoal > 0) {
+                    const cPerc = Math.min((c / calGoal) * 100, 100);
+                    if(document.getElementById('cal-fill')) document.getElementById('cal-fill').style.width = cPerc + "%";
+                }
+                if (typeof proGoal !== 'undefined' && proGoal > 0) {
+                    const pPerc = Math.min((p / proGoal) * 100, 100);
+                    if(document.getElementById('pro-fill')) document.getElementById('pro-fill').style.width = pPerc + "%";
                 }
 
-                // 4. Update Progress Bar
-                const goal = (typeof waterGoal !== 'undefined' && waterGoal > 0) ? waterGoal : 16; 
-                const progressPercentage = Math.min((totalCups / goal) * 100, 100);
-                const progressBar = document.getElementById('water-progress-bar');
-
-                if (progressBar) {
-                    progressBar.style.width = `${progressPercentage}%`;
-                    
-                    if (progressPercentage >= 100) {
-                        progressBar.classList.add('bg-green-500');
-                        progressBar.classList.remove('bg-blue-500');
+                // Water Bar
+                const wGoal = (typeof waterGoal !== 'undefined' && waterGoal > 0) ? waterGoal : 16; 
+                const wPerc = Math.min((totalCups / wGoal) * 100, 100);
+                const wBar = document.getElementById('water-progress-bar');
+                if (wBar) {
+                    wBar.style.width = `${wPerc}%`;
+                    if (wPerc >= 100) {
+                        wBar.classList.replace('bg-blue-500', 'bg-green-500');
                     } else {
-                        progressBar.classList.add('bg-blue-500');
-                        progressBar.classList.remove('bg-green-500');
+                        wBar.classList.replace('bg-green-500', 'bg-blue-500');
                     }
                 }
 
             } catch (e) {
-                console.error("Update Totals Error:", e);
+                console.error("Master Update Error:", e);
             }
         };
     </script>
