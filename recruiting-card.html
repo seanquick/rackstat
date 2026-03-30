@@ -140,6 +140,7 @@
                     const profileRef = doc(db, "recruiting_profiles", targetUid);
                     const masterRef = doc(db, "users", targetUid);
                     
+                    // Note: If these maxes are on the main profile, maxesSnap will be empty
                     const maxesRef = doc(db, "recruiting_profiles", targetUid, "maxes", "latest");
 
                     const [recSnap, maxesSnap] = await Promise.all([
@@ -172,36 +173,38 @@
                         safeSet('disp-pos', "POS: " + (d.primaryPos || "--"));
                         safeSet('disp-number', "#" + (d.jerseyNum || "--"));
                         
-                        const rawH = m.height || d.height;
+                        // Using 'height' and 'weight' directly from d as seen in log
+                        const rawH = d.height || m.height;
                         const hEl = document.getElementById('disp-height');
                         if (hEl) hEl.innerText = rawH ? `${Math.floor(rawH/12)}'${rawH%12}"` : "--";
                         
-                        const w = m.weight || d.weight;
+                        const w = d.weight || m.weight;
                         safeSet('disp-weight', w ? w + " lbs" : "--");
 
-                        // --- VERIFIED METRICS (Fixed based on your console log) ---
-                        // Using d.bench, d.squat, d.clean, d.deadlift as seen in console
+                        // --- VERIFIED METRICS (Mapped to your log keys) ---
+                        // Your log uses: bench, deadlift, clean, squat
                         safeSet('bench-max', mx.bench || d.bench);
                         safeSet('squat-max', mx.squat || d.squat);
                         safeSet('clean-max', mx.clean || d.clean);
                         safeSet('deadlift-max', mx.deadlift || d.deadlift);
 
-                        // --- ACADEMICS (Fixed based on your console log) ---
-                        safeSet('disp-gpa', d.gpa || d.coreGpa); 
-                        // Your log shows "sat": "1200" and "ncaaid": "12345"
+                        // --- ACADEMICS (Mapped to your log keys) ---
+                        safeSet('disp-gpa', d.gpa); 
+                        // Your log uses 'sat' for test scores and 'ncaaid'
                         safeSet('disp-act-sat', d.sat || d.act || d.testScore || "--");
-                        safeSet('disp-ncaa-id', d.ncaaid || d.ncaaReg || "--");
+                        safeSet('disp-ncaa-id', d.ncaaid || "--");
 
-                        // --- PLAYER CHARACTER (Fixed based on your console log) ---
-                        // Your log shows "tdlMeaning": "lift others up"
+                        // --- PLAYER CHARACTER ---
+                        // Your log uses 'tdlMeaning' for "lift others up"
                         safeSet('disp-character', d.tdlMeaning || d.whyPlay || d.postCollegeGoals);
 
-                        // --- SOCIALS & HUDL (Fixed based on your console log) ---
-                        // Using d.twitterLink and d.highlightLink
+                        // --- SOCIALS & HUDL ---
+                        // Your log confirms 'twitterLink' and 'highlightLink'
                         safeSet('disp-twitter', d.twitterLink ? "@" + d.twitterLink.split('/').pop() : "--");
                         safeSet('disp-instagram', d.instagram ? "@" + d.instagram : "--");
                         
                         const hudlBtn = document.getElementById('hudl-link');
+                        // Use 'highlightLink' as found in your Firestore object
                         const hudlUrl = d.highlightLink || d.highlightUrl || d.hudlUrl;
                         if (hudlBtn && hudlUrl) {
                             hudlBtn.onclick = () => window.open(hudlUrl, '_blank');
@@ -212,7 +215,9 @@
                         document.getElementById('main-card-container')?.classList.remove('hidden');
 
                     } else {
-                        document.getElementById('loader').innerText = "Athlete profile not found.";
+                        if (document.getElementById('loader')) {
+                            document.getElementById('loader').innerText = "Athlete profile not found.";
+                        }
                     }
                 } catch (err) {
                     console.error("Critical Render Error:", err);
