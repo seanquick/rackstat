@@ -131,28 +131,33 @@
             const auth = getAuth(app);
 
         onAuthStateChanged(auth, async (user) => {
-            // Get the Athlete ID from the URL (?uid=XXXXXXXX)
             const urlParams = new URLSearchParams(window.location.search);
             const athleteId = urlParams.get('uid');
 
             if (user) {
                 try {
-                    // 1. FETCH DATA
-                    // We use athleteId if it exists in URL, otherwise fallback to the logged-in user
                     const targetUid = athleteId || user.uid;
                     
-                    const recSnap = await getDoc(doc(db, "recruiting_profiles", targetUid));
+                    // 1. FETCH ALL NECESSARY DOCUMENTS
+                    const profileRef = doc(db, "recruiting_profiles", targetUid);
+                    const masterRef = doc(db, "users", targetUid);
+                    
+                    // Fetching the 'latest' maxes from your sub-collection
+                    const maxesRef = doc(db, "recruiting_profiles", targetUid, "maxes", "latest");
+
+                    const [recSnap, maxesSnap] = await Promise.all([
+                        getDoc(profileRef),
+                        getDoc(maxesRef)
+                    ]);
                     
                     let masterSnap = { exists: () => false };
-                    try {
-                        // We only attempt to fetch 'users' if the viewer is the owner
-                        if (targetUid === user.uid) {
-                            masterSnap = await getDoc(doc(db, "users", targetUid));
-                        }
-                    } catch (pErr) {
-                        console.warn("Private master record inaccessible; using profile data.");
+                    if (targetUid === user.uid) {
+                        try {
+                            masterSnap = await getDoc(masterRef);
+                        } catch (e) { console.warn("Master record locked."); }
                     }
 
+                    // Helper to prevent script crashes if an ID is missing in HTML
                     const safeSet = (id, text) => {
                         const el = document.getElementById(id);
                         if (el) el.innerText = text || "--";
@@ -161,33 +166,38 @@
                     if (recSnap.exists()) {
                         const d = recSnap.data();
                         const m = masterSnap.exists() ? masterSnap.data() : {};
+                        const mx = maxesSnap.exists() ? maxesSnap.data() : {};
 
-                        // 2. RENDER HEADER INFO
-                        safeSet('disp-name', d.fullName || "Athlete Name");
+                        // --- HEADER & PHYSICALS ---
+                        safeSet('disp-name', d.fullName);
                         safeSet('disp-class', "CLASS OF " + (d.gradYear || "--"));
                         safeSet('disp-pos', "POS: " + (d.primaryPos || "--"));
                         safeSet('disp-number', "#" + (d.jerseyNum || "--"));
-
-                        const rawHeight = m.height || d.height;
+                        
+                        const rawH = m.height || d.height;
                         const hEl = document.getElementById('disp-height');
-                        if (hEl) hEl.innerText = rawHeight ? `${Math.floor(rawHeight/12)}'${rawHeight%12}"` : "--";
+                        if (hEl) hEl.innerText = rawH ? `${Math.floor(rawH/12)}'${rawH%12}"` : "--";
+                        
+                        const w = m.weight || d.weight;
+                        safeSet('disp-weight', w ? w + " lbs" : "--");
 
-                        const weight = m.weight || d.weight || "--";
-                        safeSet('disp-weight', weight + (weight !== "--" ? " lbs" : ""));
+                        // --- VERIFIED METRICS (The Waterfall) ---
+                        // Looks in 'maxes' sub-collection first, then main profile
+                        safeSet('bench-max', mx.bench || d.benchMax || d.bench);
+                        safeSet('squat-max', mx.squat || d.squatMax || d.squat);
+                        safeSet('clean-max', mx.clean || d.cleanMax || d.clean);
+                        safeSet('deadlift-max', mx.deadlift || d.deadliftMax || d.deadlift);
 
-                        // 3. RENDER VERIFIED METRICS
-                        // Note: These field names (e.g., benchMax) must match your Firestore exactly
-                        safeSet('bench-max', d.benchMax);
-                        safeSet('squat-max', d.squatMax);
-                        safeSet('clean-max', d.cleanMax);
-                        safeSet('deadlift-max', d.deadliftMax);
-
-                        // 4. RENDER ACADEMIC PROFILE
+                        // --- ACADEMICS ---
                         safeSet('disp-gpa', d.gpa);
-                        safeSet('disp-act-sat', d.testScore || d.actSat);
+                        safeSet('disp-act-sat', d.testScore || d.actSat || d.sat);
                         safeSet('disp-ncaa-id', d.ncaaId);
 
-                        // 5. CONTACT & SOCIALS
+                        // --- CHARACTER STATEMENT ---
+                        // Maps to the 'TDL Definition' box
+                        safeSet('disp-character', d.characterStatement || d.tdlDefinition || d.statement);
+
+                        // --- SOCIALS & LINKS ---
                         safeSet('disp-twitter', d.twitter ? "@" + d.twitter.replace('@','') : "--");
                         safeSet('disp-instagram', d.instagram ? "@" + d.instagram.replace('@','') : "--");
                         
@@ -196,26 +206,20 @@
                             hudlBtn.onclick = () => window.open(d.hudlUrl, '_blank');
                         }
 
-                        // 6. UI STATE MANAGEMENT
-                        const loader = document.getElementById('loader');
-                        if (loader) loader.classList.add('hidden');
-                        
-                        const card = document.getElementById('main-card-container');
-                        if (card) card.classList.remove('hidden');
+                        // --- UI CLEANUP ---
+                        document.getElementById('loader')?.classList.add('hidden');
+                        document.getElementById('main-card-container')?.classList.remove('hidden');
 
                     } else {
-                        console.warn("No profile found.");
                         const loaderEl = document.getElementById('loader');
                         if (loaderEl) loaderEl.innerText = "Athlete profile not found.";
                     }
                 } catch (err) {
-                    console.error("Card Render Error:", err);
+                    console.error("Critical Render Error:", err);
                     document.getElementById('loader')?.classList.add('hidden');
                 }
             } else {
-                if (!window.location.pathname.includes('login.html')) {
-                    location.href = 'login.html';
-                }
+                if (!window.location.pathname.includes('login.html')) location.href = 'login.html';
             }
         });
 
