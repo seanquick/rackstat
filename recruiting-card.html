@@ -140,7 +140,6 @@
                     const profileRef = doc(db, "recruiting_profiles", targetUid);
                     const masterRef = doc(db, "users", targetUid);
                     
-                    // Try fetching sub-collection maxes
                     const maxesRef = doc(db, "recruiting_profiles", targetUid, "maxes", "latest");
 
                     const [recSnap, maxesSnap] = await Promise.all([
@@ -165,7 +164,6 @@
                         const mx = maxesSnap.exists() ? maxesSnap.data() : {};
                         const m = masterSnap.exists() ? masterSnap.data() : {};
 
-                        // --- DEBUGGING ---
                         console.log("Firestore Data Found:", d);
 
                         // --- HEADER & PHYSICALS ---
@@ -181,30 +179,30 @@
                         const w = m.weight || d.weight;
                         safeSet('disp-weight', w ? w + " lbs" : "--");
 
-                        // --- VERIFIED METRICS ---
-                        // Updated to match your specific Firestore keys: bench, deadlift, clean, squat
-                        safeSet('bench-max', mx.bench || d.bench || d.benchMax);
-                        safeSet('squat-max', mx.squat || d.squat || d.squatMax);
-                        safeSet('clean-max', mx.clean || d.clean || d.cleanMax);
-                        safeSet('deadlift-max', mx.deadlift || d.deadlift || d.deadliftMax);
+                        // --- VERIFIED METRICS (Fixed based on your console log) ---
+                        // Using d.bench, d.squat, d.clean, d.deadlift as seen in console
+                        safeSet('bench-max', mx.bench || d.bench);
+                        safeSet('squat-max', mx.squat || d.squat);
+                        safeSet('clean-max', mx.clean || d.clean);
+                        safeSet('deadlift-max', mx.deadlift || d.deadlift);
 
-                        // --- ACADEMICS ---
-                        safeSet('disp-gpa', d.gpa);
-                        // Fallbacks for test scores and registration status
-                        safeSet('disp-act-sat', d.testScore || d.actSat || d.act_sat || "--");
-                        safeSet('disp-ncaa-id', d.ncaaReg || d.ncaaId || "--");
+                        // --- ACADEMICS (Fixed based on your console log) ---
+                        safeSet('disp-gpa', d.gpa || d.coreGpa); 
+                        // Your log shows "sat": "1200" and "ncaaid": "12345"
+                        safeSet('disp-act-sat', d.sat || d.act || d.testScore || "--");
+                        safeSet('disp-ncaa-id', d.ncaaid || d.ncaaReg || "--");
 
-                        // --- PLAYER CHARACTER ---
-                        // Using 'whyPlay' and 'postCollegeGoals' as seen in your log
-                        safeSet('disp-character', d.whyPlay || d.characterStatement || d.tdlDefinition || d.postCollegeGoals);
+                        // --- PLAYER CHARACTER (Fixed based on your console log) ---
+                        // Your log shows "tdlMeaning": "lift others up"
+                        safeSet('disp-character', d.tdlMeaning || d.whyPlay || d.postCollegeGoals);
 
-                        // --- SOCIALS & HUDL ---
-                        safeSet('disp-twitter', d.twitter ? "@" + d.twitter.replace('@','') : "--");
-                        safeSet('disp-instagram', d.instagram ? "@" + d.instagram.replace('@','') : "--");
+                        // --- SOCIALS & HUDL (Fixed based on your console log) ---
+                        // Using d.twitterLink and d.highlightLink
+                        safeSet('disp-twitter', d.twitterLink ? "@" + d.twitterLink.split('/').pop() : "--");
+                        safeSet('disp-instagram', d.instagram ? "@" + d.instagram : "--");
                         
-                        // Fixed: Your log uses 'highlightLink' for the Hudl URL
                         const hudlBtn = document.getElementById('hudl-link');
-                        const hudlUrl = d.highlightLink || d.hudlUrl;
+                        const hudlUrl = d.highlightLink || d.highlightUrl || d.hudlUrl;
                         if (hudlBtn && hudlUrl) {
                             hudlBtn.onclick = () => window.open(hudlUrl, '_blank');
                         }
