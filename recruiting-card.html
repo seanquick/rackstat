@@ -46,22 +46,36 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
                 <h3 class="label mb-4 text-red-500 text-sm">Verified Metrics</h3>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="stat-box p-3">
-                        <span class="label">Bench Press</span>
-                        <div id="stat-bench" class="value">--</div>
-                    </div>
-                    <div class="stat-box p-3">
-                        <span class="label">Squat</span>
-                        <div id="stat-squat" class="value">--</div>
-                    </div>
-                    <div class="stat-box p-3">
-                        <span class="label">Clean</span>
-                        <div id="stat-clean" class="value">--</div>
-                    </div>
-                    <div class="stat-box p-3">
-                        <span class="label">Deadlift</span>
-                        <div id="stat-dead" class="value">--</div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="stat-box p-3">
+                            <span class="label">Bench Press</span>
+                            <div id="stat-bench" class="value view-mode">--</div>
+                            <input id="edit-bench" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
+                        </div>
+
+                        <div class="stat-box p-3">
+                            <span class="label">Squat</span>
+                            <div id="stat-squat" class="value view-mode">--</div>
+                            <input id="edit-squat" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
+                        </div>
+
+                        <div class="stat-box p-3">
+                            <span class="label">Clean</span>
+                            <div id="stat-clean" class="value view-mode">--</div>
+                            <input id="edit-clean" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
+                        </div>
+
+                        <div class="stat-box p-3">
+                            <span class="label">Deadlift</span>
+                            <div id="stat-dead" class="value view-mode">--</div>
+                            <input id="edit-deadlift" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
+                        </div>
+
+                        <div class="stat-box p-3">
+                            <span class="label">Push Press</span>
+                            <div id="stat-push" class="value view-mode">--</div>
+                            <input id="edit-push" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
+                        </div>
                     </div>
                 </div>
 
@@ -110,6 +124,11 @@
             <span class="text-[8px] font-black uppercase tracking-widest">Powered by RACKSTAT Elite Recruiting</span>
             <img src="images/rackstat-logo.png" class="h-4 w-auto">
         </div>
+
+        <button id="save-profile-btn" onclick="saveAthleteProfile()" 
+                class="hidden fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-500 text-white font-black px-10 py-4 rounded-full shadow-2xl uppercase italic tracking-tighter transition-all z-50">
+            Save Changes
+        </button>
     </div>
 
     <script type="module">
@@ -123,7 +142,7 @@
         }
             import { firebaseConfig } from './firebase-config.js';
             import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-            import { getFirestore, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+            import { getFirestore, doc, getDoc, onSnapshot, updateDoc} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
             import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
             const app = initializeApp(firebaseConfig);
@@ -133,28 +152,21 @@
         onAuthStateChanged(auth, async (user) => {
             const urlParams = new URLSearchParams(window.location.search);
             const athleteId = urlParams.get('uid');
+            const isEditMode = urlParams.get('edit') === 'true';
 
             if (user) {
                 try {
                     const targetUid = athleteId || user.uid;
                     const profileRef = doc(db, "recruiting_profiles", targetUid);
                     const masterRef = doc(db, "users", targetUid);
-                    
-                    // Note: If these maxes are on the main profile, maxesSnap will be empty
                     const maxesRef = doc(db, "recruiting_profiles", targetUid, "maxes", "latest");
 
                     const [recSnap, maxesSnap] = await Promise.all([
                         getDoc(profileRef),
                         getDoc(maxesRef)
                     ]);
-                    
-                    let masterSnap = { exists: () => false };
-                    if (targetUid === user.uid) {
-                        try {
-                            masterSnap = await getDoc(masterRef);
-                        } catch (e) { console.warn("Master record locked."); }
-                    }
 
+                    // Helper to set text
                     const safeSet = (id, text) => {
                         const el = document.getElementById(id);
                         if (el) el.innerText = text || "--";
@@ -163,75 +175,130 @@
                     if (recSnap.exists()) {
                         const d = recSnap.data();
                         const mx = maxesSnap.exists() ? maxesSnap.data() : {};
-                        const m = masterSnap.exists() ? masterSnap.data() : {};
 
-                        console.log("Firestore Data Found:", d);
-
-                        // --- HEADER & PHYSICALS ---
+                        // --- DATA RENDERING ---
                         safeSet('disp-name', d.fullName);
                         safeSet('disp-class', "CLASS OF " + (d.gradYear || "--"));
                         safeSet('disp-pos', "POS: " + (d.primaryPos || "--"));
                         safeSet('disp-number', "#" + (d.jerseyNum || "--"));
                         
-                        // Using 'height' and 'weight' directly from d as seen in log
-                        const rawH = d.height || m.height;
+                        // Height/Weight logic
+                        const rawH = d.height;
                         const hEl = document.getElementById('disp-height');
                         if (hEl) hEl.innerText = rawH ? `${Math.floor(rawH/12)}'${rawH%12}"` : "--";
-                        
-                        const w = d.weight || m.weight;
-                        safeSet('disp-weight', w ? w + " lbs" : "--");
+                        safeSet('disp-weight', d.weight ? d.weight + " lbs" : "--");
 
-                        // --- VERIFIED METRICS (Mapped to your log keys) ---
-                        // Your log uses: bench, deadlift, clean, squat
+                        // Metrics
                         safeSet('bench-max', mx.bench || d.bench);
                         safeSet('squat-max', mx.squat || d.squat);
                         safeSet('clean-max', mx.clean || d.clean);
                         safeSet('deadlift-max', mx.deadlift || d.deadlift);
 
-                        // --- ACADEMICS (Mapped to your log keys) ---
+                        // Academics & Character
                         safeSet('disp-gpa', d.gpa); 
-                        // Your log uses 'sat' for test scores and 'ncaaid'
                         safeSet('disp-act-sat', d.sat || d.act || d.testScore || "--");
                         safeSet('disp-ncaa-id', d.ncaaid || "--");
+                        safeSet('disp-character', d.tdlMeaning || d.whyPlay);
 
-                        // --- PLAYER CHARACTER ---
-                        // Your log uses 'tdlMeaning' for "lift others up"
-                        safeSet('disp-character', d.tdlMeaning || d.whyPlay || d.postCollegeGoals);
-
-                        // --- SOCIALS & HUDL ---
-                        // Your log confirms 'twitterLink' and 'highlightLink'
+                        // Socials
                         safeSet('disp-twitter', d.twitterLink ? "@" + d.twitterLink.split('/').pop() : "--");
-                        safeSet('disp-instagram', d.instagram ? "@" + d.instagram : "--");
                         
+                        // Hudl Link
                         const hudlBtn = document.getElementById('hudl-link');
-                        // Use 'highlightLink' as found in your Firestore object
                         const hudlUrl = d.highlightLink || d.highlightUrl || d.hudlUrl;
                         if (hudlBtn && hudlUrl) {
                             hudlBtn.onclick = () => window.open(hudlUrl, '_blank');
                         }
 
-                        // --- UI CLEANUP ---
+                        // --- PERMISSION & EDIT CHECK ---
+                        // We call the function here after data is ready
+                        await runPermissionCheck(user, isEditMode);
+
+                        // UI Cleanup
                         document.getElementById('loader')?.classList.add('hidden');
                         document.getElementById('main-card-container')?.classList.remove('hidden');
 
                     } else {
-                        if (document.getElementById('loader')) {
-                            document.getElementById('loader').innerText = "Athlete profile not found.";
-                        }
+                        document.getElementById('loader').innerText = "Athlete profile not found.";
                     }
                 } catch (err) {
                     console.error("Critical Render Error:", err);
-                    document.getElementById('loader')?.classList.add('hidden');
                 }
             } else {
-                if (!window.location.pathname.includes('login.html')) location.href = 'login.html';
+                location.href = 'index.html';
             }
         });
+
+        /**
+         * Separate function to handle unlocking the UI for Coaches
+         */
+        async function runPermissionCheck(currentUser, isEditMode) {
+            if (!isEditMode) return;
+
+            try {
+                const coachSnap = await getDoc(doc(db, "users", currentUser.uid));
+                if (coachSnap.exists() && coachSnap.data().role === 'coach') {
+                    
+                    // 1. Toggle visibility: Hide display spans, show inputs
+                    // Note: This assumes you have elements with these classes in your HTML
+                    document.querySelectorAll('.view-mode').forEach(el => el.classList.add('hidden'));
+                    document.querySelectorAll('.edit-mode').forEach(el => el.classList.remove('hidden'));
+
+                    // 2. Fallback: If you aren't using classes yet, we unlock all existing inputs
+                    const inputs = document.querySelectorAll('input, select, textarea');
+                    inputs.forEach(input => {
+                        input.removeAttribute('disabled');
+                        input.removeAttribute('readonly');
+                        input.classList.add('border-blue-500', 'bg-gray-800'); 
+                    });
+
+                    // 3. Show the Save Button
+                    const saveBtn = document.getElementById('save-profile-btn');
+                    if (saveBtn) saveBtn.classList.remove('hidden');
+                }
+            } catch (e) {
+                console.error("Permission check failed:", e);
+            }
+        }
 
         // Helper for the Print Button
         document.getElementById('print-pdf-btn')?.addEventListener('click', () => {
             window.print();
         });
+
+        // Function to save the coach's manual edits
+        window.saveAthleteProfile = async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const playerUID = urlParams.get('uid');
+
+            if (!playerUID) {
+                alert("Error: No athlete ID found.");
+                return;
+            }
+
+            // Create the object with the NEW values from the input fields
+            const updatedData = {
+                bench: document.getElementById('edit-bench').value,
+                squat: document.getElementById('edit-squat').value,
+                clean: document.getElementById('edit-clean').value,
+                deadlift: document.getElementById('edit-deadlift').value,
+                // Add others here (like gpa, gradYear) if you added edit- boxes for them
+            };
+
+            try {
+                const profileRef = doc(db, "recruiting_profiles", playerUID);
+                await updateDoc(profileRef, updatedData);
+                
+                alert("Profile updated successfully!");
+                
+                // Refresh the page to show the new 'View Mode' values, 
+                // or send them back to the dashboard
+                window.location.href = `coach-dashboard.html`; 
+            } catch (error) {
+                console.error("Error updating profile:", error);
+                alert("Failed to save changes. Check console for details.");
+            }
+        };
         </script>
 </body>
 </html>
