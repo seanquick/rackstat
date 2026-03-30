@@ -122,62 +122,73 @@
             const db = getFirestore(app);
             const auth = getAuth(app);
 
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    // 1. FETCH DATA
+                    // Fetch the public profile first.
+                    const recSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+                    
+                    // Fetch the private master record in a separate sub-try to prevent 
+                    // permission errors from crashing the entire card render.
+                    let masterSnap = { exists: () => false };
                     try {
-                        // 1. FETCH DATA
-                        const recSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
-                        const masterSnap = await getDoc(doc(db, "users", user.uid));
-                        // Note: If you don't have a "max_lifts" collection, this line might be the one crashing it
-                        
-                        if (recSnap.exists()) {
-                            const d = recSnap.data();
-                            const m = masterSnap.exists() ? masterSnap.data() : {};
-
-                            // Helper function to safely set text without crashing the whole script
-                            const safeSet = (id, text) => {
-                                const el = document.getElementById(id);
-                                if (el) el.innerText = text;
-                            };
-
-                            // 2. RENDER BASIC INFO
-                            safeSet('disp-name', d.fullName || "Athlete Name");
-                            safeSet('disp-class', "CLASS OF " + (d.gradYear || "--"));
-                            safeSet('disp-pos', "POS: " + (d.primaryPos || "--"));
-                            safeSet('disp-number', "#" + (d.jerseyNum || "--"));
-
-                            // HEIGHT FORMATTING
-                            const rawHeight = m.height || d.height;
-                            const heightElement = document.getElementById('disp-height');
-                            if (heightElement) {
-                                heightElement.innerText = rawHeight ? `${Math.floor(rawHeight/12)}'${rawHeight%12}"` : "--";
-                            }
-
-                            // WEIGHT
-                            const weight = m.weight || d.weight || "--";
-                            safeSet('disp-weight', weight + (weight !== "--" ? " lbs" : ""));
-
-                            // 3. ADD THIS: HIDE THE LOADING SCREEN
-                            const loader = document.getElementById('loader');
-                            if (loader) loader?.classList.add('hidden');
-                            
-                            // If you have a container that starts as 'hidden', show it now
-                            const card = document.getElementById('main-card-container');
-                            if (card) card.classList.remove('hidden');
-
-                        } else {
-                            console.warn("No profile found for this user.");
-                            document.getElementById('loader').innerText = "Profile not found.";
-                        }
-                    } catch (err) {
-                        console.error("Card Render Error:", err);
-                        // Emergency: hide loader anyway so you can see what failed
-                        document.getElementById('loader').classList.add('hidden');
+                        masterSnap = await getDoc(doc(db, "users", user.uid));
+                    } catch (pErr) {
+                        console.warn("Private master record inaccessible; falling back to profile data.");
                     }
-                } else {
+
+                    // Helper function to safely set text without crashing the whole script
+                    const safeSet = (id, text) => {
+                        const el = document.getElementById(id);
+                        if (el) el.innerText = text;
+                    };
+
+                    if (recSnap.exists()) {
+                        const d = recSnap.data();
+                        const m = masterSnap.exists() ? masterSnap.data() : {};
+
+                        // 2. RENDER BASIC INFO
+                        safeSet('disp-name', d.fullName || "Athlete Name");
+                        safeSet('disp-class', "CLASS OF " + (d.gradYear || "--"));
+                        safeSet('disp-pos', "POS: " + (d.primaryPos || "--"));
+                        safeSet('disp-number', "#" + (d.jerseyNum || "--"));
+
+                        // HEIGHT FORMATTING
+                        const rawHeight = m.height || d.height;
+                        const heightElement = document.getElementById('disp-height');
+                        if (heightElement) {
+                            heightElement.innerText = rawHeight ? `${Math.floor(rawHeight/12)}'${rawHeight%12}"` : "--";
+                        }
+
+                        // WEIGHT
+                        const weight = m.weight || d.weight || "--";
+                        safeSet('disp-weight', weight + (weight !== "--" ? " lbs" : ""));
+
+                        // 3. UI STATE MANAGEMENT (Loader & Card)
+                        const loader = document.getElementById('loader');
+                        if (loader) loader.classList.add('hidden');
+                        
+                        const card = document.getElementById('main-card-container');
+                        if (card) card.classList.remove('hidden');
+
+                    } else {
+                        console.warn("No profile found for this user.");
+                        const loaderEl = document.getElementById('loader');
+                        if (loaderEl) loaderEl.innerText = "Profile not found.";
+                    }
+                } catch (err) {
+                    console.error("Card Render Error:", err);
+                    // Emergency: hide loader anyway so you can see the console errors
+                    document.getElementById('loader')?.classList.add('hidden');
+                }
+            } else {
+                // Only redirect if we aren't already on the login page to avoid loops
+                if (!window.location.pathname.includes('login.html')) {
                     location.href = 'login.html';
                 }
-            });
+            }
+        });
         </script>
 </body>
 </html>
