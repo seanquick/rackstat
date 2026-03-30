@@ -1,30 +1,99 @@
-<body class="bg-black text-white p-6">
-    <header class="flex justify-between items-center border-b border-red-700 pb-4 mb-8">
-        <h1 class="text-2xl font-black italic uppercase">Coach Control Center</h1>
-        <button onclick="handleLogout()" class="bg-gray-800 px-4 py-2 rounded text-xs uppercase">Sign Out</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RACKSTAT | Coach Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#0a0a0b] text-white min-h-screen p-4">
+
+    <header class="flex justify-between items-center max-w-6xl mx-auto border-b border-red-700 pb-4 mb-6">
+        <div>
+            <h1 class="text-xl font-black italic uppercase tracking-tighter">Coach Command</h1>
+            <p id="school-title" class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Loading School...</p>
+        </div>
+        <button onclick="handleLogout()" class="text-[10px] font-black uppercase bg-gray-800 px-4 py-2 rounded hover:bg-red-700 transition-all">Sign Out</button>
     </header>
 
-    <div class="grid grid-cols-1 gap-6">
-        <div class="flex gap-4">
-            <button class="btn-primary flex-1">View Full Roster</button>
-            <button onclick="exportToCSV()" class="bg-green-700 p-3 rounded font-bold uppercase text-[10px]">Export to CSV</button>
+    <main class="max-w-6xl mx-auto">
+        <div class="flex justify-between items-end mb-4">
+            <h2 class="text-sm font-black uppercase text-red-500">Active Roster</h2>
+            <button onclick="exportRoster()" class="text-[10px] font-bold bg-white text-black px-3 py-1 rounded uppercase hover:bg-gray-200">Export CSV</button>
         </div>
 
-        <div class="bg-[#111] rounded border border-gray-800 overflow-hidden">
-            <table class="w-full text-left text-xs uppercase">
-                <thead class="bg-gray-900 text-gray-400">
+        <div class="bg-black border border-gray-800 rounded overflow-x-auto">
+            <table class="w-full text-left text-[11px] uppercase font-bold">
+                <thead class="bg-gray-900 text-gray-500 border-b border-gray-800">
                     <tr>
-                        <th class="p-3">Player</th>
-                        <th class="p-3">Grade</th>
-                        <th class="p-3">Max Bench</th>
-                        <th class="p-3">Max Squat</th>
-                        <th class="p-3">Daily Cals</th>
-                        <th class="p-3">Action</th>
+                        <th class="p-4">Athlete</th>
+                        <th class="p-4">Pos</th>
+                        <th class="p-4">Bench</th>
+                        <th class="p-4">Squat</th>
+                        <th class="p-4">Clean</th>
+                        <th class="p-4">Daily Cals</th>
+                        <th class="p-4">Notes</th>
                     </tr>
                 </thead>
-                <tbody id="roster-body">
+                <tbody id="roster-table-body" class="divide-y divide-gray-800">
                     </tbody>
             </table>
         </div>
-    </div>
+    </main>
+
+    <script type="module">
+        import { firebaseConfig } from './firebase-config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, query, where, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // Security & Data Loading
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const userSnap = await getDoc(doc(db, "users", user.uid));
+            const userData = userSnap.data();
+
+            if (userData.role !== 'coach') {
+                window.location.href = 'index.html'; // Boot non-coaches
+                return;
+            }
+
+            document.getElementById('school-title').innerText = userData.school_id.replace('_', ' ');
+            loadRoster(userData.school_id);
+        });
+
+        async function loadRoster(schoolId) {
+            const rosterBody = document.getElementById('roster-table-body');
+            // Query all players in this coach's school
+            const q = query(collection(db, "recruiting_profiles"), where("school_id", "==", schoolId), where("role", "==", "player"));
+            const querySnapshot = await getDocs(q);
+
+            rosterBody.innerHTML = '';
+            querySnapshot.forEach((doc) => {
+                const p = doc.data();
+                rosterBody.innerHTML += `
+                    <tr class="hover:bg-gray-900/50 transition-all cursor-pointer" onclick="location.href='recruiting-card.html?uid=${doc.id}'">
+                        <td class="p-4">${p.firstName} ${p.lastName}</td>
+                        <td class="p-4 text-gray-500">${p.primaryPos || '--'}</td>
+                        <td class="p-4">${p.bench || '--'}</td>
+                        <td class="p-4">${p.squat || '--'}</td>
+                        <td class="p-4">${p.clean || '--'}</td>
+                        <td class="p-4 text-red-500">${p.dailyCalorieGoal || '--'}</td>
+                        <td class="p-4"><button class="text-blue-500 text-[9px]">VIEW</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        window.handleLogout = () => signOut(auth).then(() => window.location.href = 'index.html');
+    </script>
 </body>
+</html>

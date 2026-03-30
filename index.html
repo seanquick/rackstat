@@ -125,35 +125,34 @@
         onAuthStateChanged(auth, async (user) => {
             const authSection = document.getElementById('auth-section');
             const mainMenu = document.getElementById('main-menu');
-            const schoolBranding = document.getElementById('school-branding');
             
             if (user) {
                 try {
-                    const userSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+                    // We check the 'users' collection for the master role
+                    const userSnap = await getDoc(doc(db, "users", user.uid));
                     
                     if (userSnap.exists()) {
                         const userData = userSnap.data();
 
-                        // --- NEW ROLE CHECK ---
                         if (userData.role === 'coach') {
+                            // REDIRECT COACH IMMEDIATELY
                             window.location.href = 'coach-dashboard.html';
-                            return; // Stop execution here
+                            return; 
                         }
                         
-                        // Toggle UI visibility for Athletes
+                        // If not a coach, show the standard Athlete Menu
                         authSection.classList.add('hidden');
                         mainMenu.classList.remove('hidden');
+                        document.getElementById('welcome-msg').innerText = `Welcome, ${userData.fullName || 'Athlete'}`;
                         
-                        // Set Welcome Text
-                        document.getElementById('welcome-msg').innerText = `Welcome, ${userData.firstName || 'Athlete'}`;
-
-                        // ... Rest of your branding logic ...
+                        // ... rest of your branding logic ...
                     }
                 } catch (err) {
-                    console.error("Error fetching user profile:", err);
+                    console.error("Auth Error:", err);
                 }
             } else {
-                // ... Your sign-out logic ...
+                authSection.classList.remove('hidden');
+                mainMenu.classList.add('hidden');
             }
         });
 
