@@ -130,98 +130,97 @@
             const db = getFirestore(app);
             const auth = getAuth(app);
 
-        onAuthStateChanged(auth, async (user) => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const athleteId = urlParams.get('uid');
+            onAuthStateChanged(auth, async (user) => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const athleteId = urlParams.get('uid');
 
-            if (user) {
-                try {
-                    const targetUid = athleteId || user.uid;
-                    
-                    // 1. FETCH ALL NECESSARY DOCUMENTS
-                    const profileRef = doc(db, "recruiting_profiles", targetUid);
-                    const masterRef = doc(db, "users", targetUid);
-                    
-                    // Fetching the 'latest' maxes from your sub-collection
-                    const maxesRef = doc(db, "recruiting_profiles", targetUid, "maxes", "latest");
-
-                    const [recSnap, maxesSnap] = await Promise.all([
-                        getDoc(profileRef),
-                        getDoc(maxesRef)
-                    ]);
-                    
-                    let masterSnap = { exists: () => false };
-                    if (targetUid === user.uid) {
-                        try {
-                            masterSnap = await getDoc(masterRef);
-                        } catch (e) { console.warn("Master record locked."); }
-                    }
-
-                    // Helper to prevent script crashes if an ID is missing in HTML
-                    const safeSet = (id, text) => {
-                        const el = document.getElementById(id);
-                        if (el) el.innerText = text || "--";
-                    };
-
-                    if (recSnap.exists()) {
-                        const d = recSnap.data();
-                        const m = masterSnap.exists() ? masterSnap.data() : {};
-                        const mx = maxesSnap.exists() ? maxesSnap.data() : {};
-
-                        // --- HEADER & PHYSICALS ---
-                        safeSet('disp-name', d.fullName);
-                        safeSet('disp-class', "CLASS OF " + (d.gradYear || "--"));
-                        safeSet('disp-pos', "POS: " + (d.primaryPos || "--"));
-                        safeSet('disp-number', "#" + (d.jerseyNum || "--"));
+                if (user) {
+                    try {
+                        const targetUid = athleteId || user.uid;
+                        const profileRef = doc(db, "recruiting_profiles", targetUid);
+                        const masterRef = doc(db, "users", targetUid);
                         
-                        const rawH = m.height || d.height;
-                        const hEl = document.getElementById('disp-height');
-                        if (hEl) hEl.innerText = rawH ? `${Math.floor(rawH/12)}'${rawH%12}"` : "--";
+                        // Try fetching sub-collection maxes
+                        const maxesRef = doc(db, "recruiting_profiles", targetUid, "maxes", "latest");
+
+                        const [recSnap, maxesSnap] = await Promise.all([
+                            getDoc(profileRef),
+                            getDoc(maxesRef)
+                        ]);
                         
-                        const w = m.weight || d.weight;
-                        safeSet('disp-weight', w ? w + " lbs" : "--");
-
-                        // --- VERIFIED METRICS (The Waterfall) ---
-                        // Looks in 'maxes' sub-collection first, then main profile
-                        safeSet('bench-max', mx.bench || d.benchMax || d.bench);
-                        safeSet('squat-max', mx.squat || d.squatMax || d.squat);
-                        safeSet('clean-max', mx.clean || d.cleanMax || d.clean);
-                        safeSet('deadlift-max', mx.deadlift || d.deadliftMax || d.deadlift);
-
-                        // --- ACADEMICS ---
-                        safeSet('disp-gpa', d.gpa);
-                        safeSet('disp-act-sat', d.testScore || d.actSat || d.sat);
-                        safeSet('disp-ncaa-id', d.ncaaId);
-
-                        // --- CHARACTER STATEMENT ---
-                        // Maps to the 'TDL Definition' box
-                        safeSet('disp-character', d.characterStatement || d.tdlDefinition || d.statement);
-
-                        // --- SOCIALS & LINKS ---
-                        safeSet('disp-twitter', d.twitter ? "@" + d.twitter.replace('@','') : "--");
-                        safeSet('disp-instagram', d.instagram ? "@" + d.instagram.replace('@','') : "--");
-                        
-                        const hudlBtn = document.getElementById('hudl-link');
-                        if (hudlBtn && d.hudlUrl) {
-                            hudlBtn.onclick = () => window.open(d.hudlUrl, '_blank');
+                        let masterSnap = { exists: () => false };
+                        if (targetUid === user.uid) {
+                            try {
+                                masterSnap = await getDoc(masterRef);
+                            } catch (e) { console.warn("Master record locked."); }
                         }
 
-                        // --- UI CLEANUP ---
-                        document.getElementById('loader')?.classList.add('hidden');
-                        document.getElementById('main-card-container')?.classList.remove('hidden');
+                        const safeSet = (id, text) => {
+                            const el = document.getElementById(id);
+                            if (el) el.innerText = text || "--";
+                        };
 
-                    } else {
-                        const loaderEl = document.getElementById('loader');
-                        if (loaderEl) loaderEl.innerText = "Athlete profile not found.";
+                        if (recSnap.exists()) {
+                            const d = recSnap.data();
+                            const mx = maxesSnap.exists() ? maxesSnap.data() : {};
+                            const m = masterSnap.exists() ? masterSnap.data() : {};
+
+                            // --- DEBUGGING: Check your console (F12) to see exact field names ---
+                            console.log("Firestore Data Found:", d);
+
+                            // --- HEADER & PHYSICALS ---
+                            safeSet('disp-name', d.fullName);
+                            safeSet('disp-class', "CLASS OF " + (d.gradYear || "--"));
+                            safeSet('disp-pos', "POS: " + (d.primaryPos || "--"));
+                            safeSet('disp-number', "#" + (d.jerseyNum || "--"));
+                            
+                            const rawH = m.height || d.height;
+                            const hEl = document.getElementById('disp-height');
+                            if (hEl) hEl.innerText = rawH ? `${Math.floor(rawH/12)}'${rawH%12}"` : "--";
+                            
+                            const w = m.weight || d.weight;
+                            safeSet('disp-weight', w ? w + " lbs" : "--");
+
+                            // --- VERIFIED METRICS (Enhanced Fallbacks) ---
+                            // Checks the sub-collection first, then three different common field names
+                            safeSet('bench-max', mx.bench || d.benchMax || d.bench_press || d.bench);
+                            safeSet('squat-max', mx.squat || d.squatMax || d.squat_press || d.squat);
+                            safeSet('clean-max', mx.clean || d.cleanMax || d.power_clean || d.clean);
+                            safeSet('deadlift-max', mx.deadlift || d.deadliftMax || d.dead_lift || d.deadlift);
+
+                            // --- ACADEMICS ---
+                            safeSet('disp-gpa', d.gpa);
+                            safeSet('disp-act-sat', d.testScore || d.actSat || d.sat || d.act_sat);
+                            safeSet('disp-ncaa-id', d.ncaaId || d.ncaa_id);
+
+                            // --- CHARACTER STATEMENT ---
+                            // Try every variation of the "Character" or "Statement" field
+                            safeSet('disp-character', d.characterStatement || d.tdlDefinition || d.statement || d.bio || d.aboutMe);
+
+                            // --- SOCIALS ---
+                            safeSet('disp-twitter', d.twitter ? "@" + d.twitter.replace('@','') : "--");
+                            safeSet('disp-instagram', d.instagram ? "@" + d.instagram.replace('@','') : "--");
+                            
+                            const hudlBtn = document.getElementById('hudl-link');
+                            if (hudlBtn && d.hudlUrl) {
+                                hudlBtn.onclick = () => window.open(d.hudlUrl, '_blank');
+                            }
+
+                            // --- UI CLEANUP ---
+                            document.getElementById('loader')?.classList.add('hidden');
+                            document.getElementById('main-card-container')?.classList.remove('hidden');
+
+                        } else {
+                            document.getElementById('loader').innerText = "Athlete profile not found.";
+                        }
+                    } catch (err) {
+                        console.error("Critical Render Error:", err);
+                        document.getElementById('loader')?.classList.add('hidden');
                     }
-                } catch (err) {
-                    console.error("Critical Render Error:", err);
-                    document.getElementById('loader')?.classList.add('hidden');
+                } else {
+                    if (!window.location.pathname.includes('login.html')) location.href = 'login.html';
                 }
-            } else {
-                if (!window.location.pathname.includes('login.html')) location.href = 'login.html';
-            }
-        });
+            });
 
         // Helper for the Print Button
         document.getElementById('print-pdf-btn')?.addEventListener('click', () => {
