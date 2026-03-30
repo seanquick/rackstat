@@ -75,7 +75,7 @@
             </button>
             </div>
 
-            <button onclick="handleLogout()" class="w-full mt-8 text-[10px] font-bold uppercase text-gray-500 hover:text-white transition-colors">
+            <button onclick="handleLogout()" class="w-full mt-8 text-[14px] font-bold uppercase text-gray-500 hover:text-white transition-colors">
                 Sign Out / Switch User
             </button>
         </div>
@@ -88,7 +88,7 @@
             // 2. Pull the tools from Google's servers
             import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
             import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-            import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+            import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
             // 3. Initialize using the imported config
             const app = initializeApp(firebaseConfig);
@@ -110,11 +110,17 @@
             }
         };
 
-        // LOGOUT FUNCTION
-        window.handleLogout = async () => {
-            await signOut(auth);
-            location.reload();
-        };
+        // FIX handleLogout
+            window.handleLogout = async () => {
+                try {
+                    await signOut(auth);
+                    console.log("User signed out successfully");
+                    window.location.href = 'index.html'; // Or wherever your lobby is
+                } catch (error) {
+                    console.error("Error signing out:", error);
+                    alert("Logout failed. Please try again.");
+                }
+            };
 
         // AUTH WATCHER & DYNAMIC BRANDING
         onAuthStateChanged(auth, async (user) => {
