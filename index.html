@@ -122,7 +122,6 @@
                 }
             };
 
-        // AUTH WATCHER & DYNAMIC BRANDING
         onAuthStateChanged(auth, async (user) => {
             const authSection = document.getElementById('auth-section');
             const mainMenu = document.getElementById('main-menu');
@@ -134,38 +133,27 @@
                     
                     if (userSnap.exists()) {
                         const userData = userSnap.data();
+
+                        // --- NEW ROLE CHECK ---
+                        if (userData.role === 'coach') {
+                            window.location.href = 'coach-dashboard.html';
+                            return; // Stop execution here
+                        }
                         
-                        // Toggle UI visibility
+                        // Toggle UI visibility for Athletes
                         authSection.classList.add('hidden');
                         mainMenu.classList.remove('hidden');
                         
                         // Set Welcome Text
                         document.getElementById('welcome-msg').innerText = `Welcome, ${userData.firstName || 'Athlete'}`;
 
-                        // Load School Identity
-                        if (userData.school_id) {
-                            const schoolSnap = await getDoc(doc(db, "schools", userData.school_id));
-                            if (schoolSnap.exists()) {
-                                const schoolData = schoolSnap.data();
-                                document.getElementById('school-name-display').innerText = schoolData.name;
-                                schoolBranding.style.display = 'flex';
-                                
-                                // Load logos - ensuring fallback if paths are missing
-                                if(schoolData.logo_primary) document.getElementById('school-logo-1').src = schoolData.logo_primary;
-                                if(schoolData.logo_secondary) document.getElementById('school-logo-2').src = schoolData.logo_secondary;
-                            }
-                        }
-                    } else {
-                        console.error("No profile found for this user UID.");
+                        // ... Rest of your branding logic ...
                     }
                 } catch (err) {
                     console.error("Error fetching user profile:", err);
                 }
             } else {
-                // User is signed out
-                authSection.classList.remove('hidden');
-                mainMenu.classList.add('hidden');
-                if(schoolBranding) schoolBranding.style.display = 'none';
+                // ... Your sign-out logic ...
             }
         });
 

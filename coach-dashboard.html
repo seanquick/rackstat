@@ -1,0 +1,30 @@
+<body class="bg-black text-white p-6">
+    <header class="flex justify-between items-center border-b border-red-700 pb-4 mb-8">
+        <h1 class="text-2xl font-black italic uppercase">Coach Control Center</h1>
+        <button onclick="handleLogout()" class="bg-gray-800 px-4 py-2 rounded text-xs uppercase">Sign Out</button>
+    </header>
+
+    <div class="grid grid-cols-1 gap-6">
+        <div class="flex gap-4">
+            <button class="btn-primary flex-1">View Full Roster</button>
+            <button onclick="exportToCSV()" class="bg-green-700 p-3 rounded font-bold uppercase text-[10px]">Export to CSV</button>
+        </div>
+
+        <div class="bg-[#111] rounded border border-gray-800 overflow-hidden">
+            <table class="w-full text-left text-xs uppercase">
+                <thead class="bg-gray-900 text-gray-400">
+                    <tr>
+                        <th class="p-3">Player</th>
+                        <th class="p-3">Grade</th>
+                        <th class="p-3">Max Bench</th>
+                        <th class="p-3">Max Squat</th>
+                        <th class="p-3">Daily Cals</th>
+                        <th class="p-3">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="roster-body">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+</body>
