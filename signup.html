@@ -84,20 +84,25 @@
     </div>
 
     <script type="module">
-            // 1. Pull the config from your central file
-            import { firebaseConfig } from './firebase-config.js';
+        import { firebaseConfig } from './firebase-config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { 
+            getFirestore, 
+            doc, 
+            setDoc, 
+            collection, 
+            query, 
+            where, 
+            getDocs 
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { 
+            getAuth, 
+            createUserWithEmailAndPassword 
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-            // 2. Pull the tools from Google's servers
-            import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-            import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-            import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-            // 3. Initialize using the imported config
-            const app = initializeApp(firebaseConfig);
-            const db = getFirestore(app);
-            const auth = getAuth(app);
-            
-            // ... rest of your code ...
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
 
         let currentRole = 'player';
 
@@ -128,60 +133,64 @@
             const pass = document.getElementById('reg-pass').value;
             const inputCode = document.getElementById('school-code').value.trim();
 
-            // 1. Check for empty fields
-                if (!fullName || !email || !pass || !inputCode) return alert("All fields required.");
-                
-            // 2. NEW: Check for First AND Last name
-                if (fullName.split(' ').length < 2) {
-                    return alert("Please enter both your First and Last name (e.g., 'Joe Panther').");
-                }
-
-            // 3. Check for legal agreement
-                if (!isAgreed) return alert("Please accept the terms (SB29 Compliance).");
-                
+            if (!fullName || !email || !pass || !inputCode) return alert("All fields required.");
+            if (fullName.split(' ').length < 2) return alert("Please enter both First and Last name.");
+            if (!isAgreed) return alert("Please accept the terms (SB29 Compliance).");
+            
             const signupBtn = document.getElementById('signup-btn');
             signupBtn.innerText = "VERIFYING CODE...";
             signupBtn.disabled = true;
 
             try {
-                // --- SCALABLE CODE CHECK ---
-                // We look for a school where the player_code OR coach_code matches
+                // 1. Verify Code against Schools collection
                 const schoolsRef = collection(db, "schools");
                 const codeField = currentRole === 'coach' ? "coach_code" : "player_code";
                 const q = query(schoolsRef, where(codeField, "==", inputCode));
                 const querySnapshot = await getDocs(q);
 
                 if (querySnapshot.empty) {
-                    throw new Error(`Invalid ${currentRole} code. Please contact your coach.`);
+                    throw new Error(`Invalid ${currentRole} code. Please contact your school.`);
                 }
 
                 const schoolDoc = querySnapshot.docs[0];
                 const schoolData = schoolDoc.data();
 
-                // Create User
+                // 2. Create Authentication Account
                 const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
                 const user = userCredential.user;
 
-                // Save to recruiting_profiles
-                await setDoc(doc(db, "recruiting_profiles", user.uid), {
-                    firstName: fullName.split(' ')[0],
-                    lastName: fullName.split(' ').slice(1).join(' ') || '',
+                // 3. Save Master User Record (CRITICAL for Security Rules)
+                await setDoc(doc(db, "users", user.uid), {
+                    fullName: fullName,
                     email: email,
                     role: currentRole,
-                    school_id: schoolDoc.id, // Links to Fairbanks/etc
+                    school_id: schoolDoc.id,
+                    createdAt: Date.now()
+                });
+
+                // 4. Save Public Recruiting Profile
+                // Coaches get a profile too, but it will be handled by coach-dashboard.html
+                await setDoc(doc(db, "recruiting_profiles", user.uid), {
+                    firstName: fullName.split(' ')[0],
+                    lastName: fullName.split(' ').slice(1).join(' '),
+                    email: email,
+                    role: currentRole,
+                    school_id: schoolDoc.id,
                     school_name: schoolData.name,
-                    createdAt: new Date().getTime()
+                    createdAt: Date.now()
                 });
 
                 alert(`Welcome to the program, ${fullName}!`);
                 window.location.href = 'index.html';
 
             } catch (e) {
+                console.error(e);
                 alert(e.message);
                 signupBtn.innerText = "Create My Profile";
                 signupBtn.disabled = false;
             }
         };
     </script>
+
 </body>
 </html>
