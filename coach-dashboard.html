@@ -92,22 +92,39 @@
 
         async function loadRoster(schoolId) {
             const rosterBody = document.getElementById('roster-table-body');
-            // Query all players in this coach's school
             const q = query(collection(db, "recruiting_profiles"), where("school_id", "==", schoolId), where("role", "==", "player"));
             const querySnapshot = await getDocs(q);
 
             rosterBody.innerHTML = '';
-            querySnapshot.forEach((doc) => {
-                const p = doc.data();
+            querySnapshot.forEach((docSnap) => {
+                const p = docSnap.data();
+                const uid = docSnap.id;
+
                 rosterBody.innerHTML += `
-                    <tr class="hover:bg-gray-900/50 transition-all cursor-pointer" onclick="location.href='recruiting-card.html?uid=${doc.id}'">
-                        <td class="p-4">${p.firstName} ${p.lastName}</td>
-                        <td class="p-4 text-gray-500">${p.primaryPos || '--'}</td>
+                    <tr class="hover:bg-gray-900/50 transition-all border-b border-gray-800">
+                        <td class="p-4 text-white font-bold cursor-pointer hover:text-red-500" onclick="location.href='recruiting-card.html?uid=${uid}'">
+                            ${p.firstName} ${p.lastName}
+                        </td>
+                        <td class="p-4 text-gray-400">${p.gradYear || '--'}</td>
+                        <td class="p-4 text-xs">
+                            <span class="text-blue-400">${p.primaryPos || '--'}</span> / 
+                            <span class="text-red-400">${p.defPrimary || '--'}</span>
+                        </td>
                         <td class="p-4">${p.bench || '--'}</td>
                         <td class="p-4">${p.squat || '--'}</td>
                         <td class="p-4">${p.clean || '--'}</td>
-                        <td class="p-4 text-red-500">${p.dailyCalorieGoal || '--'}</td>
-                        <td class="p-4"><button class="text-blue-500 text-[9px]">VIEW</button></td>
+                        <td class="p-4">${p.deadlift || '--'}</td>
+                        <td class="p-4">${p.push_press || '--'}</td>
+                        <td class="p-4">
+                            <button onclick="viewMeals('${uid}', '${p.firstName}')" class="text-[9px] bg-gray-800 px-2 py-1 rounded hover:bg-red-700">
+                                VIEW LOGS
+                            </button>
+                        </td>
+                        
+                        <td class="p-4 flex gap-3">
+                            <button onclick="location.href='recruiting-card.html?uid=${uid}&edit=true'" class="text-blue-500 hover:underline">EDIT</button>
+                            <button onclick="deleteAthlete('${uid}', '${p.firstName} ${p.lastName}')" class="text-red-600 hover:underline">DEL</button>
+                        </td>
                     </tr>
                 `;
             });
@@ -143,6 +160,46 @@
             }
         };
         
+        // Open the Meal Modal and fetch data
+        window.viewMeals = async (uid, name) => {
+            document.getElementById('modal-player-name').innerText = `${name}'S MEAL HISTORY`;
+            const container = document.getElementById('meal-logs-container');
+            container.innerHTML = '<p class="text-center py-4 text-gray-600">Loading...</p>';
+            document.getElementById('meal-modal').classList.remove('hidden');
+
+            const mealSnap = await getDocs(collection(db, "recruiting_profiles", uid, "meals"));
+            container.innerHTML = '';
+            
+            if (mealSnap.empty) {
+                container.innerHTML = '<p class="text-center py-4">No meals recorded.</p>';
+                return;
+            }
+
+            mealSnap.forEach(mDoc => {
+                const m = mDoc.data();
+                container.innerHTML += `
+                    <div class="bg-black p-3 border border-gray-800 rounded flex justify-between items-center text-[10px]">
+                        <div>
+                            <div class="text-white font-bold uppercase">${m.mealName || 'Meal'}</div>
+                            <div class="text-gray-500">${m.date || ''}</div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-red-500">${m.calories} CAL</span><br>
+                            <span class="text-blue-400">${m.protein}G PROTEIN</span>
+                        </div>
+                    </div>
+                `;
+            });
+        };
+
+        window.closeMealModal = () => {
+            document.getElementById('meal-modal').classList.add('hidden');
+        };
+
+        // Ensure currentSchoolId is accessible for the bulk function
+        let currentSchoolId = ""; 
+        // Inside your onAuthStateChanged, add: currentSchoolId = userData.school_id;
+
         window.handleLogout = () => signOut(auth).then(() => window.location.href = 'index.html');
     </script>
 </body>
