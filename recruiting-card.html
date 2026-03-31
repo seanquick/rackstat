@@ -30,19 +30,28 @@
 
     <div id="capture-area" class="max-w-2xl mx-auto card-container rounded-3xl p-8 shadow-2xl border-red-600/20">
         
-        <div class="flex justify-between items-start border-b-2 border-red-600 pb-6 mb-6">
-            <div>
-                <h1 id="disp-name" class="text-4xl font-black italic uppercase leading-none">LOADING...</h1>
-                <div class="flex gap-4 mt-2">
-                    <span id="disp-class" class="text-red-600 font-bold uppercase text-sm">CLASS OF --</span>
-                    <span id="disp-pos" class="text-white font-bold uppercase text-sm">POS: --</span>
-                    <span id="disp-number" class="text-gray-500 font-bold uppercase text-sm">#--</span>
-                    <span id="disp-weight" class="text-white font-bold uppercase text-sm border-l border-gray-700 pl-4">-- LBS</span>
-                    <span id="disp-height" class="text-white font-bold uppercase text-sm">--</span>
+    <div class="flex justify-between items-start border-b-2 border-red-600 pb-6 mb-6">
+        <div>
+            <h1 id="disp-name" class="text-4xl font-black italic uppercase leading-none view-mode">LOADING...</h1>
+            <input id="edit-name" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-2xl font-bold p-1 rounded w-full mb-2">
+            
+            <div class="flex gap-4 mt-2">
+                <span id="disp-class" class="text-red-600 font-bold uppercase text-sm view-mode">CLASS OF --</span>
+                <div class="edit-mode hidden flex items-center gap-1">
+                    <span class="text-xs text-gray-500">CLASS:</span>
+                    <input id="edit-grad" type="number" class="bg-gray-900 border border-blue-500 text-white text-sm p-1 w-20 rounded">
                 </div>
-            </div>
-            <img src="images/panther-logo1.png" class="h-16 w-auto opacity-80">
+
+                <span id="disp-pos" class="text-white font-bold uppercase text-sm view-mode">POS: --</span>
+                <div class="edit-mode hidden flex items-center gap-1">
+                    <span class="text-xs text-gray-500">POS:</span>
+                    <input id="edit-pos" type="text" class="bg-gray-900 border border-blue-500 text-white text-sm p-1 w-16 rounded">
+                </div>
+                
+                </div>
         </div>
+        <img src="images/panther-logo1.png" class="h-16 w-auto opacity-80">
+    </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
@@ -80,19 +89,17 @@
                     </div>
                 </div>
 
-                <h3 class="label mt-8 mb-4 text-red-500 text-sm">Academic Profile</h3>
+            <h3 class="label mt-8 mb-4 text-red-500 text-sm">Academic Profile</h3>
                 <div class="space-y-2">
-                    <div class="flex justify-between border-b border-white/10 pb-1">
+                    <div class="flex justify-between border-b border-white/10 pb-1 items-center">
                         <span class="label">Current GPA</span>
-                        <span id="disp-gpa" class="font-bold italic">--</span>
+                        <span id="disp-gpa" class="font-bold italic view-mode">--</span>
+                        <input id="edit-gpa" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-right p-1 w-16 rounded">
                     </div>
+                    
                     <div class="flex justify-between border-b border-white/10 pb-1">
                         <span class="label">ACT / SAT</span>
                         <span id="disp-test" class="font-bold italic">--</span>
-                    </div>
-                    <div class="flex justify-between border-b border-white/10 pb-1">
-                        <span class="label">NCAA ID</span>
-                        <span id="disp-ncaa" class="font-bold italic">--</span>
                     </div>
                 </div>
             </div>
@@ -159,7 +166,7 @@
                 const isEditMode = urlParams.get('edit') === 'true';
 
                 if (user) {
-                    currentUser = user; // Fixes "user is not defined" error
+                    currentUser = user; 
                     try {
                         const targetUid = athleteId || user.uid;
                         const profileRef = doc(db, "recruiting_profiles", targetUid);
@@ -190,13 +197,14 @@
                             if (hEl) hEl.innerText = rawH ? `${Math.floor(rawH/12)}'${rawH%12}"` : "--";
                             safeSet('disp-weight', d.weight ? d.weight + " lbs" : "--");
 
-                            // --- METRICS (Updated to match your HTML IDs) ---
+                            // --- METRICS ---
                             safeSet('stat-bench', mx.bench || d.bench);
                             safeSet('stat-squat', mx.squat || d.squat);
                             safeSet('stat-clean', mx.clean || d.clean);
                             safeSet('stat-dead', mx.deadlift || d.deadlift); 
-                            safeSet('stat-push', mx.push_press || d.push_press );// Added this to match your HTML grid
+                            safeSet('stat-push', mx.push_press || d.push_press);
 
+                            // --- ACADEMICS ---
                             safeSet('disp-gpa', d.gpa); 
                             safeSet('disp-act-sat', d.sat || d.act || d.testScore || "--");
                             safeSet('disp-ncaa-id', d.ncaaid || "--");
@@ -204,19 +212,25 @@
 
                             safeSet('disp-twitter', d.twitterLink ? "@" + d.twitterLink.split('/').pop() : "--");
                             
-                            const hudlBtn = document.getElementById('hudl-link');
+                            const hudlBtn = document.getElementById('film-btn'); // Matched to your HTML ID
                             const hudlUrl = d.highlightLink || d.highlightUrl || d.hudlUrl;
                             if (hudlBtn && hudlUrl) {
                                 hudlBtn.onclick = () => window.open(hudlUrl, '_blank');
                             }
 
                             // --- PRE-FILL EDIT FIELDS (EDIT MODE) ---
-                            // This ensures that when the coach unlocks, the current data is already in the boxes
+                            // Metrics
                             if (document.getElementById('edit-bench')) document.getElementById('edit-bench').value = mx.bench || d.bench || "";
                             if (document.getElementById('edit-squat')) document.getElementById('edit-squat').value = mx.squat || d.squat || "";
                             if (document.getElementById('edit-clean')) document.getElementById('edit-clean').value = mx.clean || d.clean || "";
                             if (document.getElementById('edit-deadlift')) document.getElementById('edit-deadlift').value = mx.deadlift || d.deadlift || "";
                             if (document.getElementById('edit-push')) document.getElementById('edit-push').value = mx.push_press || d.push_press || "";
+                            
+                            // Attributes (Name, GPA, etc.)
+                            if (document.getElementById('edit-name')) document.getElementById('edit-name').value = d.fullName || "";
+                            if (document.getElementById('edit-gpa')) document.getElementById('edit-gpa').value = d.gpa || "";
+                            if (document.getElementById('edit-grad')) document.getElementById('edit-grad').value = d.gradYear || "";
+                            if (document.getElementById('edit-pos')) document.getElementById('edit-pos').value = d.primaryPos || "";
 
                             // --- PERMISSION & EDIT CHECK ---
                             await runPermissionCheck(user, isEditMode);
@@ -277,24 +291,31 @@
                 if (!playerUID) return alert("No athlete selected.");
 
                 const updatedData = {
+                    // Metrics
                     bench: document.getElementById('edit-bench').value,
                     squat: document.getElementById('edit-squat').value,
                     clean: document.getElementById('edit-clean').value,
                     deadlift: document.getElementById('edit-deadlift').value,
-                    push_press: document.getElementById('edit-push').value, // MUST HAVE UNDERSCORE
-                    // Attributes (Add these IDs to your HTML inputs on the card)
-                    grad_year: document.getElementById('edit-grad').value,
-                    primary_pos: document.getElementById('edit-pos').value,
-                    gpa: document.getElementById('edit-gpa').value
+                    push_press: document.getElementById('edit-push').value,
+                    
+                    // Attributes (The ones you're adding now)
+                    gpa: document.getElementById('edit-gpa').value,
+                    gradYear: document.getElementById('edit-grad')?.value || "",
+                    primaryPos: document.getElementById('edit-pos')?.value || ""
                 };
 
                 try {
-                    await updateDoc(doc(db, "recruiting_profiles", playerUID), updatedData);
+                    const profileRef = doc(db, "recruiting_profiles", playerUID);
+                    await updateDoc(profileRef, updatedData);
+                    
+                    const maxesRef = doc(db, "recruiting_profiles", playerUID, "maxes", "latest");
+                    await setDoc(maxesRef, updatedData, { merge: true });
+                    
                     alert("Profile Updated Successfully!");
-                    location.reload(); // Refresh to lock and show new data
+                    window.location.href = `coach-dashboard.html`; 
                 } catch (error) {
                     console.error("Save error:", error);
-                    alert("Failed to save changes. Check your Firestore permissions.");
+                    alert("Failed to save. Check console.");
                 }
             };
 
