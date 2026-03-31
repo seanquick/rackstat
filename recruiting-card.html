@@ -195,7 +195,7 @@
                             safeSet('stat-squat', mx.squat || d.squat);
                             safeSet('stat-clean', mx.clean || d.clean);
                             safeSet('stat-dead', mx.deadlift || d.deadlift); 
-                            safeSet('stat-push', mx.pushPress || d.pushpress || mx.pushpress || d.pushpress);// Added this to match your HTML grid
+                            safeSet('stat-push', mx.pushpress || d.pushpress || mx.pushpress || d.pushpress);// Added this to match your HTML grid
 
                             safeSet('disp-gpa', d.gpa); 
                             safeSet('disp-act-sat', d.sat || d.act || d.testScore || "--");
@@ -216,7 +216,7 @@
                             if (document.getElementById('edit-squat')) document.getElementById('edit-squat').value = mx.squat || d.squat || "";
                             if (document.getElementById('edit-clean')) document.getElementById('edit-clean').value = mx.clean || d.clean || "";
                             if (document.getElementById('edit-deadlift')) document.getElementById('edit-deadlift').value = mx.deadlift || d.deadlift || "";
-                            if (document.getElementById('edit-push')) document.getElementById('edit-push').value = mx.pushPress || d.pushPress || "";
+                            if (document.getElementById('edit-push')) document.getElementById('edit-push').value = mx.pushpress || d.pushpress || "";
 
                             // --- PERMISSION & EDIT CHECK ---
                             await runPermissionCheck(user, isEditMode);
