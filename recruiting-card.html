@@ -280,7 +280,8 @@
                     bench: document.getElementById('edit-bench').value,
                     squat: document.getElementById('edit-squat').value,
                     clean: document.getElementById('edit-clean').value,
-                    deadlift: document.getElementById('edit-deadlift').value
+                    deadlift: document.getElementById('edit-deadlift').value,
+                    push_press: document.getElementById('edit-push').value // MUST HAVE UNDERSCORE
                 };
 
                 try {
@@ -309,23 +310,26 @@
                 return;
             }
 
-            // Create the object with the NEW values from the input fields
+            // 1. GRAB THE DATA (Ensure push_press is here!)
             const updatedData = {
                 bench: document.getElementById('edit-bench').value,
                 squat: document.getElementById('edit-squat').value,
                 clean: document.getElementById('edit-clean').value,
                 deadlift: document.getElementById('edit-deadlift').value,
-                // Add others here (like gpa, gradYear) if you added edit- boxes for them
+                push_press: document.getElementById('edit-push').value // THE MISSING LINK
             };
 
             try {
+                // 2. UPDATE MAIN PROFILE (For the Recruiting Card)
                 const profileRef = doc(db, "recruiting_profiles", playerUID);
                 await updateDoc(profileRef, updatedData);
                 
-                alert("Profile updated successfully!");
+                // 3. UPDATE MAXES SUB-COLLECTION (For the Coach Dashboard)
+                // This ensures the '85' becomes '95' in the table view too
+                const maxesRef = doc(db, "recruiting_profiles", playerUID, "maxes", "latest");
+                await setDoc(maxesRef, updatedData, { merge: true });
                 
-                // Refresh the page to show the new 'View Mode' values, 
-                // or send them back to the dashboard
+                alert("Profile updated successfully!");
                 window.location.href = `coach-dashboard.html`; 
             } catch (error) {
                 console.error("Error updating profile:", error);
