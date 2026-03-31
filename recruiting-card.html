@@ -24,6 +24,7 @@
 
     <div class="max-w-2xl mx-auto mb-6 flex justify-between no-print">
         <button onclick="window.print()" class="bg-white text-black px-6 py-2 rounded-full font-bold uppercase text-xs">Print PDF</button>
+        <button id="unlock-btn" onclick="toggleEditMode()" class="hidden bg-yellow-600 text-black font-black px-4 py-2 rounded uppercase text-[10px] mb-4 transition-all"> 🔓 Unlock Profile for Editing</button>
         <button onclick="location.href='index.html'" class="bg-gray-800 text-white px-6 py-2 rounded-full font-bold uppercase text-xs">Back to Lobby</button>
     </div>
 
@@ -149,117 +150,149 @@
             const db = getFirestore(app);
             const auth = getAuth(app);
 
-        onAuthStateChanged(auth, async (user) => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const athleteId = urlParams.get('uid');
-            const isEditMode = urlParams.get('edit') === 'true';
+            // Add this at the top of your script block
+            let currentUser = null;
 
-            if (user) {
-                try {
-                    const targetUid = athleteId || user.uid;
-                    const profileRef = doc(db, "recruiting_profiles", targetUid);
-                    const masterRef = doc(db, "users", targetUid);
-                    const maxesRef = doc(db, "recruiting_profiles", targetUid, "maxes", "latest");
+            onAuthStateChanged(auth, async (user) => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const athleteId = urlParams.get('uid');
+                const isEditMode = urlParams.get('edit') === 'true';
 
-                    const [recSnap, maxesSnap] = await Promise.all([
-                        getDoc(profileRef),
-                        getDoc(maxesRef)
-                    ]);
+                if (user) {
+                    currentUser = user; // Fixes "user is not defined" error
+                    try {
+                        const targetUid = athleteId || user.uid;
+                        const profileRef = doc(db, "recruiting_profiles", targetUid);
+                        const maxesRef = doc(db, "recruiting_profiles", targetUid, "maxes", "latest");
 
-                    // Helper to set text
-                    const safeSet = (id, text) => {
-                        const el = document.getElementById(id);
-                        if (el) el.innerText = text || "--";
-                    };
+                        const [recSnap, maxesSnap] = await Promise.all([
+                            getDoc(profileRef),
+                            getDoc(maxesRef)
+                        ]);
 
-                    if (recSnap.exists()) {
-                        const d = recSnap.data();
-                        const mx = maxesSnap.exists() ? maxesSnap.data() : {};
+                        const safeSet = (id, text) => {
+                            const el = document.getElementById(id);
+                            if (el) el.innerText = text || "--";
+                        };
 
-                        // --- DATA RENDERING ---
-                        safeSet('disp-name', d.fullName);
-                        safeSet('disp-class', "CLASS OF " + (d.gradYear || "--"));
-                        safeSet('disp-pos', "POS: " + (d.primaryPos || "--"));
-                        safeSet('disp-number', "#" + (d.jerseyNum || "--"));
-                        
-                        // Height/Weight logic
-                        const rawH = d.height;
-                        const hEl = document.getElementById('disp-height');
-                        if (hEl) hEl.innerText = rawH ? `${Math.floor(rawH/12)}'${rawH%12}"` : "--";
-                        safeSet('disp-weight', d.weight ? d.weight + " lbs" : "--");
+                        if (recSnap.exists()) {
+                            const d = recSnap.data();
+                            const mx = maxesSnap.exists() ? maxesSnap.data() : {};
 
-                        // Metrics
-                        safeSet('bench-max', mx.bench || d.bench);
-                        safeSet('squat-max', mx.squat || d.squat);
-                        safeSet('clean-max', mx.clean || d.clean);
-                        safeSet('deadlift-max', mx.deadlift || d.deadlift);
+                            // --- DATA RENDERING (VIEW MODE) ---
+                            safeSet('disp-name', d.fullName);
+                            safeSet('disp-class', "CLASS OF " + (d.gradYear || "--"));
+                            safeSet('disp-pos', "POS: " + (d.primaryPos || "--"));
+                            safeSet('disp-number', "#" + (d.jerseyNum || "--"));
+                            
+                            const rawH = d.height;
+                            const hEl = document.getElementById('disp-height');
+                            if (hEl) hEl.innerText = rawH ? `${Math.floor(rawH/12)}'${rawH%12}"` : "--";
+                            safeSet('disp-weight', d.weight ? d.weight + " lbs" : "--");
 
-                        // Academics & Character
-                        safeSet('disp-gpa', d.gpa); 
-                        safeSet('disp-act-sat', d.sat || d.act || d.testScore || "--");
-                        safeSet('disp-ncaa-id', d.ncaaid || "--");
-                        safeSet('disp-character', d.tdlMeaning || d.whyPlay);
+                            // --- METRICS (Updated to match your HTML IDs) ---
+                            safeSet('stat-bench', mx.bench || d.bench);
+                            safeSet('stat-squat', mx.squat || d.squat);
+                            safeSet('stat-clean', mx.clean || d.clean);
+                            safeSet('stat-dead', mx.deadlift || d.deadlift); 
+                            safeSet('stat-push', mx.pushPress || d.pushPress); // Added this to match your HTML grid
 
-                        // Socials
-                        safeSet('disp-twitter', d.twitterLink ? "@" + d.twitterLink.split('/').pop() : "--");
-                        
-                        // Hudl Link
-                        const hudlBtn = document.getElementById('hudl-link');
-                        const hudlUrl = d.highlightLink || d.highlightUrl || d.hudlUrl;
-                        if (hudlBtn && hudlUrl) {
-                            hudlBtn.onclick = () => window.open(hudlUrl, '_blank');
+                            safeSet('disp-gpa', d.gpa); 
+                            safeSet('disp-act-sat', d.sat || d.act || d.testScore || "--");
+                            safeSet('disp-ncaa-id', d.ncaaid || "--");
+                            safeSet('disp-character', d.tdlMeaning || d.whyPlay);
+
+                            safeSet('disp-twitter', d.twitterLink ? "@" + d.twitterLink.split('/').pop() : "--");
+                            
+                            const hudlBtn = document.getElementById('hudl-link');
+                            const hudlUrl = d.highlightLink || d.highlightUrl || d.hudlUrl;
+                            if (hudlBtn && hudlUrl) {
+                                hudlBtn.onclick = () => window.open(hudlUrl, '_blank');
+                            }
+
+                            // --- PRE-FILL EDIT FIELDS (EDIT MODE) ---
+                            // This ensures that when the coach unlocks, the current data is already in the boxes
+                            if (document.getElementById('edit-bench')) document.getElementById('edit-bench').value = mx.bench || d.bench || "";
+                            if (document.getElementById('edit-squat')) document.getElementById('edit-squat').value = mx.squat || d.squat || "";
+                            if (document.getElementById('edit-clean')) document.getElementById('edit-clean').value = mx.clean || d.clean || "";
+                            if (document.getElementById('edit-deadlift')) document.gtElementById('edit-deadlift').value = mx.deadlift || d.deadlift || "";
+                            if (document.getElementById('edit-push')) document.getElementById('edit-push').value = mx.pushPress || d.pushPress || "";
+
+                            // --- PERMISSION & EDIT CHECK ---
+                            await runPermissionCheck(user, isEditMode);
+
+                            // UI Cleanup
+                            document.getElementById('loader')?.classList.add('hidden');
+                            document.getElementById('main-card-container')?.classList.remove('hidden');
+
+                        } else {
+                            if (document.getElementById('loader')) {
+                                document.getElementById('loader').innerText = "Athlete profile not found.";
+                            }
                         }
-
-                        // --- PERMISSION & EDIT CHECK ---
-                        // We call the function here after data is ready
-                        await runPermissionCheck(user, isEditMode);
-
-                        // UI Cleanup
-                        document.getElementById('loader')?.classList.add('hidden');
-                        document.getElementById('main-card-container')?.classList.remove('hidden');
-
-                    } else {
-                        document.getElementById('loader').innerText = "Athlete profile not found.";
+                    } catch (err) {
+                        console.error("Critical Render Error:", err);
                     }
-                } catch (err) {
-                    console.error("Critical Render Error:", err);
+                } else {
+                    location.href = 'index.html';
                 }
-            } else {
-                location.href = 'index.html';
-            }
-        });
+            });
 
-        /**
-         * Separate function to handle unlocking the UI for Coaches
-         */
-        async function runPermissionCheck(currentUser, isEditMode) {
-            if (!isEditMode) return;
-
-            try {
-                const coachSnap = await getDoc(doc(db, "users", currentUser.uid));
-                if (coachSnap.exists() && coachSnap.data().role === 'coach') {
-                    
-                    // 1. Toggle visibility: Hide display spans, show inputs
-                    // Note: This assumes you have elements with these classes in your HTML
-                    document.querySelectorAll('.view-mode').forEach(el => el.classList.add('hidden'));
-                    document.querySelectorAll('.edit-mode').forEach(el => el.classList.remove('hidden'));
-
-                    // 2. Fallback: If you aren't using classes yet, we unlock all existing inputs
-                    const inputs = document.querySelectorAll('input, select, textarea');
-                    inputs.forEach(input => {
-                        input.removeAttribute('disabled');
-                        input.removeAttribute('readonly');
-                        input.classList.add('border-blue-500', 'bg-gray-800'); 
-                    });
-
-                    // 3. Show the Save Button
-                    const saveBtn = document.getElementById('save-profile-btn');
-                    if (saveBtn) saveBtn.classList.remove('hidden');
+            // Permissions Check - Only shows the UNLOCK button
+            async function runPermissionCheck(currentUser, isEditMode) {
+                if (!isEditMode) return;
+                try {
+                    const coachSnap = await getDoc(doc(db, "users", currentUser.uid));
+                    if (coachSnap.exists() && coachSnap.data().role === 'coach') {
+                        const unlockBtn = document.getElementById('unlock-btn');
+                        if (unlockBtn) unlockBtn.classList.remove('hidden');
+                    }
+                } catch (e) {
+                    console.error("Permission check failed:", e);
                 }
-            } catch (e) {
-                console.error("Permission check failed:", e);
             }
-        }
+
+            // Function for the Unlock Button
+            window.toggleEditMode = () => {
+                // Hide text, show inputs
+                document.querySelectorAll('.view-mode').forEach(el => el.classList.add('hidden'));
+                document.querySelectorAll('.edit-mode').forEach(el => el.classList.remove('hidden'));
+                
+                // Show save button
+                document.getElementById('save-profile-btn')?.classList.remove('hidden');
+                
+                // UI Feedback on the unlock button
+                const btn = document.getElementById('unlock-btn');
+                if (btn) {
+                    btn.innerText = "⚠️ EDITING ACTIVE";
+                    btn.classList.replace('bg-yellow-600', 'bg-red-600');
+                }
+            };
+
+            // Function to save changes back to Firestore
+            window.saveAthleteProfile = async () => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const playerUID = urlParams.get('uid');
+
+                if (!playerUID) return alert("No athlete selected.");
+
+                const updatedData = {
+                    bench: document.getElementById('edit-bench').value,
+                    squat: document.getElementById('edit-squat').value,
+                    clean: document.getElementById('edit-clean').value,
+                    deadlift: document.getElementById('edit-deadlift').value
+                };
+
+                try {
+                    await updateDoc(doc(db, "recruiting_profiles", playerUID), updatedData);
+                    alert("Profile Updated Successfully!");
+                    location.reload(); // Refresh to lock and show new data
+                } catch (error) {
+                    console.error("Save error:", error);
+                    alert("Failed to save changes. Check your Firestore permissions.");
+                }
+            };
+
 
         // Helper for the Print Button
         document.getElementById('print-pdf-btn')?.addEventListener('click', () => {
