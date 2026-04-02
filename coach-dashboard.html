@@ -178,6 +178,19 @@
                 return;
             }
 
+            const schoolSnap = await getDoc(doc(db, "schools", schoolId));
+                if (schoolSnap.exists()) {
+                    const data = schoolSnap.data();
+                    
+                    // NEW: Store the lifts so the "Add Exercise" button can see them
+                    // We use a fallback ['bench', 'squat', 'clean'] in case none are saved yet
+                    window.currentTrackedLifts = data.trackedLifts || ['bench', 'squat', 'clean'];
+
+                    isRecruitingEnabled = data.hasRecruitingCard !== false;
+                    document.getElementById('feature-management').classList.remove('hidden');
+                    document.getElementById('toggle-recruiting-feature').checked = isRecruitingEnabled;
+                }
+
             const userSnap = await getDoc(doc(db, "users", user.uid));
             const userData = userSnap.data();
 
@@ -278,7 +291,6 @@
             }
 
             try {
-                // Gather all checkboxes with the class 'lift-checkbox' that are currently checked
                 const checkboxes = document.querySelectorAll('.lift-checkbox:checked');
                 const selectedLifts = Array.from(checkboxes).map(cb => cb.value);
 
@@ -287,10 +299,15 @@
                     return;
                 }
 
-                // Update the school document
+                // Update the school document in Firestore
                 await updateDoc(doc(db, "schools", window.currentSchoolId), {
                     trackedLifts: selectedLifts
                 });
+
+                // --- THE CRITICAL UPDATE ---
+                // This ensures that any NEW rows added to the workout builder 
+                // immediately use the updated list of lifts.
+                window.currentTrackedLifts = selectedLifts;
 
                 alert("Core lifts successfully updated!");
             } catch (error) {
@@ -316,7 +333,7 @@
 
             <div id="name-container-${id}">
                 <select id="name-${id}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600">
-                    ${window.currentTrackedLifts.map(l => `<option value="${l}">${l.toUpperCase()}</option>`).join('')}
+                    ${(window.currentTrackedLifts || []).map(l => `<option value="${l}">${l.toUpperCase()}</option>`).join('')}
                 </select>
             </div>
 
@@ -416,9 +433,15 @@
                     </select>
                 `;
             } else {
-                // 3. Rebuild the Core Lift Dropdown
-                const coreLifts = Array.from(document.querySelectorAll('.lift-checkbox:checked')).map(cb => cb.value);
-                const options = coreLifts.map(l => `<option value="${l}">${l.replace(/_/g, ' ').toUpperCase()}</option>`).join('');
+
+            // 3. Rebuild the Core Lift Dropdown
+            // Use the pre-loaded window variable, with a fallback to the checkboxes if needed
+            const coreLifts = window.currentTrackedLifts || 
+                            Array.from(document.querySelectorAll('.lift-checkbox:checked')).map(cb => cb.value);
+
+            const options = coreLifts.length > 0 
+                ? coreLifts.map(l => `<option value="${l}">${l.replace(/_/g, ' ').toUpperCase()}</option>`).join('')
+                : '<option value="">No Lifts Selected</option>';
                 
                 nameContainer.innerHTML = `
                     <label class="text-xs text-gray-400 block mb-1 uppercase">Exercise Name</label>
