@@ -325,33 +325,49 @@
     row.className = "exercise-row bg-gray-800 p-4 rounded-lg border border-gray-700 mb-4";
     
     row.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center mb-4">
-            <select id="type-${id}" onchange="toggleExerciseType(${id})" class="bg-gray-900 text-white p-2 rounded border border-gray-600">
-                <option value="core">Core Lift</option>
-                <option value="supp">Supplementary</option>
-            </select>
-
-            <div id="name-container-${id}">
-                <select id="name-${id}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600">
-                    ${(window.currentTrackedLifts || []).map(l => `<option value="${l}">${l.toUpperCase()}</option>`).join('')}
+        <div class="grid grid-cols-12 gap-3 items-end mb-4 bg-gray-800/50 p-3 rounded-lg border border-gray-700">
+            
+            <div class="col-span-3 md:col-span-2">
+                <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1">Type</label>
+                <select id="type-${id}" onchange="toggleExerciseType(${id})" 
+                    class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none text-sm">
+                    <option value="core" class="bg-gray-900 text-white">Core</option>
+                    <option value="supp" class="bg-gray-900 text-white">Supp</option>
                 </select>
             </div>
 
-            <div class="flex items-center gap-2">
-                <span class="text-gray-400 text-xs font-bold uppercase">Sets:</span>
-                <input type="number" id="sets-${id}" value="1" min="1" max="10" 
-                    onchange="generateSetInputs(${id})" 
-                    class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600">
+            <div class="col-span-6 md:col-span-6" id="name-container-${id}">
+                <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1">Exercise Name</label>
+                <select id="name-${id}" 
+                    class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none text-sm">
+                    ${(window.currentTrackedLifts || []).map(l => 
+                        `<option value="${l}" class="bg-gray-900 text-white">${l.toUpperCase()}</option>`
+                    ).join('')}
+                </select>
             </div>
 
-            <button onclick="document.getElementById('row-${id}').remove()" class="text-red-500 hover:text-red-400 font-bold">REMOVE</button>
+            <div class="col-span-3 md:col-span-2">
+                <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1">Sets</label>
+                <input type="number" id="sets-${id}" value="1" min="1" max="10" 
+                    onchange="generateSetInputs(${id})" 
+                    class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none text-sm">
+            </div>
+
+            <div class="col-span-12 md:col-span-2 flex justify-end md:pb-2">
+                <button onclick="document.getElementById('row-${id}').remove()" 
+                    class="text-red-500 hover:text-red-400 font-bold text-xs uppercase tracking-wider">
+                    Remove
+                </button>
+            </div>
         </div>
 
-        <div id="sets-container-${id}" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 border-t border-gray-700 pt-4">
-            <div class="flex items-center gap-2 bg-gray-900 p-2 rounded">
-                <span class="text-red-500 font-black text-xs">S1:</span>
-                <input type="text" placeholder="Reps" id="reps-${id}-1" class="w-full bg-transparent text-white text-sm outline-none">
-                <input type="number" placeholder="%" id="percent-${id}-1" class="w-16 bg-gray-800 text-white text-sm p-1 rounded">
+        <div id="sets-container-${id}" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-2 pb-4">
+            <div class="flex items-center gap-2 bg-gray-900 p-2 rounded border border-gray-700">
+                <span class="text-red-500 font-black text-[10px]">S1:</span>
+                <input type="text" placeholder="Reps" id="reps-${id}-1" 
+                    class="w-full bg-transparent text-white text-xs outline-none">
+                <input type="number" placeholder="%" id="percent-${id}-1" 
+                    class="w-12 bg-gray-800 text-white text-xs p-1 rounded border border-gray-600">
             </div>
         </div>
     `;
@@ -434,21 +450,15 @@
                 `;
             } else {
 
-            // 3. Rebuild the Core Lift Dropdown
-            // Use the pre-loaded window variable, with a fallback to the checkboxes if needed
-            const coreLifts = window.currentTrackedLifts || 
-                            Array.from(document.querySelectorAll('.lift-checkbox:checked')).map(cb => cb.value);
+                // 3. Rebuild the Core Lift Dropdown
+                const coreLifts = window.currentTrackedLifts || []; 
 
-            const options = coreLifts.length > 0 
-                ? coreLifts.map(l => `<option value="${l}">${l.replace(/_/g, ' ').toUpperCase()}</option>`).join('')
-                : '<option value="">No Lifts Selected</option>';
-                
-                nameContainer.innerHTML = `
-                    <label class="text-xs text-gray-400 block mb-1 uppercase">Exercise Name</label>
-                    <select id="name-${id}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none appearance-none"
-                        ${options}
-                    </select>
-                `;
+                // Log this to your console to see if data is actually there
+                console.log("Current Lifts available for dropdown:", coreLifts);
+
+                const options = coreLifts.length > 0 
+                    ? coreLifts.map(l => `<option value="${l}" class="text-white bg-gray-900">${l.replace(/_/g, ' ').toUpperCase()}</option>`).join('')
+                    : '<option value="" disabled selected>No lifts found - Check "Tracked Core Lifts" above</option>';
 
                 // 4. Switch Mode back to % of Max label
                 modifierContainer.innerHTML = `
