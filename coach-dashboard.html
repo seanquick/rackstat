@@ -322,7 +322,8 @@
     const id = Date.now();
     const row = document.createElement('div');
     row.id = `row-${id}`;
-    row.className = "exercise-row bg-gray-800 p-4 rounded-lg border border-gray-700 mb-4";
+    // Remove 'overflow-hidden' if you have it; add 'relative' and a high z-index
+    row.className = "exercise-row relative z-10 bg-gray-800 p-4 rounded-lg border border-gray-700 mb-4";
     
     row.innerHTML = `
         <div class="grid grid-cols-12 gap-3 items-end mb-4 bg-gray-800/50 p-3 rounded-lg border border-gray-700">
@@ -431,39 +432,44 @@
             const type = document.getElementById(`type-${id}`).value;
             const nameContainer = document.getElementById(`name-container-${id}`);
             const modifierContainer = document.getElementById(`modifier-container-${id}`);
-            
+
             if (type === 'supp') {
                 // 1. Switch to Text Input for Supplementary
                 nameContainer.innerHTML = `
-                    <label class="text-xs text-gray-400 block mb-1 uppercase">Exercise Name</label>
+                    <label class="text-xs text-gray-400 block mb-1 uppercase tracking-wider">Exercise Name</label>
                     <input type="text" id="name-${id}" placeholder="e.g. Pullups" 
-                        class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none appearance-none"
+                        class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none">
                 `;
 
                 // 2. Switch % to Mode (Reps vs Timed)
                 modifierContainer.innerHTML = `
-                    <label class="text-xs text-gray-400 block mb-1 uppercase">Mode</label>
-                    <select id="mode-${id}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600">
-                        <option value="reps">Reps</option>
-                        <option value="timed">Timed (Sec)</option>
+                    <label class="text-xs text-gray-400 block mb-1 uppercase tracking-wider">Mode</label>
+                    <select id="mode-${id}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none">
+                        <option value="reps" class="bg-gray-900 text-white">Reps</option>
+                        <option value="timed" class="bg-gray-900 text-white">Timed (Sec)</option>
                     </select>
                 `;
             } else {
-
-                // 3. Rebuild the Core Lift Dropdown
-                const coreLifts = window.currentTrackedLifts || []; 
-
-                // Log this to your console to see if data is actually there
-                console.log("Current Lifts available for dropdown:", coreLifts);
-
-                const options = coreLifts.length > 0 
+                // 3. Rebuild the Core Lift Dropdown with visibility fixes
+                const coreLifts = window.currentTrackedLifts || [];
+                
+                // Safety check + generating the <option> strings
+                const liftOptions = coreLifts.length > 0 
                     ? coreLifts.map(l => `<option value="${l}" class="text-white bg-gray-900">${l.replace(/_/g, ' ').toUpperCase()}</option>`).join('')
                     : '<option value="" disabled selected>No lifts found - Check "Tracked Core Lifts" above</option>';
 
+                nameContainer.innerHTML = `
+                    <label class="text-xs text-gray-400 block mb-1 uppercase tracking-wider">Exercise Name</label>
+                    // Inside your row.innerHTML backticks:
+                    <select id="name-${id}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600">
+                        ${liftOptions}
+                    </select>
+                `;
+
                 // 4. Switch Mode back to % of Max label
                 modifierContainer.innerHTML = `
-                    <label class="text-xs text-gray-400 block mb-1 uppercase">% of Max</label>
-                    <div class="text-gray-500 text-xs italic p-2 italic">Set-by-set entry enabled</div>
+                    <label class="text-xs text-gray-400 block mb-1 uppercase tracking-wider">% of Max</label>
+                    <div class="text-gray-500 text-[10px] italic py-2">Set-by-set entry enabled</div>
                 `;
             }
 

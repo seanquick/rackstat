@@ -136,3 +136,22 @@ body {
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+/* Ensure the select dropdown menus are always on top */
+select {
+    position: relative;
+    z-index: 50;
+    cursor: pointer;
+}
+
+/* Force standard dropdown options to be visible on dark themes */
+select option {
+    background-color: #111827 !important; /* Tailwind bg-gray-900 */
+    color: white !important;
+    padding: 10px;
+}
+
+/* Fixes a common Chrome/Brave bug where dark mode hides the dropdown arrow */
+select {
+    color-scheme: dark;
+}
