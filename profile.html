@@ -149,9 +149,10 @@
 
         <div class="space-y-3">
             <button onclick="saveProfile()" id="save-btn" class="w-full py-4 font-black italic uppercase bg-red-700 rounded-lg hover:bg-red-600 transition-all shadow-lg shadow-red-900/20">
-                Save Recruiting Card
+                Save Profile
             </button>
-            <button onclick="viewCard()" class="w-full py-4 font-black italic uppercase bg-gray-900 border border-gray-700 rounded-lg hover:bg-gray-800 transition-all text-gray-300">
+
+            <button id="btn-view-card" onclick="viewCard()" class="w-full py-4 font-black italic uppercase bg-gray-900 border border-gray-700 rounded-lg hover:bg-gray-800 transition-all text-gray-300">
                 View My Recruiting Card →
             </button>
         </div>
@@ -220,13 +221,23 @@
                     document.getElementById('youtube-link').value = data.youtubeLink || '';
                     document.getElementById('other-link').value = data.otherLink || '';
                     
-                    // 5. School Logic (Branding/Lifts)
+                    // 5. School Logic (Branding/Lifts/Toggles)
                     const schoolId = data.schoolId || data.school_id; 
                     if(schoolId) {
                         const schoolSnap = await getDoc(doc(db, "schools", schoolId));
                         if(schoolSnap.exists()){
                             const sData = schoolSnap.data();
-                            // Optional: If you still use the individual goals modal
+
+                            // --- NEW: RECRUITING CARD TOGGLE ---
+                            const viewCardBtn = document.getElementById('btn-view-card');
+                            if (sData.hasRecruitingCard === false) {
+                                if (viewCardBtn) viewCardBtn.classList.add('hidden');
+                                console.log("Recruiting Card disabled for this school.");
+                            } else {
+                                if (viewCardBtn) viewCardBtn.classList.remove('hidden');
+                            }
+                            // -----------------------------------
+
                             const select = document.getElementById('goal-category');
                             if(select) {
                                 const lifts = sData.trackedLifts || ['bench', 'squat', 'clean'];
@@ -238,12 +249,11 @@
                         }
                     }
 
-                    // 6. Legacy Render (Optional)
+                    // 6. Legacy Render
                     currentGoals = data.goals || [];
                     if (typeof renderGoals === "function") renderGoals(user.uid, currentGoals);
 
-                    // 7. NEW: SYNC THE CLUB GOAL PROGRESS BAR
-                    // This is the specific line you need to trigger the new UI
+                    // 7. SYNC THE CLUB GOAL PROGRESS BAR
                     syncGoalDisplay(data); 
                 }
             } else { 
