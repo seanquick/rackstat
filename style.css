@@ -21,7 +21,7 @@ body {
 /* --- BRANDING HEADER --- */
 .brand-header {
     background: linear-gradient(to bottom, #000, var(--rackstat-black));
-    padding: 40px 20px; /* Increased padding for the larger logos */
+    padding: 40px 20px;
     border-bottom: 2px solid var(--rackstat-border);
     display: flex;
     flex-direction: column;
@@ -30,7 +30,7 @@ body {
 }
 
 .rackstat-logo {
-    height: 180px; /* Scaled down from 300px to prevent massive scrolling */
+    height: 180px; 
     width: auto;
     filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.1));
 }
@@ -43,19 +43,19 @@ body {
     gap: 40px; 
     padding: 20px;
     width: 100%;
-    flex-wrap: wrap; /* Ensures it looks good on phones */
+    flex-wrap: wrap;
 }
 
 .school-logo-primary, 
 .school-logo-secondary {
-    height: 140px;    /* Scaled from 200px for better vertical balance */
+    height: 140px;
     width: auto;
     object-fit: contain;
     filter: drop-shadow(0 0 15px rgba(185, 28, 28, 0.4));
 }
 
 .school-name {
-    font-size: 2.5rem; /* Slightly reduced from 3rem to keep it on one line */
+    font-size: 2.5rem;
     font-weight: 900;
     text-transform: uppercase;
     font-style: italic;
@@ -67,8 +67,6 @@ body {
     padding: 0 25px;
     line-height: 1;
 }
-
-/* Rest of your CSS remains the same... */
 
 /* --- CONTAINERS & FORMS --- */
 .container {
@@ -137,21 +135,39 @@ body {
     cursor: not-allowed;
 }
 
-/* Ensure the select dropdown menus are always on top */
+/* --- WORKOUT BUILDER DROPDOWN FIXES --- */
+
+/* 1. Ensure the exercise row itself doesn't hide anything */
+.exercise-row {
+    position: relative;
+    overflow: visible !important; /* CRITICAL: Prevents clipping of dropdowns */
+    z-index: 10;
+    margin-bottom: 20px;
+}
+
+/* 2. Higher z-index for the top container where the dropdown lives */
+[id^="name-container-"] {
+    position: relative;
+    z-index: 100 !important;
+}
+
+/* 3. Dropdown styling and visibility */
 select {
     position: relative;
-    z-index: 50;
+    z-index: 100;
     cursor: pointer;
+    color-scheme: dark; /* Fixes invisible arrows in Chrome/Brave */
 }
 
-/* Force standard dropdown options to be visible on dark themes */
+/* 4. Ensure options are readable on dark background */
 select option {
-    background-color: #111827 !important; /* Tailwind bg-gray-900 */
+    background-color: #1a1a1c !important; /* var(--rackstat-gray) */
     color: white !important;
-    padding: 10px;
+    padding: 12px;
 }
 
-/* Fixes a common Chrome/Brave bug where dark mode hides the dropdown arrow */
-select {
-    color-scheme: dark;
+/* 5. Lower the z-index of the sets container below the dropdown */
+[id^="sets-container-"] {
+    position: relative;
+    z-index: 1; /* Keeps it below the open dropdown menu */
 }

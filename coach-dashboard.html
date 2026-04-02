@@ -322,8 +322,8 @@
     const id = Date.now();
     const row = document.createElement('div');
     row.id = `row-${id}`;
-    // Remove 'overflow-hidden' if you have it; add 'relative' and a high z-index
-    row.className = "exercise-row relative z-10 bg-gray-800 p-4 rounded-lg border border-gray-700 mb-4";
+    // Added 'relative' and removed any 'overflow' classes
+    row.className = "exercise-row relative bg-gray-800 p-4 rounded-lg border border-gray-700 mb-4";
     
     row.innerHTML = `
         <div class="grid grid-cols-12 gap-3 items-end mb-4 bg-gray-800/50 p-3 rounded-lg border border-gray-700">
@@ -339,8 +339,7 @@
 
             <div class="col-span-6 md:col-span-6" id="name-container-${id}">
                 <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1">Exercise Name</label>
-                <select id="name-${id}" 
-                    class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none text-sm">
+                <select id="name-${id}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 appearance-none cursor-pointer">
                     ${(window.currentTrackedLifts || []).map(l => 
                         `<option value="${l}" class="bg-gray-900 text-white">${l.toUpperCase()}</option>`
                     ).join('')}
@@ -453,15 +452,18 @@
                 // 3. Rebuild the Core Lift Dropdown with visibility fixes
                 const coreLifts = window.currentTrackedLifts || [];
                 
-                // Safety check + generating the <option> strings
-                const liftOptions = coreLifts.length > 0 
-                    ? coreLifts.map(l => `<option value="${l}" class="text-white bg-gray-900">${l.replace(/_/g, ' ').toUpperCase()}</option>`).join('')
-                    : '<option value="" disabled selected>No lifts found - Check "Tracked Core Lifts" above</option>';
+                // 1. Rebuild with a hardcoded RED option to test visibility
+                const liftOptions = `
+                    <option value="" class="bg-red-600 text-white font-bold">-- DEBUG: IF YOU SEE THIS, IT WORKS --</option>
+                    ${(window.currentTrackedLifts || []).map(l => 
+                        `<option value="${l}" class="text-white bg-gray-900">${l.replace(/_/g, ' ').toUpperCase()}</option>`
+                    ).join('')}
+                `;
 
+                // 2. Update the container
                 nameContainer.innerHTML = `
                     <label class="text-xs text-gray-400 block mb-1 uppercase tracking-wider">Exercise Name</label>
-                    // Inside your row.innerHTML backticks:
-                    <select id="name-${id}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600">
+                    <select id="name-${id}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 relative z-50">
                         ${liftOptions}
                     </select>
                 `;
