@@ -122,76 +122,91 @@
                 }
             };
 
-        onAuthStateChanged(auth, async (user) => {
-            const authSection = document.getElementById('auth-section');
-            const mainMenu = document.getElementById('main-menu');
-            
-            if (user) {
-                try {
-                    // 1. Fetch Master User Data
-                    const userSnap = await getDoc(doc(db, "users", user.uid));
-                    
-                    if (userSnap.exists()) {
-                        const userData = userSnap.data();
-
-                        // 2. Redirect Coach immediately
-                        if (userData.role === 'coach') {
-                            window.location.href = 'coach-dashboard.html';
-                            return; 
-                        }
+            onAuthStateChanged(auth, async (user) => {
+                        const authSection = document.getElementById('auth-section');
+                        const mainMenu = document.getElementById('main-menu');
                         
-                        // 3. Handle School-Level Feature Toggles (Recruiting Card)
-                        if (userData.school_id) {
-                            const schoolSnap = await getDoc(doc(db, "schools", userData.school_id));
-                            if (schoolSnap.exists()) {
-                                const schoolData = schoolSnap.data();
-                                const recruitingBtn = document.getElementById('btn-recruiting-card'); 
+                        if (user) {
+                            try {
+                                // 1. Fetch Master User Data
+                                const userSnap = await getDoc(doc(db, "users", user.uid));
                                 
-                                if (schoolData.hasRecruitingCard === false) {
-                                    if (recruitingBtn) recruitingBtn.classList.add('hidden');
-                                } else {
-                                    if (recruitingBtn) recruitingBtn.classList.remove('hidden');
+                                if (userSnap.exists()) {
+                                    const userData = userSnap.data();
+                                    
+                                    // TEMP LOG 1: Check what school ID is attached to this athlete
+                                    console.log("Athlete School ID:", userData.school_id);
+
+                                    // 2. Redirect Coach immediately
+                                    if (userData.role === 'coach') {
+                                        window.location.href = 'coach-dashboard.html';
+                                        return; 
+                                    }
+                                    
+                                    // 3. Handle School-Level Feature Toggles (Recruiting Card)
+                                    if (userData.school_id) {
+                                        const schoolSnap = await getDoc(doc(db, "schools", userData.school_id));
+                                        
+                                        if (schoolSnap.exists()) {
+                                            const schoolData = schoolSnap.data();
+                                            
+                                            // TEMP LOGS 2 & 3: Check database values
+                                            console.log("School Doc Found!");
+                                            console.log("hasRecruitingCard value:", schoolData.hasRecruitingCard);
+                                            console.log("Type of value:", typeof schoolData.hasRecruitingCard);
+
+                                            const recruitingBtn = document.getElementById('btn-recruiting-card'); 
+                                            
+                                            if (schoolData.hasRecruitingCard === false) {
+                                                console.log("Condition met: Adding 'hidden' class to button.");
+                                                if (recruitingBtn) recruitingBtn.classList.add('hidden');
+                                            } else {
+                                                console.log("Condition NOT met: Keeping button visible.");
+                                                if (recruitingBtn) recruitingBtn.classList.remove('hidden');
+                                            }
+                                        } else {
+                                            // TEMP LOG 4: If this triggers, your school_id in 'users' doesn't match the Doc ID in 'schools'
+                                            console.error("CRITICAL: No school document found at /schools/" + userData.school_id);
+                                        }
+                                    }
+
+                                    // 4. Handle Athlete Profile Status Label
+                                    const recruitingDoc = await getDoc(doc(db, "recruiting_profiles", user.uid));
+                                    const statusLabel = document.getElementById('recruiting-status'); 
+
+                                    if (statusLabel) {
+                                        if (recruitingDoc.exists()) {
+                                            const data = recruitingDoc.data();
+                                            const lastUpdate = data.lastUpdated ? new Date(data.lastUpdated) : new Date();
+                                            const daysSinceUpdate = (new Date() - lastUpdate) / (1000 * 60 * 60 * 24);
+                                            
+                                            if (daysSinceUpdate > 30) {
+                                                statusLabel.innerText = "⚠️ Profile Outdated";
+                                                statusLabel.className = "text-[9px] font-black text-yellow-400 uppercase";
+                                            } else {
+                                                statusLabel.innerText = "✅ Profile Active";
+                                                statusLabel.className = "text-[9px] font-black text-green-400 uppercase";
+                                            }
+                                        } else {
+                                            statusLabel.innerText = "❌ Profile Incomplete";
+                                            statusLabel.className = "text-[9px] font-black text-red-500 uppercase";
+                                        }
+                                    }
+
+                                    // 5. Show Main Menu
+                                    authSection.classList.add('hidden');
+                                    mainMenu.classList.remove('hidden');
+                                    document.getElementById('welcome-msg').innerText = `Welcome, ${userData.fullName || 'Athlete'}`;
                                 }
+                            } catch (err) {
+                                console.error("Auth Error:", err);
                             }
+                        } else {
+                            // Reset view for logged-out state
+                            authSection.classList.remove('hidden');
+                            mainMenu.classList.add('hidden');
                         }
-
-                        // 4. Handle Athlete Profile Status Label
-                        const recruitingDoc = await getDoc(doc(db, "recruiting_profiles", user.uid));
-                        const statusLabel = document.getElementById('recruiting-status'); 
-
-                        if (statusLabel) {
-                            if (recruitingDoc.exists()) {
-                                const data = recruitingDoc.data();
-                                const lastUpdate = data.lastUpdated ? new Date(data.lastUpdated) : new Date();
-                                const daysSinceUpdate = (new Date() - lastUpdate) / (1000 * 60 * 60 * 24);
-                                
-                                if (daysSinceUpdate > 30) {
-                                    statusLabel.innerText = "⚠️ Profile Outdated";
-                                    statusLabel.className = "text-[9px] font-black text-yellow-400 uppercase";
-                                } else {
-                                    statusLabel.innerText = "✅ Profile Active";
-                                    statusLabel.className = "text-[9px] font-black text-green-400 uppercase";
-                                }
-                            } else {
-                                statusLabel.innerText = "❌ Profile Incomplete";
-                                statusLabel.className = "text-[9px] font-black text-red-500 uppercase";
-                            }
-                        }
-
-                        // 5. Show Main Menu
-                        authSection.classList.add('hidden');
-                        mainMenu.classList.remove('hidden');
-                        document.getElementById('welcome-msg').innerText = `Welcome, ${userData.fullName || 'Athlete'}`;
-                    }
-                } catch (err) {
-                    console.error("Auth Error:", err);
-                }
-            } else {
-                // Reset view for logged-out state
-                authSection.classList.remove('hidden');
-                mainMenu.classList.add('hidden');
-            }
-        });
+                    });
     </script>
 </body>
 </html>
