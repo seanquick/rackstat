@@ -52,8 +52,8 @@
         <div id="main-menu" class="hidden space-y-4 p-6">
             <h2 id="welcome-msg" class="text-xl font-black italic uppercase text-center mb-6"></h2>
             
-            <div class="grid grid-cols-1 gap-4">
-            
+        <div class="grid grid-cols-1 gap-4">
+                    
             <button onclick="location.href='board.html'" class="btn-primary w-full py-4 text-lg bg-red-700 border-red-900 mb-4">
                 THE BOARD
             </button>
@@ -62,18 +62,18 @@
                 THE RACK
             </button>
 
-            <button onclick="location.href='kitchen.html'" class="btn-primary w-full py-4 text-lg bg-green-700 border-green-900 mb-4">
+            <button id="btn-kitchen" onclick="location.href='kitchen.html'" class="btn-primary w-full py-4 text-lg bg-green-700 border-green-900 mb-4">
                 THE KITCHEN
             </button>
 
-            <button onclick="location.href='next-level.html'" class="btn-primary w-full py-4 text-lg bg-red-700 border-red-900 mb-4">
+            <button id="btn-recruiting-card" onclick="location.href='next-level.html'" class="btn-primary w-full py-4 text-lg bg-red-700 border-red-900 mb-4">
                 NEXT LEVEL RECRUITING
             </button>
 
             <button onclick="location.href='profile.html'" class="btn-primary w-full py-4 text-lg bg-blue-700 border-blue-900">
                 MY PROFILE
             </button>
-            </div>
+        </div>
 
             <button onclick="handleLogout()" class="w-full mt-8 text-[14px] font-bold uppercase text-gray-500 hover:text-white transition-colors">
                 Sign Out / Switch User
@@ -128,69 +128,70 @@
             
             if (user) {
                 try {
+                    // 1. Fetch Master User Data
                     const userSnap = await getDoc(doc(db, "users", user.uid));
                     
                     if (userSnap.exists()) {
                         const userData = userSnap.data();
 
+                        // 2. Redirect Coach immediately
                         if (userData.role === 'coach') {
                             window.location.href = 'coach-dashboard.html';
                             return; 
                         }
                         
-                        // --- NEW: CHECK SCHOOL SETTINGS FOR THE RECRUITING CARD ---
+                        // 3. Handle School-Level Feature Toggles (Recruiting Card)
                         if (userData.school_id) {
                             const schoolSnap = await getDoc(doc(db, "schools", userData.school_id));
                             if (schoolSnap.exists()) {
                                 const schoolData = schoolSnap.data();
-                                
-                                // Look for your Recruiting Card button/link
                                 const recruitingBtn = document.getElementById('btn-recruiting-card'); 
                                 
                                 if (schoolData.hasRecruitingCard === false) {
                                     if (recruitingBtn) recruitingBtn.classList.add('hidden');
-                                    console.log("Recruiting feature disabled by coach.");
                                 } else {
                                     if (recruitingBtn) recruitingBtn.classList.remove('hidden');
                                 }
                             }
                         }
-                        // ---------------------------------------------------------
 
+                        // 4. Handle Athlete Profile Status Label
+                        const recruitingDoc = await getDoc(doc(db, "recruiting_profiles", user.uid));
+                        const statusLabel = document.getElementById('recruiting-status'); 
+
+                        if (statusLabel) {
+                            if (recruitingDoc.exists()) {
+                                const data = recruitingDoc.data();
+                                const lastUpdate = data.lastUpdated ? new Date(data.lastUpdated) : new Date();
+                                const daysSinceUpdate = (new Date() - lastUpdate) / (1000 * 60 * 60 * 24);
+                                
+                                if (daysSinceUpdate > 30) {
+                                    statusLabel.innerText = "⚠️ Profile Outdated";
+                                    statusLabel.className = "text-[9px] font-black text-yellow-400 uppercase";
+                                } else {
+                                    statusLabel.innerText = "✅ Profile Active";
+                                    statusLabel.className = "text-[9px] font-black text-green-400 uppercase";
+                                }
+                            } else {
+                                statusLabel.innerText = "❌ Profile Incomplete";
+                                statusLabel.className = "text-[9px] font-black text-red-500 uppercase";
+                            }
+                        }
+
+                        // 5. Show Main Menu
                         authSection.classList.add('hidden');
                         mainMenu.classList.remove('hidden');
                         document.getElementById('welcome-msg').innerText = `Welcome, ${userData.fullName || 'Athlete'}`;
-                        
                     }
                 } catch (err) {
                     console.error("Auth Error:", err);
                 }
             } else {
+                // Reset view for logged-out state
                 authSection.classList.remove('hidden');
                 mainMenu.classList.add('hidden');
             }
         });
-
-        // Check Recruiting Profile Status
-            const recruitingDoc = await getDoc(doc(db, "recruiting_profiles", user.uid));
-            const statusLabel = document.getElementById('recruiting-status'); // Add an ID to your UI if you want to show this
-
-            if (recruitingDoc.exists()) {
-                const data = recruitingDoc.data();
-                // If they haven't updated in 30 days, warn them
-                const lastUpdate = new Date(data.lastUpdated);
-                const daysSinceUpdate = (new Date() - lastUpdate) / (1000 * 60 * 60 * 24);
-                
-                if (daysSinceUpdate > 30) {
-                    statusLabel.innerText = "⚠️ Profile Outdated";
-                    statusLabel.className = "text-[9px] font-black text-yellow-400 uppercase";
-                } else {
-                    statusLabel.innerText = "✅ Profile Active";
-                    statusLabel.className = "text-[9px] font-black text-green-400 uppercase";
-                }
-            } else {
-                statusLabel.innerText = "❌ Profile Incomplete";
-            }
     </script>
 </body>
 </html>
