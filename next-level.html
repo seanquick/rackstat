@@ -221,7 +221,7 @@
             <span class="sub-label">What type of teammate are you?</span>
             <textarea id="teammateType" rows="2"></textarea>
             <span class="sub-label">What does being a good teammate mean to you?</span>
-            <textarea id="tdlMeaning" rows="3"></textarea>
+            <textarea id="teammateDef" rows="3"></textarea>
             <span class="sub-label">What are you willing to sacrifice?</span>
             <textarea id="sacrifice" rows="2"></textarea>
         </div>
@@ -285,7 +285,7 @@
                     // SECTION 06-08: TESTING & CHARACTER
                     document.getElementById('isStarter').value = d.isStarter || "No";
                     document.getElementById('highlightUrl').value = d.highlightUrl || "";
-                    document.getElementById('tdlMeaning').value = d.tdlMeaning || "";
+                    document.getElementById('teammateDef').value = d.teammateDef || "";
                     
                     // Re-check the commitment boxes
                     if (d.commitments && Array.isArray(d.commitments)) {
@@ -339,7 +339,7 @@
             isStarter: document.getElementById('isStarter').value,
             highlightUrl: document.getElementById('highlightUrl').value,
             commitments: commitments,
-            tdlMeaning: document.getElementById('tdlMeaning').value,
+            teammateDef: document.getElementById('teammateDef').value,
             
             // SYSTEM DATA
             lastUpdated: new Date().toISOString()

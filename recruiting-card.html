@@ -98,17 +98,24 @@
                         <input id="edit-gpa" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-right p-1 w-16 rounded">
                     </div>
                     
-                    <div class="flex justify-between border-b border-white/10 pb-1">
-                        <span class="label">ACT / SAT</span>
-                        <span id="disp-test" class="font-bold italic">--</span>
-                    </div>
+                    <div class="flex justify-between border-b border-white/10 pb-1 items-center">
+                            <span class="label">ACT Score</span>
+                            <span id="disp-act" class="font-bold italic view-mode">--</span>
+                            <input id="edit-act" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-right p-1 w-16 rounded">
+                        </div>
+
+                        <div class="flex justify-between border-b border-white/10 pb-1 items-center">
+                            <span class="label">SAT Score</span>
+                            <span id="disp-sat" class="font-bold italic view-mode">--</span>
+                            <input id="edit-sat" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-right p-1 w-16 rounded">
+                        </div>
                 </div>
             </div>
 
             <div>
                 <h3 class="label mb-4 text-red-500 text-sm">Player Character</h3>
                 <div class="bg-white/5 p-4 rounded-xl italic text-sm text-gray-300 mb-6">
-                    <p class="label mb-1 text-white/40">TDL Definition:</p>
+                    <p class="label mb-1 text-white/40">Character Definition:</p>
                     "<span id="disp-tdl">...</span>"
                 </div>
 
@@ -210,9 +217,10 @@
 
                             // --- ACADEMICS ---
                             safeSet('disp-gpa', d.gpa); 
-                            safeSet('disp-act-sat', d.sat || d.act || d.testScore || "--");
+                            safeSet('disp-act', d.act);
+                            safeSet('disp-sat', d.sat);
                             safeSet('disp-ncaa-id', d.ncaaid || "--");
-                            safeSet('disp-character', d.tdlMeaning || d.whyPlay);
+                            safeSet('disp-character', d.teammateDef || d.whyPlay);
 
                             safeSet('disp-twitter', d.twitterLink ? "@" + d.twitterLink.split('/').pop() : "--");
                             
@@ -234,6 +242,8 @@
                             if (document.getElementById('edit-name')) document.getElementById('edit-name').value = d.fullName || "";
                             if (document.getElementById('edit-gpa')) document.getElementById('edit-gpa').value = d.gpa || "";
                             if (document.getElementById('edit-grad')) document.getElementById('edit-grad').value = d.gradYear || "";
+                            if (document.getElementById('edit-act')) document.getElementById('edit-act').value = d.act || "";
+                            if (document.getElementById('edit-sat')) document.getElementById('edit-sat').value = d.sat || "";
                             if (document.getElementById('edit-pos')) document.getElementById('edit-pos').value = d.primaryPos || "";
                             if (document.getElementById('edit-pos2')) document.getElementById('edit-pos2').value = d.secondaryPos || "";
                             if (document.getElementById('edit-def-pos')) document.getElementById('edit-def-pos').value = d.primaryDefPos || "";
@@ -307,6 +317,8 @@
                     
                     // Academics & Info
                     gpa: document.getElementById('edit-gpa').value,
+                    act: document.getElementById('edit-act').value,
+                    sat: document.getElementById('edit-sat').value,
                     fullName: document.getElementById('edit-name').value,
                     gradYear: document.getElementById('edit-grad').value,
 
