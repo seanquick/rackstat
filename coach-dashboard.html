@@ -122,14 +122,22 @@
 
         window.updateSchoolFeatures = async () => {
             const isEnabled = document.getElementById('toggle-recruiting-feature').checked;
+            
+            // Safety check: Make sure we have a school ID before trying to save
+            if (!currentSchoolId) {
+                alert("Error: School ID not loaded yet. Please refresh.");
+                return;
+            }
+
             try {
-                await updateDoc(doc(db, "schools", currentSchoolId), {
+                const schoolRef = doc(db, "schools", currentSchoolId);
+                await updateDoc(schoolRef, {
                     hasRecruitingCard: isEnabled
                 });
-                alert(`Recruiting Card feature is now ${isEnabled ? 'ENABLED' : 'DISABLED'}.`);
-                location.reload();
+                console.log("Feature updated successfully");
             } catch (err) {
                 console.error("Error updating feature:", err);
+                alert("Permission Denied: You do not have authority to change school settings.");
             }
         };
 
