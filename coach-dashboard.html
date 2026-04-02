@@ -301,56 +301,49 @@
 
         let exerciseCount = 0;
 
-        function addExerciseRow() {
-            exerciseCount++;
-            const container = document.getElementById('exercise-list');
-            
-            // We need to fetch the tracked lifts we saved in Phase 1 for the dropdown
-            const coreLifts = Array.from(document.querySelectorAll('.lift-checkbox:checked')).map(cb => cb.value);
-            const options = coreLifts.map(l => `<option value="${l}">${l.replace('_', ' ').toUpperCase()}</option>`).join('');
+ function addExerciseRow() {
+    const id = Date.now();
+    const row = document.createElement('div');
+    row.id = `row-${id}`;
+    row.className = "exercise-row bg-gray-800 p-4 rounded-lg border border-gray-700 mb-4";
+    
+    row.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center mb-4">
+            <select id="type-${id}" onchange="toggleExerciseType(${id})" class="bg-gray-900 text-white p-2 rounded border border-gray-600">
+                <option value="core">Core Lift</option>
+                <option value="supp">Supplementary</option>
+            </select>
 
-            const rowHtml = `
-                <div class="exercise-row bg-gray-800 p-4 rounded-lg border border-gray-700 grid grid-cols-1 md:grid-cols-6 gap-3 items-end" id="row-${exerciseCount}">
-                    <div>
-                        <label class="text-xs text-gray-400 block mb-1">TYPE</label>
-                        <select onchange="toggleExerciseType(${exerciseCount})" id="type-${exerciseCount}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600">
-                            <option value="core">Core Lift</option>
-                            <option value="supp">Supplementary</option>
-                        </select>
-                    </div>
+            <div id="name-container-${id}">
+                <select id="name-${id}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600">
+                    ${window.currentTrackedLifts.map(l => `<option value="${l}">${l.toUpperCase()}</option>`).join('')}
+                </select>
+            </div>
 
-                    <div class="md:col-span-2" id="name-container-${exerciseCount}">
-                        <label class="text-xs text-gray-400 block mb-1">EXERCISE NAME</label>
-                        <select id="name-${exerciseCount}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600">
-                            ${options}
-                        </select>
-                    </div>
+            <div class="flex items-center gap-2">
+                <span class="text-gray-400 text-xs font-bold uppercase">Sets:</span>
+                <input type="number" id="sets-${id}" value="1" min="1" max="10" 
+                    onchange="generateSetInputs(${id})" 
+                    class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600">
+            </div>
 
-                    <div class="flex gap-2">
-                        <div>
-                            <label class="text-xs text-gray-400 block mb-1">SETS</label>
-                            <input type="number" id="sets-${exerciseCount}" class="w-20 bg-gray-900 text-white p-2 rounded border border-gray-600">
-                        </div>
-                        <div id="reps-container-${exerciseCount}">
-                            <label class="text-xs text-gray-400 block mb-1">REPS</label>
-                            <input type="text" id="reps-${exerciseCount}" placeholder="5 or AMRAP" class="w-24 bg-gray-900 text-white p-2 rounded border border-gray-600">
-                        </div>
-                    </div>
+            <button onclick="document.getElementById('row-${id}').remove()" class="text-red-500 hover:text-red-400 font-bold">REMOVE</button>
+        </div>
 
-                    <div id="modifier-container-${exerciseCount}">
-                        <label class="text-xs text-gray-400 block mb-1">% OF MAX</label>
-                        <input type="number" id="percent-${exerciseCount}" placeholder="80" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600">
-                    </div>
-
-                    <button onclick="document.getElementById('row-${exerciseCount}').remove()" class="text-red-500 font-bold hover:text-red-400 pb-2">REMOVE</button>
-                </div>
-            `;
-            container.insertAdjacentHTML('beforeend', rowHtml);
-        }
+        <div id="sets-container-${id}" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 border-t border-gray-700 pt-4">
+            <div class="flex items-center gap-2 bg-gray-900 p-2 rounded">
+                <span class="text-red-500 font-black text-xs">S1:</span>
+                <input type="text" placeholder="Reps" id="reps-${id}-1" class="w-full bg-transparent text-white text-sm outline-none">
+                <input type="number" placeholder="%" id="percent-${id}-1" class="w-16 bg-gray-800 text-white text-sm p-1 rounded">
+            </div>
+        </div>
+    `;
+    document.getElementById('exercise-list').appendChild(row);
+}
 
         async function saveWorkout() {
             const title = document.getElementById('workout-title').value;
-            const week = document.getElementById('workout-week').value; // Get the selected week
+            const week = document.getElementById('workout-week').value; 
             
             if(!title) return alert("Please name the workout");
 
@@ -360,30 +353,39 @@
             rows.forEach(row => {
                 const id = row.id.split('-')[1];
                 const type = document.getElementById(`type-${id}`).value;
-                const repsVal = document.getElementById(`reps-${id}`).value;
+                const setCount = parseInt(document.getElementById(`sets-${id}`).value) || 0;
                 
+                // NEW: Collect individual data for each set
+                const setDetails = [];
+                for (let i = 1; i <= setCount; i++) {
+                    const repsVal = document.getElementById(`reps-${id}-${i}`).value;
+                    setDetails.push({
+                        setNum: i,
+                        reps: repsVal,
+                        // Only save percentage if it's a Core lift
+                        percent: type === 'core' ? (parseInt(document.getElementById(`percent-${id}-${i}`).value) || 0) : null,
+                        isAMRAP: repsVal.toUpperCase() === 'AMRAP'
+                    });
+                }
+
                 exercises.push({
                     name: document.getElementById(`name-${id}`).value,
                     isCore: type === 'core',
-                    // Convert to Number for better data handling
-                    sets: parseInt(document.getElementById(`sets-${id}`).value) || 0,
-                    reps: repsVal,
-                    percent: type === 'core' ? (parseInt(document.getElementById(`percent-${id}`).value) || 0) : null,
+                    sets: setDetails, // Saving the array of set objects
                     mode: type === 'supp' ? document.getElementById(`mode-${id}`).value : 'reps',
-                    isAMRAP: repsVal.toUpperCase() === 'AMRAP'
+                    totalSets: setCount // Reference for UI rendering
                 });
             });
 
             try {
+                //
                 await addDoc(collection(db, "schools", window.currentSchoolId, "workouts"), {
                     title: title,
-                    week: parseInt(week), // Store week as a number for sorting
+                    week: parseInt(week), 
                     exercises: exercises,
-                    createdAt: serverTimestamp()
+                    createdAt: serverTimestamp() //
                 });
                 
-                // Alert the user, but we DON'T clear the exercise-list
-                // This allows the coach to quickly edit and save the next week
                 alert(`Success! ${title} (Week ${week}) has been published.`);
                 
             } catch (e) {
@@ -398,35 +400,43 @@
             const modifierContainer = document.getElementById(`modifier-container-${id}`);
             
             if (type === 'supp') {
-                // Switch to Text Input for Supplementary
+                // 1. Switch to Text Input for Supplementary
                 nameContainer.innerHTML = `
-                    <label class="text-xs text-gray-400 block mb-1">EXERCISE NAME</label>
-                    <input type="text" id="name-${id}" placeholder="e.g. Pullups" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600">
+                    <label class="text-xs text-gray-400 block mb-1 uppercase">Exercise Name</label>
+                    <input type="text" id="name-${id}" placeholder="e.g. Pullups" 
+                        class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none">
                 `;
-                // Switch % to Mode (Reps vs Timed)
+
+                // 2. Switch % to Mode (Reps vs Timed)
                 modifierContainer.innerHTML = `
-                    <label class="text-xs text-gray-400 block mb-1">MODE</label>
+                    <label class="text-xs text-gray-400 block mb-1 uppercase">Mode</label>
                     <select id="mode-${id}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600">
                         <option value="reps">Reps</option>
                         <option value="timed">Timed (Sec)</option>
                     </select>
                 `;
             } else {
-                // Rebuild the Core Lift Dropdown from Phase 1 selections
+                // 3. Rebuild the Core Lift Dropdown
                 const coreLifts = Array.from(document.querySelectorAll('.lift-checkbox:checked')).map(cb => cb.value);
                 const options = coreLifts.map(l => `<option value="${l}">${l.replace(/_/g, ' ').toUpperCase()}</option>`).join('');
                 
                 nameContainer.innerHTML = `
-                    <label class="text-xs text-gray-400 block mb-1">EXERCISE NAME</label>
-                    <select id="name-${id}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600">
+                    <label class="text-xs text-gray-400 block mb-1 uppercase">Exercise Name</label>
+                    <select id="name-${id}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none">
                         ${options}
                     </select>
                 `;
-                // Switch Mode back to % of Max
+
+                // 4. Switch Mode back to % of Max label
                 modifierContainer.innerHTML = `
-                    <label class="text-xs text-gray-400 block mb-1">% OF MAX</label>
-                    <input type="number" id="percent-${id}" placeholder="80" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600">
+                    <label class="text-xs text-gray-400 block mb-1 uppercase">% of Max</label>
+                    <div class="text-gray-500 text-xs italic p-2 italic">Set-by-set entry enabled</div>
                 `;
+            }
+
+            // 5. CRITICAL: Refresh the sets UI to show/hide percentage boxes based on the new type
+            if (typeof window.generateSetInputs === 'function') {
+                window.generateSetInputs(id);
             }
         }
 
