@@ -421,7 +421,7 @@
                 nameContainer.innerHTML = `
                     <label class="text-xs text-gray-400 block mb-1 uppercase">Exercise Name</label>
                     <input type="text" id="name-${id}" placeholder="e.g. Pullups" 
-                        class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none">
+                        class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none appearance-none"
                 `;
 
                 // 2. Switch % to Mode (Reps vs Timed)
@@ -445,7 +445,7 @@
                 
                 nameContainer.innerHTML = `
                     <label class="text-xs text-gray-400 block mb-1 uppercase">Exercise Name</label>
-                    <select id="name-${id}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none">
+                    <select id="name-${id}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none appearance-none"
                         ${options}
                     </select>
                 `;
