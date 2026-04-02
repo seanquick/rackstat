@@ -168,106 +168,123 @@
             // Add this at the top of your script block
             let currentUser = null;
 
-            onAuthStateChanged(auth, async (user) => {
-                const urlParams = new URLSearchParams(window.location.search);
-                const athleteId = urlParams.get('uid');
-                const isEditMode = urlParams.get('edit') === 'true';
+           onAuthStateChanged(auth, async (user) => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const athleteId = urlParams.get('uid');
+            const isEditMode = urlParams.get('edit') === 'true';
 
-                if (user) {
-                    currentUser = user; 
-                    try {
-                        const targetUid = athleteId || user.uid;
-                        const profileRef = doc(db, "recruiting_profiles", targetUid);
-                        const maxesRef = doc(db, "recruiting_profiles", targetUid, "maxes", "latest");
+            if (user) {
+                currentUser = user; 
+                try {
+                    // 1. Get User Role and School ID first
+                    const userSnap = await getDoc(doc(db, "users", user.uid));
+                    const userData = userSnap.data();
+                    const isCoach = userData.role === 'coach';
 
-                        const [recSnap, maxesSnap] = await Promise.all([
-                            getDoc(profileRef),
-                            getDoc(maxesRef)
-                        ]);
-
-                        const safeSet = (id, text) => {
-                            const el = document.getElementById(id);
-                            if (el) el.innerText = text || "--";
-                        };
-
-                        if (recSnap.exists()) {
-                            const d = recSnap.data();
-                            const mx = maxesSnap.exists() ? maxesSnap.data() : {};
-
-                            // --- DATA RENDERING (VIEW MODE) ---
-                            safeSet('disp-name', d.fullName);
-                            safeSet('disp-class', "CLASS OF " + (d.gradYear || "--"));
-                            safeSet('disp-pos', d.primaryPos);
-                            safeSet('disp-pos2', d.secondaryPos ? "/ " + d.secondaryPos : "");
-                            safeSet('disp-def-pos', d.primaryDefPos);
-                            safeSet('disp-def-pos2', d.secondaryDefPos ? "/ " + d.secondaryDefPos : "");
-                            safeSet('disp-number', "#" + (d.jerseyNum || "--"));
-                            
-                            const rawH = d.height;
-                            const hEl = document.getElementById('disp-height');
-                            if (hEl) hEl.innerText = rawH ? `${Math.floor(rawH/12)}'${rawH%12}"` : "--";
-                            safeSet('disp-weight', d.weight ? d.weight + " lbs" : "--");
-
-                            // --- METRICS ---
-                            safeSet('stat-bench', mx.bench || d.bench);
-                            safeSet('stat-squat', mx.squat || d.squat);
-                            safeSet('stat-clean', mx.clean || d.clean);
-                            safeSet('stat-dead', mx.deadlift || d.deadlift); 
-                            safeSet('stat-push', mx.push_press || d.push_press);
-
-                            // --- ACADEMICS ---
-                            safeSet('disp-gpa', d.gpa); 
-                            safeSet('disp-act', d.act);
-                            safeSet('disp-sat', d.sat);
-                            safeSet('disp-ncaa-id', d.ncaaid || "--");
-                            safeSet('disp-character', d.teammateDef || d.whyPlay);
-
-                            safeSet('disp-twitter', d.twitterLink ? "@" + d.twitterLink.split('/').pop() : "--");
-                            
-                            const hudlBtn = document.getElementById('film-btn'); // Matched to your HTML ID
-                            const hudlUrl = d.highlightLink || d.highlightUrl || d.hudlUrl;
-                            if (hudlBtn && hudlUrl) {
-                                hudlBtn.onclick = () => window.open(hudlUrl, '_blank');
-                            }
-
-                            // --- PRE-FILL EDIT FIELDS (EDIT MODE) ---
-                            // Metrics
-                            if (document.getElementById('edit-bench')) document.getElementById('edit-bench').value = mx.bench || d.bench || "";
-                            if (document.getElementById('edit-squat')) document.getElementById('edit-squat').value = mx.squat || d.squat || "";
-                            if (document.getElementById('edit-clean')) document.getElementById('edit-clean').value = mx.clean || d.clean || "";
-                            if (document.getElementById('edit-deadlift')) document.getElementById('edit-deadlift').value = mx.deadlift || d.deadlift || "";
-                            if (document.getElementById('edit-push')) document.getElementById('edit-push').value = mx.push_press || d.push_press || "";
-                            
-                            // Attributes (Name, GPA, etc.)
-                            if (document.getElementById('edit-name')) document.getElementById('edit-name').value = d.fullName || "";
-                            if (document.getElementById('edit-gpa')) document.getElementById('edit-gpa').value = d.gpa || "";
-                            if (document.getElementById('edit-grad')) document.getElementById('edit-grad').value = d.gradYear || "";
-                            if (document.getElementById('edit-act')) document.getElementById('edit-act').value = d.act || "";
-                            if (document.getElementById('edit-sat')) document.getElementById('edit-sat').value = d.sat || "";
-                            if (document.getElementById('edit-pos')) document.getElementById('edit-pos').value = d.primaryPos || "";
-                            if (document.getElementById('edit-pos2')) document.getElementById('edit-pos2').value = d.secondaryPos || "";
-                            if (document.getElementById('edit-def-pos')) document.getElementById('edit-def-pos').value = d.primaryDefPos || "";
-                            if (document.getElementById('edit-def-pos2')) document.getElementById('edit-def-pos2').value = d.secondaryDefPos || "";
-
-                            // --- PERMISSION & EDIT CHECK ---
-                            await runPermissionCheck(user, isEditMode);
-
-                            // UI Cleanup
-                            document.getElementById('loader')?.classList.add('hidden');
-                            document.getElementById('main-card-container')?.classList.remove('hidden');
-
-                        } else {
-                            if (document.getElementById('loader')) {
-                                document.getElementById('loader').innerText = "Athlete profile not found.";
-                            }
+                    // 2. --- FEATURE FLAG CHECK (THE GATEKEEPER) ---
+                    const schoolSnap = await getDoc(doc(db, "schools", userData.school_id));
+                    if (schoolSnap.exists()) {
+                        const schoolSettings = schoolSnap.data();
+                        
+                        // If feature is OFF and the person viewing is NOT a coach, kick them out
+                        if (schoolSettings.hasRecruitingCard === false && !isCoach) {
+                            alert("This feature is currently disabled by your athletic department.");
+                            window.location.href = 'index.html'; 
+                            return;
                         }
-                    } catch (err) {
-                        console.error("Critical Render Error:", err);
                     }
-                } else {
-                    location.href = 'index.html';
+                    // ----------------------------------------------
+
+                    const targetUid = athleteId || user.uid;
+                    const profileRef = doc(db, "recruiting_profiles", targetUid);
+                    const maxesRef = doc(db, "recruiting_profiles", targetUid, "maxes", "latest");
+
+                    const [recSnap, maxesSnap] = await Promise.all([
+                        getDoc(profileRef),
+                        getDoc(maxesRef)
+                    ]);
+
+                    const safeSet = (id, text) => {
+                        const el = document.getElementById(id);
+                        if (el) el.innerText = text || "--";
+                    };
+
+                    if (recSnap.exists()) {
+                        const d = recSnap.data();
+                        const mx = maxesSnap.exists() ? maxesSnap.data() : {};
+
+                        // --- DATA RENDERING (VIEW MODE) ---
+                        safeSet('disp-name', d.fullName);
+                        safeSet('disp-class', "CLASS OF " + (d.gradYear || "--"));
+                        safeSet('disp-pos', d.primaryPos);
+                        safeSet('disp-pos2', d.secondaryPos ? "/ " + d.secondaryPos : "");
+                        safeSet('disp-def-pos', d.primaryDefPos);
+                        safeSet('disp-def-pos2', d.secondaryDefPos ? "/ " + d.secondaryDefPos : "");
+                        safeSet('disp-number', "#" + (d.jerseyNum || "--"));
+                        
+                        const rawH = d.height;
+                        const hEl = document.getElementById('disp-height');
+                        if (hEl) hEl.innerText = rawH ? `${Math.floor(rawH/12)}'${rawH%12}"` : "--";
+                        safeSet('disp-weight', d.weight ? d.weight + " lbs" : "--");
+
+                        // --- METRICS ---
+                        safeSet('stat-bench', mx.bench || d.bench);
+                        safeSet('stat-squat', mx.squat || d.squat);
+                        safeSet('stat-clean', mx.clean || d.clean);
+                        safeSet('stat-dead', mx.deadlift || d.deadlift); 
+                        safeSet('stat-push', mx.push_press || d.push_press);
+
+                        // --- ACADEMICS ---
+                        safeSet('disp-gpa', d.gpa); 
+                        safeSet('disp-act', d.act);
+                        safeSet('disp-sat', d.sat);
+                        safeSet('disp-ncaa-id', d.ncaaid || "--");
+                        safeSet('disp-character', d.teammateDef || d.whyPlay);
+
+                        safeSet('disp-twitter', d.twitterLink ? "@" + d.twitterLink.split('/').pop() : "--");
+                        
+                        const hudlBtn = document.getElementById('film-btn');
+                        const hudlUrl = d.highlightLink || d.highlightUrl || d.hudlUrl;
+                        if (hudlBtn && hudlUrl) {
+                            hudlBtn.onclick = () => window.open(hudlUrl, '_blank');
+                        }
+
+                        // --- PRE-FILL EDIT FIELDS (EDIT MODE) ---
+                        if (document.getElementById('edit-bench')) document.getElementById('edit-bench').value = mx.bench || d.bench || "";
+                        if (document.getElementById('edit-squat')) document.getElementById('edit-squat').value = mx.squat || d.squat || "";
+                        if (document.getElementById('edit-clean')) document.getElementById('edit-clean').value = mx.clean || d.clean || "";
+                        if (document.getElementById('edit-deadlift')) document.getElementById('edit-deadlift').value = mx.deadlift || d.deadlift || "";
+                        if (document.getElementById('edit-push')) document.getElementById('edit-push').value = mx.push_press || d.push_press || "";
+                        
+                        if (document.getElementById('edit-name')) document.getElementById('edit-name').value = d.fullName || "";
+                        if (document.getElementById('edit-gpa')) document.getElementById('edit-gpa').value = d.gpa || "";
+                        if (document.getElementById('edit-grad')) document.getElementById('edit-grad').value = d.gradYear || "";
+                        if (document.getElementById('edit-act')) document.getElementById('edit-act').value = d.act || "";
+                        if (document.getElementById('edit-sat')) document.getElementById('edit-sat').value = d.sat || "";
+                        if (document.getElementById('edit-pos')) document.getElementById('edit-pos').value = d.primaryPos || "";
+                        if (document.getElementById('edit-pos2')) document.getElementById('edit-pos2').value = d.secondaryPos || "";
+                        if (document.getElementById('edit-def-pos')) document.getElementById('edit-def-pos').value = d.primaryDefPos || "";
+                        if (document.getElementById('edit-def-pos2')) document.getElementById('edit-def-pos2').value = d.secondaryDefPos || "";
+
+                        // --- PERMISSION & EDIT CHECK ---
+                        await runPermissionCheck(user, isEditMode);
+
+                        // UI Cleanup
+                        document.getElementById('loader')?.classList.add('hidden');
+                        document.getElementById('main-card-container')?.classList.remove('hidden');
+
+                    } else {
+                        if (document.getElementById('loader')) {
+                            document.getElementById('loader').innerText = "Athlete profile not found.";
+                        }
+                    }
+                } catch (err) {
+                    console.error("Critical Render Error:", err);
                 }
-            });
+            } else {
+                location.href = 'index.html';
+            }
+        });
 
             // Permissions Check - Only shows the UNLOCK button
             async function runPermissionCheck(currentUser, isEditMode) {

@@ -128,24 +128,39 @@
             
             if (user) {
                 try {
-                    // We check the 'users' collection for the master role
                     const userSnap = await getDoc(doc(db, "users", user.uid));
                     
                     if (userSnap.exists()) {
                         const userData = userSnap.data();
 
                         if (userData.role === 'coach') {
-                            // REDIRECT COACH IMMEDIATELY
                             window.location.href = 'coach-dashboard.html';
                             return; 
                         }
                         
-                        // If not a coach, show the standard Athlete Menu
+                        // --- NEW: CHECK SCHOOL SETTINGS FOR THE RECRUITING CARD ---
+                        if (userData.school_id) {
+                            const schoolSnap = await getDoc(doc(db, "schools", userData.school_id));
+                            if (schoolSnap.exists()) {
+                                const schoolData = schoolSnap.data();
+                                
+                                // Look for your Recruiting Card button/link
+                                const recruitingBtn = document.getElementById('btn-recruiting-card'); 
+                                
+                                if (schoolData.hasRecruitingCard === false) {
+                                    if (recruitingBtn) recruitingBtn.classList.add('hidden');
+                                    console.log("Recruiting feature disabled by coach.");
+                                } else {
+                                    if (recruitingBtn) recruitingBtn.classList.remove('hidden');
+                                }
+                            }
+                        }
+                        // ---------------------------------------------------------
+
                         authSection.classList.add('hidden');
                         mainMenu.classList.remove('hidden');
                         document.getElementById('welcome-msg').innerText = `Welcome, ${userData.fullName || 'Athlete'}`;
                         
-                        // ... rest of your branding logic ...
                     }
                 } catch (err) {
                     console.error("Auth Error:", err);
