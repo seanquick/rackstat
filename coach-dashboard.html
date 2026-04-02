@@ -26,6 +26,45 @@
             </button>
         </div>
 
+        <div class="bg-gray-900 border border-gray-700 p-6 rounded-lg mt-6 mb-6">
+            <h2 class="text-xl font-black text-white uppercase mb-2">Tracked Core Lifts</h2>
+            <p class="text-gray-400 text-sm mb-4">Select the primary lifts your program tracks. These will appear in the athletes' goal trackers and your workout builder.</p>
+            
+            <div id="core-lifts-container" class="grid grid-cols-2 md:grid-cols-3 gap-4 text-gray-300 mb-6 font-bold uppercase text-sm">
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" value="bench" class="lift-checkbox w-5 h-5 rounded bg-gray-800 border-gray-600 text-red-600 focus:ring-red-600">
+                    <span>Bench</span>
+                </label>
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" value="squat" class="lift-checkbox w-5 h-5 rounded bg-gray-800 border-gray-600 text-red-600 focus:ring-red-600">
+                    <span>Squat</span>
+                </label>
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" value="clean" class="lift-checkbox w-5 h-5 rounded bg-gray-800 border-gray-600 text-red-600 focus:ring-red-600">
+                    <span>Clean</span>
+                </label>
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" value="deadlift" class="lift-checkbox w-5 h-5 rounded bg-gray-800 border-gray-600 text-red-600 focus:ring-red-600">
+                    <span>Deadlift</span>
+                </label>
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" value="pushpress" class="lift-checkbox w-5 h-5 rounded bg-gray-800 border-gray-600 text-red-600 focus:ring-red-600">
+                    <span>Push Press</span>
+                </label>
+            </div>
+
+            <div class="flex gap-2 mb-6">
+                <input type="text" id="custom-lift-input" placeholder="Add Custom Lift (e.g. Incline Bench)" class="w-full p-3 rounded-lg bg-gray-800 text-white border border-gray-700 focus:border-red-500 focus:outline-none">
+                <button onclick="addCustomLiftToUI()" class="bg-gray-700 hover:bg-gray-600 text-white px-6 font-black rounded-lg transition-colors">
+                    ADD
+                </button>
+            </div>
+
+            <button onclick="saveTrackedLifts()" class="w-full py-4 font-black uppercase bg-red-700 rounded-lg hover:bg-red-600 transition-all text-white shadow-lg">
+                Save Tracked Lifts
+            </button>
+        </div>
+
         <div id="feature-management" class="bg-gray-900/50 border border-white/10 p-4 rounded-lg mb-6 flex justify-between items-center hidden">
             <div>
                 <h3 class="text-white font-black italic uppercase text-xs">Feature Management</h3>
@@ -107,8 +146,107 @@
             
             // Load settings and then roster
             await loadSchoolSettings(currentSchoolId);
+            
+            // --- NEW: Load the Tracked Core Lifts for Phase 1 ---
+            loadCurrentLifts(currentSchoolId); 
+            
             loadRoster(currentSchoolId);
         });
+
+        // --- CORE LIFTS MANAGEMENT ---
+
+        // 1. Load the lifts from the database and check the boxes
+        async function loadCurrentLifts(schoolId) {
+            // Save schoolId globally so the save function can use it
+            window.currentSchoolId = schoolId; 
+            
+            const schoolSnap = await getDoc(doc(db, "schools", schoolId));
+            if (schoolSnap.exists()) {
+                const data = schoolSnap.data();
+                const lifts = data.trackedLifts || ['bench', 'squat', 'clean']; // Default if none exist
+                
+                const container = document.getElementById('core-lifts-container');
+                
+                // Loop through the lifts from the database
+                lifts.forEach(liftValue => {
+                    // Check if a checkbox for this lift already exists
+                    let checkbox = container.querySelector(`input[value="${liftValue}"]`);
+                    
+                    if (checkbox) {
+                        // If it exists (e.g., standard lift), just check it
+                        checkbox.checked = true;
+                    } else {
+                        // If it doesn't exist (it was a custom lift added previously), generate it
+                        const displayLabel = liftValue.replace(/_/g, ' ').toUpperCase();
+                        const newHtml = `
+                            <label class="flex items-center space-x-2 cursor-pointer custom-added">
+                                <input type="checkbox" value="${liftValue}" checked class="lift-checkbox w-5 h-5 rounded bg-gray-800 border-gray-600 text-red-600 focus:ring-red-600">
+                                <span>${displayLabel}</span>
+                            </label>
+                        `;
+                        container.insertAdjacentHTML('beforeend', newHtml);
+                    }
+                });
+            }
+        }
+
+        // 2. Add a custom lift dynamically to the UI
+        function addCustomLiftToUI() {
+            const input = document.getElementById('custom-lift-input');
+            const rawVal = input.value.trim();
+            if (!rawVal) return;
+            
+            // Format the value for the database (lowercase, spaces to underscores)
+            const dbValue = rawVal.toLowerCase().replace(/\s+/g, '_');
+            
+            // Check if it already exists to prevent duplicates
+            const container = document.getElementById('core-lifts-container');
+            const existing = container.querySelector(`input[value="${dbValue}"]`);
+            if (existing) {
+                alert("This lift is already in the list!");
+                input.value = '';
+                return;
+            }
+
+            // Add it to the screen, automatically checked
+            const newHtml = `
+                <label class="flex items-center space-x-2 cursor-pointer custom-added text-yellow-500">
+                    <input type="checkbox" value="${dbValue}" checked class="lift-checkbox w-5 h-5 rounded bg-gray-800 border-gray-600 text-red-600 focus:ring-red-600">
+                    <span>${rawVal.toUpperCase()}</span>
+                </label>
+            `;
+            container.insertAdjacentHTML('beforeend', newHtml);
+            input.value = ''; // clear input
+        }
+
+        // 3. Save the checked lifts to Firestore
+        async function saveTrackedLifts() {
+            if (!window.currentSchoolId) {
+                alert("Error: School ID not loaded.");
+                return;
+            }
+
+            try {
+                // Gather all checkboxes with the class 'lift-checkbox' that are currently checked
+                const checkboxes = document.querySelectorAll('.lift-checkbox:checked');
+                const selectedLifts = Array.from(checkboxes).map(cb => cb.value);
+
+                if (selectedLifts.length === 0) {
+                    alert("Please select at least one core lift.");
+                    return;
+                }
+
+                // Update the school document
+                await updateDoc(doc(db, "schools", window.currentSchoolId), {
+                    trackedLifts: selectedLifts
+                });
+
+                alert("Core lifts successfully updated!");
+            } catch (error) {
+                console.error("Error saving lifts:", error);
+                alert("Failed to save. Ensure your Firestore rules allow Coaches to write to the 'schools' collection.");
+            }
+        }
 
         async function loadSchoolSettings(schoolId) {
             const schoolSnap = await getDoc(doc(db, "schools", schoolId));
