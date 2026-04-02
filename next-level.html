@@ -172,14 +172,19 @@
                 <div><span class="sub-label">Core GPA</span><input type="text" id="coreGpa"></div>
             </div>
             <div class="grid-2">
-                <div><span class="sub-label">ACT</span><input type="text" id="act"></div>
-                <div><span class="sub-label">SAT</span><input type="text" id="sat"></div>
+                <div><span class="sub-label">ACT Score</span><input type="number" id="act"></div>
+                <div><span class="sub-label">SAT Score</span><input type="number" id="sat"></div>
             </div>
+            
             <span class="sub-label">NCAA Eligibility Registered?</span>
             <select id="ncaaReg">
                 <option value="No">No</option>
                 <option value="Yes">Yes</option>
             </select>
+
+            <span class="sub-label">What does it mean to be a good teammate to you?</span>
+            <textarea id="teammateDef" rows="3" placeholder="Explain your perspective..."></textarea>
+            
             <span class="sub-label">Academic Strengths</span>
             <textarea id="acadStrengths" rows="2"></textarea>
         </div>
@@ -310,40 +315,46 @@
             const commitments = Array.from(document.querySelectorAll('#commitmentChecks input:checked')).map(cb => cb.value);
 
             const profileData = {
-            // 01 PERSONAL & SOCIAL
-            fullName: document.getElementById('fullName').value,
-            jerseyNum: document.getElementById('jerseyNum').value,
-            playerPhone: document.getElementById('playerPhone').value, // NEW
-            playerEmail: document.getElementById('playerEmail').value,
-            twitter: document.getElementById('twitter').value,         // NEW
-            instagram: document.getElementById('instagram').value,     // NEW
-            tiktok: document.getElementById('tiktok').value,           // NEW
-            parentNames: document.getElementById('parentNames').value,
-            parentContact: document.getElementById('parentContact').value,
+                // 01 PERSONAL & SOCIAL
+                fullName: document.getElementById('fullName').value,
+                jerseyNum: document.getElementById('jerseyNum').value,
+                playerPhone: document.getElementById('playerPhone').value, 
+                playerEmail: document.getElementById('playerEmail').value,
+                twitter: document.getElementById('twitter').value,         
+                instagram: document.getElementById('instagram').value,     
+                tiktok: document.getElementById('tiktok').value,           
+                parentNames: document.getElementById('parentNames').value,
+                parentContact: document.getElementById('parentContact').value,
 
-            // 02 ASPIRATIONS
-            wantsToPlay: document.getElementById('wantsToPlay').value,
-            whyPlay: document.getElementById('whyPlay').value,
-            seriousness: document.getElementById('seriousness').value,
-            perceivedLevel: document.getElementById('perceivedLevel').value,
+                // 02 ASPIRATIONS
+                wantsToPlay: document.getElementById('wantsToPlay').value,
+                whyPlay: document.getElementById('whyPlay').value,
+                seriousness: document.getElementById('seriousness').value,
+                perceivedLevel: document.getElementById('perceivedLevel').value,
 
-            // 03-05 ACADEMICS & GOALS
-            postCollegeGoals: document.getElementById('postCollegeGoals').value,
-            major: document.getElementById('major').value,
-            acadImportance: document.getElementById('acadImportance').value,
-            gpa: document.getElementById('gpa').value,
-            coreGpa: document.getElementById('coreGpa').value,
-            ncaaReg: document.getElementById('ncaaReg').value,
+                // 03-05 ACADEMICS & GOALS
+                postCollegeGoals: document.getElementById('postCollegeGoals').value,
+                major: document.getElementById('major').value,
+                acadImportance: document.getElementById('acadImportance').value,
+                gpa: document.getElementById('gpa').value,
+                coreGpa: document.getElementById('coreGpa').value,
+                
+                // --- ADD THESE TWO LINES ---
+                act: document.getElementById('act').value, 
+                sat: document.getElementById('sat').value, 
+                // ---------------------------
 
-            // 06-08 TESTING & CHARACTER
-            isStarter: document.getElementById('isStarter').value,
-            highlightUrl: document.getElementById('highlightUrl').value,
-            commitments: commitments,
-            teammateDef: document.getElementById('teammateDef').value,
-            
-            // SYSTEM DATA
-            lastUpdated: new Date().toISOString()
-        };
+                ncaaReg: document.getElementById('ncaaReg').value,
+
+                // 06-08 TESTING & CHARACTER
+                isStarter: document.getElementById('isStarter').value,
+                highlightUrl: document.getElementById('highlightUrl').value,
+                commitments: commitments,
+                teammateDef: document.getElementById('teammateDef').value, // Confirmed update
+                
+                // SYSTEM DATA
+                lastUpdated: new Date().toISOString()
+            };
 
             try {
                 await setDoc(doc(db, "recruiting_profiles", currentUser.uid), profileData, { merge: true });
