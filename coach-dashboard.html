@@ -178,37 +178,52 @@
                 return;
             }
 
-            const schoolSnap = await getDoc(doc(db, "schools", schoolId));
+            try {
+                // 1. First, get the USER's data to find out what school they belong to
+                const userSnap = await getDoc(doc(db, "users", user.uid));
+                if (!userSnap.exists()) {
+                    console.error("User profile not found.");
+                    return;
+                }
+                
+                const userData = userSnap.data();
+
+                // 2. Security Check: Ensure they are a coach
+                if (userData.role !== 'coach') {
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                // 3. NOW we have the school ID
+                const schoolId = userData.school_id;
+                window.currentSchoolId = schoolId; // Store it globally
+                
+                document.getElementById('school-title').innerText = schoolId.replace(/_/g, ' ');
+
+                // 4. NOW fetch the SCHOOL data using that ID
+                const schoolSnap = await getDoc(doc(db, "schools", schoolId));
                 if (schoolSnap.exists()) {
                     const data = schoolSnap.data();
                     
-                    // NEW: Store the lifts so the "Add Exercise" button can see them
-                    // We use a fallback ['bench', 'squat', 'clean'] in case none are saved yet
+                    // This is the CRITICAL fix for the 'map' error
                     window.currentTrackedLifts = data.trackedLifts || ['bench', 'squat', 'clean'];
 
-                    isRecruitingEnabled = data.hasRecruitingCard !== false;
-                    document.getElementById('feature-management').classList.remove('hidden');
-                    document.getElementById('toggle-recruiting-feature').checked = isRecruitingEnabled;
+                    const isRecruitingEnabled = data.hasRecruitingCard !== false;
+                    const featureMgmt = document.getElementById('feature-management');
+                    if (featureMgmt) featureMgmt.classList.remove('hidden');
+                    
+                    const toggleRecruiting = document.getElementById('toggle-recruiting-feature');
+                    if (toggleRecruiting) toggleRecruiting.checked = isRecruitingEnabled;
                 }
 
-            const userSnap = await getDoc(doc(db, "users", user.uid));
-            const userData = userSnap.data();
+                // 5. Load the rest of your dashboard
+                await loadSchoolSettings(schoolId);
+                loadCurrentLifts(schoolId); 
+                loadRoster(schoolId);
 
-            if (userData.role !== 'coach') {
-                window.location.href = 'index.html';
-                return;
+            } catch (error) {
+                console.error("Error in auth state change:", error);
             }
-
-            currentSchoolId = userData.school_id;
-            document.getElementById('school-title').innerText = currentSchoolId.replace(/_/g, ' ');
-            
-            // Load settings and then roster
-            await loadSchoolSettings(currentSchoolId);
-            
-            // --- NEW: Load the Tracked Core Lifts for Phase 1 ---
-            loadCurrentLifts(currentSchoolId); 
-            
-            loadRoster(currentSchoolId);
         });
 
         // --- CORE LIFTS MANAGEMENT ---
@@ -318,62 +333,71 @@
 
         let exerciseCount = 0;
 
- function addExerciseRow() {
-    const id = Date.now();
-    const row = document.createElement('div');
-    row.id = `row-${id}`;
-    // Added 'relative' and removed any 'overflow' classes
-    row.className = "exercise-row relative bg-gray-800 p-4 rounded-lg border border-gray-700 mb-4";
-    
-    row.innerHTML = `
-        <div class="grid grid-cols-12 gap-3 items-end mb-4 bg-gray-800/50 p-3 rounded-lg border border-gray-700">
+        function addExerciseRow() {
+            const id = Date.now();
             
-            <div class="col-span-3 md:col-span-2">
-                <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1">Type</label>
-                <select id="type-${id}" onchange="toggleExerciseType(${id})" 
-                    class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none text-sm">
-                    <option value="core" class="bg-gray-900 text-white">Core</option>
-                    <option value="supp" class="bg-gray-900 text-white">Supp</option>
-                </select>
-            </div>
+            // 1. Safety Check: Get the lifts and handle the case where they aren't loaded yet
+            const coreLifts = window.currentTrackedLifts || [];
+            
+            // 2. Generate the Options HTML with a fallback message if empty
+            const liftOptions = coreLifts.length > 0 
+                ? coreLifts.map(l => `<option value="${l}" class="bg-gray-900 text-white">${l.replace(/_/g, ' ').toUpperCase()}</option>`).join('')
+                : '<option value="" disabled selected>No lifts loaded - check Tracked Lifts above</option>';
 
-            <div class="col-span-6 md:col-span-6" id="name-container-${id}">
-                <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1">Exercise Name</label>
-                <select id="name-${id}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 appearance-none cursor-pointer">
-                    ${(window.currentTrackedLifts || []).map(l => 
-                        `<option value="${l}" class="bg-gray-900 text-white">${l.toUpperCase()}</option>`
-                    ).join('')}
-                </select>
-            </div>
+            const row = document.createElement('div');
+            row.id = `row-${id}`;
+            
+            // 3. Apply the 'relative' and 'z-index' classes to ensure the dropdown floats OVER other rows
+            row.className = "exercise-row relative z-10 bg-gray-800 p-4 rounded-lg border border-gray-700 mb-4";
+            
+            row.innerHTML = `
+                <div class="grid grid-cols-12 gap-3 items-end mb-4 bg-gray-800/50 p-3 rounded-lg border border-gray-700 relative z-20">
+                    
+                    <div class="col-span-3 md:col-span-2">
+                        <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1">Type</label>
+                        <select id="type-${id}" onchange="toggleExerciseType(${id})" 
+                            class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none text-sm cursor-pointer">
+                            <option value="core" class="bg-gray-900 text-white">Core</option>
+                            <option value="supp" class="bg-gray-900 text-white">Supp</option>
+                        </select>
+                    </div>
 
-            <div class="col-span-3 md:col-span-2">
-                <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1">Sets</label>
-                <input type="number" id="sets-${id}" value="1" min="1" max="10" 
-                    onchange="generateSetInputs(${id})" 
-                    class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none text-sm">
-            </div>
+                    <div class="col-span-6 md:col-span-6 relative z-30" id="name-container-${id}">
+                        <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1">Exercise Name</label>
+                        <select id="name-${id}" 
+                            class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 appearance-none cursor-pointer focus:border-red-500 outline-none text-sm">
+                            ${liftOptions}
+                        </select>
+                    </div>
 
-            <div class="col-span-12 md:col-span-2 flex justify-end md:pb-2">
-                <button onclick="document.getElementById('row-${id}').remove()" 
-                    class="text-red-500 hover:text-red-400 font-bold text-xs uppercase tracking-wider">
-                    Remove
-                </button>
-            </div>
-        </div>
+                    <div class="col-span-3 md:col-span-2">
+                        <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1">Sets</label>
+                        <input type="number" id="sets-${id}" value="1" min="1" max="10" 
+                            onchange="generateSetInputs(${id})" 
+                            class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none text-sm">
+                    </div>
 
-        <div id="sets-container-${id}" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-2 pb-4">
-            <div class="flex items-center gap-2 bg-gray-900 p-2 rounded border border-gray-700">
-                <span class="text-red-500 font-black text-[10px]">S1:</span>
-                <input type="text" placeholder="Reps" id="reps-${id}-1" 
-                    class="w-full bg-transparent text-white text-xs outline-none">
-                <input type="number" placeholder="%" id="percent-${id}-1" 
-                    class="w-12 bg-gray-800 text-white text-xs p-1 rounded border border-gray-600">
-            </div>
-        </div>
-    `;
-    document.getElementById('exercise-list').appendChild(row);
-}
+                    <div class="col-span-12 md:col-span-2 flex justify-end md:pb-2">
+                        <button onclick="document.getElementById('row-${id}').remove()" 
+                            class="text-red-500 hover:text-red-400 font-bold text-xs uppercase tracking-wider">
+                            Remove
+                        </button>
+                    </div>
+                </div>
 
+                <div id="sets-container-${id}" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-2 pb-4 relative z-10">
+                    <div class="flex items-center gap-2 bg-gray-900 p-2 rounded border border-gray-700">
+                        <span class="text-red-500 font-black text-[10px]">S1:</span>
+                        <input type="text" placeholder="Reps" id="reps-${id}-1" 
+                            class="w-full bg-transparent text-white text-xs outline-none">
+                        <input type="number" placeholder="%" id="percent-${id}-1" 
+                            class="w-12 bg-gray-800 text-white text-xs p-1 rounded border border-gray-600">
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('exercise-list').appendChild(row);
+        }
         async function saveWorkout() {
             const title = document.getElementById('workout-title').value;
             const week = document.getElementById('workout-week').value; 
