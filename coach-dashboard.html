@@ -358,7 +358,7 @@
                         <select id="type-${id}" onchange="toggleExerciseType(${id})" 
                             class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none text-sm cursor-pointer">
                             <option value="core" class="bg-gray-900 text-white">Core</option>
-                            <option value="supp" class="bg-gray-900 text-white">Supp</option>
+                            <option value="supp" class="bg-gray-900 text-white">Supplement</option>
                         </select>
                     </div>
 
@@ -452,54 +452,54 @@
         }
 
         function toggleExerciseType(id) {
-            const type = document.getElementById(`type-${id}`).value;
+            const typeSelect = document.getElementById(`type-${id}`);
             const nameContainer = document.getElementById(`name-container-${id}`);
             const modifierContainer = document.getElementById(`modifier-container-${id}`);
+
+            // Safety check to prevent "Cannot read properties of null" errors
+            if (!typeSelect || !nameContainer || !modifierContainer) return;
+
+            const type = typeSelect.value;
 
             if (type === 'supp') {
                 // 1. Switch to Text Input for Supplementary
                 nameContainer.innerHTML = `
-                    <label class="text-xs text-gray-400 block mb-1 uppercase tracking-wider">Exercise Name</label>
+                    <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1 tracking-wider">Exercise Name</label>
                     <input type="text" id="name-${id}" placeholder="e.g. Pullups" 
-                        class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none">
+                        class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none text-sm">
                 `;
 
                 // 2. Switch % to Mode (Reps vs Timed)
                 modifierContainer.innerHTML = `
-                    <label class="text-xs text-gray-400 block mb-1 uppercase tracking-wider">Mode</label>
-                    <select id="mode-${id}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none">
+                    <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1 tracking-wider">Mode</label>
+                    <select id="mode-${id}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none text-sm">
                         <option value="reps" class="bg-gray-900 text-white">Reps</option>
                         <option value="timed" class="bg-gray-900 text-white">Timed (Sec)</option>
                     </select>
                 `;
             } else {
-                // 3. Rebuild the Core Lift Dropdown with visibility fixes
+                // 3. Rebuild the Core Lift Dropdown
                 const coreLifts = window.currentTrackedLifts || [];
                 
-                // 1. Rebuild with a hardcoded RED option to test visibility
-                const liftOptions = `
-                    <option value="" class="bg-red-600 text-white font-bold">-- DEBUG: IF YOU SEE THIS, IT WORKS --</option>
-                    ${(window.currentTrackedLifts || []).map(l => 
-                        `<option value="${l}" class="text-white bg-gray-900">${l.replace(/_/g, ' ').toUpperCase()}</option>`
-                    ).join('')}
-                `;
+                const liftOptions = coreLifts.length > 0 
+                    ? coreLifts.map(l => `<option value="${l}" class="text-white bg-gray-900">${l.replace(/_/g, ' ').toUpperCase()}</option>`).join('')
+                    : '<option value="" disabled selected>No lifts found - Check Settings</option>';
 
-                // 2. Update the container
                 nameContainer.innerHTML = `
-                    <label class="text-xs text-gray-400 block mb-1 uppercase tracking-wider">Exercise Name</label>
-                    <select id="name-${id}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 relative z-50">
+                    <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1 tracking-wider">Exercise Name</label>
+                    <select id="name-${id}" class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 relative z-50 focus:border-red-500 outline-none text-sm">
                         ${liftOptions}
                     </select>
                 `;
 
                 // 4. Switch Mode back to % of Max label
                 modifierContainer.innerHTML = `
-                    <label class="text-xs text-gray-400 block mb-1 uppercase tracking-wider">% of Max</label>
+                    <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1 tracking-wider">% of Max</label>
                     <div class="text-gray-500 text-[10px] italic py-2">Set-by-set entry enabled</div>
                 `;
             }
 
-            // 5. CRITICAL: Refresh the sets UI to show/hide percentage boxes based on the new type
+            // 5. Refresh the sets UI
             if (typeof window.generateSetInputs === 'function') {
                 window.generateSetInputs(id);
             }
