@@ -601,18 +601,48 @@
             location.reload();
         };
 
-        window.deleteAthlete = async (athleteId, athleteName) => {
-            if (confirm(`Are you sure you want to PERMANENTLY delete ${athleteName}?`)) {
-                try {
-                    await deleteDoc(doc(db, "recruiting_profiles", athleteId));
-                    alert(`${athleteName} removed.`);
-                    location.reload();
-                } catch (error) {
-                    console.error(error);
-                    alert("Delete failed.");
-                }
-            }
-        };
+            window.deleteAthlete = async (athleteId, athleteName) => {
+                        if (confirm(`Are you sure you want to PERMANENTLY delete ${athleteName}?`)) {
+                            try {
+                                // Delete the document from Firestore
+                                await deleteDoc(doc(db, "recruiting_profiles", athleteId));
+                                alert(`${athleteName} has been deleted.`);
+                                // Reload the roster to reflect the deletion
+                                loadRoster(window.currentSchoolId); 
+                            } catch (error) {
+                                console.error("Error deleting athlete:", error);
+                                alert("Failed to delete athlete. Check console for details.");
+                            }
+                        }
+                    };
+
+                    // --- MISSING FUNCTION: Generates the Set/Rep/Percent inputs ---
+                    function generateSetInputs(id) {
+                        const setCount = parseInt(document.getElementById(`sets-${id}`).value) || 1;
+                        const container = document.getElementById(`sets-container-${id}`);
+                        const typeSelect = document.getElementById(`type-${id}`);
+                        const isCore = typeSelect && typeSelect.value === 'core';
+
+                        // Clear out the existing inputs
+                        container.innerHTML = ''; 
+
+                        // Generate new inputs based on the number of sets
+                        for (let i = 1; i <= setCount; i++) {
+                            // Only show the % input if it is a Core lift
+                            const percentHtml = isCore 
+                                ? `<input type="number" placeholder="%" id="percent-${id}-${i}" class="w-12 bg-gray-800 text-white text-xs p-1 rounded border border-gray-600">`
+                                : ``;
+
+                            container.innerHTML += `
+                                <div class="flex items-center gap-2 bg-gray-900 p-2 rounded border border-gray-700">
+                                    <span class="text-red-500 font-black text-[10px]">S${i}:</span>
+                                    <input type="text" placeholder="Reps" id="reps-${id}-${i}" 
+                                        class="w-full bg-transparent text-white text-xs outline-none">
+                                    ${percentHtml}
+                                </div>
+                            `;
+                        }
+                    }
 
         window.viewMeals = async (uid, name) => {
             document.getElementById('modal-player-name').innerText = `${name.toUpperCase()}'S MEAL HISTORY`;
@@ -643,31 +673,6 @@
                 `;
             });
         };
-
-        function generateSetInputs(id) {
-            const container = document.getElementById(`sets-container-${id}`);
-            const setCount = parseInt(document.getElementById(`sets-${id}`).value) || 1;
-            const typeSelect = document.getElementById(`type-${id}`);
-            const type = typeSelect ? typeSelect.value : 'core';
-            
-            container.innerHTML = '';
-            
-            for(let i = 1; i <= setCount; i++) {
-                // Only show the % input if it is a Core lift
-                const percentInput = type === 'core' 
-                    ? `<input type="number" placeholder="%" id="percent-${id}-${i}" class="w-12 bg-gray-800 text-white text-xs p-1 rounded border border-gray-600">` 
-                    : '';
-                    
-                container.innerHTML += `
-                    <div class="flex items-center gap-2 bg-gray-900 p-2 rounded border border-gray-700">
-                        <span class="text-red-500 font-black text-[10px]">S${i}:</span>
-                        <input type="text" placeholder="${type === 'supp' ? 'Reps/Time' : 'Reps'}" id="reps-${id}-${i}" 
-                            class="w-full bg-transparent text-white text-xs outline-none">
-                        ${percentInput}
-                    </div>
-                `;
-            }
-        }
 
         // Dummy exportRoster function so your console stops throwing errors
         function exportRoster() {
