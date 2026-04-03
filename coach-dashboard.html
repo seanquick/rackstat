@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RACKSTAT | Coach Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="data:,">
 </head>
 <body class="bg-[#0a0a0b] text-white min-h-screen p-4">
 
@@ -189,7 +190,7 @@
                     return;
                 }
                 
-                const userData = userSnap.data();
+                let userData = userSnap.data();
 
                 // 2. Security Check
                 if (userData.role !== 'coach') {
@@ -198,7 +199,7 @@
                 }
 
                 // 3. Define School ID ONCE
-                const schoolId = userData.school_id;
+                let schoolId = userData.school_id;
                 window.currentSchoolId = schoolId; 
                 
                 const schoolTitle = document.getElementById('school-title');
