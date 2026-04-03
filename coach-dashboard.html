@@ -182,7 +182,7 @@
             }
 
             try {
-                // 1. First, get the USER's data to find out what school they belong to
+                // 1. Get the USER's data
                 const userSnap = await getDoc(doc(db, "users", user.uid));
                 if (!userSnap.exists()) {
                     console.error("User profile not found.");
@@ -191,27 +191,27 @@
                 
                 const userData = userSnap.data();
 
-                // 2. Security Check: Ensure they are a coach
+                // 2. Security Check
                 if (userData.role !== 'coach') {
                     window.location.href = 'index.html';
                     return;
                 }
 
-                // 3. NOW we have the school ID
+                // 3. Define School ID ONCE
                 const schoolId = userData.school_id;
-                window.currentSchoolId = schoolId; // Store it globally
+                window.currentSchoolId = schoolId; 
                 
-                document.getElementById('school-title').innerText = schoolId.replace(/_/g, ' ');
+                const schoolTitle = document.getElementById('school-title');
+                if (schoolTitle) schoolTitle.innerText = schoolId.replace(/_/g, ' ');
 
-                // 4. NOW fetch the SCHOOL data using that ID
+                // 4. Fetch the SCHOOL data
                 const schoolSnap = await getDoc(doc(db, "schools", schoolId));
+                
                 if (schoolSnap.exists()) {
                     const data = schoolSnap.data();
-                    
-                    // This is the CRITICAL fix for the 'map' error
                     window.currentTrackedLifts = data.trackedLifts || ['bench', 'squat', 'clean'];
+                    isRecruitingEnabled = data.hasRecruitingCard !== false;
 
-                    const isRecruitingEnabled = data.hasRecruitingCard !== false;
                     const featureMgmt = document.getElementById('feature-management');
                     if (featureMgmt) featureMgmt.classList.remove('hidden');
                     
@@ -223,6 +223,10 @@
                 await loadSchoolSettings(schoolId);
                 loadCurrentLifts(schoolId); 
                 loadRoster(schoolId);
+
+                // FINAL STEP: Now that everything is loaded, expose the functions
+                window.toggleExerciseType = toggleExerciseType;
+                window.generateSetInputs = generateSetInputs;
 
             } catch (error) {
                 console.error("Error in auth state change:", error);
@@ -339,18 +343,14 @@
         function addExerciseRow() {
             const id = Date.now();
             
-            // 1. Safety Check: Get the lifts and handle the case where they aren't loaded yet
             const coreLifts = window.currentTrackedLifts || [];
             
-            // 2. Generate the Options HTML with a fallback message if empty
             const liftOptions = coreLifts.length > 0 
                 ? coreLifts.map(l => `<option value="${l}" class="bg-gray-900 text-white">${l.replace(/_/g, ' ').toUpperCase()}</option>`).join('')
                 : '<option value="" disabled selected>No lifts loaded - check Tracked Lifts above</option>';
 
             const row = document.createElement('div');
             row.id = `row-${id}`;
-            
-            // 3. Apply the 'relative' and 'z-index' classes to ensure the dropdown floats OVER other rows
             row.className = "exercise-row relative z-10 bg-gray-800 p-4 rounded-lg border border-gray-700 mb-4";
             
             row.innerHTML = `
@@ -365,7 +365,7 @@
                         </select>
                     </div>
 
-                    <div class="col-span-6 md:col-span-6 relative z-30" id="name-container-${id}">
+                    <div class="col-span-4 md:col-span-4 relative z-30" id="name-container-${id}">
                         <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1">Exercise Name</label>
                         <select id="name-${id}" 
                             class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 appearance-none cursor-pointer focus:border-red-500 outline-none text-sm">
@@ -373,7 +373,12 @@
                         </select>
                     </div>
 
-                    <div class="col-span-3 md:col-span-2">
+                    <div class="col-span-3 md:col-span-3" id="modifier-container-${id}">
+                        <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1">% of Max</label>
+                        <div class="text-gray-500 text-[10px] italic py-2">Set-by-set entry enabled</div>
+                    </div>
+
+                    <div class="col-span-2 md:col-span-1">
                         <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1">Sets</label>
                         <input type="number" id="sets-${id}" value="1" min="1" max="10" 
                             onchange="generateSetInputs(${id})" 
@@ -401,6 +406,7 @@
             
             document.getElementById('exercise-list').appendChild(row);
         }
+
         async function saveWorkout() {
             const title = document.getElementById('workout-title').value;
             const week = document.getElementById('workout-week').value; 
