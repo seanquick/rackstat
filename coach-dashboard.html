@@ -225,10 +225,6 @@
                 loadCurrentLifts(schoolId); 
                 loadRoster(schoolId);
 
-                // FINAL STEP: Now that everything is loaded, expose the functions
-                window.toggleExerciseType = toggleExerciseType;
-                window.generateSetInputs = generateSetInputs;
-
             } catch (error) {
                 console.error("Error in auth state change:", error);
             }
