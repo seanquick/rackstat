@@ -193,7 +193,7 @@
                 
                 userData = userSnap.data();
 
-                // 2. Security Check
+                // 2. Security CheckuserData
                 if (userData.role !== 'coach') {
                     window.location.href = 'index.html';
                     return;
@@ -406,6 +406,10 @@
         }
 
         async function saveWorkout() {
+            if (!window.currentSchoolId) {
+                return alert("Error: School ID not loaded. Please refresh and try again.");
+            }
+            
             const title = document.getElementById('workout-title').value;
             const week = document.getElementById('workout-week').value; 
             
