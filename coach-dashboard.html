@@ -110,8 +110,10 @@
                     + Add Exercise
                 </button>
 
-                <button onclick="saveWorkout()" class="flex-1 py-3 bg-red-700 hover:bg-red-600 text-white font-bold rounded-lg uppercase">
-                    Save & Publish Workout
+                <button id="save-workout-btn" onclick="saveWorkout()" 
+                        data-mode="create" 
+                        class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors">
+                    SAVE & PUBLISH
                 </button>
             </div>
         </div>
@@ -442,6 +444,12 @@
 
         window.saveWorkout = async () => {
             const saveBtn = document.getElementById('save-workout-btn');
+            // SAFETY CHECK: If the button is missing, stop here and show an error
+                if (!saveBtn) {
+                    console.error("CRITICAL ERROR: Could not find the button with ID 'save-workout-btn'");
+                    alert("System Error: Save button not found. Please check your HTML IDs.");
+                    return;
+                }
             // Check if we are editing or creating a new one
             const isEditMode = saveBtn.dataset.mode === "edit";
             
