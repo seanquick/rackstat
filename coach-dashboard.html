@@ -402,14 +402,17 @@
             
             document.getElementById('exercise-list').appendChild(row);
 
-            // IMPORTANT: Generate the set inputs after the row is added to the DOM
-            if (existingData && existingData.setsData) {
-                // If we have existing set data, we use a slightly modified version of your generator
-                generateSetInputsWithData(id, existingData.setsData);
-            } else {
-                generateSetInputs(id);
+            // FIX: Instead of just setting a value, we manually trigger the set inputs
+                if (existingData && existingData.setsData) {
+                    // We need a specific function to draw sets with existing numbers
+                    rebuildSetsWithData(id, existingData.setsData);
+                } else {
+                    // Fallback for new rows
+                    if (typeof generateSetInputs === "function") {
+                        generateSetInputs(id);
+                    }
+                }
             }
-        }
 
         window.saveWorkout = async () => {
             const saveBtn = document.getElementById('save-workout-btn');
