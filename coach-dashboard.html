@@ -410,7 +410,7 @@
                 console.error("User data not loaded yet.");
                 return alert("Profile still loading, please try again in a second.");
             }
-            
+
             if (!window.currentSchoolId) {
                 return alert("Error: School ID not loaded. Please refresh and try again.");
             }
@@ -465,6 +465,48 @@
                 console.error("Error saving workout: ", e);
                 alert("Failed to save workout. Check console for details.");
             }
+        }
+
+        async function loadWorkouts(schoolId) {
+            const container = document.getElementById('published-workouts-container');
+            if (!container) return;
+
+            // 1. Reference the EXACT same path you used in your addDoc snippet
+            const workoutsRef = collection(db, "schools", schoolId, "workouts");
+            
+            // 2. Query the workouts (ordering by createdAt so newest are on top)
+            const q = query(workoutsRef, orderBy("createdAt", "desc"));
+
+            // 3. Set up a real-time listener
+            onSnapshot(q, (snapshot) => {
+                container.innerHTML = ''; // Clear the "Loading..." message
+
+                if (snapshot.empty) {
+                    container.innerHTML = '<p class="text-gray-500 text-xs uppercase p-4">No workouts published yet.</p>';
+                    return;
+                }
+
+                snapshot.forEach((doc) => {
+                    const workout = doc.data();
+                    const date = workout.createdAt?.toDate().toLocaleDateString() || 'Recent';
+                    
+                    // Build the UI card for each workout
+                    container.innerHTML += `
+                        <div class="bg-gray-900 border border-gray-800 p-4 rounded mb-2 flex justify-between items-center">
+                            <div>
+                                <div class="text-white font-bold uppercase text-sm">${workout.title || 'Untitled Workout'}</div>
+                                <div class="text-gray-500 text-[10px]">WEEK ${workout.week} • ${date}</div>
+                            </div>
+                            <button onclick="viewWorkoutDetails('${doc.id}')" class="text-red-500 font-black text-xs hover:text-white transition">
+                                VIEW →
+                            </button>
+                        </div>
+                    `;
+                });
+            }, (error) => {
+                console.error("Error fetching workouts:", error);
+                container.innerHTML = '<p class="text-red-500 text-xs p-4">Error loading workouts. Check console.</p>';
+            });
         }
 
         function toggleExerciseType(id) {
