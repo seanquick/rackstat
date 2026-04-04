@@ -406,6 +406,11 @@
         }
 
         async function saveWorkout() {
+            if (!userData) {
+                console.error("User data not loaded yet.");
+                return alert("Profile still loading, please try again in a second.");
+            }
+            
             if (!window.currentSchoolId) {
                 return alert("Error: School ID not loaded. Please refresh and try again.");
             }
