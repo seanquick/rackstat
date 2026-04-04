@@ -414,6 +414,31 @@
                 }
             }
 
+            function rebuildSetsWithData(id, setsData) {
+                const container = document.getElementById(`sets-container-${id}`);
+                if (!container) return;
+
+                container.innerHTML = ''; // Clear it out
+
+                setsData.forEach((setData, index) => {
+                    const setNum = index + 1;
+                    const setDiv = document.createElement('div');
+                    setDiv.className = "flex items-center gap-2 bg-gray-900 p-2 rounded border border-gray-700";
+                    
+                    // Populate the inputs with the actual saved reps and percentage
+                    setDiv.innerHTML = `
+                        <span class="text-red-500 font-black text-[10px]">S${setNum}:</span>
+                        <input type="text" placeholder="Reps" id="reps-${id}-${setNum}" 
+                            value="${setData.reps || ''}"
+                            class="w-full bg-transparent text-white text-xs outline-none">
+                        <input type="number" placeholder="%" id="percent-${id}-${setNum}" 
+                            value="${setData.percent || ''}"
+                            class="w-12 bg-gray-800 text-white text-xs p-1 rounded border border-gray-600">
+                    `;
+                    container.appendChild(setDiv);
+                });
+            }
+
         window.saveWorkout = async () => {
             const saveBtn = document.getElementById('save-workout-btn');
             // Check if we are editing or creating a new one
