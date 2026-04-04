@@ -193,13 +193,13 @@
                 
                 userData = userSnap.data();
 
-                // 2. Security CheckuserData
+                // 2. Security Check
                 if (userData.role !== 'coach') {
                     window.location.href = 'index.html';
                     return;
                 }
 
-                // 3. Assign the value (Remove 'let' from the front here!)
+                // 3. Assign the value
                 schoolId = userData.school_id; 
                 window.currentSchoolId = schoolId; 
 
@@ -225,6 +225,9 @@
                 await loadSchoolSettings(schoolId);
                 loadCurrentLifts(schoolId); 
                 loadRoster(schoolId);
+                
+                // --- NEW UPDATE: Load Published Workouts ---
+                loadWorkouts(schoolId);
 
             } catch (error) {
                 console.error("Error in auth state change:", error);
