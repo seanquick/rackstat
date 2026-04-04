@@ -341,28 +341,30 @@
 
         let exerciseCount = 0;
 
-        function addExerciseRow() {
-            const id = Date.now();
-            
+        function addExerciseRow(existingData = null) {
+            const id = Date.now() + Math.floor(Math.random() * 1000); // Unique ID
             const coreLifts = window.currentTrackedLifts || [];
             
             const liftOptions = coreLifts.length > 0 
-                ? coreLifts.map(l => `<option value="${l}" class="bg-gray-900 text-white">${l.replace(/_/g, ' ').toUpperCase()}</option>`).join('')
-                : '<option value="" disabled selected>No lifts loaded - check Tracked Lifts above</option>';
+                ? coreLifts.map(l => `<option value="${l}" class="bg-gray-900 text-white" ${existingData && existingData.name === l ? 'selected' : ''}>${l.replace(/_/g, ' ').toUpperCase()}</option>`).join('')
+                : '<option value="" disabled selected>No lifts loaded</option>';
 
             const row = document.createElement('div');
             row.id = `row-${id}`;
             row.className = "exercise-row relative z-10 bg-gray-800 p-4 rounded-lg border border-gray-700 mb-4";
             
+            // Set default values or use existing data
+            const typeValue = existingData ? existingData.type : "core";
+            const setsValue = existingData ? existingData.sets : 1;
+
             row.innerHTML = `
                 <div class="grid grid-cols-12 gap-3 items-end mb-4 bg-gray-800/50 p-3 rounded-lg border border-gray-700 relative z-20">
-                    
                     <div class="col-span-3 md:col-span-2">
                         <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1">Type</label>
                         <select id="type-${id}" onchange="toggleExerciseType(${id})" 
                             class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none text-sm cursor-pointer">
-                            <option value="core" class="bg-gray-900 text-white">Core</option>
-                            <option value="supp" class="bg-gray-900 text-white">Supplement</option>
+                            <option value="core" ${typeValue === 'core' ? 'selected' : ''}>Core</option>
+                            <option value="supp" ${typeValue === 'supp' ? 'selected' : ''}>Supplement</option>
                         </select>
                     </div>
 
@@ -381,7 +383,7 @@
 
                     <div class="col-span-2 md:col-span-1">
                         <label class="text-[10px] text-gray-500 uppercase font-bold block mb-1">Sets</label>
-                        <input type="number" id="sets-${id}" value="1" min="1" max="10" 
+                        <input type="number" id="sets-${id}" value="${setsValue}" min="1" max="10" 
                             onchange="generateSetInputs(${id})" 
                             class="w-full bg-gray-900 text-white p-2 rounded border border-gray-600 focus:border-red-500 outline-none text-sm">
                     </div>
@@ -395,17 +397,18 @@
                 </div>
 
                 <div id="sets-container-${id}" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-2 pb-4 relative z-10">
-                    <div class="flex items-center gap-2 bg-gray-900 p-2 rounded border border-gray-700">
-                        <span class="text-red-500 font-black text-[10px]">S1:</span>
-                        <input type="text" placeholder="Reps" id="reps-${id}-1" 
-                            class="w-full bg-transparent text-white text-xs outline-none">
-                        <input type="number" placeholder="%" id="percent-${id}-1" 
-                            class="w-12 bg-gray-800 text-white text-xs p-1 rounded border border-gray-600">
                     </div>
-                </div>
             `;
             
             document.getElementById('exercise-list').appendChild(row);
+
+            // IMPORTANT: Generate the set inputs after the row is added to the DOM
+            if (existingData && existingData.setsData) {
+                // If we have existing set data, we use a slightly modified version of your generator
+                generateSetInputsWithData(id, existingData.setsData);
+            } else {
+                generateSetInputs(id);
+            }
         }
 
         window.saveWorkout = async () => {
@@ -775,31 +778,26 @@
                     const titleInput = document.getElementById('workout-title');
                     if (titleInput) {
                         titleInput.value = data.title || "";
-                    } else {
-                        console.warn("Missing HTML Element: #workout-title");
                     }
 
                     // 2. Populate Week
                     const weekInput = document.getElementById('workout-week');
                     if (weekInput) {
                         weekInput.value = data.week || "";
-                    } else {
-                        console.warn("Missing HTML Element: #workout-week");
                     }
 
                     // 3. Rebuild Exercises
-                    // Assuming your container for exercise rows is 'exercise-list'
                     const exerciseContainer = document.getElementById('exercise-list');
                     if (exerciseContainer && data.exercises) {
-                        exerciseContainer.innerHTML = ''; // Clear existing empty rows
+                        exerciseContainer.innerHTML = ''; // Clear the current blank rows
                         
                         data.exercises.forEach(ex => {
-                            // Call your existing function that creates a new row
-                            // Then find the inputs in that new row and fill them
                             if (typeof addExerciseRow === "function") {
-                                addExerciseRow(ex.name, ex.sets, ex.reps);
+                                // Pass the WHOLE object 'ex' instead of just name/sets/reps
+                                // This allows addExerciseRow to handle types and complex set data
+                                addExerciseRow(ex); 
                             } else {
-                                console.warn("Function 'addExerciseRow' not found. Cannot rebuild list.");
+                                console.warn("Function 'addExerciseRow' not found.");
                             }
                         });
                     }
@@ -813,8 +811,6 @@
                         saveBtn.innerText = "UPDATE WORKOUT";
                         saveBtn.dataset.mode = "edit";
                         saveBtn.dataset.editId = workoutId;
-                    } else {
-                        console.warn("Missing HTML Element: #save-workout-btn");
                     }
                     
                 } else {
@@ -822,7 +818,7 @@
                 }
             } catch (e) {
                 console.error("Error loading workout for edit:", e);
-                alert("Could not load workout data. Check console for details.");
+                alert("Could not load workout data.");
             }
         };
 
