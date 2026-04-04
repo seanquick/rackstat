@@ -408,70 +408,74 @@
             document.getElementById('exercise-list').appendChild(row);
         }
 
-        async function saveWorkout() {
-            if (!userData) {
-                console.error("User data not loaded yet.");
-                return alert("Profile still loading, please try again in a second.");
-            }
-
-            if (!window.currentSchoolId) {
-                return alert("Error: School ID not loaded. Please refresh and try again.");
-            }
+        // --- FIND YOUR EXISTING SAVE FUNCTION AND REPLACE IT WITH THIS ---
+        window.saveWorkout = async () => {
+            const saveBtn = document.getElementById('save-workout-btn');
+            // Check if we are editing or creating a new one
+            const isEditMode = saveBtn.dataset.mode === "edit";
             
+            // 1. Get the form values
             const title = document.getElementById('workout-title').value;
-            const week = document.getElementById('workout-week').value; 
-            
-            if(!title) return alert("Please name the workout");
+            const week = document.getElementById('workout-week').value;
 
-            const rows = document.querySelectorAll('.exercise-row');
-            const exercises = [];
+            // 2. Gather your exercises array (Ensure this variable name matches your logic)
+            // This is the array of exercises the coach just built in the UI
+            const exercises = Array.from(document.querySelectorAll('.exercise-row')).map(row => ({
+                name: row.querySelector('.ex-name').value,
+                sets: row.querySelector('.ex-sets').value,
+                reps: row.querySelector('.ex-reps').value
+            }));
 
-            rows.forEach(row => {
-                const id = row.id.split('-')[1];
-                const type = document.getElementById(`type-${id}`).value;
-                const setCount = parseInt(document.getElementById(`sets-${id}`).value) || 0;
-                
-                // NEW: Collect individual data for each set
-                const setDetails = [];
-                for (let i = 1; i <= setCount; i++) {
-                    const repsVal = document.getElementById(`reps-${id}-${i}`).value;
-                    setDetails.push({
-                        setNum: i,
-                        reps: repsVal,
-                        // Only save percentage if it's a Core lift
-                        percent: type === 'core' ? (parseInt(document.getElementById(`percent-${id}-${i}`).value) || 0) : null,
-                        isAMRAP: repsVal.toUpperCase() === 'AMRAP'
-                    });
-                }
-
-                exercises.push({
-                    name: document.getElementById(`name-${id}`).value,
-                    isCore: type === 'core',
-                    sets: setDetails, // Saving the array of set objects
-                    mode: type === 'supp' ? document.getElementById(`mode-${id}`).value : 'reps',
-                    totalSets: setCount // Reference for UI rendering
-                });
-            });
+            if (!title || !week) {
+                alert("Please enter a title and week number.");
+                return;
+            }
 
             try {
-                //
-                await addDoc(collection(db, "schools", window.currentSchoolId, "workouts"), {
-                    title: title,
-                    week: parseInt(week), 
-                    exercises: exercises,
-                    createdAt: serverTimestamp() //
-                });
+                if (isEditMode) {
+                    // --- BRANCH 1: UPDATE EXISTING ---
+                    const workoutId = saveBtn.dataset.editId;
+                    const workoutRef = doc(db, "schools", window.currentSchoolId, "workouts", workoutId);
+                    
+                    await updateDoc(workoutRef, {
+                        title: title,
+                        week: parseInt(week),
+                        exercises: exercises,
+                        updatedAt: serverTimestamp()
+                    });
+                    
+                    alert("Workout updated successfully!");
+                } else {
+                    // --- BRANCH 2: CREATE NEW ---
+                    await addDoc(collection(db, "schools", window.currentSchoolId, "workouts"), {
+                        title: title,
+                        week: parseInt(week),
+                        exercises: exercises,
+                        createdAt: serverTimestamp()
+                    });
+                    
+                    alert("Workout published successfully!");
+                }
+
+                // --- CLEANUP & RESET ---
+                saveBtn.innerText = "SAVE & PUBLISH";
+                saveBtn.dataset.mode = "create";
+                saveBtn.removeAttribute('data-edit-id');
                 
-                alert(`Success! ${title} (Week ${week}) has been published.`);
+                // Clear the inputs
+                document.getElementById('workout-title').value = "";
+                document.getElementById('workout-week').value = "";
                 
-            } catch (e) {
-                console.error("Error saving workout: ", e);
-                alert("Failed to save workout. Check console for details.");
+                // If you have a function to clear the exercise rows, call it here
+                // e.g., document.getElementById('exercise-list').innerHTML = "";
+
+            } catch (error) {
+                console.error("Error saving workout:", error);
+                alert("Error saving: " + error.message);
             }
-        }
+        };
 
         async function loadWorkouts(schoolId) {
-            // UPDATED: Now targeting the exact ID in your HTML
             const container = document.getElementById('workout-feed');
             
             if (!container) {
@@ -484,7 +488,7 @@
                 const q = query(workoutsRef, orderBy("createdAt", "desc"));
 
                 onSnapshot(q, (snapshot) => {
-                    container.innerHTML = ''; // Clears the "Loading workouts..." text
+                    container.innerHTML = ''; 
 
                     if (snapshot.empty) {
                         container.innerHTML = '<p class="text-gray-500 italic">No workouts published yet.</p>';
@@ -493,24 +497,29 @@
 
                     snapshot.forEach((doc) => {
                         const workout = doc.data();
+                        const workoutId = doc.id;
                         const dateStr = workout.createdAt ? workout.createdAt.toDate().toLocaleDateString() : 'Just now';
                         
-                        // Adjusted background and borders to look good inside your new container
                         container.innerHTML += `
-                            <div class="bg-gray-800 border border-gray-700 p-4 rounded flex justify-between items-center">
+                            <div class="bg-gray-800 border border-gray-700 p-4 rounded flex justify-between items-center mb-3">
                                 <div>
                                     <div class="text-white font-bold uppercase text-sm">${workout.title || 'Untitled Workout'}</div>
-                                    <div class="text-gray-400 text-xs mt-1">WEEK ${workout.week || '?'} • ${dateStr}</div>
+                                    <div class="text-gray-400 text-[10px] mt-1">WEEK ${workout.week || '?'} • ${dateStr}</div>
                                 </div>
-                                <button onclick="viewWorkoutDetails('${doc.id}')" class="text-red-500 font-black text-xs hover:text-white transition">
-                                    VIEW →
-                                </button>
+                                <div class="flex gap-3">
+                                    <button onclick="editWorkout('${workoutId}')" class="text-blue-400 font-black text-[10px] hover:text-white transition uppercase">
+                                        Edit
+                                    </button>
+                                    <button onclick="deleteWorkout('${workoutId}')" class="text-red-500 font-black text-[10px] hover:text-white transition uppercase">
+                                        Delete
+                                    </button>
+                                </div>
                             </div>
                         `;
                     });
                 }, (error) => {
                     console.error("Firestore Listener Error:", error);
-                    container.innerHTML = `<p class="text-red-500 text-xs">Error loading workouts. Check console.</p>`;
+                    container.innerHTML = `<p class="text-red-500 text-xs">Error loading workouts. Check console for index link.</p>`;
                 });
             } catch (err) {
                 console.error("Function Setup Error:", err);
@@ -733,6 +742,76 @@
             });
         };
 
+        window.viewWorkoutDetails = (workoutId) => {
+            console.log("Viewing workout:", workoutId);
+            // This is where you'll trigger your edit modal
+            openEditModal(workoutId);
+        };
+
+        window.deleteWorkout = async (workoutId) => {
+            if (confirm("Are you sure you want to delete this workout? This cannot be undone.")) {
+                try {
+                    const workoutRef = doc(db, "schools", window.currentSchoolId, "workouts", workoutId);
+                    await deleteDoc(workoutRef);
+                    alert("Workout deleted.");
+                } catch (error) {
+                    console.error("Delete failed:", error);
+                }
+            }
+        };
+
+        // --- WORKOUT ACTIONS (Place this inside your module script) ---
+
+        window.editWorkout = async (workoutId) => {
+            console.log("Editing workout:", workoutId);
+            try {
+                // 1. Reference the specific workout using the schoolId and workoutId
+                const workoutRef = doc(db, "schools", window.currentSchoolId, "workouts", workoutId);
+                const snap = await getDoc(workoutRef);
+                
+                if (snap.exists()) {
+                    const data = snap.data();
+                    
+                    // 2. Map the Firestore data back to your input fields
+                    // Update these IDs to match your actual <input> IDs
+                    if (document.getElementById('workout-title')) {
+                        document.getElementById('workout-title').value = data.title || "";
+                    }
+                    if (document.getElementById('workout-week')) {
+                        document.getElementById('workout-week').value = data.week || "";
+                    }
+
+                    // 3. Optional: If you have a complex exercise builder, you'll need 
+                    // a loop here to recreate those rows based on data.exercises
+                    
+                    // 4. UI Feedback: Scroll to top and update the button text
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    
+                    const saveBtn = document.getElementById('save-workout-btn');
+                    if (saveBtn) {
+                        saveBtn.innerText = "UPDATE WORKOUT";
+                        saveBtn.dataset.mode = "edit";
+                        saveBtn.dataset.editId = workoutId;
+                    }
+                }
+            } catch (e) {
+                console.error("Error loading workout for edit:", e);
+                alert("Could not load workout data.");
+            }
+        };
+
+        window.deleteWorkout = async (workoutId) => {
+            if (!confirm("Are you sure? This will permanently delete this workout.")) return;
+
+            try {
+                const workoutRef = doc(db, "schools", window.currentSchoolId, "workouts", workoutId);
+                await deleteDoc(workoutRef);
+                // onSnapshot will automatically remove it from the list!
+            } catch (e) {
+                console.error("Delete failed:", e);
+                alert("Error deleting workout: " + e.message);
+            }
+        };
         // Dummy exportRoster function so your console stops throwing errors
         function exportRoster() {
             alert("Export Roster feature coming soon!");
