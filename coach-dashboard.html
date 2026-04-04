@@ -408,7 +408,6 @@
             document.getElementById('exercise-list').appendChild(row);
         }
 
-        // --- FIND YOUR EXISTING SAVE FUNCTION AND REPLACE IT WITH THIS ---
         window.saveWorkout = async () => {
             const saveBtn = document.getElementById('save-workout-btn');
             // Check if we are editing or creating a new one
@@ -763,40 +762,67 @@
         // --- WORKOUT ACTIONS (Place this inside your module script) ---
 
         window.editWorkout = async (workoutId) => {
-            console.log("Editing workout:", workoutId);
+            console.log("Fetching data for workout:", workoutId);
             try {
-                // 1. Reference the specific workout using the schoolId and workoutId
                 const workoutRef = doc(db, "schools", window.currentSchoolId, "workouts", workoutId);
                 const snap = await getDoc(workoutRef);
                 
                 if (snap.exists()) {
                     const data = snap.data();
-                    
-                    // 2. Map the Firestore data back to your input fields
-                    // Update these IDs to match your actual <input> IDs
-                    if (document.getElementById('workout-title')) {
-                        document.getElementById('workout-title').value = data.title || "";
-                    }
-                    if (document.getElementById('workout-week')) {
-                        document.getElementById('workout-week').value = data.week || "";
+                    console.log("Workout Data found:", data);
+
+                    // 1. Populate Title
+                    const titleInput = document.getElementById('workout-title');
+                    if (titleInput) {
+                        titleInput.value = data.title || "";
+                    } else {
+                        console.warn("Missing HTML Element: #workout-title");
                     }
 
-                    // 3. Optional: If you have a complex exercise builder, you'll need 
-                    // a loop here to recreate those rows based on data.exercises
-                    
-                    // 4. UI Feedback: Scroll to top and update the button text
+                    // 2. Populate Week
+                    const weekInput = document.getElementById('workout-week');
+                    if (weekInput) {
+                        weekInput.value = data.week || "";
+                    } else {
+                        console.warn("Missing HTML Element: #workout-week");
+                    }
+
+                    // 3. Rebuild Exercises
+                    // Assuming your container for exercise rows is 'exercise-list'
+                    const exerciseContainer = document.getElementById('exercise-list');
+                    if (exerciseContainer && data.exercises) {
+                        exerciseContainer.innerHTML = ''; // Clear existing empty rows
+                        
+                        data.exercises.forEach(ex => {
+                            // Call your existing function that creates a new row
+                            // Then find the inputs in that new row and fill them
+                            if (typeof addExerciseRow === "function") {
+                                addExerciseRow(ex.name, ex.sets, ex.reps);
+                            } else {
+                                console.warn("Function 'addExerciseRow' not found. Cannot rebuild list.");
+                            }
+                        });
+                    }
+
+                    // 4. UI Feedback: Scroll to top
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                     
+                    // 5. Update Button to 'Edit Mode'
                     const saveBtn = document.getElementById('save-workout-btn');
                     if (saveBtn) {
                         saveBtn.innerText = "UPDATE WORKOUT";
                         saveBtn.dataset.mode = "edit";
                         saveBtn.dataset.editId = workoutId;
+                    } else {
+                        console.warn("Missing HTML Element: #save-workout-btn");
                     }
+                    
+                } else {
+                    console.error("No workout found with ID:", workoutId);
                 }
             } catch (e) {
                 console.error("Error loading workout for edit:", e);
-                alert("Could not load workout data.");
+                alert("Could not load workout data. Check console for details.");
             }
         };
 
