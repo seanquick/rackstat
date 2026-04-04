@@ -27,6 +27,20 @@
             </button>
         </div>
 
+        <div id="feature-management" class="bg-gray-900/50 border border-white/10 p-4 rounded-lg mb-6 flex justify-between items-center hidden">
+            <div>
+                <h3 class="text-white font-black italic uppercase text-xs">Feature Management</h3>
+                <p class="text-gray-500 text-[10px] uppercase tracking-wider">Enable or Disable Recruiting-Card Feature</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-[10px] font-bold text-gray-400">RECRUITING CARD:</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="toggle-recruiting-feature" class="sr-only peer" onchange="updateSchoolFeatures()">
+                    <div class="w-10 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-600"></div>
+                </label>
+            </div>
+        </div>
+            
         <div class="bg-gray-900 border border-gray-700 p-6 rounded-lg mt-6 mb-6">
             <h2 class="text-xl font-black text-white uppercase mb-2">Tracked Core Lifts</h2>
             <p class="text-gray-400 text-sm mb-4">Select the primary lifts your program tracks. These appear in athlete trackers and the builder.</p>
@@ -106,20 +120,6 @@
             <h2 class="text-xl font-black text-white uppercase mb-4">Published Workouts</h2>
             <div id="workout-feed" class="space-y-2">
                 <p class="text-gray-500 italic">Loading workouts...</p>
-            </div>
-        </div>
-
-        <div id="feature-management" class="bg-gray-900/50 border border-white/10 p-4 rounded-lg mb-6 flex justify-between items-center hidden">
-            <div>
-                <h3 class="text-white font-black italic uppercase text-xs">Feature Management</h3>
-                <p class="text-gray-500 text-[10px] uppercase tracking-wider">Enable or Disable Recruiting-Card Feature</p>
-            </div>
-            <div class="flex items-center gap-3">
-                <span class="text-[10px] font-bold text-gray-400">RECRUITING CARD:</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="toggle-recruiting-feature" class="sr-only peer" onchange="updateSchoolFeatures()">
-                    <div class="w-10 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-600"></div>
-                </label>
             </div>
         </div>
 
@@ -471,42 +471,51 @@
         }
 
         async function loadWorkouts(schoolId) {
+            console.log("Attempting to load workouts for school:", schoolId);
             const container = document.getElementById('published-workouts-container');
-            if (!container) return;
+            
+            if (!container) {
+                console.error("CRITICAL: Element #published-workouts-container not found in HTML!");
+                return;
+            }
 
-            // Querying the specific school's workout sub-collection
-            const workoutsRef = collection(db, "schools", schoolId, "workouts");
-            const q = query(workoutsRef, orderBy("createdAt", "desc"));
+            try {
+                // Simplified query: No ordering, just get everything in the collection
+                const workoutsRef = collection(db, "schools", schoolId, "workouts");
+                
+                onSnapshot(workoutsRef, (snapshot) => {
+                    console.log("Snapshot received! Number of workouts:", snapshot.size);
+                    container.innerHTML = ''; 
 
-            onSnapshot(q, (snapshot) => {
-                container.innerHTML = ''; // Clear the "Loading..." message
+                    if (snapshot.empty) {
+                        container.innerHTML = '<p class="text-gray-500 text-[10px] uppercase p-4">No workouts found in database.</p>';
+                        return;
+                    }
 
-                if (snapshot.empty) {
-                    container.innerHTML = '<p class="text-gray-500 text-[10px] uppercase p-4">No workouts published yet.</p>';
-                    return;
-                }
-
-                snapshot.forEach((doc) => {
-                    const workout = doc.data();
-                    // Handle the potential null timestamp if it's still being written by server
-                    const dateStr = workout.createdAt ? workout.createdAt.toDate().toLocaleDateString() : 'Saving...';
-                    
-                    container.innerHTML += `
-                        <div class="bg-gray-900 border border-gray-800 p-4 rounded mb-2 flex justify-between items-center">
-                            <div>
-                                <div class="text-white font-bold uppercase text-sm">${workout.title || 'Untitled Workout'}</div>
-                                <div class="text-gray-500 text-[10px]">WEEK ${workout.week} • ${dateStr}</div>
+                    snapshot.forEach((doc) => {
+                        const workout = doc.data();
+                        console.log("Rendering workout:", doc.id, workout.title);
+                        
+                        container.innerHTML += `
+                            <div class="bg-gray-900 border border-gray-800 p-4 rounded mb-2 flex justify-between items-center">
+                                <div>
+                                    <div class="text-white font-bold uppercase text-sm">${workout.title || 'Untitled'}</div>
+                                    <div class="text-gray-500 text-[10px]">WEEK ${workout.week || '?'}</div>
+                                </div>
+                                <button class="text-red-500 font-black text-xs hover:text-white transition">
+                                    VIEW →
+                                </button>
                             </div>
-                            <button onclick="viewWorkoutDetails('${doc.id}')" class="text-red-500 font-black text-xs hover:text-white transition">
-                                VIEW →
-                            </button>
-                        </div>
-                    `;
+                        `;
+                    });
+                }, (error) => {
+                    // This will catch Index or Permission issues
+                    console.error("Firestore Listener Error:", error);
+                    container.innerHTML = `<p class="text-red-500 text-xs p-4">Error: ${error.code}</p>`;
                 });
-            }, (error) => {
-                console.error("Error fetching workouts:", error);
-                container.innerHTML = '<p class="text-red-500 text-xs p-4">Permission Error or Index Required.</p>';
-            });
+            } catch (err) {
+                console.error("Function Setup Error:", err);
+            }
         }
 
         function toggleExerciseType(id) {
