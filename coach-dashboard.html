@@ -471,47 +471,46 @@
         }
 
         async function loadWorkouts(schoolId) {
-            console.log("Attempting to load workouts for school:", schoolId);
-            const container = document.getElementById('published-workouts-container');
+            // UPDATED: Now targeting the exact ID in your HTML
+            const container = document.getElementById('workout-feed');
             
             if (!container) {
-                console.error("CRITICAL: Element #published-workouts-container not found in HTML!");
+                console.error("CRITICAL: Element #workout-feed not found in HTML!");
                 return;
             }
 
             try {
-                // Simplified query: No ordering, just get everything in the collection
                 const workoutsRef = collection(db, "schools", schoolId, "workouts");
-                
-                onSnapshot(workoutsRef, (snapshot) => {
-                    console.log("Snapshot received! Number of workouts:", snapshot.size);
-                    container.innerHTML = ''; 
+                const q = query(workoutsRef, orderBy("createdAt", "desc"));
+
+                onSnapshot(q, (snapshot) => {
+                    container.innerHTML = ''; // Clears the "Loading workouts..." text
 
                     if (snapshot.empty) {
-                        container.innerHTML = '<p class="text-gray-500 text-[10px] uppercase p-4">No workouts found in database.</p>';
+                        container.innerHTML = '<p class="text-gray-500 italic">No workouts published yet.</p>';
                         return;
                     }
 
                     snapshot.forEach((doc) => {
                         const workout = doc.data();
-                        console.log("Rendering workout:", doc.id, workout.title);
+                        const dateStr = workout.createdAt ? workout.createdAt.toDate().toLocaleDateString() : 'Just now';
                         
+                        // Adjusted background and borders to look good inside your new container
                         container.innerHTML += `
-                            <div class="bg-gray-900 border border-gray-800 p-4 rounded mb-2 flex justify-between items-center">
+                            <div class="bg-gray-800 border border-gray-700 p-4 rounded flex justify-between items-center">
                                 <div>
-                                    <div class="text-white font-bold uppercase text-sm">${workout.title || 'Untitled'}</div>
-                                    <div class="text-gray-500 text-[10px]">WEEK ${workout.week || '?'}</div>
+                                    <div class="text-white font-bold uppercase text-sm">${workout.title || 'Untitled Workout'}</div>
+                                    <div class="text-gray-400 text-xs mt-1">WEEK ${workout.week || '?'} • ${dateStr}</div>
                                 </div>
-                                <button class="text-red-500 font-black text-xs hover:text-white transition">
+                                <button onclick="viewWorkoutDetails('${doc.id}')" class="text-red-500 font-black text-xs hover:text-white transition">
                                     VIEW →
                                 </button>
                             </div>
                         `;
                     });
                 }, (error) => {
-                    // This will catch Index or Permission issues
                     console.error("Firestore Listener Error:", error);
-                    container.innerHTML = `<p class="text-red-500 text-xs p-4">Error: ${error.code}</p>`;
+                    container.innerHTML = `<p class="text-red-500 text-xs">Error loading workouts. Check console.</p>`;
                 });
             } catch (err) {
                 console.error("Function Setup Error:", err);
