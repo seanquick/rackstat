@@ -40,19 +40,16 @@
     // --- FROM HERE DOWN, THE REST OF YOUR CODE REMAINS THE SAME ---
 
     onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        window.currentAthleteId = user.uid;
-        
-        // Fetch the athlete's profile to get their School ID
-        const profileSnap = await getDoc(doc(db, "profiles", user.uid));
-        if (profileSnap.exists()) {
-            window.currentSchoolId = profileSnap.data().schoolId; // Matches the field name in your Firestore
-            window.loadAvailableWorkouts(); 
-        } else {
-            console.error("No profile found for this athlete.");
+        if (user) {
+            window.currentAthleteId = user.uid;
+            // MUST fetch school_id from recruiting_profiles first
+            const docSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+            if (docSnap.exists()) {
+                window.currentSchoolId = docSnap.data().school_id; // Check underscore vs camelCase
+                loadAvailableWorkouts(); 
+            }
         }
-    }
-});
+    });
 
     const calculateWeight = (max, percentage) => {
         if (!max || !percentage) return "---";
@@ -150,14 +147,33 @@
     // LOAD SINGLE WORKOUT
     window.loadAthleteWorkout = async (workoutId, athleteId) => {
         try {
-            const workoutSnap = await getDoc(doc(db, "schools", window.currentSchoolId, "workouts", workoutId));
-            const athleteSnap = await getDoc(doc(db, "recruiting_profiles", athleteId));
+            // 1. Safety Check: Ensure School ID is actually set
+            if (!window.currentSchoolId) {
+                alert("Error: School ID is missing. Try logging in again.");
+                return;
+            }
 
-            if (!workoutSnap.exists()) return;
-            
+            console.log("Fetching workout from:", `schools/${window.currentSchoolId}/workouts/${workoutId}`);
+
+            // 2. Fetch Data (Single-time Get)
+            const workoutDocRef = doc(db, "schools", window.currentSchoolId, "workouts", workoutId);
+            const athleteDocRef = doc(db, "recruiting_profiles", athleteId);
+
+            // We use Promise.all to fetch both simultaneously for speed
+            const [workoutSnap, athleteSnap] = await Promise.all([
+                getDoc(workoutDocRef),
+                getDoc(athleteDocRef)
+            ]);
+
+            if (!workoutSnap.exists()) {
+                console.error("Workout not found at path:", workoutDocRef.path);
+                return;
+            }
+
             const workout = workoutSnap.data();
             const athlete = athleteSnap.exists() ? athleteSnap.data() : {};
 
+            // 3. UI Updates
             document.getElementById('athlete-dashboard').style.display = 'none';
             document.getElementById('athlete-workout-container').style.display = 'block';
             
@@ -167,29 +183,32 @@
             const list = document.getElementById('athlete-exercise-list');
             list.innerHTML = '';
 
-            workout.exercises.forEach(ex => {
+            // 4. Build Exercise Cards
+            workout.exercises.forEach((ex, exIndex) => {
+                // Map exercise name to maxes (Ensure ex.name matches your liftMap keys)
                 const athleteMax = athlete[liftMap[ex.name]] || 0;
                 const card = document.createElement('div');
                 card.className = "exercise-card bg-gray-800 border-l-4 border-red-600 p-4 rounded-r-lg mb-4";
                 
                 let setsHtml = ex.setsData.map((s, i) => {
                     const targetWeight = calculateWeight(athleteMax, s.percent);
-                    const setId = `set-${ex.name}-${i}`;
+                    // Important: Use exIndex to ensure uniqueness if the same exercise is added twice
+                    const setId = `set-${exIndex}-${i}`;
                     
                     return `
                         <div id="container-${setId}" class="flex justify-between items-center bg-gray-900/50 p-3 rounded mb-2 border border-gray-700 transition-all">
                             <div class="flex flex-col">
                                 <span class="text-[9px] text-gray-500 font-bold uppercase leading-none">Set ${i+1}</span>
-                                <span class="text-red-500 font-black text-lg">${targetWeight}<small class="text-[10px] ml-1">LBS</small></span>
+                                <span class="text-red-500 font-black text-lg">${targetWeight}<small class="text-[10px] ml-1 text-gray-400">LBS</small></span>
                             </div>
                             <div class="flex items-center gap-3">
                                 <div class="flex flex-col items-center">
-                                    <label class="text-[8px] text-gray-600 uppercase font-bold">Actual Reps</label>
+                                    <label class="text-[8px] text-gray-600 uppercase font-bold mb-1">Actual</label>
                                     <input type="number" id="input-${setId}" value="${s.reps}" 
-                                        class="w-12 bg-gray-800 text-white text-center font-bold p-1 rounded border border-gray-600 focus:border-green-500 outline-none">
+                                        class="w-12 bg-gray-800 text-white text-center font-bold p-1 rounded border border-gray-600 focus:border-green-500 outline-none text-sm">
                                 </div>
                                 <button onclick="toggleSetComplete('${setId}')" id="btn-${setId}"
-                                    class="bg-gray-700 p-2 rounded-full text-gray-400 hover:text-green-500 transition-colors">
+                                    class="bg-gray-700 p-2 rounded-full text-gray-400 hover:text-green-500 transition-colors mt-3">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
                                     </svg>
@@ -200,21 +219,24 @@
                 }).join('');
 
                 card.innerHTML = `
-                    <h3 class="text-white font-black uppercase text-sm mb-3">${ex.name.replace(/_/g, ' ')}</h3>
+                    <h3 class="text-white font-black uppercase text-sm mb-3 tracking-tight">${ex.name.replace(/_/g, ' ')}</h3>
                     <div class="space-y-1">${setsHtml}</div>
                 `;
                 list.appendChild(card);
             });
 
-            // FINISH BUTTON MOVED HERE - Inside loadAthleteWorkout but outside the loop
+            // 5. Build Finish Button
             const finishBtn = document.createElement('button');
-            finishBtn.className = "w-full bg-green-600 hover:bg-green-700 text-white font-black py-4 rounded-xl mt-8 mb-12 shadow-lg tracking-widest uppercase";
+            finishBtn.className = "w-full bg-green-600 hover:bg-green-700 text-white font-black py-4 rounded-xl mt-8 mb-12 shadow-lg tracking-widest uppercase transition-transform active:scale-95";
             finishBtn.innerText = "Log Session & Finish";
             finishBtn.onclick = () => window.logFullWorkout(workoutId);
             list.appendChild(finishBtn);
 
         } catch (e) {
-            console.error(e);
+            console.error("Critical error in loadAthleteWorkout:", e);
+            if (e.code === 'permission-denied') {
+                alert("Permission Denied: Ensure you are logged in and belong to this school.");
+            }
         }
     };
 </script>
