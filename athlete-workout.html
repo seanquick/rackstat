@@ -1,259 +1,281 @@
-<script src="https://cdn.tailwindcss.com"></script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RackStat | Athlete Workout</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="stylesheet" href="style.css">
+    
+    <style>
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {
+            -webkit-appearance: none; margin: 0;
+        }
+    </style>
+</head>
+<body class="bg-[#0a0a0b] text-white antialiased min-h-screen">
 
-<style>
-    body {
-        background-color: #000000;
-        color: #ffffff;
-        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    }
-    input::-webkit-outer-spin-button,
-    input::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
-</style>
-
-<div id="athlete-dashboard" class="max-w-md mx-auto p-4">
-    <div class="mb-8 border-b border-gray-800 pb-4">
-        <h2 class="text-xs font-black text-red-500 uppercase tracking-widest mb-1">Athlete Portal</h2>
-        <h1 class="text-3xl font-black text-white uppercase tracking-tighter">Current Workouts</h1>
-    </div>
-    <div id="available-workouts" class="space-y-3">
-        <div class="animate-pulse text-gray-600 text-xs uppercase font-bold text-center py-10">
-            Loading your training session...
+    <div id="athlete-dashboard" class="max-w-md mx-auto p-4">
+        <div class="mb-8 border-b border-[#2a2a2c] pb-4 mt-4">
+            <h2 class="text-[10px] font-black text-[#b91c1c] uppercase tracking-widest mb-1">Athlete Portal</h2>
+            <h1 class="text-3xl font-black text-white uppercase tracking-tighter italic">Current Workouts</h1>
+        </div>
+        <div id="available-workouts" class="space-y-3">
+            <div class="animate-pulse text-gray-500 text-xs uppercase font-bold text-center py-10 tracking-widest">
+                Loading your training session...
+            </div>
         </div>
     </div>
-</div>
 
-<div id="athlete-workout-container" class="max-w-md mx-auto p-4" style="display: none;">
-    <button onclick="location.reload()" class="text-gray-500 text-[10px] uppercase font-bold mb-4 flex items-center gap-1">
-        ← Back to Workouts
-    </button>
-    <div class="mb-6">
-        <h1 id="display-title" class="text-2xl font-black text-white uppercase tracking-tighter">--</h1>
-        <p id="display-week" class="text-red-500 font-bold text-sm">WEEK --</p>
+    <div id="athlete-workout-container" class="max-w-md mx-auto p-4" style="display: none;">
+        <button onclick="location.reload()" class="text-gray-500 text-[10px] uppercase font-bold mb-4 flex items-center gap-1 hover:text-white transition-colors">
+            ← Back to Workouts
+        </button>
+        <div class="mb-6">
+            <h1 id="display-title" class="text-3xl font-black text-white uppercase tracking-tighter italic">--</h1>
+            <p id="display-week" class="text-[#b91c1c] font-black text-sm uppercase tracking-widest">WEEK --</p>
+        </div>
+        <div id="athlete-exercise-list" class="space-y-4"></div>
     </div>
-    <div id="athlete-exercise-list" class="space-y-4"></div>
-</div>
 
-<script type="module">
-    // 1. Import the App Initializer
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    
-    // 2. Import your specific config file (Ensure the path is correct!)
-    import { firebaseConfig } from "./firebase-config.js"; 
+    <script type="module">
+        // 1. Firebase Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { firebaseConfig } from "./firebase-config.js"; 
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, collection, query, orderBy, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // 3. Import the rest of your Firebase services
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, collection, query, where, getDocs, orderBy, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        // 2. Initialize Services
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
-    // 4. INITIALIZE EVERYTHING
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    // --- FROM HERE DOWN, THE REST OF YOUR CODE REMAINS THE SAME ---
-
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            window.currentAthleteId = user.uid;
-            // MUST fetch school_id from recruiting_profiles first
-            const docSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
-            if (docSnap.exists()) {
-                window.currentSchoolId = docSnap.data().school_id; // Check underscore vs camelCase
-                loadAvailableWorkouts(); 
+        // 3. Auth Listener & Initial Load
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                window.currentAthleteId = user.uid;
+                try {
+                    const docSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        // Check for both naming conventions to be safe
+                        window.currentSchoolId = data.school_id || data.schoolId; 
+                        
+                        if (window.currentSchoolId) {
+                            window.loadAvailableWorkouts(); 
+                        } else {
+                            console.error("Athlete profile exists but has no School ID assigned.");
+                            document.getElementById('available-workouts').innerHTML = `<p class="text-[#b91c1c] text-center py-10 uppercase text-xs font-bold">No School Assigned to Profile.</p>`;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error fetching athlete profile:", e);
+                }
+            } else {
+                window.location.href = "index.html"; // Redirect to login if not authenticated
             }
-        }
-    });
+        });
 
-    const calculateWeight = (max, percentage) => {
-        if (!max || !percentage || max === 0) return "---";
-        const raw = max * (parseFloat(percentage) / 100);
-        return Math.round(raw / 5) * 5; // Rounds to nearest 5lbs
-    };
+        // 4. Data Mapping & Calculation Logic
+        const liftMap = {
+            "clean": "cleanMax",         
+            "power_clean": "cleanMax",
+            "bench_press": "benchMax",
+            "back_squat": "squatMax",
+            "deadlift": "deadliftMax",
+            "push_press": "pushpressMax"
+        };
 
-    const liftMap = {
-        "clean": "cleanMax",         // This matches the name in your screenshot
-        "power_clean": "cleanMax",
-        "bench_press": "benchMax",
-        "back_squat": "squatMax",
-        "deadlift": "deadliftMax",
-        "push_press": "pushpressMax"
-    };
+        const calculateWeight = (max, percentage) => {
+            if (!max || max === 0 || !percentage) return "---";
+            const raw = max * (parseFloat(percentage) / 100);
+            return Math.round(raw / 5) * 5; // Rounds to nearest 5lbs
+        };
 
-    // VISUAL TOGGLE
-    window.toggleSetComplete = (setId) => {
-        const container = document.getElementById(`container-${setId}`);
-        const btn = document.getElementById(`btn-${setId}`);
-        container.classList.toggle('border-green-500');
-        container.classList.toggle('bg-green-900/20');
-        btn.classList.toggle('text-green-500');
-    };
-
-    // LOAD LIST
-    window.loadAvailableWorkouts = async () => {
-        const workoutContainer = document.getElementById('available-workouts');
-        try {
-            const workoutRef = collection(db, "schools", window.currentSchoolId, "workouts");
-            const q = query(workoutRef, orderBy("createdAt", "desc"));
-            const querySnapshot = await getDocs(q);
-
-            if (querySnapshot.empty) {
-                workoutContainer.innerHTML = `<p class="text-gray-500 text-center py-10 uppercase text-xs font-bold">No workouts published.</p>`;
-                return;
-            }
-
-            workoutContainer.innerHTML = ''; 
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                const btn = document.createElement('button');
-                btn.className = "w-full bg-gray-800 border border-gray-700 p-5 rounded-xl flex justify-between items-center group text-left mb-3";
-                btn.onclick = () => window.loadAthleteWorkout(doc.id, window.currentAthleteId);
-
-                btn.innerHTML = `
-                    <div>
-                        <h3 class="text-white font-black uppercase text-lg mb-1">${data.title}</h3>
-                        <span class="text-red-500 font-bold text-[10px] uppercase">Week ${data.week}</span>
-                    </div>
-                    <span class="text-gray-600 group-hover:text-red-500">→</span>
-                `;
-                workoutContainer.appendChild(btn);
-            });
-        } catch (e) {
-            console.error(e);
-        }
-    };
-
-    // LOGGING LOGIC
-    window.logFullWorkout = async (workoutId) => {
-        try {
-            const loggedExercises = [];
-            const exerciseCards = document.querySelectorAll('.exercise-card'); 
-
-            exerciseCards.forEach(card => {
-                const name = card.querySelector('h3').innerText;
-                const setRows = card.querySelectorAll('[id^="container-set-"]');
-                
-                const sets = Array.from(setRows).map(row => {
-                    const setId = row.id.replace('container-', '');
-                    return {
-                        repsPerformed: document.getElementById(`input-${setId}`).value,
-                        completed: row.classList.contains('border-green-500')
-                    };
-                });
-                loggedExercises.push({ name, sets });
-            });
-
-            await addDoc(collection(db, "completed_workouts"), {
-                athleteId: window.currentAthleteId,
-                workoutId: workoutId,
-                schoolId: window.currentSchoolId,
-                timestamp: serverTimestamp(),
-                performance: loggedExercises
-            });
-
-            alert("Workout Logged Successfully!");
-            location.reload();
-
-        } catch (e) {
-            console.error("Error logging workout:", e);
-            alert("Failed to save workout.");
-        }
-    };
-
-    // LOAD SINGLE WORKOUT
-    window.loadAthleteWorkout = async (workoutId, athleteId) => {
-        try {
-            // 1. Safety Check: Ensure School ID is actually set
-            if (!window.currentSchoolId) {
-                alert("Error: School ID is missing. Try logging in again.");
-                return;
-            }
-
-            console.log("Fetching workout from:", `schools/${window.currentSchoolId}/workouts/${workoutId}`);
-
-            // 2. Fetch Data (Single-time Get)
-            const workoutDocRef = doc(db, "schools", window.currentSchoolId, "workouts", workoutId);
-            const athleteDocRef = doc(db, "recruiting_profiles", athleteId);
-
-            // We use Promise.all to fetch both simultaneously for speed
-            const [workoutSnap, athleteSnap] = await Promise.all([
-                getDoc(workoutDocRef),
-                getDoc(athleteDocRef)
-            ]);
-
-            if (!workoutSnap.exists()) {
-                console.error("Workout not found at path:", workoutDocRef.path);
-                return;
-            }
-
-            const workout = workoutSnap.data();
-            const athlete = athleteSnap.exists() ? athleteSnap.data() : {};
-
-            // 3. UI Updates
-            document.getElementById('athlete-dashboard').style.display = 'none';
-            document.getElementById('athlete-workout-container').style.display = 'block';
+        // 5. Visual Toggle for Completed Sets
+        window.toggleSetComplete = (setId) => {
+            const container = document.getElementById(`container-${setId}`);
+            const btn = document.getElementById(`btn-${setId}`);
             
-            document.getElementById('display-title').innerText = workout.title;
-            document.getElementById('display-week').innerText = `WEEK ${workout.week}`;
+            // Toggle UI States
+            container.classList.toggle('border-[#b91c1c]');
+            container.classList.toggle('border-[#2a2a2c]');
+            btn.classList.toggle('text-green-500');
+            btn.classList.toggle('text-gray-500');
+            
+            // Mark as completed data attribute for easy extraction later
+            const isCompleted = container.getAttribute('data-completed') === 'true';
+            container.setAttribute('data-completed', !isCompleted);
+        };
 
-            const list = document.getElementById('athlete-exercise-list');
-            list.innerHTML = '';
+        // 6. Load the Dashboard List
+        window.loadAvailableWorkouts = async () => {
+            const workoutContainer = document.getElementById('available-workouts');
+            try {
+                const workoutRef = collection(db, "schools", window.currentSchoolId, "workouts");
+                const q = query(workoutRef, orderBy("createdAt", "desc"));
+                const querySnapshot = await getDocs(q);
 
-            // 4. Build Exercise Cards
-            workout.exercises.forEach((ex, exIndex) => {
-                // Map exercise name to maxes (Ensure ex.name matches your liftMap keys)
-                const athleteMax = athlete[liftMap[ex.name]] || 0;
-                const card = document.createElement('div');
-                card.className = "exercise-card bg-gray-800 border-l-4 border-red-600 p-4 rounded-r-lg mb-4";
-                
-                let setsHtml = ex.setsData.map((s, i) => {
-                    const targetWeight = calculateWeight(athleteMax, s.percent);
-                    // Important: Use exIndex to ensure uniqueness if the same exercise is added twice
-                    const setId = `set-${exIndex}-${i}`;
-                    
-                    return `
-                        <div id="container-${setId}" class="flex justify-between items-center bg-gray-900/50 p-3 rounded mb-2 border border-gray-700 transition-all">
-                            <div class="flex flex-col">
-                                <span class="text-[9px] text-gray-500 font-bold uppercase leading-none">Set ${i+1}</span>
-                                <span class="text-red-500 font-black text-lg">${targetWeight}<small class="text-[10px] ml-1 text-gray-400">LBS</small></span>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <div class="flex flex-col items-center">
-                                    <label class="text-[8px] text-gray-600 uppercase font-bold mb-1">Actual</label>
-                                    <input type="number" id="input-${setId}" value="${s.reps}" 
-                                        class="w-12 bg-gray-800 text-white text-center font-bold p-1 rounded border border-gray-600 focus:border-green-500 outline-none text-sm">
-                                </div>
-                                <button onclick="toggleSetComplete('${setId}')" id="btn-${setId}"
-                                    class="bg-gray-700 p-2 rounded-full text-gray-400 hover:text-green-500 transition-colors mt-3">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                </button>
-                            </div>
+                if (querySnapshot.empty) {
+                    workoutContainer.innerHTML = `<p class="text-gray-500 text-center py-10 uppercase text-xs font-bold tracking-widest">No workouts published.</p>`;
+                    return;
+                }
+
+                workoutContainer.innerHTML = ''; 
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const btn = document.createElement('button');
+                    // Using RackStat Hex colors directly in Tailwind
+                    btn.className = "w-full bg-[#1a1a1c] border border-[#2a2a2c] p-5 rounded-xl flex justify-between items-center group text-left mb-3 hover:border-[#b91c1c] transition-colors";
+                    btn.onclick = () => window.loadAthleteWorkout(doc.id, window.currentAthleteId);
+
+                    btn.innerHTML = `
+                        <div>
+                            <h3 class="text-white font-black uppercase text-lg mb-1 tracking-tighter">${data.title}</h3>
+                            <span class="text-[#b91c1c] font-bold text-[10px] uppercase tracking-widest">Week ${data.week}</span>
                         </div>
+                        <span class="text-gray-600 group-hover:text-[#b91c1c] font-black text-xl transition-colors">→</span>
                     `;
-                }).join('');
-
-                card.innerHTML = `
-                    <h3 class="text-white font-black uppercase text-sm mb-3 tracking-tight">${ex.name.replace(/_/g, ' ')}</h3>
-                    <div class="space-y-1">${setsHtml}</div>
-                `;
-                list.appendChild(card);
-            });
-
-            // 5. Build Finish Button
-            const finishBtn = document.createElement('button');
-            finishBtn.className = "w-full bg-green-600 hover:bg-green-700 text-white font-black py-4 rounded-xl mt-8 mb-12 shadow-lg tracking-widest uppercase transition-transform active:scale-95";
-            finishBtn.innerText = "Log Session & Finish";
-            finishBtn.onclick = () => window.logFullWorkout(workoutId);
-            list.appendChild(finishBtn);
-
-        } catch (e) {
-            console.error("Critical error in loadAthleteWorkout:", e);
-            if (e.code === 'permission-denied') {
-                alert("Permission Denied: Ensure you are logged in and belong to this school.");
+                    workoutContainer.appendChild(btn);
+                });
+            } catch (e) {
+                console.error("Error loading workouts:", e);
+                workoutContainer.innerHTML = `<p class="text-[#b91c1c] text-center py-10 uppercase text-xs font-bold tracking-widest">Error Loading Workouts.</p>`;
             }
-        }
-    };
-</script>
+        };
+
+        // 7. Render Specific Workout
+        window.loadAthleteWorkout = async (workoutId, athleteId) => {
+            try {
+                if (!window.currentSchoolId) {
+                    alert("Error: School ID is missing. Try logging in again.");
+                    return;
+                }
+
+                const workoutDocRef = doc(db, "schools", window.currentSchoolId, "workouts", workoutId);
+                const athleteDocRef = doc(db, "recruiting_profiles", athleteId);
+
+                // Fetch simultaneously 
+                const [workoutSnap, athleteSnap] = await Promise.all([
+                    getDoc(workoutDocRef),
+                    getDoc(athleteDocRef)
+                ]);
+
+                if (!workoutSnap.exists()) return;
+
+                const workout = workoutSnap.data();
+                const athlete = athleteSnap.exists() ? athleteSnap.data() : {};
+
+                // Toggle views
+                document.getElementById('athlete-dashboard').style.display = 'none';
+                document.getElementById('athlete-workout-container').style.display = 'block';
+                
+                document.getElementById('display-title').innerText = workout.title;
+                document.getElementById('display-week').innerText = `WEEK ${workout.week}`;
+
+                const list = document.getElementById('athlete-exercise-list');
+                list.innerHTML = '';
+
+                workout.exercises.forEach((ex, exIndex) => {
+                    const athleteMax = athlete[liftMap[ex.name]] || 0;
+                    
+                    const card = document.createElement('div');
+                    // Applying custom hex variables mapped from style.css
+                    card.className = "exercise-card bg-[#1a1a1c] border-l-4 border-[#b91c1c] p-5 rounded-r-lg mb-4 shadow-xl";
+                    
+                    let setsHtml = ex.setsData.map((s, i) => {
+                        const targetWeight = calculateWeight(athleteMax, s.percent);
+                        const setId = `set-${exIndex}-${i}`;
+                        
+                        return `
+                            <div id="container-${setId}" data-completed="false" class="flex justify-between items-center bg-[#0a0a0b] p-3 rounded-lg mb-2 border border-[#2a2a2c] transition-all duration-300">
+                                <div class="flex flex-col">
+                                    <span class="text-[9px] text-gray-500 font-bold uppercase leading-none tracking-wider mb-1">Set ${i+1}</span>
+                                    <span class="text-[#b91c1c] font-black text-xl italic">${targetWeight}<small class="text-[10px] ml-1 text-gray-500 font-bold not-italic">LBS</small></span>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <div class="flex flex-col items-center">
+                                        <label class="text-[8px] text-gray-600 uppercase font-black tracking-widest mb-1">Actual</label>
+                                        <input type="number" id="input-${setId}" value="${s.reps}" 
+                                            class="w-14 bg-[#0a0a0b] text-white text-center font-black py-2 rounded border border-[#2a2a2c] focus:border-[#b91c1c] outline-none text-sm transition-colors">
+                                    </div>
+                                    <button onclick="toggleSetComplete('${setId}')" id="btn-${setId}"
+                                        class="bg-[#1a1a1c] p-3 rounded-full text-gray-600 hover:text-green-500 transition-colors mt-3 border border-[#2a2a2c]">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    card.innerHTML = `
+                        <h3 class="text-white font-black uppercase text-sm mb-4 tracking-wider italic">${ex.name.replace(/_/g, ' ')}</h3>
+                        <div class="space-y-2">${setsHtml}</div>
+                    `;
+                    list.appendChild(card);
+                });
+
+                // Build Finish Button utilizing your style.css .btn-primary
+                const finishBtn = document.createElement('button');
+                finishBtn.className = "btn-primary mt-6 mb-12 shadow-2xl"; 
+                finishBtn.innerText = "Log Session & Finish";
+                finishBtn.onclick = () => window.logFullWorkout(workoutId);
+                list.appendChild(finishBtn);
+
+            } catch (e) {
+                console.error("Critical error in loadAthleteWorkout:", e);
+                if (e.code === 'permission-denied') {
+                    alert("Permission Denied: Ensure you belong to this school.");
+                }
+            }
+        };
+
+        // 8. Log Session to Database
+        window.logFullWorkout = async (workoutId) => {
+            const btn = document.querySelector('.btn-primary');
+            btn.innerText = "LOGGING...";
+            btn.disabled = true;
+
+            try {
+                const loggedExercises = [];
+                const exerciseCards = document.querySelectorAll('.exercise-card'); 
+
+                exerciseCards.forEach(card => {
+                    const name = card.querySelector('h3').innerText;
+                    const setRows = card.querySelectorAll('[id^="container-set-"]');
+                    
+                    const sets = Array.from(setRows).map(row => {
+                        const setId = row.id.replace('container-', '');
+                        return {
+                            repsPerformed: document.getElementById(`input-${setId}`).value,
+                            completed: row.getAttribute('data-completed') === 'true'
+                        };
+                    });
+                    loggedExercises.push({ name, sets });
+                });
+
+                await addDoc(collection(db, "completed_workouts"), {
+                    athleteId: window.currentAthleteId,
+                    workoutId: workoutId,
+                    schoolId: window.currentSchoolId,
+                    timestamp: serverTimestamp(),
+                    performance: loggedExercises
+                });
+
+                alert("Workout Logged Successfully! Great Job.");
+                location.reload();
+
+            } catch (e) {
+                console.error("Error logging workout:", e);
+                alert("Failed to save workout. Check connection.");
+                btn.innerText = "Log Session & Finish";
+                btn.disabled = false;
+            }
+        };
+    </script>
+</body>
+</html>
