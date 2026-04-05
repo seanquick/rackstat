@@ -1,3 +1,18 @@
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+    body {
+        background-color: #000000;
+        color: #ffffff;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+</style>
+
 <div id="athlete-dashboard" class="max-w-md mx-auto p-4">
     <div class="mb-8 border-b border-gray-800 pb-4">
         <h2 class="text-xs font-black text-red-500 uppercase tracking-widest mb-1">Athlete Portal</h2>
@@ -52,16 +67,18 @@
     });
 
     const calculateWeight = (max, percentage) => {
-        if (!max || !percentage) return "---";
+        if (!max || !percentage || max === 0) return "---";
         const raw = max * (parseFloat(percentage) / 100);
-        return Math.round(raw / 5) * 5;
+        return Math.round(raw / 5) * 5; // Rounds to nearest 5lbs
     };
 
     const liftMap = {
+        "clean": "cleanMax",         // This matches the name in your screenshot
+        "power_clean": "cleanMax",
         "bench_press": "benchMax",
         "back_squat": "squatMax",
-        "power_clean": "cleanMax",
-        "deadlift": "deadliftMax"
+        "deadlift": "deadliftMax",
+        "push_press": "pushpressMax"
     };
 
     // VISUAL TOGGLE
