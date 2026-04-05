@@ -110,11 +110,12 @@
                     + Add Exercise
                 </button>
 
-                <button id="save-workout-btn" onclick="saveWorkout()" 
-                        data-mode="create" 
-                        class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-colors">
-                    SAVE & PUBLISH
-                </button>
+            <button id="save-workout-btn" 
+                    onclick="saveWorkout()" 
+                    data-mode="create" 
+                    class="...">
+                SAVE & PUBLISH
+            </button>
             </div>
         </div>
 
@@ -459,11 +460,38 @@
 
             // 2. Gather your exercises array (Ensure this variable name matches your logic)
             // This is the array of exercises the coach just built in the UI
-            const exercises = Array.from(document.querySelectorAll('.exercise-row')).map(row => ({
-                name: row.querySelector('.ex-name').value,
-                sets: row.querySelector('.ex-sets').value,
-                reps: row.querySelector('.ex-reps').value
-            }));
+            // --- UPDATED EXERCISE MAPPING ---
+            const exercises = Array.from(document.querySelectorAll('.exercise-row')).map(row => {
+                // Find the ID from the row (e.g., "row-12345" -> "12345")
+                const id = row.id.replace('row-', '');
+                
+                // Safety check: ensure the elements exist before grabbing .value
+                const nameEl = document.getElementById(`name-${id}`);
+                const typeEl = document.getElementById(`type-${id}`);
+                const setsEl = document.getElementById(`sets-${id}`);
+
+                // If these are missing, we skip this row or return null
+                if (!nameEl || !setsEl) return null;
+
+                // Gather the individual sets data (S1, S2, etc.)
+                const numSets = parseInt(setsEl.value) || 0;
+                const setsData = [];
+                for (let i = 1; i <= numSets; i++) {
+                    const rEl = document.getElementById(`reps-${id}-${i}`);
+                    const pEl = document.getElementById(`percent-${id}-${i}`);
+                    setsData.push({
+                        reps: rEl ? rEl.value : "",
+                        percent: pEl ? pEl.value : ""
+                    });
+                }
+
+                return {
+                    name: nameEl.value,
+                    type: typeEl ? typeEl.value : 'core',
+                    sets: numSets,
+                    setsData: setsData
+                };
+            }).filter(ex => ex !== null); // Remove any null entries from the array
 
             if (!title || !week) {
                 alert("Please enter a title and week number.");
