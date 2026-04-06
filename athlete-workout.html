@@ -38,6 +38,15 @@
         <div id="athlete-exercise-list" class="space-y-4"></div>
     </div>
 
+    <div class="flex items-center mb-6">
+        <button onclick="location.href='index.html'" class="flex items-center text-gray-500 hover:text-white transition-colors group">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7" />
+            </svg>
+            <span class="text-xs font-black uppercase tracking-widest italic">Lobby</span>
+        </button>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { firebaseConfig } from "./firebase-config.js"; 
@@ -137,6 +146,27 @@
                 const workout = workoutSnap.data();
                 const athlete = athleteSnap.exists() ? athleteSnap.data() : {};
 
+                document.getElementById('athlete-dashboard').style.display = 'none';
+                document.getElementById('athlete-workout-container').style.display = 'block';
+                
+                // 1. Update the title and week
+                document.getElementById('display-title').innerText = workout.title;
+                document.getElementById('display-week').innerText = `WEEK ${workout.week}`;
+
+                // 2. Make the Back Button return to the Workout List instead of the Lobby
+                const backBtn = document.getElementById('back-to-lobby-btn'); 
+                if (backBtn) {
+                    backBtn.onclick = () => {
+                        // Hide workout, show the dashboard list again
+                        document.getElementById('athlete-workout-container').style.display = 'none';
+                        document.getElementById('athlete-dashboard').style.display = 'block';
+                        // Reset the button to go to index.html if clicked again from the list
+                        backBtn.onclick = () => location.href = 'index.html';
+                        backBtn.querySelector('span').innerText = 'Lobby';
+                    };
+                    backBtn.querySelector('span').innerText = 'Back to List';
+                }
+                
                 // DEBUG: This will show you exactly what data we are pulling for this athlete
                 console.log("--- DEBUG: Athlete Data Found ---", athlete);
 
