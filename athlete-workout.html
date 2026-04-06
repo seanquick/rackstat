@@ -38,7 +38,7 @@
         <div id="athlete-exercise-list" class="space-y-4"></div>
     </div>
 
-<script type="module">
+    <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { firebaseConfig } from "./firebase-config.js"; 
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -48,7 +48,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // 1. Auth Observer
+        // --- 1. Auth & Data Setup ---
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 window.currentAthleteId = user.uid;
@@ -63,29 +63,27 @@
             }
         });
 
-        // 2. Lift Mapping
+        // --- 2. Advanced Lift Mapping ---
+        // This helps the code find the right data even if naming varies (e.g. "bench" vs "benchMax")
         const liftMap = {
-            "clean": "cleanMax",         
-            "power clean": "cleanMax",
-            "bench press": "benchMax",
-            "bench": "benchMax",
-            "back squat": "squatMax",
-            "squat": "squatMax",
-            "deadlift": "deadliftMax",
-            "push press": "pushpressMax"
+            "clean": ["cleanMax", "clean", "clean_max"],
+            "power clean": ["cleanMax", "power_clean", "clean"],
+            "bench press": ["benchMax", "bench", "bench_press"],
+            "bench": ["benchMax", "bench", "bench_press"],
+            "back squat": ["squatMax", "squat", "back_squat"],
+            "squat": ["squatMax", "squat", "back_squat"],
+            "deadlift": ["deadliftMax", "deadlift", "dead_lift"],
+            "push press": ["pushpressMax", "push_press"]
         };
 
-        // 3. Weight Calculation Logic
         const calculateWeight = (max, percentage) => {
             const m = parseFloat(max);
             const p = parseFloat(percentage);
             if (!m || m === 0 || !p || p === 0) return "BW";
-            
-            const raw = m * (p / 100);
-            return Math.round(raw / 5) * 5; 
+            return Math.round((m * (p / 100)) / 5) * 5; 
         };
 
-        // 4. UI Toggle
+        // --- 3. UI Functions ---
         window.toggleSetComplete = (setId) => {
             const container = document.getElementById(`container-${setId}`);
             const btn = document.getElementById(`btn-${setId}`);
@@ -97,7 +95,6 @@
             container.setAttribute('data-completed', !isDone);
         };
 
-        // 5. Load List of Workouts
         window.loadAvailableWorkouts = async () => {
             const workoutContainer = document.getElementById('available-workouts');
             const workoutRef = collection(db, "schools", window.currentSchoolId, "workouts");
@@ -115,21 +112,19 @@
             });
         };
 
-        // 6. Render Active Workout (FIXED NESTING HERE)
+        // --- 4. Main Workout Renderer ---
         window.loadAthleteWorkout = async (workoutId, athleteId) => {
             try {
                 const workoutDocRef = doc(db, "schools", window.currentSchoolId, "workouts", workoutId);
                 const athleteDocRef = doc(db, "recruiting_profiles", athleteId);
-
-                const [workoutSnap, athleteSnap] = await Promise.all([
-                    getDoc(workoutDocRef),
-                    getDoc(athleteDocRef)
-                ]);
+                const [workoutSnap, athleteSnap] = await Promise.all([getDoc(workoutDocRef), getDoc(athleteDocRef)]);
 
                 if (!workoutSnap.exists()) return;
-
                 const workout = workoutSnap.data();
                 const athlete = athleteSnap.exists() ? athleteSnap.data() : {};
+
+                // DEBUG: This will show you exactly what data we are pulling for this athlete
+                console.log("--- DEBUG: Athlete Data Found ---", athlete);
 
                 document.getElementById('athlete-dashboard').style.display = 'none';
                 document.getElementById('athlete-workout-container').style.display = 'block';
@@ -141,12 +136,19 @@
 
                 workout.exercises.forEach((ex, exIndex) => {
                     const cleanName = ex.name.toLowerCase().trim().replace(/_/g, ' ');
-                    const maxKey = liftMap[cleanName] || cleanName; 
-                    const athleteMax = athlete[maxKey] || athlete[ex.name] || athlete[cleanName] || 0;
                     
-                    // DEBUG LOGS
-                    console.log(`--- LIFT: ${ex.name} ---`);
-                    console.log(`Max Found: ${athleteMax} (Field: ${maxKey})`);
+                    // Try to find the max using the map, then fallbacks
+                    let athleteMax = 0;
+                    const keysToTry = liftMap[cleanName] || [cleanName];
+                    for (let key of keysToTry) {
+                        if (athlete[key]) {
+                            athleteMax = athlete[key];
+                            break;
+                        }
+                    }
+                    if (!athleteMax) athleteMax = athlete[ex.name] || 0;
+
+                    console.log(`Lift: ${ex.name} | Using Max: ${athleteMax}`);
 
                     const card = document.createElement('div');
                     card.className = "exercise-card bg-[#1a1a1c] border-l-4 border-[#b91c1c] p-5 rounded-r-lg mb-4 shadow-xl";
@@ -179,7 +181,7 @@
                             </div>`;
                     }).join('');
 
-                    card.innerHTML = `<h3 class="text-white font-black uppercase text-sm mb-4 italic">${ex.name.replace(/_/g, ' ')}</h3><div class="space-y-2">${setsHtml}</div>`;
+                    card.innerHTML = `<h3 class="text-white font-black uppercase text-sm mb-4 italic tracking-wider">${ex.name.replace(/_/g, ' ')}</h3><div class="space-y-2">${setsHtml}</div>`;
                     list.appendChild(card);
                 });
 
@@ -189,12 +191,10 @@
                 finishBtn.onclick = () => window.logFullWorkout(workoutId);
                 list.appendChild(finishBtn);
 
-            } catch (error) {
-                console.error("Error loading workout:", error);
-            }
+            } catch (e) { console.error("Error loading workout:", e); }
         };
 
-        // 7. Save Workout to Database
+        // --- 5. Log & Save Workout ---
         window.logFullWorkout = async (workoutId) => {
             try {
                 const btn = document.querySelector('button[onclick*="logFullWorkout"]');
@@ -223,9 +223,9 @@
 
                 alert("Workout Logged!");
                 location.reload();
-            } catch (error) {
-                console.error("Error logging workout:", error);
-                alert("Failed to save workout.");
+            } catch (e) { 
+                console.error("Error saving:", e); 
+                alert("Error saving workout.");
             }
         };
     </script>
