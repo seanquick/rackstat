@@ -188,20 +188,21 @@
         window.loadAthleteWorkout = async (workoutId, athleteId) => {
             try {
                 const workoutDocRef = doc(db, "schools", window.currentSchoolId, "workouts", workoutId);
-                const userDocRef = doc(db, "users", athleteId);
                 
-                const [workoutSnap, userSnap] = await Promise.all([
+                // DATA FIX: Points to the 'latest' doc in the 'maxes' sub-collection
+                const latestMaxRef = doc(db, "recruiting_profiles", athleteId, "maxes", "latest");
+                
+                const [workoutSnap, maxSnap] = await Promise.all([
                     getDoc(workoutDocRef), 
-                    getDoc(userDocRef)
+                    getDoc(latestMaxRef)
                 ]);
 
                 if (!workoutSnap.exists()) return;
                 const workout = workoutSnap.data();
-                const userPrivate = userSnap.exists() ? userSnap.data() : {};
                 
-                // LOGGING: Check your console to see the actual keys in your DB
-                console.log("Current Maxes Map from DB:", userPrivate.maxes);
-                const currentMaxes = userPrivate.maxes || {};
+                // Extracting maxes from the sub-collection document
+                const currentMaxes = maxSnap.exists() ? maxSnap.data() : {};
+                console.log("Fetched Latest Maxes from Sub-collection:", currentMaxes);
 
                 document.getElementById('athlete-dashboard').style.display = 'none';
                 document.getElementById('athlete-workout-container').style.display = 'block';
@@ -216,17 +217,19 @@
                 for (const [exIndex, ex] of workout.exercises.entries()) {
                     const cleanName = ex.name.toLowerCase().trim();
                     const lastWeight = await getLastLift(athleteId, ex.name);
+                    
+                    // FORMATTING FIX: Handle keys like 'push_press' or 'bodyweight'
+                    const liftKeySnake = cleanName.replace(/\s+/g, '_');
                     const liftKeyNoSpaces = cleanName.replace(/\s+/g, '');
                     
-                    // NEW ROBUST LOOKUP: checks "bench press", "benchpress", and "bench"
                     let athleteCurrentMax = "No Data";
-                    const potentialKeys = [cleanName, liftKeyNoSpaces];
+                    const potentialKeys = [cleanName, liftKeySnake, liftKeyNoSpaces];
                     
-                    // Add any logic-based alternates (e.g., if name is "Bench Press", check "bench")
+                    // Specific logic for multi-word names (e.g., "Bench Press" -> "bench")
                     if (cleanName.includes(" ")) potentialKeys.push(cleanName.split(" ")[0]);
 
                     for (let key of potentialKeys) {
-                        if (currentMaxes[key]) {
+                        if (currentMaxes[key] !== undefined && currentMaxes[key] !== null) {
                             athleteCurrentMax = currentMaxes[key];
                             break;
                         }
@@ -271,7 +274,6 @@
                                 </div>`;
                         }
                     } else {
-                        // Standard Mode Calc
                         let calcMax = (athleteCurrentMax !== "No Data") ? athleteCurrentMax : 0;
                         setsHtml = ex.setsData.map((s, i) => {
                             const suggestedWeight = calculateWeight(calcMax, s.percent || 0);
