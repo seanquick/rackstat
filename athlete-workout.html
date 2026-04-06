@@ -158,17 +158,23 @@
                         const suggestedWeight = calculateWeight(athleteMax, perc);
                         const setId = `set-${exIndex}-${i}`;
                         
-                        // We use value="${suggestedWeight}" so the box is pre-filled, 
-                        // but the athlete can click and type over it.
-                        const weightInputHTML = suggestedWeight === "LBS" 
+                        // We keep the percentage label visible next to the input
+                        const percString = perc > 0 
+                            ? `<span class="text-[10px] text-gray-500 font-bold ml-1 italic">@ ${perc}%</span>` 
+                            : '';
+
+                        const weightInputHTML = suggestedWeight === "BW" 
                             ? `<span class="text-gray-600 font-black text-xl italic mt-1 uppercase">BW</span>` 
-                            : `<div class="flex items-center">
-                                <input type="number" 
-                                    id="weight-${setId}" 
-                                    value="${suggestedWeight}" 
-                                    class="bg-transparent text-[#b91c1c] font-black text-xl italic w-20 outline-none border-b border-transparent focus:border-[#b91c1c] transition-all"
-                                >
-                                <small class="text-[10px] ml-1 text-gray-500 font-bold not-italic">LBS</small>
+                            : `<div class="flex flex-col">
+                                <div class="flex items-center">
+                                    <input type="number" 
+                                        id="weight-${setId}" 
+                                        value="${suggestedWeight}" 
+                                        class="bg-transparent text-[#b91c1c] font-black text-xl italic w-16 outline-none border-b border-transparent focus:border-[#b91c1c] transition-all"
+                                    >
+                                    <small class="text-[10px] ml-1 text-gray-500 font-bold not-italic">LBS</small>
+                                    ${percString}
+                                </div>
                             </div>`;
 
                         return `
