@@ -89,6 +89,7 @@
                 
                 <div class="flex items-center gap-4">
                     <select id="workout-week" class="bg-gray-800 border border-gray-700 text-white p-2 rounded-lg focus:border-red-500 outline-none text-sm font-bold uppercase">
+                        <option value="0">Week 0 (MAX OUT / TESTING)</option>
                         <option value="1">Week 1</option>
                         <option value="2">Week 2</option>
                         <option value="3">Week 3</option>
@@ -191,6 +192,13 @@
         let currentSchoolId = ""; 
         let isRecruitingEnabled = true;
 
+        document.getElementById('workout-week').addEventListener('change', (e) => {
+            if (e.target.value === "0") {
+                const maxToggle = document.getElementById('isMaxOut');
+                if (maxToggle) maxToggle.checked = true;
+            }
+        });
+        
         onAuthStateChanged(auth, async (user) => {
             if (!user) {
                 window.location.href = 'index.html';
@@ -835,65 +843,69 @@
             }
         };
 
-        // --- WORKOUT ACTIONS (Place this inside your module script) ---
-
         window.editWorkout = async (workoutId) => {
-            console.log("Fetching data for workout:", workoutId);
-            try {
-                const workoutRef = doc(db, "schools", window.currentSchoolId, "workouts", workoutId);
-                const snap = await getDoc(workoutRef);
-                
-                if (snap.exists()) {
-                    const data = snap.data();
-                    console.log("Workout Data found:", data);
-
-                    // 1. Populate Title
-                    const titleInput = document.getElementById('workout-title');
-                    if (titleInput) {
-                        titleInput.value = data.title || "";
-                    }
-
-                    // 2. Populate Week
-                    const weekInput = document.getElementById('workout-week');
-                    if (weekInput) {
-                        weekInput.value = data.week || "";
-                    }
-
-                    // 3. Rebuild Exercises
-                    const exerciseContainer = document.getElementById('exercise-list');
-                    if (exerciseContainer && data.exercises) {
-                        exerciseContainer.innerHTML = ''; // Clear the current blank rows
+                    console.log("Fetching data for workout:", workoutId);
+                    try {
+                        const workoutRef = doc(db, "schools", window.currentSchoolId, "workouts", workoutId);
+                        const snap = await getDoc(workoutRef);
                         
-                        data.exercises.forEach(ex => {
-                            if (typeof addExerciseRow === "function") {
-                                // Pass the WHOLE object 'ex' instead of just name/sets/reps
-                                // This allows addExerciseRow to handle types and complex set data
-                                addExerciseRow(ex); 
-                            } else {
-                                console.warn("Function 'addExerciseRow' not found.");
-                            }
-                        });
-                    }
+                        if (snap.exists()) {
+                            const data = snap.data();
+                            console.log("Workout Data found:", data);
 
-                    // 4. UI Feedback: Scroll to top
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                    
-                    // 5. Update Button to 'Edit Mode'
-                    const saveBtn = document.getElementById('save-workout-btn');
-                    if (saveBtn) {
-                        saveBtn.innerText = "UPDATE WORKOUT";
-                        saveBtn.dataset.mode = "edit";
-                        saveBtn.dataset.editId = workoutId;
+                            // 1. Populate Title
+                            const titleInput = document.getElementById('workout-title');
+                            if (titleInput) {
+                                titleInput.value = data.title || "";
+                            }
+
+                            // 2. Populate Week (Ensuring Week 0 works)
+                            const weekInput = document.getElementById('workout-week');
+                            if (weekInput) {
+                                // Use toString() so that 0 correctly matches the <option value="0">
+                                weekInput.value = (data.week !== undefined) ? data.week.toString() : "";
+                            }
+
+                            // 2b. Restore Max Out Toggle State
+                            const maxToggle = document.getElementById('isMaxOut');
+                            if (maxToggle) {
+                                maxToggle.checked = data.isMaxOut || false;
+                            }
+
+                            // 3. Rebuild Exercises
+                            const exerciseContainer = document.getElementById('exercise-list');
+                            if (exerciseContainer && data.exercises) {
+                                exerciseContainer.innerHTML = ''; // Clear the current blank rows
+                                
+                                data.exercises.forEach(ex => {
+                                    if (typeof addExerciseRow === "function") {
+                                        // Pass the WHOLE object 'ex' to handle types and set data
+                                        addExerciseRow(ex); 
+                                    } else {
+                                        console.warn("Function 'addExerciseRow' not found.");
+                                    }
+                                });
+                            }
+
+                            // 4. UI Feedback: Scroll to top
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                            
+                            // 5. Update Button to 'Edit Mode'
+                            const saveBtn = document.getElementById('save-workout-btn');
+                            if (saveBtn) {
+                                saveBtn.innerText = "UPDATE WORKOUT";
+                                saveBtn.dataset.mode = "edit";
+                                saveBtn.dataset.editId = workoutId;
+                            }
+                            
+                        } else {
+                            console.error("No workout found with ID:", workoutId);
+                        }
+                    } catch (e) {
+                        console.error("Error loading workout for edit:", e);
+                        alert("Could not load workout data.");
                     }
-                    
-                } else {
-                    console.error("No workout found with ID:", workoutId);
-                }
-            } catch (e) {
-                console.error("Error loading workout for edit:", e);
-                alert("Could not load workout data.");
-            }
-        };
+                };
 
         window.deleteWorkout = async (workoutId) => {
             if (!confirm("Are you sure? This will permanently delete this workout.")) return;
