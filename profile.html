@@ -264,32 +264,27 @@
     async function renderGoals(uid, goals) {
         const container = document.getElementById('goals-container');
         
-        // Check if goals exist in the array
         if (!goals || goals.length === 0) {
             container.innerHTML = '<p class="text-center text-[10px] text-gray-600 uppercase font-bold py-4 italic">No goals active</p>';
             return;
         }
         
-        // Clear container to prepare for rendering
         container.innerHTML = '';
         
         try {
-            // Fetch latest maxes to calculate progress
-            const q = query(collection(db, "recruiting_profiles", uid, "maxes"), orderBy("timestamp", "desc"), limit(1));
-            const maxSnap = await getDocs(q);
+            // --- UPDATED: Pull from the specific 'latest' document ---
+            const latestMaxRef = doc(db, "recruiting_profiles", uid, "maxes", "latest");
+            const maxSnap = await getDoc(latestMaxRef);
             
-            // If the collection is empty, latestStats becomes an empty object {}
-            const latestStats = !maxSnap.empty ? maxSnap.docs[0].data() : {};
+            const latestStats = maxSnap.exists() ? maxSnap.data() : {};
 
             goals.forEach((goal, index) => {
-                // If goal.type doesn't exist in latestStats, it defaults to 0
-                const currentVal = Number(latestStats[goal.type]) || 0;
+                // Handle different naming conventions (e.g., bench vs bench_press)
+                const liftKey = goal.type.toLowerCase().trim().replace(/\s+/g, '_');
+                const currentVal = Number(latestStats[liftKey] || latestStats[goal.type]) || 0;
                 const targetVal = Number(goal.target) || 0;
                 
-                // Calculate progress; handle division by zero just in case
                 const progress = targetVal > 0 ? Math.min((currentVal / targetVal) * 100, 100) : 0;
-                
-                // Format display name (e.g., bodyWeight -> Body Weight)
                 const displayName = goal.type.replace('_', ' ').replace(/([A-Z])/g, ' $1').trim();
                 
                 container.innerHTML += `
@@ -315,7 +310,6 @@
             });
         } catch (error) {
             console.error("Error rendering goals:", error);
-            // Fallback: Still try to render the goals with 0 progress if the database fetch fails
             renderFallbackGoals(container, goals);
         }
     }
