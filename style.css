@@ -223,3 +223,15 @@ select option {
     position: relative;
     z-index: 1;
 }
+
+.badge-red {
+    background-color: var(--rackstat-red);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 900;
+    text-transform: uppercase;
+    display: inline-block;
+    margin-right: 4px;
+}

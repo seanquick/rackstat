@@ -168,7 +168,7 @@
             // Add this at the top of your script block
             let currentUser = null;
 
-           onAuthStateChanged(auth, async (user) => {
+        onAuthStateChanged(auth, async (user) => {
             const urlParams = new URLSearchParams(window.location.search);
             const athleteId = urlParams.get('uid');
             const isEditMode = urlParams.get('edit') === 'true';
@@ -193,7 +193,6 @@
                             return;
                         }
                     }
-                    // ----------------------------------------------
 
                     const targetUid = athleteId || user.uid;
                     const profileRef = doc(db, "recruiting_profiles", targetUid);
@@ -213,7 +212,7 @@
                         const d = recSnap.data();
                         const mx = maxesSnap.exists() ? maxesSnap.data() : {};
 
-                        // --- DATA RENDERING (VIEW MODE) ---
+                        // --- 1. IDENTITY & VITALS ---
                         safeSet('disp-name', d.fullName);
                         safeSet('disp-class', "CLASS OF " + (d.gradYear || "--"));
                         safeSet('disp-pos', d.primaryPos);
@@ -225,51 +224,49 @@
                         const rawH = d.height;
                         const hEl = document.getElementById('disp-height');
                         if (hEl) hEl.innerText = rawH ? `${Math.floor(rawH/12)}'${rawH%12}"` : "--";
-                        safeSet('disp-weight', d.weight ? d.weight + " lbs" : "--");
+                        
+                        safeSet('disp-weight', (mx.body_weight || d.weight) ? (mx.body_weight || d.weight) + " lbs" : "--");
 
-                        // --- METRICS ---
-                        safeSet('stat-bench', mx.bench || d.bench);
+                        // --- 2. LATEST MAX-OUT METRICS ---
+                        safeSet('stat-bench', mx.bench_press || mx.bench || d.bench);
                         safeSet('stat-squat', mx.squat || d.squat);
                         safeSet('stat-clean', mx.clean || d.clean);
                         safeSet('stat-dead', mx.deadlift || d.deadlift); 
                         safeSet('stat-push', mx.push_press || d.push_press);
 
-                        // --- ACADEMICS ---
+                        // --- 3. ACADEMICS & CONTACT ---
                         safeSet('disp-gpa', d.gpa); 
                         safeSet('disp-act', d.act);
                         safeSet('disp-sat', d.sat);
                         safeSet('disp-ncaa-id', d.ncaaid || "--");
-                        safeSet('disp-character', d.teammateDef || d.whyPlay);
-
-                        safeSet('disp-twitter', d.twitterLink ? "@" + d.twitterLink.split('/').pop() : "--");
                         
+                        safeSet('disp-twitter', d.twitterLink ? "@" + d.twitterLink.split('/').pop() : "--");
                         const hudlBtn = document.getElementById('film-btn');
-                        const hudlUrl = d.highlightLink || d.highlightUrl || d.hudlUrl;
+                        const hudlUrl = d.hudlLink || d.highlightLink || d.highlightUrl;
                         if (hudlBtn && hudlUrl) {
                             hudlBtn.onclick = () => window.open(hudlUrl, '_blank');
                         }
 
-                        // --- PRE-FILL EDIT FIELDS (EDIT MODE) ---
-                        if (document.getElementById('edit-bench')) document.getElementById('edit-bench').value = mx.bench || d.bench || "";
-                        if (document.getElementById('edit-squat')) document.getElementById('edit-squat').value = mx.squat || d.squat || "";
-                        if (document.getElementById('edit-clean')) document.getElementById('edit-clean').value = mx.clean || d.clean || "";
-                        if (document.getElementById('edit-deadlift')) document.getElementById('edit-deadlift').value = mx.deadlift || d.deadlift || "";
-                        if (document.getElementById('edit-push')) document.getElementById('edit-push').value = mx.push_press || d.push_press || "";
+                        // --- 4. NEXT-LEVEL QUESTIONNAIRE DATA ---
+                        safeSet('disp-train-freq', d.trainFreq); 
+                        safeSet('disp-nutrition', d.hasNutrition);
+                        safeSet('disp-sleep', d.hasSleep);
+                        safeSet('disp-teammate-type', d.teammateType);
+                        safeSet('disp-sacrifice', d.sacrifice);
+                        safeSet('disp-character', d.teammateDef || d.whyPlay);
+
+                        const commitEl = document.getElementById('disp-commitments');
+                        if (commitEl && d.commitments) {
+                            commitEl.innerHTML = d.commitments.map(c => 
+                                `<span class="badge-red">${c}</span>`
+                            ).join(' ');
+                        }
+
+                        // --- 5. PERMISSION CHECK & UI SHOW ---
+                        if (typeof runPermissionCheck === "function") {
+                            await runPermissionCheck(user, isEditMode);
+                        }
                         
-                        if (document.getElementById('edit-name')) document.getElementById('edit-name').value = d.fullName || "";
-                        if (document.getElementById('edit-gpa')) document.getElementById('edit-gpa').value = d.gpa || "";
-                        if (document.getElementById('edit-grad')) document.getElementById('edit-grad').value = d.gradYear || "";
-                        if (document.getElementById('edit-act')) document.getElementById('edit-act').value = d.act || "";
-                        if (document.getElementById('edit-sat')) document.getElementById('edit-sat').value = d.sat || "";
-                        if (document.getElementById('edit-pos')) document.getElementById('edit-pos').value = d.primaryPos || "";
-                        if (document.getElementById('edit-pos2')) document.getElementById('edit-pos2').value = d.secondaryPos || "";
-                        if (document.getElementById('edit-def-pos')) document.getElementById('edit-def-pos').value = d.primaryDefPos || "";
-                        if (document.getElementById('edit-def-pos2')) document.getElementById('edit-def-pos2').value = d.secondaryDefPos || "";
-
-                        // --- PERMISSION & EDIT CHECK ---
-                        await runPermissionCheck(user, isEditMode);
-
-                        // UI Cleanup
                         document.getElementById('loader')?.classList.add('hidden');
                         document.getElementById('main-card-container')?.classList.remove('hidden');
 
@@ -285,7 +282,6 @@
                 location.href = 'index.html';
             }
         });
-
             // Permissions Check - Only shows the UNLOCK button
             async function runPermissionCheck(currentUser, isEditMode) {
                 if (!isEditMode) return;
