@@ -279,45 +279,45 @@
         window.logFullWorkout = async (workoutId) => {
             try {
                 const btn = document.querySelector('button[onclick*="logFullWorkout"]');
-                const originalText = btn.innerText;
-                btn.innerText = "SAVING...";
-                btn.disabled = true; // Prevent double-submitting
+                if (btn) {
+                    btn.innerText = "SAVING...";
+                    btn.disabled = true;
+                }
                 
                 const loggedExercises = [];
                 
                 document.querySelectorAll('.exercise-card').forEach(card => {
-                // 1. Get the H3 element
-                const h3 = card.querySelector('h3');
-                if (!h3) return;
+                    const h3 = card.querySelector('h3');
+                    if (!h3) return;
 
-                // 2. CLEAN THE NAME: 
-                // This looks for the text but ignores the <span> badge specifically
-                let name = h3.innerText.split('Last:')[0].trim();
+                    // CLEAN THE NAME: Ignores the "Last:" badge if it exists
+                    let name = h3.innerText.split('Last:')[0].trim();
 
-                const sets = Array.from(card.querySelectorAll('[id^="container-set-"]')).map(row => {
-                    const setId = row.id.replace('container-', '');
+                    // Find all rows inside THIS card that start with "container-set-"
+                    const sets = Array.from(card.querySelectorAll('[id^="container-set-"]')).map(row => {
+                        
+                        // --- SAFER DATA GRABBING ---
+                        // Instead of getElementById, we look INSIDE the row element
+                        const weightInput = row.querySelector('input');
+                        const repsEl = row.querySelector('span[id^="reps-"]');
+                        
+                        // Fallback values so the script never hits "null"
+                        let weightUsed = weightInput ? weightInput.value.trim() : "BW";
+                        if (weightUsed === "") weightUsed = "BW";
+                        
+                        const repsPerformed = repsEl ? repsEl.innerText.trim() : "0";
+
+                        return {
+                            weightUsed: weightUsed,
+                            repsPerformed: repsPerformed,
+                            completed: row.getAttribute('data-completed') === 'true'
+                        };
+                    });
                     
-                    // 3. GRAB WEIGHT:
-                    // Use a fallback to "BW" if the input is missing or empty
-                    const weightInput = document.getElementById(`weight-${setId}`);
-                    let weightUsed = weightInput ? weightInput.value.trim() : "BW";
-                    if (weightUsed === "") weightUsed = "BW";
-
-                    // 4. GRAB REPS:
-                    const repsEl = document.getElementById(`reps-${setId}`);
-                    const repsPerformed = repsEl ? repsEl.innerText : "0";
-
-                    return {
-                        weightUsed: weightUsed,
-                        repsPerformed: repsPerformed,
-                        completed: row.getAttribute('data-completed') === 'true'
-                    };
+                    loggedExercises.push({ name, sets });
                 });
-                
-                loggedExercises.push({ name, sets });
-            });
 
-                // 2. Save to Firestore
+                // Save to Firestore
                 await addDoc(collection(db, "completed_workouts"), {
                     athleteId: window.currentAthleteId,
                     workoutId: workoutId,
@@ -327,12 +327,12 @@
                 });
 
                 alert("Workout Logged Successfully!");
-                // Instead of reload, taking them back to index might be smoother
                 window.location.href = 'index.html'; 
 
             } catch (e) { 
-                console.error("Error saving:", e); 
-                alert("Error saving workout. Please check your connection.");
+                console.error("Detailed Error saving:", e); 
+                alert("Error saving workout. See console for details.");
+                
                 const btn = document.querySelector('button[onclick*="logFullWorkout"]');
                 if (btn) {
                     btn.innerText = "Log Session & Finish";
