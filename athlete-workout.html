@@ -48,15 +48,29 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // --- 1. Auth & Data Setup ---
+        // --- 1. URL & Auth Setup ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const directWorkoutId = urlParams.get('id'); // Looks for ?id=... in the URL
+
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 window.currentAthleteId = user.uid;
                 const docSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+                
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     window.currentSchoolId = data.school_id || data.schoolId;
-                    if (window.currentSchoolId) window.loadAvailableWorkouts(); 
+                    
+                    if (window.currentSchoolId) {
+                        // UPDATE: Check if we are coming from a direct link
+                        if (directWorkoutId) {
+                            // Load the specific workout from the link
+                            window.loadAthleteWorkout(directWorkoutId, user.uid);
+                        } else {
+                            // Otherwise, just show the full list as usual
+                            window.loadAvailableWorkouts(); 
+                        }
+                    }
                 }
             } else {
                 window.location.href = "index.html";

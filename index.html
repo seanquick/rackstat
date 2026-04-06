@@ -52,28 +52,29 @@
         <div id="main-menu" class="hidden space-y-4 p-6">
             <h2 id="welcome-msg" class="text-xl font-black italic uppercase text-center mb-6"></h2>
             
-        <div class="grid grid-cols-1 gap-4">
-                    
-            <button onclick="location.href='board.html'" class="btn-primary w-full py-4 text-lg bg-red-700 border-red-900 mb-4">
-                THE BOARD
-            </button>
+            <div id="quick-workout-container" class="mb-8"></div>
 
-            <button onclick="location.href='rack.html'" class="btn-primary w-full py-4 text-lg bg-slate-800 border-slate-900 mb-4">
-                THE RACK
-            </button>
+            <div class="grid grid-cols-1 gap-4">
+                <button onclick="location.href='board.html'" class="btn-primary w-full py-4 text-lg bg-red-700 border-red-900 mb-4">
+                    THE BOARD
+                </button>
 
-            <button id="btn-kitchen" onclick="location.href='kitchen.html'" class="btn-primary w-full py-4 text-lg bg-green-700 border-green-900 mb-4">
-                THE KITCHEN
-            </button>
+                <button onclick="location.href='athlete-workout.html'" class="btn-primary w-full py-4 text-lg bg-slate-800 border-slate-900 mb-4">
+                    THE RACK
+                </button>
 
-            <button id="btn-recruiting-card" onclick="location.href='next-level.html'" class="btn-primary w-full py-4 text-lg bg-red-700 border-red-900 mb-4">
-                NEXT LEVEL RECRUITING
-            </button>
+                <button id="btn-kitchen" onclick="location.href='kitchen.html'" class="btn-primary w-full py-4 text-lg bg-green-700 border-green-900 mb-4">
+                    THE KITCHEN
+                </button>
 
-            <button onclick="location.href='profile.html'" class="btn-primary w-full py-4 text-lg bg-blue-700 border-blue-900">
-                MY PROFILE
-            </button>
-        </div>
+                <button id="btn-recruiting-card" onclick="location.href='next-level.html'" class="btn-primary w-full py-4 text-lg bg-red-700 border-red-900 mb-4">
+                    NEXT LEVEL RECRUITING
+                </button>
+
+                <button onclick="location.href='profile.html'" class="btn-primary w-full py-4 text-lg bg-blue-700 border-blue-900">
+                    MY PROFILE
+                </button>
+            </div>
 
             <button onclick="handleLogout()" class="w-full mt-8 text-[14px] font-bold uppercase text-gray-500 hover:text-white transition-colors">
                 Sign Out / Switch User
@@ -82,45 +83,67 @@
     </div>
 
     <script type="module">
-            // 1. Pull the config from your central file
-            import { firebaseConfig } from './firebase-config.js';
+        import { firebaseConfig } from './firebase-config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        // Added collection, query, orderBy, getDocs, limit to the imports below
+        import { getFirestore, doc, getDoc, collection, query, orderBy, getDocs, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-            // 2. Pull the tools from Google's servers
-            import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-            import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-            import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-            // 3. Initialize using the imported config
-            const app = initializeApp(firebaseConfig);
-            const db = getFirestore(app);
-            const auth = getAuth(app);
-            
-            // ... rest of your code ...
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
 
         // LOGIN FUNCTION
         window.handleLogin = async () => {
             const email = document.getElementById('email').value.trim();
             const pass = document.getElementById('password').value;
-            
             try { 
                 await signInWithEmailAndPassword(auth, email, pass);
-                // location.reload() is fine, but checking auth state will handle the rest
             } catch (e) { 
                 alert("Login failed: " + e.message); 
             }
         };
 
-        // FIX handleLogout
-            window.handleLogout = async () => {
-                try {
-                    await signOut(auth);
-                    console.log("User signed out successfully");
-                    window.location.href = 'index.html'; // Or wherever your lobby is
-                } catch (error) {
-                    console.error("Error signing out:", error);
-                    alert("Logout failed. Please try again.");
+        // LOGOUT FUNCTION
+        window.handleLogout = async () => {
+            try {
+                await signOut(auth);
+                window.location.href = 'index.html';
+            } catch (error) {
+                console.error("Error signing out:", error);
+            }
+        };
+
+        // QUICK WORKOUT LOADER
+        async function loadQuickWorkout(schoolId) {
+            const container = document.getElementById('quick-workout-container');
+            if(!container) return;
+
+            try {
+                const workoutRef = collection(db, "schools", schoolId, "workouts");
+                const q = query(workoutRef, orderBy("createdAt", "desc"), limit(1));
+                const querySnapshot = await getDocs(q);
+
+                if (!querySnapshot.empty) {
+                    const workoutDoc = querySnapshot.docs[0];
+                    const data = workoutDoc.data();
+                    
+                    container.innerHTML = `
+                        <div class="bg-[#1a1a1c] border-l-4 border-[#b91c1c] p-6 rounded-r-xl shadow-2xl transition-transform hover:scale-[1.01]">
+                            <span class="text-[#b91c1c] font-black text-xs uppercase italic tracking-widest">Active Session</span>
+                            <h2 class="text-white text-2xl font-black uppercase italic mt-1">${data.title}</h2>
+                            <p class="text-gray-500 text-xs font-bold uppercase mb-4">Week ${data.week || 1}</p>
+                            <a href="athlete-workout.html?id=${workoutDoc.id}" 
+                               class="inline-block bg-[#b91c1c] text-white font-black uppercase px-6 py-3 rounded-lg text-sm tracking-widest hover:bg-red-700 transition-colors">
+                               Start Workout →
+                            </a>
+                        </div>
+                    `;
                 }
-            };
+            } catch (err) {
+                console.error("Error loading quick workout:", err);
+            }
+        }
 
         onAuthStateChanged(auth, async (user) => {
             const authSection = document.getElementById('auth-section');
@@ -128,71 +151,37 @@
             
             if (user) {
                 try {
-                    // 1. Fetch Master User Data
                     const userSnap = await getDoc(doc(db, "users", user.uid));
                     
                     if (userSnap.exists()) {
                         const userData = userSnap.data();
 
-                        // 2. Redirect Coach immediately
                         if (userData.role === 'coach') {
                             window.location.href = 'coach-dashboard.html';
                             return; 
                         }
 
-                        // 3 & 4. Fetch Recruiting Profile (School ID and Status live here)
                         const recruitingDoc = await getDoc(doc(db, "recruiting_profiles", user.uid));
-                        const statusLabel = document.getElementById('recruiting-status'); 
                         const recruitingBtn = document.getElementById('btn-recruiting-card');
 
                         if (recruitingDoc.exists()) {
                             const profileData = recruitingDoc.data();
-                            const schoolId = profileData.school_id;
+                            const schoolId = profileData.school_id || profileData.schoolId;
                             
-                            // DEBUG LOG: Verify we found the school ID in the profile
-                            console.log("Athlete School ID from Profile:", schoolId);
-
-                            // HANDLE SCHOOL-LEVEL TOGGLE
                             if (schoolId) {
+                                // TRIGGER THE QUICK WORKOUT LOAD
+                                loadQuickWorkout(schoolId);
+
                                 const schoolSnap = await getDoc(doc(db, "schools", schoolId));
                                 if (schoolSnap.exists()) {
                                     const schoolData = schoolSnap.data();
-                                    console.log("School Settings Found. hasRecruitingCard:", schoolData.hasRecruitingCard);
-
                                     if (schoolData.hasRecruitingCard === false) {
                                         if (recruitingBtn) recruitingBtn.classList.add('hidden');
-                                        console.log("Button hidden successfully.");
-                                    } else {
-                                        if (recruitingBtn) recruitingBtn.classList.remove('hidden');
-                                        console.log("Button remains visible.");
                                     }
-                                } else {
-                                    console.error("No school document found for ID:", schoolId);
                                 }
-                            }
-
-                            // HANDLE PROFILE STATUS LABEL
-                            if (statusLabel) {
-                                const lastUpdate = profileData.lastUpdated ? new Date(profileData.lastUpdated) : new Date();
-                                const daysSinceUpdate = (new Date() - lastUpdate) / (1000 * 60 * 60 * 24);
-                                
-                                if (daysSinceUpdate > 30) {
-                                    statusLabel.innerText = "⚠️ Profile Outdated";
-                                    statusLabel.className = "text-[9px] font-black text-yellow-400 uppercase";
-                                } else {
-                                    statusLabel.innerText = "✅ Profile Active";
-                                    statusLabel.className = "text-[9px] font-black text-green-400 uppercase";
-                                }
-                            }
-                        } else {
-                            // If no profile exists yet
-                            if (statusLabel) {
-                                statusLabel.innerText = "❌ Profile Incomplete";
-                                statusLabel.className = "text-[9px] font-black text-red-500 uppercase";
                             }
                         }
 
-                        // 5. Show Main Menu
                         authSection.classList.add('hidden');
                         mainMenu.classList.remove('hidden');
                         document.getElementById('welcome-msg').innerText = `Welcome, ${userData.fullName || 'Athlete'}`;
@@ -201,7 +190,6 @@
                     console.error("Auth Error:", err);
                 }
             } else {
-                // Reset view for logged-out state
                 authSection.classList.remove('hidden');
                 mainMenu.classList.add('hidden');
             }
