@@ -178,70 +178,90 @@
                 const list = document.getElementById('athlete-exercise-list');
                 list.innerHTML = '';
 
-                workout.exercises.forEach((ex, exIndex) => {
-                    const cleanName = ex.name.toLowerCase().trim().replace(/_/g, ' ');
-                    
-                    // Try to find the max using the map, then fallbacks
-                    let athleteMax = 0;
-                    const keysToTry = liftMap[cleanName] || [cleanName];
-                    for (let key of keysToTry) {
-                        if (athlete[key]) {
-                            athleteMax = athlete[key];
-                            break;
-                        }
-                    }
-                    if (!athleteMax) athleteMax = athlete[ex.name] || 0;
+        // Switch to for...of to allow 'await' inside the loop
+        for (const [exIndex, ex] of workout.exercises.entries()) {
+            const cleanName = ex.name.toLowerCase().trim().replace(/_/g, ' ');
 
-                    console.log(`Lift: ${ex.name} | Using Max: ${athleteMax}`);
+            // 1. FETCH PREVIOUS PERFORMANCE DATA
+            const lastWeight = await getLastLift(athleteId, ex.name);
+            const lastLiftBadge = lastWeight 
+                ? `<span class="bg-[#2a2a2c] text-gray-400 text-[10px] font-black px-2 py-0.5 rounded ml-2 italic uppercase border border-[#3a3a3c]">
+                    Last: ${lastWeight}${lastWeight === "BW" ? "" : " LBS"}
+                </span>` 
+                : '';
 
-                    const card = document.createElement('div');
-                    card.className = "exercise-card bg-[#1a1a1c] border-l-4 border-[#b91c1c] p-5 rounded-r-lg mb-4 shadow-xl";
-                    
-                    let setsHtml = ex.setsData.map((s, i) => {
-                        const perc = s.percent || s.percentage || 0;
-                        const suggestedWeight = calculateWeight(athleteMax, perc);
-                        const setId = `set-${exIndex}-${i}`;
-                        
-                        // We keep the percentage label visible next to the input
-                        const percString = perc > 0 
-                            ? `<span class="text-[10px] text-gray-500 font-bold ml-1 italic">@ ${perc}%</span>` 
-                            : '';
+            // 2. CALCULATE MAX (Your existing logic)
+            let athleteMax = 0;
+            const keysToTry = liftMap[cleanName] || [cleanName];
+            for (let key of keysToTry) {
+                if (athlete[key]) {
+                    athleteMax = athlete[key];
+                    break;
+                }
+            }
+            if (!athleteMax) athleteMax = athlete[ex.name] || 0;
 
-                        const weightInputHTML = suggestedWeight === "BW" 
-                            ? `<span class="text-gray-600 font-black text-xl italic mt-1 uppercase">BW</span>` 
-                            : `<div class="flex flex-col">
-                                <div class="flex items-center">
-                                    <input type="number" 
-                                        id="weight-${setId}" 
-                                        value="${suggestedWeight}" 
-                                        class="bg-transparent text-[#b91c1c] font-black text-xl italic w-16 outline-none border-b border-transparent focus:border-[#b91c1c] transition-all"
-                                    >
-                                    <small class="text-[10px] ml-1 text-gray-500 font-bold not-italic">LBS</small>
-                                    ${percString}
-                                </div>
-                            </div>`;
+            console.log(`Lift: ${ex.name} | Using Max: ${athleteMax}`);
 
-                        return `
-                            <div id="container-${setId}" data-completed="false" class="flex justify-between items-center bg-[#0a0a0b] p-3 rounded-lg mb-2 border border-[#2a2a2c]">
-                                <div class="flex flex-col">
-                                    <span class="text-[9px] text-gray-500 font-bold uppercase mb-1">Set ${i+1}</span>
-                                    ${weightInputHTML}
-                                </div>
-                                <div class="flex items-center gap-4">
-                                    <div class="flex flex-col items-center bg-[#1a1a1c] border border-[#2a2a2c] rounded px-4 py-1 min-w-[60px]">
-                                        <label class="text-[8px] text-gray-600 uppercase font-black mb-1">Reps</label>
-                                        <span id="reps-${setId}" class="text-white font-black text-lg">${s.reps}</span>
-                                    </div>
-                                    <button onclick="toggleSetComplete('${setId}')" id="btn-${setId}" class="bg-[#1a1a1c] p-3 rounded-full text-gray-600 border border-[#2a2a2c]">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>
-                                    </button>
-                                </div>
-                            </div>`;
-                    }).join('');
+            // 3. GENERATE SETS HTML
+            let setsHtml = ex.setsData.map((s, i) => {
+                const perc = s.percent || s.percentage || 0;
+                const suggestedWeight = calculateWeight(athleteMax, perc);
+                const setId = `set-${exIndex}-${i}`;
+                
+                const percString = perc > 0 
+                    ? `<span class="text-[10px] text-gray-500 font-bold ml-1 italic">@ ${perc}%</span>` 
+                    : '';
 
-                    card.innerHTML = `<h3 class="text-white font-black uppercase text-sm mb-4 italic tracking-wider">${ex.name.replace(/_/g, ' ')}</h3><div class="space-y-2">${setsHtml}</div>`;
-                    list.appendChild(card);
-                });
+                const weightInputHTML = suggestedWeight === "BW" 
+                    ? `<span class="text-gray-600 font-black text-xl italic mt-1 uppercase">BW</span>` 
+                    : `<div class="flex flex-col">
+                        <div class="flex items-center">
+                            <input type="number" 
+                                id="weight-${setId}" 
+                                value="${suggestedWeight}" 
+                                class="bg-transparent text-[#b91c1c] font-black text-xl italic w-16 outline-none border-b border-transparent focus:border-[#b91c1c] transition-all"
+                            >
+                            <small class="text-[10px] ml-1 text-gray-500 font-bold not-italic">LBS</small>
+                            ${percString}
+                        </div>
+                    </div>`;
+
+                return `
+                    <div id="container-${setId}" data-completed="false" class="flex justify-between items-center bg-[#0a0a0b] p-3 rounded-lg mb-2 border border-[#2a2a2c]">
+                        <div class="flex flex-col">
+                            <span class="text-[9px] text-gray-500 font-bold uppercase mb-1">Set ${i+1}</span>
+                            ${weightInputHTML}
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="flex flex-col items-center bg-[#1a1a1c] border border-[#2a2a2c] rounded px-4 py-1 min-w-[60px]">
+                                <label class="text-[8px] text-gray-600 uppercase font-black mb-1">Reps</label>
+                                <span id="reps-${setId}" class="text-white font-black text-lg">${s.reps}</span>
+                            </div>
+                            <button onclick="toggleSetComplete('${setId}')" id="btn-${setId}" class="bg-[#1a1a1c] p-3 rounded-full text-gray-600 border border-[#2a2a2c]">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>
+                            </button>
+                        </div>
+                    </div>`;
+            }).join('');
+
+            // 4. ASSEMBLE CARD
+            const card = document.createElement('div');
+            card.className = "exercise-card bg-[#1a1a1c] border-l-4 border-[#b91c1c] p-5 rounded-r-lg mb-4 shadow-xl";
+            
+            // Title includes the new badge
+            card.innerHTML = `
+                <div class="flex items-center mb-4">
+                    <h3 class="text-white font-black uppercase text-sm italic tracking-wider">
+                        ${ex.name.replace(/_/g, ' ')}
+                    </h3>
+                    ${lastLiftBadge}
+                </div>
+                <div class="space-y-2">${setsHtml}</div>
+            `;
+            
+            list.appendChild(card);
+        }
 
                 const finishBtn = document.createElement('button');
                 finishBtn.className = "w-full bg-[#b91c1c] text-white font-black uppercase py-4 rounded-xl mt-6 mb-12"; 
@@ -292,6 +312,35 @@
                 alert("Error saving workout.");
             }
         };
+
+        async function getLastLift(athleteId, exerciseName) {
+            try {
+                const completedRef = collection(db, "completed_workouts");
+                // Query for this athlete's history, newest first
+                const q = query(
+                    completedRef, 
+                    where("athleteId", "==", athleteId), 
+                    orderBy("timestamp", "desc"), 
+                    limit(10) // Check last 10 workouts to find a match
+                );
+                
+                const querySnapshot = await getDocs(q);
+                for (const doc of querySnapshot.docs) {
+                    const workout = doc.data();
+                    const exercise = workout.performance.find(ex => ex.name === exerciseName);
+                    
+                    if (exercise && exercise.sets && exercise.sets.length > 0) {
+                        // Return the weight used in the first completed set
+                        const firstSet = exercise.sets.find(s => s.completed);
+                        if (firstSet) return firstSet.weightUsed;
+                    }
+                }
+                return null; // No history found
+            } catch (e) {
+                console.error("Error fetching last lift:", e);
+                return null;
+            }
+        }
     </script>
 </body>
 </html>
