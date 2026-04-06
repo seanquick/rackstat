@@ -62,7 +62,6 @@
             }
         });
 
-        // Expanded Map to catch common variations
         const liftMap = {
             "clean": "cleanMax",
             "power clean": "cleanMax",
@@ -75,7 +74,6 @@
         };
 
         const calculateWeight = (max, percentage) => {
-            // If coach didn't put a percentage or max is 0, it's Bodyweight (BW)
             if (!max || max === 0 || !percentage || percentage === 0) return "BW";
             const raw = max * (parseFloat(percentage) / 100);
             return Math.round(raw / 5) * 5; 
@@ -127,7 +125,6 @@
             list.innerHTML = '';
 
             workout.exercises.forEach((ex, exIndex) => {
-                // Find Max: Try map, then try raw name, then try name_max
                 const cleanName = ex.name.toLowerCase().trim().replace(/_/g, ' ');
                 const maxKey = liftMap[cleanName] || ex.name;
                 const athleteMax = athlete[maxKey] || athlete[ex.name] || 0;
@@ -136,14 +133,19 @@
                 card.className = "exercise-card bg-[#1a1a1c] border-l-4 border-[#b91c1c] p-5 rounded-r-lg mb-4 shadow-xl";
                 
                 let setsHtml = ex.setsData.map((s, i) => {
-                    // Logic: Use s.percent OR s.percentage
                     const perc = s.percent || s.percentage || 0;
                     const targetWeight = calculateWeight(athleteMax, perc);
                     const setId = `set-${exIndex}-${i}`;
                     
+                    // NEW: Display percentage string if it exists
+                    const percString = perc > 0 ? `<span class="text-[10px] text-gray-500 font-bold ml-1 italic">@ ${perc}%</span>` : '';
+
                     const weightHTML = targetWeight === "BW" 
                         ? `<span class="text-gray-600 font-black text-xl italic mt-1 uppercase">BW</span>` 
-                        : `<span class="text-[#b91c1c] font-black text-xl italic">${targetWeight}<small class="text-[10px] ml-1 text-gray-500 font-bold not-italic">LBS</small></span>`;
+                        : `<div class="flex items-baseline">
+                             <span class="text-[#b91c1c] font-black text-xl italic">${targetWeight}<small class="text-[10px] ml-1 text-gray-500 font-bold not-italic">LBS</small></span>
+                             ${percString}
+                           </div>`;
 
                     return `
                         <div id="container-${setId}" data-completed="false" class="flex justify-between items-center bg-[#0a0a0b] p-3 rounded-lg mb-2 border border-[#2a2a2c] transition-all">
