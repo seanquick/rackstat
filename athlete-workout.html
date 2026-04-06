@@ -184,142 +184,145 @@
                     });
                 };
 
-    // --- 5. Main Workout Renderer ---
-            window.loadAthleteWorkout = async (workoutId, athleteId) => {
-                try {
-                    const workoutDocRef = doc(db, "schools", window.currentSchoolId, "workouts", workoutId);
-                    const athleteDocRef = doc(db, "recruiting_profiles", athleteId);
-                    const userDocRef = doc(db, "users", athleteId);
+        // --- 5. Main Workout Renderer ---
+        window.loadAthleteWorkout = async (workoutId, athleteId) => {
+            try {
+                const workoutDocRef = doc(db, "schools", window.currentSchoolId, "workouts", workoutId);
+                const userDocRef = doc(db, "users", athleteId);
+                
+                const [workoutSnap, userSnap] = await Promise.all([
+                    getDoc(workoutDocRef), 
+                    getDoc(userDocRef)
+                ]);
+
+                if (!workoutSnap.exists()) return;
+                const workout = workoutSnap.data();
+                const userPrivate = userSnap.exists() ? userSnap.data() : {};
+                
+                // LOGGING: Check your console to see the actual keys in your DB
+                console.log("Current Maxes Map from DB:", userPrivate.maxes);
+                const currentMaxes = userPrivate.maxes || {};
+
+                document.getElementById('athlete-dashboard').style.display = 'none';
+                document.getElementById('athlete-workout-container').style.display = 'block';
+                document.getElementById('display-title').innerText = workout.title;
+                
+                const weekNum = (workout.week !== undefined && workout.week !== null) ? workout.week : '?';
+                document.getElementById('display-week').innerText = `WEEK ${weekNum}`;
+
+                const list = document.getElementById('athlete-exercise-list');
+                list.innerHTML = '';
+
+                for (const [exIndex, ex] of workout.exercises.entries()) {
+                    const cleanName = ex.name.toLowerCase().trim();
+                    const lastWeight = await getLastLift(athleteId, ex.name);
+                    const liftKeyNoSpaces = cleanName.replace(/\s+/g, '');
                     
-                    const [workoutSnap, athleteSnap, userSnap] = await Promise.all([
-                        getDoc(workoutDocRef), 
-                        getDoc(athleteDocRef),
-                        getDoc(userDocRef)
-                    ]);
-
-                    if (!workoutSnap.exists()) return;
-                    const workout = workoutSnap.data();
-                    const athlete = athleteSnap.exists() ? athleteSnap.data() : {};
-                    const userPrivate = userSnap.exists() ? userSnap.data() : {};
-                    const currentMaxes = userPrivate.maxes || {};
-
-                    document.getElementById('athlete-dashboard').style.display = 'none';
-                    document.getElementById('athlete-workout-container').style.display = 'block';
-                    document.getElementById('display-title').innerText = workout.title;
+                    // NEW ROBUST LOOKUP: checks "bench press", "benchpress", and "bench"
+                    let athleteCurrentMax = "No Data";
+                    const potentialKeys = [cleanName, liftKeyNoSpaces];
                     
-                    // FIX: Check for Week 0 specifically (since 0 is falsy)
-                    const weekNum = (workout.week !== undefined && workout.week !== null) ? workout.week : '?';
-                    document.getElementById('display-week').innerText = `WEEK ${weekNum}`;
+                    // Add any logic-based alternates (e.g., if name is "Bench Press", check "bench")
+                    if (cleanName.includes(" ")) potentialKeys.push(cleanName.split(" ")[0]);
 
-                    const list = document.getElementById('athlete-exercise-list');
-                    list.innerHTML = '';
-
-                    for (const [exIndex, ex] of workout.exercises.entries()) {
-                        const cleanName = ex.name.toLowerCase().trim();
-                        const lastWeight = await getLastLift(athleteId, ex.name);
-                        
-                        // FIX: Robust Max Lookup
-                        // This checks "bench press", then "benchpress", then any mappings in liftMap
-                        const liftKeyNoSpaces = cleanName.replace(/\s+/g, '');
-                        let athleteCurrentMax = currentMaxes[cleanName] || currentMaxes[liftKeyNoSpaces] || "No Data";
-
-                        if (athleteCurrentMax === "No Data" && typeof liftMap !== 'undefined') {
-                            const alternates = liftMap[cleanName] || [];
-                            for (let alt of alternates) {
-                                if (currentMaxes[alt]) {
-                                    athleteCurrentMax = currentMaxes[alt];
-                                    break;
-                                }
-                            }
+                    for (let key of potentialKeys) {
+                        if (currentMaxes[key]) {
+                            athleteCurrentMax = currentMaxes[key];
+                            break;
                         }
-
-                        let setsHtml = '';
-
-                        if (workout.isMaxOut) {
-                            // --- MAX OUT MODE: 3 Warmup + 3 Attempt ---
-                            for (let i = 0; i < 6; i++) {
-                                const isWarmup = i < 3;
-                                const setId = `set-${exIndex}-${i}`;
-                                const label = isWarmup ? `Warmup ${i + 1}` : `MAX ATTEMPT ${i - 2}`;
-                                const borderClass = isWarmup ? 'border-gray-800' : 'border-red-600/50 bg-red-900/5';
-
-                                setsHtml += `
-                                    <div id="container-${setId}" data-completed="false" class="flex justify-between items-center bg-[#0a0a0b] p-3 rounded-lg mb-2 border ${borderClass}">
-                                        <div class="flex flex-col">
-                                            <span class="text-[9px] text-gray-500 font-bold uppercase mb-1">${label}</span>
-                                            <input type="number" id="weight-${setId}" placeholder="LBS" class="bg-transparent text-white font-black text-xl w-20 outline-none focus:text-red-500">
-                                        </div>
-                                        <div class="flex items-center gap-4">
-                                            <div class="flex flex-col items-center">
-                                                <label class="text-[8px] text-gray-600 uppercase font-black">Reps</label>
-                                                <input type="number" id="reps-${setId}" placeholder="-" class="bg-transparent text-white font-black text-lg w-10 text-center outline-none">
-                                            </div>
-                                            <button onclick="recordMaxAttempt('${ex.name}', '${setId}', ${isWarmup}, '${athleteId}')" id="btn-${setId}" class="bg-[#1a1a1c] p-3 rounded-full text-gray-600 border border-[#2a2a2c]">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>
-                                            </button>
-                                        </div>
-                                    </div>`;
-                            }
-                        } else {
-                            // --- STANDARD MODE: Percentage Based ---
-                            let athleteMaxForCalc = 0;
-                            // Use the same logic as above to find the max for calculations
-                            const keysToTry = (typeof liftMap !== 'undefined' && liftMap[cleanName]) ? liftMap[cleanName] : [cleanName, liftKeyNoSpaces];
-                            for (let key of keysToTry) {
-                                if (currentMaxes[key]) { athleteMaxForCalc = currentMaxes[key]; break; }
-                            }
-
-                            setsHtml = ex.setsData.map((s, i) => {
-                                const perc = s.percent || 0;
-                                const suggestedWeight = calculateWeight(athleteMaxForCalc, perc);
-                                const setId = `set-${exIndex}-${i}`;
-                                return `
-                                    <div id="container-${setId}" data-completed="false" class="flex justify-between items-center bg-[#0a0a0b] p-3 rounded-lg mb-2 border border-[#2a2a2c]">
-                                        <div class="flex flex-col">
-                                            <span class="text-[9px] text-gray-500 font-bold uppercase mb-1">Set ${i+1}</span>
-                                            <div class="flex items-center">
-                                                <input type="text" id="weight-${setId}" value="${suggestedWeight}" class="bg-transparent text-[#b91c1c] font-black text-xl italic w-20 outline-none">
-                                                <small class="text-[10px] ml-1 text-gray-500 font-bold">${suggestedWeight === "BW" ? "" : "LBS"} ${perc > 0 ? '@ '+perc+'%' : ''}</small>
-                                            </div>
-                                        </div>
-                                        <div class="flex items-center gap-4">
-                                            <div class="flex flex-col items-center min-w-[60px]">
-                                                <label class="text-[8px] text-gray-600 uppercase font-black">Reps</label>
-                                                <span id="reps-${setId}" class="text-white font-black text-lg">${s.reps}</span>
-                                            </div>
-                                            <button onclick="toggleSetComplete('${setId}')" id="btn-${setId}" class="bg-[#1a1a1c] p-3 rounded-full text-gray-600 border border-[#2a2a2c]">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>
-                                            </button>
-                                        </div>
-                                    </div>`;
-                            }).join('');
-                        }
-
-                        const card = document.createElement('div');
-                        card.className = "exercise-card bg-[#1a1a1c] border-l-4 border-[#b91c1c] p-5 rounded-r-lg mb-4 shadow-xl";
-                        
-                        const headerInfo = workout.isMaxOut 
-                            ? `<div class="text-right ml-auto"><span class="text-[8px] font-black text-gray-500 uppercase block">Current Max</span><span class="text-sm font-black text-red-500">${athleteCurrentMax}${athleteCurrentMax !== "No Data" ? " LBS" : ""}</span></div>`
-                            : (lastWeight ? `<span class="bg-[#2a2a2c] text-gray-400 text-[10px] font-black px-2 py-0.5 rounded ml-2 italic uppercase">Last: ${lastWeight}</span>` : '');
-
-                        card.innerHTML = `
-                            <div class="flex items-center mb-4">
-                                <h3 class="text-white font-black uppercase text-sm italic tracking-wider">${ex.name}</h3>
-                                ${headerInfo}
-                            </div>
-                            <div class="space-y-2">${setsHtml}</div>
-                        `;
-                        list.appendChild(card);
                     }
 
-                    const finishBtn = document.createElement('button');
-                    finishBtn.className = "w-full bg-[#b91c1c] text-white font-black uppercase py-4 rounded-xl mt-6 mb-12"; 
-                    finishBtn.innerText = "Log Session & Finish";
-                    finishBtn.onclick = () => window.logFullWorkout(workoutId);
-                    list.appendChild(finishBtn);
+                    // Final fallback to liftMap if still No Data
+                    if (athleteCurrentMax === "No Data" && typeof liftMap !== 'undefined') {
+                        const alternates = liftMap[cleanName] || [];
+                        for (let alt of alternates) {
+                            const altKey = alt.toLowerCase().trim();
+                            if (currentMaxes[altKey]) {
+                                athleteCurrentMax = currentMaxes[altKey];
+                                break;
+                            }
+                        }
+                    }
 
-                } catch (e) { console.error("Error loading workout:", e); }
-            };
+                    let setsHtml = '';
+
+                    if (workout.isMaxOut) {
+                        for (let i = 0; i < 6; i++) {
+                            const isWarmup = i < 3;
+                            const setId = `set-${exIndex}-${i}`;
+                            const label = isWarmup ? `Warmup ${i + 1}` : `MAX ATTEMPT ${i - 2}`;
+                            const borderClass = isWarmup ? 'border-gray-800' : 'border-red-600/50 bg-red-900/5';
+
+                            setsHtml += `
+                                <div id="container-${setId}" data-completed="false" class="flex justify-between items-center bg-[#0a0a0b] p-3 rounded-lg mb-2 border ${borderClass}">
+                                    <div class="flex flex-col">
+                                        <span class="text-[9px] text-gray-500 font-bold uppercase mb-1">${label}</span>
+                                        <input type="number" id="weight-${setId}" placeholder="LBS" class="bg-transparent text-white font-black text-xl w-20 outline-none focus:text-red-500">
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <div class="flex flex-col items-center">
+                                            <label class="text-[8px] text-gray-600 uppercase font-black">Reps</label>
+                                            <input type="number" id="reps-${setId}" placeholder="-" class="bg-transparent text-white font-black text-lg w-10 text-center outline-none">
+                                        </div>
+                                        <button onclick="recordMaxAttempt('${ex.name}', '${setId}', ${isWarmup}, '${athleteId}')" id="btn-${setId}" class="bg-[#1a1a1c] p-3 rounded-full text-gray-600 border border-[#2a2a2c]">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>
+                                        </button>
+                                    </div>
+                                </div>`;
+                        }
+                    } else {
+                        // Standard Mode Calc
+                        let calcMax = (athleteCurrentMax !== "No Data") ? athleteCurrentMax : 0;
+                        setsHtml = ex.setsData.map((s, i) => {
+                            const suggestedWeight = calculateWeight(calcMax, s.percent || 0);
+                            const setId = `set-${exIndex}-${i}`;
+                            return `
+                                <div id="container-${setId}" data-completed="false" class="flex justify-between items-center bg-[#0a0a0b] p-3 rounded-lg mb-2 border border-[#2a2a2c]">
+                                    <div class="flex flex-col">
+                                        <span class="text-[9px] text-gray-500 font-bold uppercase mb-1">Set ${i+1}</span>
+                                        <div class="flex items-center">
+                                            <input type="text" id="weight-${setId}" value="${suggestedWeight}" class="bg-transparent text-[#b91c1c] font-black text-xl italic w-20 outline-none">
+                                            <small class="text-[10px] ml-1 text-gray-500 font-bold">${suggestedWeight === "BW" ? "" : "LBS"}</small>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <div class="flex flex-col items-center min-w-[60px]">
+                                            <label class="text-[8px] text-gray-600 uppercase font-black">Reps</label>
+                                            <span id="reps-${setId}" class="text-white font-black text-lg">${s.reps}</span>
+                                        </div>
+                                        <button onclick="toggleSetComplete('${setId}')" id="btn-${setId}" class="bg-[#1a1a1c] p-3 rounded-full text-gray-600 border border-[#2a2a2c]">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>
+                                        </button>
+                                    </div>
+                                </div>`;
+                        }).join('');
+                    }
+
+                    const card = document.createElement('div');
+                    card.className = "exercise-card bg-[#1a1a1c] border-l-4 border-[#b91c1c] p-5 rounded-r-lg mb-4 shadow-xl";
+                    
+                    const headerInfo = workout.isMaxOut 
+                        ? `<div class="text-right ml-auto"><span class="text-[8px] font-black text-gray-500 uppercase block">Current Max</span><span class="text-sm font-black text-red-500">${athleteCurrentMax}${athleteCurrentMax !== "No Data" ? " LBS" : ""}</span></div>`
+                        : (lastWeight ? `<span class="bg-[#2a2a2c] text-gray-400 text-[10px] font-black px-2 py-0.5 rounded ml-2 italic uppercase">Last: ${lastWeight}</span>` : '');
+
+                    card.innerHTML = `
+                        <div class="flex items-center mb-4">
+                            <h3 class="text-white font-black uppercase text-sm italic tracking-wider">${ex.name}</h3>
+                            ${headerInfo}
+                        </div>
+                        <div class="space-y-2">${setsHtml}</div>
+                    `;
+                    list.appendChild(card);
+                }
+
+                const finishBtn = document.createElement('button');
+                finishBtn.className = "w-full bg-[#b91c1c] text-white font-black uppercase py-4 rounded-xl mt-6 mb-12"; 
+                finishBtn.innerText = "Log Session & Finish";
+                finishBtn.onclick = () => window.logFullWorkout(workoutId);
+                list.appendChild(finishBtn);
+
+            } catch (e) { console.error("Error loading workout:", e); }
+        };
             
         // --- 6. Persistence ---
         window.logFullWorkout = async (workoutId) => {
