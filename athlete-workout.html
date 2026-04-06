@@ -38,7 +38,7 @@
         <div id="athlete-exercise-list" class="space-y-4"></div>
     </div>
 
-    <script type="module">
+<script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { firebaseConfig } from "./firebase-config.js"; 
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -48,6 +48,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // 1. Auth Observer
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 window.currentAthleteId = user.uid;
@@ -62,8 +63,9 @@
             }
         });
 
+        // 2. Lift Mapping
         const liftMap = {
-            "clean": "cleanMax",
+            "clean": "cleanMax",         
             "power clean": "cleanMax",
             "bench press": "benchMax",
             "bench": "benchMax",
@@ -73,12 +75,17 @@
             "push press": "pushpressMax"
         };
 
+        // 3. Weight Calculation Logic
         const calculateWeight = (max, percentage) => {
-            if (!max || max === 0 || !percentage || percentage === 0) return "BW";
-            const raw = max * (parseFloat(percentage) / 100);
+            const m = parseFloat(max);
+            const p = parseFloat(percentage);
+            if (!m || m === 0 || !p || p === 0) return "BW";
+            
+            const raw = m * (p / 100);
             return Math.round(raw / 5) * 5; 
         };
 
+        // 4. UI Toggle
         window.toggleSetComplete = (setId) => {
             const container = document.getElementById(`container-${setId}`);
             const btn = document.getElementById(`btn-${setId}`);
@@ -90,6 +97,7 @@
             container.setAttribute('data-completed', !isDone);
         };
 
+        // 5. Load List of Workouts
         window.loadAvailableWorkouts = async () => {
             const workoutContainer = document.getElementById('available-workouts');
             const workoutRef = collection(db, "schools", window.currentSchoolId, "workouts");
@@ -107,103 +115,118 @@
             });
         };
 
+        // 6. Render Active Workout (FIXED NESTING HERE)
         window.loadAthleteWorkout = async (workoutId, athleteId) => {
-            const workoutDocRef = doc(db, "schools", window.currentSchoolId, "workouts", workoutId);
-            const athleteDocRef = doc(db, "recruiting_profiles", athleteId);
-            const [workoutSnap, athleteSnap] = await Promise.all([getDoc(workoutDocRef), getDoc(athleteDocRef)]);
+            try {
+                const workoutDocRef = doc(db, "schools", window.currentSchoolId, "workouts", workoutId);
+                const athleteDocRef = doc(db, "recruiting_profiles", athleteId);
 
-            if (!workoutSnap.exists()) return;
-            const workout = workoutSnap.data();
-            const athlete = athleteSnap.exists() ? athleteSnap.data() : {};
+                const [workoutSnap, athleteSnap] = await Promise.all([
+                    getDoc(workoutDocRef),
+                    getDoc(athleteDocRef)
+                ]);
 
-            document.getElementById('athlete-dashboard').style.display = 'none';
-            document.getElementById('athlete-workout-container').style.display = 'block';
-            document.getElementById('display-title').innerText = workout.title;
-            document.getElementById('display-week').innerText = `WEEK ${workout.week}`;
+                if (!workoutSnap.exists()) return;
 
-            const list = document.getElementById('athlete-exercise-list');
-            list.innerHTML = '';
+                const workout = workoutSnap.data();
+                const athlete = athleteSnap.exists() ? athleteSnap.data() : {};
 
-            workout.exercises.forEach((ex, exIndex) => {
-                const cleanName = ex.name.toLowerCase().trim().replace(/_/g, ' ');
-                const maxKey = liftMap[cleanName] || ex.name;
-                const athleteMax = athlete[maxKey] || athlete[ex.name] || 0;
-                
-                const card = document.createElement('div');
-                card.className = "exercise-card bg-[#1a1a1c] border-l-4 border-[#b91c1c] p-5 rounded-r-lg mb-4 shadow-xl";
-                
-                let setsHtml = ex.setsData.map((s, i) => {
-                    const perc = s.percent || s.percentage || 0;
-                    const targetWeight = calculateWeight(athleteMax, perc);
-                    const setId = `set-${exIndex}-${i}`;
+                document.getElementById('athlete-dashboard').style.display = 'none';
+                document.getElementById('athlete-workout-container').style.display = 'block';
+                document.getElementById('display-title').innerText = workout.title;
+                document.getElementById('display-week').innerText = `WEEK ${workout.week}`;
+
+                const list = document.getElementById('athlete-exercise-list');
+                list.innerHTML = '';
+
+                workout.exercises.forEach((ex, exIndex) => {
+                    const cleanName = ex.name.toLowerCase().trim().replace(/_/g, ' ');
+                    const maxKey = liftMap[cleanName] || cleanName; 
+                    const athleteMax = athlete[maxKey] || athlete[ex.name] || athlete[cleanName] || 0;
                     
-                    // NEW: Display percentage string if it exists
-                    const percString = perc > 0 ? `<span class="text-[10px] text-gray-500 font-bold ml-1 italic">@ ${perc}%</span>` : '';
+                    // DEBUG LOGS
+                    console.log(`--- LIFT: ${ex.name} ---`);
+                    console.log(`Max Found: ${athleteMax} (Field: ${maxKey})`);
 
-                    const weightHTML = targetWeight === "BW" 
-                        ? `<span class="text-gray-600 font-black text-xl italic mt-1 uppercase">BW</span>` 
-                        : `<div class="flex items-baseline">
-                             <span class="text-[#b91c1c] font-black text-xl italic">${targetWeight}<small class="text-[10px] ml-1 text-gray-500 font-bold not-italic">LBS</small></span>
-                             ${percString}
-                           </div>`;
+                    const card = document.createElement('div');
+                    card.className = "exercise-card bg-[#1a1a1c] border-l-4 border-[#b91c1c] p-5 rounded-r-lg mb-4 shadow-xl";
+                    
+                    let setsHtml = ex.setsData.map((s, i) => {
+                        const perc = s.percent || s.percentage || 0;
+                        const targetWeight = calculateWeight(athleteMax, perc);
+                        const setId = `set-${exIndex}-${i}`;
+                        const percString = perc > 0 ? `<span class="text-[10px] text-gray-500 font-bold ml-1 italic">@ ${perc}%</span>` : '';
 
-                    return `
-                        <div id="container-${setId}" data-completed="false" class="flex justify-between items-center bg-[#0a0a0b] p-3 rounded-lg mb-2 border border-[#2a2a2c] transition-all">
-                            <div class="flex flex-col">
-                                <span class="text-[9px] text-gray-500 font-bold uppercase leading-none mb-1">Set ${i+1}</span>
-                                ${weightHTML}
-                            </div>
-                            <div class="flex items-center gap-4">
-                                <div class="flex flex-col items-center bg-[#1a1a1c] border border-[#2a2a2c] rounded px-4 py-1 min-w-[60px]">
-                                    <label class="text-[8px] text-gray-600 uppercase font-black tracking-widest mb-1">Reps</label>
-                                    <span id="reps-${setId}" class="text-white font-black text-lg leading-none">${s.reps}</span>
+                        const weightHTML = targetWeight === "BW" 
+                            ? `<span class="text-gray-600 font-black text-xl italic mt-1 uppercase">BW</span>` 
+                            : `<div class="flex items-baseline"><span class="text-[#b91c1c] font-black text-xl italic">${targetWeight}<small class="text-[10px] ml-1 text-gray-500 font-bold not-italic">LBS</small></span>${percString}</div>`;
+
+                        return `
+                            <div id="container-${setId}" data-completed="false" class="flex justify-between items-center bg-[#0a0a0b] p-3 rounded-lg mb-2 border border-[#2a2a2c]">
+                                <div class="flex flex-col">
+                                    <span class="text-[9px] text-gray-500 font-bold uppercase mb-1">Set ${i+1}</span>
+                                    ${weightHTML}
                                 </div>
-                                <button onclick="toggleSetComplete('${setId}')" id="btn-${setId}"
-                                    class="bg-[#1a1a1c] p-3 rounded-full text-gray-600 hover:text-green-500 border border-[#2a2a2c]">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+                                <div class="flex items-center gap-4">
+                                    <div class="flex flex-col items-center bg-[#1a1a1c] border border-[#2a2a2c] rounded px-4 py-1 min-w-[60px]">
+                                        <label class="text-[8px] text-gray-600 uppercase font-black mb-1">Reps</label>
+                                        <span id="reps-${setId}" class="text-white font-black text-lg">${s.reps}</span>
+                                    </div>
+                                    <button onclick="toggleSetComplete('${setId}')" id="btn-${setId}" class="bg-[#1a1a1c] p-3 rounded-full text-gray-600 border border-[#2a2a2c]">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>
+                                    </button>
+                                </div>
+                            </div>`;
+                    }).join('');
 
-                card.innerHTML = `<h3 class="text-white font-black uppercase text-sm mb-4 italic tracking-wider">${ex.name.replace(/_/g, ' ')}</h3><div class="space-y-2">${setsHtml}</div>`;
-                list.appendChild(card);
-            });
+                    card.innerHTML = `<h3 class="text-white font-black uppercase text-sm mb-4 italic">${ex.name.replace(/_/g, ' ')}</h3><div class="space-y-2">${setsHtml}</div>`;
+                    list.appendChild(card);
+                });
 
-            const finishBtn = document.createElement('button');
-            finishBtn.className = "btn-primary mt-6 mb-12 shadow-2xl"; 
-            finishBtn.innerText = "Log Session & Finish";
-            finishBtn.onclick = () => window.logFullWorkout(workoutId);
-            list.appendChild(finishBtn);
+                const finishBtn = document.createElement('button');
+                finishBtn.className = "w-full bg-[#b91c1c] text-white font-black uppercase py-4 rounded-xl mt-6 mb-12"; 
+                finishBtn.innerText = "Log Session & Finish";
+                finishBtn.onclick = () => window.logFullWorkout(workoutId);
+                list.appendChild(finishBtn);
+
+            } catch (error) {
+                console.error("Error loading workout:", error);
+            }
         };
 
+        // 7. Save Workout to Database
         window.logFullWorkout = async (workoutId) => {
-            const btn = document.querySelector('.btn-primary');
-            btn.innerText = "SAVING...";
-            const loggedExercises = [];
-            document.querySelectorAll('.exercise-card').forEach(card => {
-                const name = card.querySelector('h3').innerText;
-                const sets = Array.from(card.querySelectorAll('[id^="container-set-"]')).map(row => {
-                    const setId = row.id.replace('container-', '');
-                    return {
-                        repsPerformed: document.getElementById(`reps-${setId}`).innerText,
-                        completed: row.getAttribute('data-completed') === 'true'
-                    };
+            try {
+                const btn = document.querySelector('button[onclick*="logFullWorkout"]');
+                btn.innerText = "SAVING...";
+                
+                const loggedExercises = [];
+                document.querySelectorAll('.exercise-card').forEach(card => {
+                    const name = card.querySelector('h3').innerText;
+                    const sets = Array.from(card.querySelectorAll('[id^="container-set-"]')).map(row => {
+                        const setId = row.id.replace('container-', '');
+                        return {
+                            repsPerformed: document.getElementById(`reps-${setId}`).innerText,
+                            completed: row.getAttribute('data-completed') === 'true'
+                        };
+                    });
+                    loggedExercises.push({ name, sets });
                 });
-                loggedExercises.push({ name, sets });
-            });
-            await addDoc(collection(db, "completed_workouts"), {
-                athleteId: window.currentAthleteId,
-                workoutId: workoutId,
-                schoolId: window.currentSchoolId,
-                timestamp: serverTimestamp(),
-                performance: loggedExercises
-            });
-            alert("Workout Logged!");
-            location.reload();
+
+                await addDoc(collection(db, "completed_workouts"), {
+                    athleteId: window.currentAthleteId,
+                    workoutId: workoutId,
+                    schoolId: window.currentSchoolId,
+                    timestamp: serverTimestamp(),
+                    performance: loggedExercises
+                });
+
+                alert("Workout Logged!");
+                location.reload();
+            } catch (error) {
+                console.error("Error logging workout:", error);
+                alert("Failed to save workout.");
+            }
         };
     </script>
 </body>
