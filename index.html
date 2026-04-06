@@ -52,7 +52,16 @@
         <div id="main-menu" class="hidden space-y-4 p-6">
             <h2 id="welcome-msg" class="text-xl font-black italic uppercase text-center mb-6"></h2>
             
-            <div id="quick-workout-container" class="mb-8"></div>
+            <div id="quick-workout-container" class="mb-6"></div>
+
+            <div id="all-workouts-link" class="mb-8 hidden">
+                <div class="flex justify-between items-center mb-3 px-2">
+                    <h3 class="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em]">Previous Sessions</h3>
+                    <a href="athlete-workout.html" class="text-[#b91c1c] text-[10px] font-black uppercase hover:underline">View All →</a>
+                </div>
+                <div id="recent-workouts-list" class="space-y-2">
+                    </div>
+            </div>
 
             <div class="grid grid-cols-1 gap-4">
                 <button onclick="location.href='board.html'" class="btn-primary w-full py-4 text-lg bg-red-700 border-red-900 mb-4">
@@ -116,34 +125,62 @@
 
         // QUICK WORKOUT LOADER
         async function loadQuickWorkout(schoolId) {
-            const container = document.getElementById('quick-workout-container');
-            if(!container) return;
+        const container = document.getElementById('quick-workout-container');
+        const recentList = document.getElementById('recent-workouts-list');
+        const recentSection = document.getElementById('all-workouts-link');
+        
+        if(!container) return;
 
-            try {
-                const workoutRef = collection(db, "schools", schoolId, "workouts");
-                const q = query(workoutRef, orderBy("createdAt", "desc"), limit(1));
-                const querySnapshot = await getDocs(q);
+        try {
+            const workoutRef = collection(db, "schools", schoolId, "workouts");
+            // Increase limit to 3 so they can see options
+            const q = query(workoutRef, orderBy("createdAt", "desc"), limit(3));
+            const querySnapshot = await getDocs(q);
 
-                if (!querySnapshot.empty) {
-                    const workoutDoc = querySnapshot.docs[0];
+            if (!querySnapshot.empty) {
+                recentSection.classList.remove('hidden');
+                container.innerHTML = '';
+                recentList.innerHTML = '';
+
+                querySnapshot.docs.forEach((workoutDoc, index) => {
                     const data = workoutDoc.data();
                     
-                    container.innerHTML = `
-                        <div class="bg-[#1a1a1c] border-l-4 border-[#b91c1c] p-6 rounded-r-xl shadow-2xl transition-transform hover:scale-[1.01]">
-                            <span class="text-[#b91c1c] font-black text-xs uppercase italic tracking-widest">Active Session</span>
-                            <h2 class="text-white text-2xl font-black uppercase italic mt-1">${data.title}</h2>
-                            <p class="text-gray-500 text-xs font-bold uppercase mb-4">Week ${data.week || 1}</p>
-                            <a href="athlete-workout.html?id=${workoutDoc.id}" 
-                               class="inline-block bg-[#b91c1c] text-white font-black uppercase px-6 py-3 rounded-lg text-sm tracking-widest hover:bg-red-700 transition-colors">
-                               Start Workout →
+                    if (index === 0) {
+                        // THE MAIN FEATURED CARD (Latest)
+                        container.innerHTML = `
+                            <div class="bg-[#1a1a1c] border-l-4 border-[#b91c1c] p-6 rounded-r-xl shadow-2xl">
+                                <span class="text-[#b91c1c] font-black text-xs uppercase italic tracking-widest">Current Session</span>
+                                <h2 class="text-white text-2xl font-black uppercase italic mt-1">${data.title}</h2>
+                                <p class="text-gray-500 text-xs font-bold uppercase mb-4">Week ${data.week || 1}</p>
+                                <a href="athlete-workout.html?id=${workoutDoc.id}" 
+                                class="inline-block bg-[#b91c1c] text-white font-black uppercase px-6 py-3 rounded-lg text-sm tracking-widest hover:bg-red-700 transition-colors">
+                                Start Workout →
+                                </a>
+                            </div>
+                        `;
+                    } else {
+                        // SECONDARY ROWS (Previous options)
+                        const row = document.createElement('div');
+                        row.className = "bg-[#0a0a0b] border border-[#1a1a1c] p-4 rounded-lg flex justify-between items-center hover:border-gray-700 transition-colors";
+                        row.innerHTML = `
+                            <div>
+                                <h4 class="text-white text-xs font-black uppercase italic">${data.title}</h4>
+                                <p class="text-[9px] text-gray-600 font-bold uppercase">Week ${data.week || 1}</p>
+                            </div>
+                            <a href="athlete-workout.html?id=${workoutDoc.id}" class="text-gray-500 hover:text-white">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7" />
+                                </svg>
                             </a>
-                        </div>
-                    `;
-                }
-            } catch (err) {
-                console.error("Error loading quick workout:", err);
+                        `;
+                        recentList.appendChild(row);
+                    }
+                });
             }
+        } catch (err) {
+            console.error("Error loading workouts:", err);
         }
+    }
 
         onAuthStateChanged(auth, async (user) => {
             const authSection = document.getElementById('auth-section');
