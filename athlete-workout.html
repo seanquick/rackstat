@@ -286,30 +286,36 @@
                 const loggedExercises = [];
                 
                 document.querySelectorAll('.exercise-card').forEach(card => {
-                    // FIX: Only grab the text from the H3, excluding any <span> badges we added
-                    const nameElement = card.querySelector('h3');
-                    // We use childNodes[0] to get just the exercise name, ignoring the badge span
-                    const name = nameElement.childNodes[0].textContent.trim();
+                // 1. Get the H3 element
+                const h3 = card.querySelector('h3');
+                if (!h3) return;
 
-                    const sets = Array.from(card.querySelectorAll('[id^="container-set-"]')).map(row => {
-                        const setId = row.id.replace('container-', '');
-                        
-                        // GRAB weight from the input field
-                        const weightInput = document.getElementById(`weight-${setId}`);
-                        let weightUsed = weightInput ? weightInput.value.trim() : "BW";
+                // 2. CLEAN THE NAME: 
+                // This looks for the text but ignores the <span> badge specifically
+                let name = h3.innerText.split('Last:')[0].trim();
 
-                        // Ensure it defaults back to BW if they left it empty
-                        if (weightUsed === "") weightUsed = "BW";
-
-                        return {
-                            weightUsed: weightUsed,
-                            repsPerformed: document.getElementById(`reps-${setId}`).innerText,
-                            completed: row.getAttribute('data-completed') === 'true'
-                        };
-                    });
+                const sets = Array.from(card.querySelectorAll('[id^="container-set-"]')).map(row => {
+                    const setId = row.id.replace('container-', '');
                     
-                    loggedExercises.push({ name, sets });
+                    // 3. GRAB WEIGHT:
+                    // Use a fallback to "BW" if the input is missing or empty
+                    const weightInput = document.getElementById(`weight-${setId}`);
+                    let weightUsed = weightInput ? weightInput.value.trim() : "BW";
+                    if (weightUsed === "") weightUsed = "BW";
+
+                    // 4. GRAB REPS:
+                    const repsEl = document.getElementById(`reps-${setId}`);
+                    const repsPerformed = repsEl ? repsEl.innerText : "0";
+
+                    return {
+                        weightUsed: weightUsed,
+                        repsPerformed: repsPerformed,
+                        completed: row.getAttribute('data-completed') === 'true'
+                    };
                 });
+                
+                loggedExercises.push({ name, sets });
+            });
 
                 // 2. Save to Firestore
                 await addDoc(collection(db, "completed_workouts"), {
