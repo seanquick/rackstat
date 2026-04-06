@@ -201,23 +201,52 @@
 
         <div class="form-section">
             <h2 class="section-header">07 Training & Commitment</h2>
-            <span class="sub-label">Weekly extra training days?</span>
-            <select id="trainFreq">
-                <option value="0-1">0–1</option>
-                <option value="2-3">2–3</option>
-                <option value="4-5">4–5</option>
-                <option value="6+">6+</option>
-            </select>
-            <div class="grid-2">
-                <div><span class="sub-label">Nutrition Plan?</span><select id="hasNutrition"><option value="No">No</option><option value="Yes">Yes</option><option value="Sometimes">Sometimes</option></select></div>
-                <div><span class="sub-label">7-8+ Hours Sleep?</span><select id="hasSleep"><option value="Yes">Yes</option><option value="No">No</option></select></div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div>
+                    <span class="sub-label">Weekly extra training days?</span>
+                    <select id="trainFreq" class="w-full">
+                        <option value="0-1">0–1</option>
+                        <option value="2-3">2–3</option>
+                        <option value="4-5">4–5</option>
+                        <option value="6+">6+</option>
+                    </select>
+                </div>
+                <div>
+                    <span class="sub-label">Nutrition Plan?</span>
+                    <select id="hasNutrition" class="w-full">
+                        <option value="No">No</option>
+                        <option value="Yes">Yes</option>
+                        <option value="Sometimes">Sometimes</option>
+                    </select>
+                </div>
+                <div>
+                    <span class="sub-label">7-8+ Hours Sleep?</span>
+                    <select id="hasSleep" class="w-full">
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
             </div>
-            <span class="sub-label">Willing to...</span>
-            <div class="checkbox-group" id="commitmentChecks">
-                <label class="check-item"><input type="checkbox" value="Lift Year Round"> Lift Year-Round</label>
-                <label class="check-item"><input type="checkbox" value="Attend Camps"> Attend Camps/Showcases</label>
-                <label class="check-item"><input type="checkbox" value="Travel Visits"> Travel for Visits</label>
-                <label class="check-item"><input type="checkbox" value="Coach Contact"> Communicate with Coaches</label>
+
+            <span class="sub-label mb-2 block">I am willing to...</span>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 bg-black/20 p-4 rounded-lg border border-white/5" id="commitmentChecks">
+                <label class="flex items-center gap-3 cursor-pointer hover:text-red-500 transition-colors">
+                    <input type="checkbox" value="Lift Year Round" class="w-4 h-4 accent-red-600">
+                    <span class="text-[11px] font-bold uppercase tracking-wider">Lift Year-Round</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer hover:text-red-500 transition-colors">
+                    <input type="checkbox" value="Attend Camps" class="w-4 h-4 accent-red-600">
+                    <span class="text-[11px] font-bold uppercase tracking-wider">Attend Camps/Showcases</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer hover:text-red-500 transition-colors">
+                    <input type="checkbox" value="Travel Visits" class="w-4 h-4 accent-red-600">
+                    <span class="text-[11px] font-bold uppercase tracking-wider">Travel for Visits</span>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer hover:text-red-500 transition-colors">
+                    <input type="checkbox" value="Coach Contact" class="w-4 h-4 accent-red-600">
+                    <span class="text-[11px] font-bold uppercase tracking-wider">Communicate with Coaches</span>
+                </label>
             </div>
         </div>
 

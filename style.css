@@ -83,7 +83,7 @@ body {
     margin-bottom: 20px;
 }
 
-.form-group label {
+.form-group label, .sub-label {
     display: block;
     font-size: 10px;
     font-weight: 900;
@@ -93,7 +93,7 @@ body {
     margin-bottom: 8px;
 }
 
-.form-group input {
+.form-group input, select {
     width: 100%;
     background: #000;
     border: 1px solid var(--rackstat-border);
@@ -104,7 +104,7 @@ body {
     transition: border 0.3s ease;
 }
 
-.form-group input:focus {
+.form-group input:focus, select:focus {
     outline: none;
     border-color: var(--rackstat-red);
 }
@@ -135,39 +135,91 @@ body {
     cursor: not-allowed;
 }
 
+/* --- TRAINING & COMMITMENT (SECTION 07) --- */
+
+#commitmentChecks {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 15px;
+    border-radius: 4px;
+    border: 1px solid var(--rackstat-border);
+    margin-top: 10px;
+}
+
+.check-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    color: #aaa;
+    transition: color 0.2s ease;
+}
+
+.check-item:hover {
+    color: var(--rackstat-red);
+}
+
+.check-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    appearance: none;
+    background: #000;
+    border: 1px solid var(--rackstat-border);
+    border-radius: 2px;
+    position: relative;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.check-item input[type="checkbox"]:checked {
+    background: var(--rackstat-red);
+    border-color: var(--rackstat-red);
+}
+
+.check-item input[type="checkbox"]:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 10px;
+}
+
 /* --- WORKOUT BUILDER DROPDOWN FIXES --- */
 
-/* 1. Ensure the exercise row itself doesn't hide anything */
 .exercise-row {
     position: relative;
-    overflow: visible !important; /* CRITICAL: Prevents clipping of dropdowns */
+    overflow: visible !important;
     z-index: 10;
     margin-bottom: 20px;
 }
 
-/* 2. Higher z-index for the top container where the dropdown lives */
 [id^="name-container-"] {
     position: relative;
     z-index: 100 !important;
 }
 
-/* 3. Dropdown styling and visibility */
 select {
     position: relative;
     z-index: 100;
     cursor: pointer;
-    color-scheme: dark; /* Fixes invisible arrows in Chrome/Brave */
+    color-scheme: dark;
 }
 
-/* 4. Ensure options are readable on dark background */
 select option {
-    background-color: #1a1a1c !important; /* var(--rackstat-gray) */
+    background-color: var(--rackstat-gray) !important;
     color: white !important;
     padding: 12px;
 }
 
-/* 5. Lower the z-index of the sets container below the dropdown */
 [id^="sets-container-"] {
     position: relative;
-    z-index: 1; /* Keeps it below the open dropdown menu */
+    z-index: 1;
 }
