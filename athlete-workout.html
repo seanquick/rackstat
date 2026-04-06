@@ -155,19 +155,27 @@
                     
                     let setsHtml = ex.setsData.map((s, i) => {
                         const perc = s.percent || s.percentage || 0;
-                        const targetWeight = calculateWeight(athleteMax, perc);
+                        const suggestedWeight = calculateWeight(athleteMax, perc);
                         const setId = `set-${exIndex}-${i}`;
-                        const percString = perc > 0 ? `<span class="text-[10px] text-gray-500 font-bold ml-1 italic">@ ${perc}%</span>` : '';
-
-                        const weightHTML = targetWeight === "BW" 
+                        
+                        // We use value="${suggestedWeight}" so the box is pre-filled, 
+                        // but the athlete can click and type over it.
+                        const weightInputHTML = suggestedWeight === "LBS" 
                             ? `<span class="text-gray-600 font-black text-xl italic mt-1 uppercase">BW</span>` 
-                            : `<div class="flex items-baseline"><span class="text-[#b91c1c] font-black text-xl italic">${targetWeight}<small class="text-[10px] ml-1 text-gray-500 font-bold not-italic">LBS</small></span>${percString}</div>`;
+                            : `<div class="flex items-center">
+                                <input type="number" 
+                                    id="weight-${setId}" 
+                                    value="${suggestedWeight}" 
+                                    class="bg-transparent text-[#b91c1c] font-black text-xl italic w-20 outline-none border-b border-transparent focus:border-[#b91c1c] transition-all"
+                                >
+                                <small class="text-[10px] ml-1 text-gray-500 font-bold not-italic">LBS</small>
+                            </div>`;
 
                         return `
                             <div id="container-${setId}" data-completed="false" class="flex justify-between items-center bg-[#0a0a0b] p-3 rounded-lg mb-2 border border-[#2a2a2c]">
                                 <div class="flex flex-col">
                                     <span class="text-[9px] text-gray-500 font-bold uppercase mb-1">Set ${i+1}</span>
-                                    ${weightHTML}
+                                    ${weightInputHTML}
                                 </div>
                                 <div class="flex items-center gap-4">
                                     <div class="flex flex-col items-center bg-[#1a1a1c] border border-[#2a2a2c] rounded px-4 py-1 min-w-[60px]">
@@ -205,7 +213,13 @@
                     const name = card.querySelector('h3').innerText;
                     const sets = Array.from(card.querySelectorAll('[id^="container-set-"]')).map(row => {
                         const setId = row.id.replace('container-', '');
+                        
+                        // NEW: Grab the weight from the input field
+                        const weightInput = document.getElementById(`weight-${setId}`);
+                        const actualWeight = weightInput ? weightInput.value : "BW";
+
                         return {
+                            weightUsed: actualWeight,
                             repsPerformed: document.getElementById(`reps-${setId}`).innerText,
                             completed: row.getAttribute('data-completed') === 'true'
                         };
