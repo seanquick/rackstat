@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-black text-white font-sans">
 
 <header class="brand-header flex flex-col items-center py-10 space-y-10">
     <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-28 w-auto drop-shadow-[0_0_20px_rgba(185,28,28,0.4)] transition-transform duration-500 hover:scale-105">
@@ -27,19 +27,21 @@
     </div>
 </header>
 
-    <div class="container">
+    <div class="container mx-auto max-w-md px-6">
         <div id="auth-section">
             <h2 class="text-center font-black uppercase tracking-widest text-sm mb-6">Athlete Login</h2>
             <div id="login-form" class="space-y-4">
-                <div class="form-group">
-                    <label>Email Address</label>
-                    <input type="email" id="email" placeholder="email">
+                <div class="form-group bg-[#111] p-4 rounded-lg border border-gray-800">
+                    <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Email Address</label>
+                    <input type="email" id="email" placeholder="email" class="w-full bg-transparent text-white outline-none">
                 </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="password" placeholder="••••••••">
+                <div class="form-group bg-[#111] p-4 rounded-lg border border-gray-800">
+                    <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Password</label>
+                    <input type="password" id="password" placeholder="••••••••" class="w-full bg-transparent text-white outline-none">
                 </div>
-                <button type="button" onclick="handleLogin()" class="btn-primary">Login to Rackstat</button>
+                <button type="button" onclick="handleLogin()" class="w-full bg-red-700 hover:bg-red-600 text-white font-black py-4 rounded-lg uppercase tracking-widest transition-all">
+                    Login to Rackstat
+                </button>
             </div>
             
             <div class="mt-8 text-center">
@@ -49,43 +51,32 @@
             </div>
         </div>
 
-        <div id="main-menu" class="hidden space-y-4 p-6">
-            <h2 id="welcome-msg" class="text-xl font-black italic uppercase text-center mb-6"></h2>
+        <div id="main-menu" class="hidden space-y-6 py-4">
+            <h2 id="welcome-msg" class="text-xl font-black italic uppercase text-center mb-8 text-gray-300 tracking-tight"></h2>
             
-            <div id="quick-workout-container" class="mb-6"></div>
-
-            <div id="all-workouts-link" class="mb-8 hidden">
-                <div class="flex justify-between items-center mb-3 px-2">
-                    <h3 class="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em]">Previous Sessions</h3>
-                    <a href="athlete-workout.html" class="text-[#b91c1c] text-[10px] font-black uppercase hover:underline">View All →</a>
-                </div>
-                <div id="recent-workouts-list" class="space-y-2">
-                    </div>
-            </div>
-
             <div class="grid grid-cols-1 gap-4">
-                <button onclick="location.href='board.html'" class="btn-primary w-full py-4 text-lg bg-red-700 border-red-900 mb-4">
-                    THE BOARD
+                <button onclick="location.href='board.html'" class="group relative overflow-hidden bg-red-700 border-b-4 border-red-900 py-6 rounded-xl transition-transform active:scale-95">
+                    <span class="relative z-10 text-2xl font-black italic uppercase italic">THE BOARD</span>
                 </button>
 
-                <button onclick="location.href='athlete-workout.html'" class="btn-primary w-full py-4 text-lg bg-slate-800 border-slate-900 mb-4">
-                    THE RACK
+                <button onclick="location.href='athlete-workout.html'" class="group relative overflow-hidden bg-slate-800 border-b-4 border-slate-900 py-6 rounded-xl transition-transform active:scale-95">
+                    <span class="relative z-10 text-2xl font-black italic uppercase italic">THE RACK</span>
                 </button>
 
-                <button id="btn-kitchen" onclick="location.href='kitchen.html'" class="btn-primary w-full py-4 text-lg bg-green-700 border-green-900 mb-4">
-                    THE KITCHEN
+                <button id="btn-kitchen" onclick="location.href='kitchen.html'" class="group relative overflow-hidden bg-green-700 border-b-4 border-green-900 py-6 rounded-xl transition-transform active:scale-95">
+                    <span class="relative z-10 text-2xl font-black italic uppercase italic">THE KITCHEN</span>
                 </button>
 
-                <button id="btn-recruiting-card" onclick="location.href='next-level.html'" class="btn-primary w-full py-4 text-lg bg-red-700 border-red-900 mb-4">
-                    NEXT LEVEL RECRUITING
+                <button id="btn-recruiting-card" onclick="location.href='next-level.html'" class="group relative overflow-hidden bg-red-700 border-b-4 border-red-900 py-6 rounded-xl transition-transform active:scale-95">
+                    <span class="relative z-10 text-xl font-black italic uppercase italic leading-none">NEXT LEVEL<br><span class="text-sm tracking-[0.3em]">RECRUITING</span></span>
                 </button>
 
-                <button onclick="location.href='profile.html'" class="btn-primary w-full py-4 text-lg bg-blue-700 border-blue-900">
-                    MY PROFILE
+                <button onclick="location.href='profile.html'" class="group relative overflow-hidden bg-blue-700 border-b-4 border-blue-900 py-6 rounded-xl transition-transform active:scale-95">
+                    <span class="relative z-10 text-2xl font-black italic uppercase italic">MY PROFILE</span>
                 </button>
             </div>
 
-            <button onclick="handleLogout()" class="w-full mt-8 text-[14px] font-bold uppercase text-gray-500 hover:text-white transition-colors">
+            <button onclick="handleLogout()" class="w-full mt-12 text-[12px] font-black uppercase text-gray-600 hover:text-white tracking-widest transition-colors">
                 Sign Out / Switch User
             </button>
         </div>
@@ -94,8 +85,7 @@
     <script type="module">
         import { firebaseConfig } from './firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        // Added collection, query, orderBy, getDocs, limit to the imports below
-        import { getFirestore, doc, getDoc, collection, query, orderBy, getDocs, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const app = initializeApp(firebaseConfig);
@@ -123,68 +113,11 @@
             }
         };
 
-        // QUICK WORKOUT LOADER
-        async function loadQuickWorkout(schoolId) {
-        const container = document.getElementById('quick-workout-container');
-        const recentList = document.getElementById('recent-workouts-list');
-        const recentSection = document.getElementById('all-workouts-link');
-        
-        if(!container) return;
-
-        try {
-            const workoutRef = collection(db, "schools", schoolId, "workouts");
-            // Increase limit to 3 so they can see options
-            const q = query(workoutRef, orderBy("createdAt", "desc"), limit(3));
-            const querySnapshot = await getDocs(q);
-
-            if (!querySnapshot.empty) {
-                recentSection.classList.remove('hidden');
-                container.innerHTML = '';
-                recentList.innerHTML = '';
-
-                querySnapshot.docs.forEach((workoutDoc, index) => {
-                    const data = workoutDoc.data();
-                    
-                    if (index === 0) {
-                        // THE MAIN FEATURED CARD (Latest)
-                        container.innerHTML = `
-                            <div class="bg-[#1a1a1c] border-l-4 border-[#b91c1c] p-6 rounded-r-xl shadow-2xl">
-                                <span class="text-[#b91c1c] font-black text-xs uppercase italic tracking-widest">Current Session</span>
-                                <h2 class="text-white text-2xl font-black uppercase italic mt-1">${data.title}</h2>
-                                <p class="text-gray-500 text-xs font-bold uppercase mb-4">Week ${data.week || 1}</p>
-                                <a href="athlete-workout.html?id=${workoutDoc.id}" 
-                                class="inline-block bg-[#b91c1c] text-white font-black uppercase px-6 py-3 rounded-lg text-sm tracking-widest hover:bg-red-700 transition-colors">
-                                Start Workout →
-                                </a>
-                            </div>
-                        `;
-                    } else {
-                        // SECONDARY ROWS (Previous options)
-                        const row = document.createElement('div');
-                        row.className = "bg-[#0a0a0b] border border-[#1a1a1c] p-4 rounded-lg flex justify-between items-center hover:border-gray-700 transition-colors";
-                        row.innerHTML = `
-                            <div>
-                                <h4 class="text-white text-xs font-black uppercase italic">${data.title}</h4>
-                                <p class="text-[9px] text-gray-600 font-bold uppercase">Week ${data.week || 1}</p>
-                            </div>
-                            <a href="athlete-workout.html?id=${workoutDoc.id}" class="text-gray-500 hover:text-white">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </a>
-                        `;
-                        recentList.appendChild(row);
-                    }
-                });
-            }
-        } catch (err) {
-            console.error("Error loading workouts:", err);
-        }
-    }
-
+        // AUTH STATE LISTENER
         onAuthStateChanged(auth, async (user) => {
             const authSection = document.getElementById('auth-section');
             const mainMenu = document.getElementById('main-menu');
+            const branding = document.getElementById('school-branding');
             
             if (user) {
                 try {
@@ -193,32 +126,30 @@
                     if (userSnap.exists()) {
                         const userData = userSnap.data();
 
+                        // Redirect Coaches
                         if (userData.role === 'coach') {
                             window.location.href = 'coach-dashboard.html';
                             return; 
                         }
 
-                        const recruitingDoc = await getDoc(doc(db, "recruiting_profiles", user.uid));
-                        const recruitingBtn = document.getElementById('btn-recruiting-card');
-
-                        if (recruitingDoc.exists()) {
-                            const profileData = recruitingDoc.data();
-                            const schoolId = profileData.school_id || profileData.schoolId;
-                            
-                            if (schoolId) {
-                                // TRIGGER THE QUICK WORKOUT LOAD
-                                loadQuickWorkout(schoolId);
-
-                                const schoolSnap = await getDoc(doc(db, "schools", schoolId));
-                                if (schoolSnap.exists()) {
-                                    const schoolData = schoolSnap.data();
-                                    if (schoolData.hasRecruitingCard === false) {
-                                        if (recruitingBtn) recruitingBtn.classList.add('hidden');
-                                    }
+                        // Handle School Branding
+                        const schoolId = userData.schoolId || userData.school_id;
+                        if (schoolId) {
+                            const schoolSnap = await getDoc(doc(db, "schools", schoolId));
+                            if (schoolSnap.exists()) {
+                                const schoolData = schoolSnap.data();
+                                document.getElementById('school-name-display').innerText = schoolData.name || "My School";
+                                branding.style.display = 'flex';
+                                
+                                // Toggle Recruiting Card visibility
+                                const recruitingBtn = document.getElementById('btn-recruiting-card');
+                                if (schoolData.hasRecruitingCard === false && recruitingBtn) {
+                                    recruitingBtn.classList.add('hidden');
                                 }
                             }
                         }
 
+                        // UI Transition
                         authSection.classList.add('hidden');
                         mainMenu.classList.remove('hidden');
                         document.getElementById('welcome-msg').innerText = `Welcome, ${userData.fullName || 'Athlete'}`;
@@ -229,6 +160,7 @@
             } else {
                 authSection.classList.remove('hidden');
                 mainMenu.classList.add('hidden');
+                branding.style.display = 'none';
             }
         });
     </script>

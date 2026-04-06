@@ -87,8 +87,8 @@
                     <p class="text-gray-400 text-xs">Define sets, reps, and % for the selected week.</p>
                 </div>
                 
-                <div class="flex gap-2">
-                    <select id="workout-week" class="bg-gray-800 border border-gray-700 text-white p-2 rounded-lg focus:border-red-500 outline-none">
+                <div class="flex items-center gap-4">
+                    <select id="workout-week" class="bg-gray-800 border border-gray-700 text-white p-2 rounded-lg focus:border-red-500 outline-none text-sm font-bold uppercase">
                         <option value="1">Week 1</option>
                         <option value="2">Week 2</option>
                         <option value="3">Week 3</option>
@@ -98,7 +98,18 @@
                     </select>
                     
                     <input type="text" id="workout-title" placeholder="Workout Title (e.g. Upper Body)" 
-                        class="bg-gray-800 border border-gray-700 text-white p-2 rounded-lg w-48 focus:border-red-500 outline-none">
+                        class="bg-gray-800 border border-gray-700 text-white p-2 rounded-lg w-48 focus:border-red-500 outline-none text-sm">
+
+                    <label class="flex items-center cursor-pointer group ml-2">
+                        <div class="relative">
+                            <input type="checkbox" id="isMaxOut" class="sr-only">
+                            <div class="w-10 h-5 bg-gray-700 rounded-full shadow-inner transition-colors duration-300 group-has-[:checked]:bg-red-600"></div>
+                            <div class="dot absolute left-1 top-1 bg-white w-3 h-3 rounded-full transition-transform duration-300 group-has-[:checked]:translate-x-5"></div>
+                        </div>
+                        <div class="ml-2 text-[10px] font-black uppercase italic tracking-widest text-gray-400 group-has-[:checked]:text-red-500 transition-colors">
+                            Max Out Mode
+                        </div>
+                    </label>
                 </div>
             </div>
 
@@ -445,35 +456,29 @@
 
         window.saveWorkout = async () => {
             const saveBtn = document.getElementById('save-workout-btn');
-            // SAFETY CHECK: If the button is missing, stop here and show an error
-                if (!saveBtn) {
-                    console.error("CRITICAL ERROR: Could not find the button with ID 'save-workout-btn'");
-                    alert("System Error: Save button not found. Please check your HTML IDs.");
-                    return;
-                }
-            // Check if we are editing or creating a new one
+            
+            if (!saveBtn) {
+                console.error("CRITICAL ERROR: Could not find the button with ID 'save-workout-btn'");
+                alert("System Error: Save button not found.");
+                return;
+            }
+
             const isEditMode = saveBtn.dataset.mode === "edit";
             
             // 1. Get the form values
             const title = document.getElementById('workout-title').value;
             const week = document.getElementById('workout-week').value;
+            const isMaxOut = document.getElementById('isMaxOut').checked; // <--- NEW: Capture Toggle
 
-            // 2. Gather your exercises array (Ensure this variable name matches your logic)
-            // This is the array of exercises the coach just built in the UI
-            // --- UPDATED EXERCISE MAPPING ---
+            // 2. Gather exercises array
             const exercises = Array.from(document.querySelectorAll('.exercise-row')).map(row => {
-                // Find the ID from the row (e.g., "row-12345" -> "12345")
                 const id = row.id.replace('row-', '');
-                
-                // Safety check: ensure the elements exist before grabbing .value
                 const nameEl = document.getElementById(`name-${id}`);
                 const typeEl = document.getElementById(`type-${id}`);
                 const setsEl = document.getElementById(`sets-${id}`);
 
-                // If these are missing, we skip this row or return null
                 if (!nameEl || !setsEl) return null;
 
-                // Gather the individual sets data (S1, S2, etc.)
                 const numSets = parseInt(setsEl.value) || 0;
                 const setsData = [];
                 for (let i = 1; i <= numSets; i++) {
@@ -491,7 +496,7 @@
                     sets: numSets,
                     setsData: setsData
                 };
-            }).filter(ex => ex !== null); // Remove any null entries from the array
+            }).filter(ex => ex !== null);
 
             if (!title || !week) {
                 alert("Please enter a title and week number.");
@@ -507,6 +512,7 @@
                     await updateDoc(workoutRef, {
                         title: title,
                         week: parseInt(week),
+                        isMaxOut: isMaxOut, // <--- NEW: Update Field
                         exercises: exercises,
                         updatedAt: serverTimestamp()
                     });
@@ -517,6 +523,7 @@
                     await addDoc(collection(db, "schools", window.currentSchoolId, "workouts"), {
                         title: title,
                         week: parseInt(week),
+                        isMaxOut: isMaxOut, // <--- NEW: Save Field
                         exercises: exercises,
                         createdAt: serverTimestamp()
                     });
@@ -529,12 +536,13 @@
                 saveBtn.dataset.mode = "create";
                 saveBtn.removeAttribute('data-edit-id');
                 
-                // Clear the inputs
                 document.getElementById('workout-title').value = "";
                 document.getElementById('workout-week').value = "";
+                document.getElementById('isMaxOut').checked = false; // <--- NEW: Reset Toggle
                 
-                // If you have a function to clear the exercise rows, call it here
-                // e.g., document.getElementById('exercise-list').innerHTML = "";
+                // Clear your list if applicable
+                const list = document.getElementById('exercise-list');
+                if (list) list.innerHTML = "";
 
             } catch (error) {
                 console.error("Error saving workout:", error);
