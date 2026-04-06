@@ -150,27 +150,39 @@
         };
 
         window.loadAvailableWorkouts = async () => {
-            const workoutContainer = document.getElementById('available-workouts');
-            const workoutRef = collection(db, "schools", window.currentSchoolId, "workouts");
-            const q = query(workoutRef, orderBy("createdAt", "desc"));
-            const querySnapshot = await getDocs(q);
-            
-            workoutContainer.innerHTML = ''; 
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                const btn = document.createElement('button');
-                btn.className = "w-full bg-[#1a1a1c] border border-[#2a2a2c] p-5 rounded-xl flex justify-between items-center group text-left mb-3";
-                btn.onclick = () => window.loadAthleteWorkout(doc.id, window.currentAthleteId);
-                btn.innerHTML = `
-                    <div>
-                        <h3 class="text-white font-black uppercase text-lg mb-1 italic">${data.title}</h3>
-                        <span class="text-[#b91c1c] font-bold text-[10px] uppercase">Week ${weekDisplay}</span>
-                    </div>
-                    <span class="text-gray-600 group-hover:text-[#b91c1c]">→</span>
-                `;
-                workoutContainer.appendChild(btn);
-            });
-        };
+                    const workoutContainer = document.getElementById('available-workouts');
+                    const workoutRef = collection(db, "schools", window.currentSchoolId, "workouts");
+                    const q = query(workoutRef, orderBy("createdAt", "desc"));
+                    const querySnapshot = await getDocs(q);
+                    
+                    workoutContainer.innerHTML = ''; 
+                    querySnapshot.forEach((doc) => {
+                        const data = doc.data();
+                        
+                        // --- FIX: Define weekDisplay so it can be used in the template ---
+                        // We check for undefined/null specifically so Week 0 shows up correctly
+                        const weekDisplay = (data.week !== undefined && data.week !== null) ? data.week : '?';
+                        
+                        // Optional: Check if it's a Max Out workout to add a visual indicator
+                        const maxBadge = data.isMaxOut ? `<span class="ml-2 bg-red-600 text-white text-[8px] px-1 rounded">MAX</span>` : '';
+
+                        const btn = document.createElement('button');
+                        btn.className = "w-full bg-[#1a1a1c] border border-[#2a2a2c] p-5 rounded-xl flex justify-between items-center group text-left mb-3 transition-all hover:border-[#b91c1c]";
+                        btn.onclick = () => window.loadAthleteWorkout(doc.id, window.currentAthleteId);
+                        
+                        btn.innerHTML = `
+                            <div>
+                                <div class="flex items-center">
+                                    <h3 class="text-white font-black uppercase text-lg mb-1 italic">${data.title}</h3>
+                                    ${maxBadge}
+                                </div>
+                                <span class="text-[#b91c1c] font-bold text-[10px] uppercase">Week ${weekDisplay}</span>
+                            </div>
+                            <span class="text-gray-600 group-hover:text-[#b91c1c] transition-colors">→</span>
+                        `;
+                        workoutContainer.appendChild(btn);
+                    });
+                };
 
     // --- 5. Main Workout Renderer ---
             window.loadAthleteWorkout = async (workoutId, athleteId) => {
