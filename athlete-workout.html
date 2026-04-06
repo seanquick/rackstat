@@ -213,19 +213,22 @@
                     ? `<span class="text-[10px] text-gray-500 font-bold ml-1 italic">@ ${perc}%</span>` 
                     : '';
 
-                const weightInputHTML = suggestedWeight === "BW" 
-                    ? `<span class="text-gray-600 font-black text-xl italic mt-1 uppercase">BW</span>` 
-                    : `<div class="flex flex-col">
-                        <div class="flex items-center">
-                            <input type="number" 
-                                id="weight-${setId}" 
-                                value="${suggestedWeight}" 
-                                class="bg-transparent text-[#b91c1c] font-black text-xl italic w-16 outline-none border-b border-transparent focus:border-[#b91c1c] transition-all"
-                            >
-                            <small class="text-[10px] ml-1 text-gray-500 font-bold not-italic">LBS</small>
-                            ${percString}
-                        </div>
-                    </div>`;
+                const weightInputHTML = `<div class="flex flex-col">
+                    <div class="flex items-center">
+                        <input type="text" 
+                            id="weight-${setId}" 
+                            value="${suggestedWeight}" 
+                            placeholder="BW"
+                            onfocus="if(this.value==='BW') this.value=''" 
+                            onblur="if(this.value==='') this.value='BW'"
+                            class="bg-transparent text-[#b91c1c] font-black text-xl italic w-20 outline-none border-b border-transparent focus:border-[#b91c1c] transition-all"
+                        >
+                        <small class="text-[10px] ml-1 text-gray-500 font-bold not-italic">
+                            ${suggestedWeight === "BW" ? "" : "LBS"}
+                        </small>
+                        ${percString}
+                    </div>
+                </div>`;
 
                 return `
                     <div id="container-${setId}" data-completed="false" class="flex justify-between items-center bg-[#0a0a0b] p-3 rounded-lg mb-2 border border-[#2a2a2c]">
@@ -276,27 +279,39 @@
         window.logFullWorkout = async (workoutId) => {
             try {
                 const btn = document.querySelector('button[onclick*="logFullWorkout"]');
+                const originalText = btn.innerText;
                 btn.innerText = "SAVING...";
+                btn.disabled = true; // Prevent double-submitting
                 
                 const loggedExercises = [];
+                
                 document.querySelectorAll('.exercise-card').forEach(card => {
-                    const name = card.querySelector('h3').innerText;
+                    // FIX: Only grab the text from the H3, excluding any <span> badges we added
+                    const nameElement = card.querySelector('h3');
+                    // We use childNodes[0] to get just the exercise name, ignoring the badge span
+                    const name = nameElement.childNodes[0].textContent.trim();
+
                     const sets = Array.from(card.querySelectorAll('[id^="container-set-"]')).map(row => {
                         const setId = row.id.replace('container-', '');
                         
-                        // NEW: Grab the weight from the input field
+                        // GRAB weight from the input field
                         const weightInput = document.getElementById(`weight-${setId}`);
-                        const actualWeight = weightInput ? weightInput.value : "BW";
+                        let weightUsed = weightInput ? weightInput.value.trim() : "BW";
+
+                        // Ensure it defaults back to BW if they left it empty
+                        if (weightUsed === "") weightUsed = "BW";
 
                         return {
-                            weightUsed: actualWeight,
+                            weightUsed: weightUsed,
                             repsPerformed: document.getElementById(`reps-${setId}`).innerText,
                             completed: row.getAttribute('data-completed') === 'true'
                         };
                     });
+                    
                     loggedExercises.push({ name, sets });
                 });
 
+                // 2. Save to Firestore
                 await addDoc(collection(db, "completed_workouts"), {
                     athleteId: window.currentAthleteId,
                     workoutId: workoutId,
@@ -305,11 +320,18 @@
                     performance: loggedExercises
                 });
 
-                alert("Workout Logged!");
-                location.reload();
+                alert("Workout Logged Successfully!");
+                // Instead of reload, taking them back to index might be smoother
+                window.location.href = 'index.html'; 
+
             } catch (e) { 
                 console.error("Error saving:", e); 
-                alert("Error saving workout.");
+                alert("Error saving workout. Please check your connection.");
+                const btn = document.querySelector('button[onclick*="logFullWorkout"]');
+                if (btn) {
+                    btn.innerText = "Log Session & Finish";
+                    btn.disabled = false;
+                }
             }
         };
 
