@@ -194,10 +194,22 @@
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                const snap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+                // Fetch both the profile and the latest maxes simultaneously
+                const profileRef = doc(db, "recruiting_profiles", user.uid);
+                const maxesRef = doc(db, "recruiting_profiles", user.uid, "maxes", "latest");
+                
+                const [snap, maxSnap] = await Promise.all([
+                    getDoc(profileRef),
+                    getDoc(maxesRef)
+                ]);
+
                 if(snap.exists()) {
                     const data = snap.data();
+                    const maxData = maxSnap.exists() ? maxSnap.data() : {};
                     
+                    // Create a combined object so the UI can find 'weight' or 'body_weight'
+                    const combinedData = { ...data, ...maxData };
+
                     // 1. Identity & Positions
                     document.getElementById('full-name').value = data.fullName || '';
                     document.getElementById('off-primary').value = data.offPrimary || '';
@@ -207,7 +219,11 @@
                     
                     // 2. Physical & Academic Stats
                     document.getElementById('height').value = data.height || '';
-                    document.getElementById('weight').value = data.weight || '';
+                    
+                    // Logic: Check maxes sub-collection first, then fall back to profile weight
+                    const displayWeight = combinedData.body_weight || combinedData.bodyWeight || data.weight || '';
+                    document.getElementById('weight').value = displayWeight;
+                    
                     document.getElementById('gpa').value = data.gpa || '';
                     document.getElementById('sat').value = data.sat || '';
                     document.getElementById('act').value = data.act || '';
@@ -228,15 +244,12 @@
                         if(schoolSnap.exists()){
                             const sData = schoolSnap.data();
 
-                            // --- NEW: RECRUITING CARD TOGGLE ---
                             const viewCardBtn = document.getElementById('btn-view-card');
                             if (sData.hasRecruitingCard === false) {
                                 if (viewCardBtn) viewCardBtn.classList.add('hidden');
-                                console.log("Recruiting Card disabled for this school.");
                             } else {
                                 if (viewCardBtn) viewCardBtn.classList.remove('hidden');
                             }
-                            // -----------------------------------
 
                             const select = document.getElementById('goal-category');
                             if(select) {
@@ -249,70 +262,91 @@
                         }
                     }
 
-                    // 6. Legacy Render
+                    // 6. Render Goals
                     currentGoals = data.goals || [];
                     if (typeof renderGoals === "function") renderGoals(user.uid, currentGoals);
 
                     // 7. SYNC THE CLUB GOAL PROGRESS BAR
-                    syncGoalDisplay(data); 
+                    // We pass combinedData so the boardScore calculation sees the newest maxes
+                    syncGoalDisplay(combinedData); 
                 }
             } else { 
                 location.href = 'index.html'; 
             }
         });
 
-    async function renderGoals(uid, goals) {
-        const container = document.getElementById('goals-container');
-        
-        if (!goals || goals.length === 0) {
-            container.innerHTML = '<p class="text-center text-[10px] text-gray-600 uppercase font-bold py-4 italic">No goals active</p>';
-            return;
-        }
-        
-        container.innerHTML = '';
-        
-        try {
-            // --- UPDATED: Pull from the specific 'latest' document ---
-            const latestMaxRef = doc(db, "recruiting_profiles", uid, "maxes", "latest");
-            const maxSnap = await getDoc(latestMaxRef);
+        async function renderGoals(uid, goals) {
+            const container = document.getElementById('goals-container');
             
-            const latestStats = maxSnap.exists() ? maxSnap.data() : {};
+            if (!goals || goals.length === 0) {
+                container.innerHTML = '<p class="text-center text-[10px] text-gray-600 uppercase font-bold py-4 italic">No goals active</p>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            try {
+                // 1. Fetch both the Latest Maxes AND the Profile (for body weight fallback)
+                const latestMaxRef = doc(db, "recruiting_profiles", uid, "maxes", "latest");
+                const profileRef = doc(db, "recruiting_profiles", uid);
+                
+                const [maxSnap, profileSnap] = await Promise.all([
+                    getDoc(latestMaxRef),
+                    getDoc(profileRef)
+                ]);
+                
+                const latestStats = maxSnap.exists() ? maxSnap.data() : {};
+                const profileData = profileSnap.exists() ? profileSnap.data() : {};
 
-            goals.forEach((goal, index) => {
-                // Handle different naming conventions (e.g., bench vs bench_press)
-                const liftKey = goal.type.toLowerCase().trim().replace(/\s+/g, '_');
-                const currentVal = Number(latestStats[liftKey] || latestStats[goal.type]) || 0;
-                const targetVal = Number(goal.target) || 0;
-                
-                const progress = targetVal > 0 ? Math.min((currentVal / targetVal) * 100, 100) : 0;
-                const displayName = goal.type.replace('_', ' ').replace(/([A-Z])/g, ' $1').trim();
-                
-                container.innerHTML += `
-                    <div class="animate-fade-in group mb-6 last:mb-0">
-                        <div class="flex justify-between items-end mb-1">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <p class="text-[10px] font-black text-gray-500 uppercase tracking-wider">${displayName}</p>
-                                    <button onclick="removeGoal(${index})" class="text-[9px] text-red-900 opacity-0 group-hover:opacity-100 transition-opacity font-bold uppercase">[Remove]</button>
+                goals.forEach((goal, index) => {
+                    // Standardize naming (e.g., "Bench Press" -> "bench_press")
+                    const liftKey = goal.type.toLowerCase().trim().replace(/\s+/g, '_');
+                    
+                    // 2. SMART VALUE LOOKUP
+                    // We check: 
+                    // - The specific key in maxes (bench_press)
+                    // - The raw goal type (Bench Press)
+                    // - Fallbacks for body weight (body_weight, bodyWeight, or just weight)
+                    let currentVal = Number(
+                        latestStats[liftKey] || 
+                        latestStats[goal.type] || 
+                        latestStats['body_weight'] || 
+                        profileData['weight'] || 
+                        profileData['bodyWeight'] || 0
+                    );
+
+                    const targetVal = Number(goal.target) || 0;
+                    const progress = targetVal > 0 ? Math.min((currentVal / targetVal) * 100, 100) : 0;
+                    
+                    // Format "bench_press" to "BENCH PRESS" for display
+                    const displayName = goal.type.replace('_', ' ').replace(/([A-Z])/g, ' $1').trim();
+                    
+                    container.innerHTML += `
+                        <div class="animate-fade-in group mb-6 last:mb-0">
+                            <div class="flex justify-between items-end mb-1">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <p class="text-[10px] font-black text-gray-500 uppercase tracking-wider">${displayName}</p>
+                                        <button onclick="removeGoal(${index})" class="text-[9px] text-red-900 opacity-0 group-hover:opacity-100 transition-opacity font-bold uppercase">[Remove]</button>
+                                    </div>
+                                    <p class="text-lg font-black italic uppercase leading-none">${targetVal} LBS</p>
                                 </div>
-                                <p class="text-lg font-black italic uppercase leading-none">${targetVal} LBS</p>
+                                <div class="text-right">
+                                    <p class="text-[9px] font-bold text-gray-400 uppercase">Current: ${currentVal}</p>
+                                    <p class="text-xs font-black ${progress >= 100 ? 'text-green-500' : 'text-red-600'}">${Math.round(progress)}%</p>
+                                </div>
                             </div>
-                            <div class="text-right">
-                                <p class="text-[9px] font-bold text-gray-400 uppercase">Current: ${currentVal}</p>
-                                <p class="text-xs font-black ${progress >= 100 ? 'text-green-500' : 'text-red-600'}">${Math.round(progress)}%</p>
+                            <div class="goal-progress">
+                                <div class="progress-fill" style="width: ${progress}%"></div>
                             </div>
                         </div>
-                        <div class="goal-progress">
-                            <div class="progress-fill" style="width: ${progress}%"></div>
-                        </div>
-                    </div>
-                `;
-            });
-        } catch (error) {
-            console.error("Error rendering goals:", error);
-            renderFallbackGoals(container, goals);
+                    `;
+                });
+            } catch (error) {
+                console.error("Error rendering goals:", error);
+                renderFallbackGoals(container, goals);
+            }
         }
-    }
 
     // Helper function to show goals at 0% if the Maxes query fails or is blocked
     function renderFallbackGoals(container, goals) {
