@@ -66,16 +66,16 @@
         // --- Column Definitions ---
         const rackColumns = [
             {title: "Athlete", field: "name", widthGrow: 2, headerFilter: "input"},
-            {title: "Lift Date", field: "dateGroup", width: 150},
-            {title: "Body Weight", field: "bodyWeight"}, // Added missing comma
-            {title: "Off.", field: "offPos", width: 80},
-            {title: "Def.", field: "defPos", width: 80},
+            {title: "Lift Date", field: "dateGroup", width: 150, headerFilter: "input"}, // Filter by "October 2026"
+            {title: "Body Weight", field: "bodyWeight"},
+            {title: "Off.", field: "offPos", width: 80, headerFilter: "input"}, // Filter by "QB", "WR", etc.
+            {title: "Def.", field: "defPos", width: 80, headerFilter: "input"}, // Filter by "LB", "DB", etc.
             {
                 title: "Grad", 
                 field: "grad", 
                 width: 90, 
                 hozAlign: "center", 
-                headerFilter: "list", // Modernized from 'select'
+                headerFilter: "list", 
                 headerFilterParams: {valuesLookup: "data", clearable: true}
             },
             {title: "Bench", field: "bench", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--"},
@@ -167,11 +167,11 @@
 
                         if (type === 'rack') {
                             Object.assign(row, {
-                                bench: s.bench_press,
-                                squat: s.squat,
-                                clean: s.clean,
-                                deadlift: s.deadlift,
-                                pushPress: s.push_press
+                                bench: s.bench_press || 0, 
+                                squat: s.squat || 0,
+                                clean: s.clean || 0,
+                                deadlift: s.deadlift || 0,
+                                pushPress: s.push_press || 0
                             });
                         } else {
                             Object.assign(row, {
@@ -187,13 +187,17 @@
                 });
 
                 await Promise.all(dataPromises);
-                
-                // Sort by dateGroup or name if you want a default order
-                table.setData(tableData);
-                
-            } catch (err) {
-                console.error("Data Load Error:", err);
-            }
+                        
+                        // setData returns a promise; we use .then to trigger a filter refresh
+                        table.setData(tableData).then(() => {
+                            // This ensures the Grad Year and Meal Type dropdowns 
+                            // actually show the years/meals found in your data.
+                            table.refreshFilter(); 
+                        });
+                        
+                    } catch (err) {
+                        console.error("Data Load Error:", err);
+                    }
         }
 
         window.downloadCSV = () => {
