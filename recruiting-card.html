@@ -112,16 +112,18 @@
 </head>
 <body class="p-4">
 
-<div class="max-w-2xl mx-auto mb-6 flex justify-between no-print">
+    <div class="max-w-2xl mx-auto mb-6 flex justify-between no-print">
         <button onclick="window.print()" class="bg-white text-black px-6 py-2 rounded-full font-bold uppercase text-xs">Print PDF</button>
-        <button onclick="exportSocial()" class="bg-white text-black px-6 py-2 rounded-full font-bold uppercase text-xs">SHARE TO SOCIAL</button>
+        
+        <button onclick="window.exportSocial()" class="bg-white text-black px-6 py-2 rounded-full font-bold uppercase text-xs">SHARE TO SOCIAL</button>
+        
         <button id="unlock-btn" onclick="toggleEditMode()" class="hidden bg-yellow-600 text-black font-black px-4 py-2 rounded uppercase text-[10px] mb-4 transition-all"> 🔓 Unlock Profile for Editing</button>
         <button onclick="location.href='index.html'" class="bg-gray-800 text-white px-6 py-2 rounded-full font-bold uppercase text-xs">Back to Lobby</button>
     </div>
 
     <div id="capture-area" class="max-w-2xl mx-auto card-container rounded-3xl p-8 shadow-2xl border-red-600/20">
         
-    <div class="flex justify-between items-start mb-6">
+        <div class="flex justify-between items-start mb-6">
             <div class="flex items-center gap-4">
                 <img id="disp-logo" src="" class="h-16 w-16 object-contain view-mode hidden" alt="School Logo">
                 
@@ -130,6 +132,7 @@
                     <input id="edit-name" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-2xl font-black p-1 rounded mb-2 w-full">
 
                     <p id="disp-class" class="text-red-500 font-bold tracking-widest text-sm mt-1 view-mode">CLASS OF --</p>
+                    
                     <div class="edit-mode hidden mb-4">
                         <label class="block text-[10px] uppercase text-gray-400">Grad Year</label>
                         <input id="edit-grad" type="number" class="bg-gray-900 border border-blue-500 text-red-500 text-sm p-1 w-24 rounded">
@@ -441,15 +444,16 @@
                     };
                     
                     // --- SCHOOL LOGO LOGIC (MOVED HERE) ---
-                    if (d.logo_primary) {
-                        console.log("Logo URL Found:", d.logo_primary); // ADD THIS LINE
+                    if (d.logo_primary) { 
+                        console.log("Logo URL Found:", d.logo_primary);
                         const logoEl = document.getElementById('disp-logo');
                         if (logoEl) {
                             logoEl.src = d.logo_primary;
                             logoEl.classList.remove('hidden');
                         }
                     } else {
-                        console.log("No schoolLogo field found in Firestore for this user.");
+                        // This is what you are seeing now because it's looking for 'schoolLogo'
+                        console.log("No logo_primary field found in Firestore for this user.");
                     }
 
                     // --- DISPLAY MAPPING: CORE IDENTITY ---
