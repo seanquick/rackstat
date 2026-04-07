@@ -6,58 +6,71 @@
     <title>Scouting Report | RACKSTAT</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* --- APP VIEW (DARK MODE) --- */
+        body {
+            background-color: #0d1117; /* Or your preferred dark hex */
+            color: white;
+        }
+        
+        /* Ensure cards and inputs look correct in dark mode */
+        .bg-white\/5 { background-color: rgba(255, 255, 255, 0.05); }
+        .text-gray-400 { color: #9ca3af; }
+
+        /* --- PDF / PRINT VIEW --- */
         @media print {
-            /* 1. Force the dark background to actually print */
-            html, body {
-                background-color: #000000 !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                height: 100%;
-                overflow: hidden; /* Prevents a second blank page */
+            @page {
+                size: letter;
+                margin: 0.5in; /* Adds a professional margin so content isn't cut off */
             }
 
-            /* 2. The Scale-to-Fit Trick */
-            /* Target your main wrapper. If it's a div, ensure it has this ID */
+            body {
+                background: white !important;
+                color: black !important;
+            }
+
             #main-card-wrapper {
-                width: 100vw !important;
-                height: 100vh !important;
-                display: flex;
-                flex-direction: column;
-                justify-content: flex-start;
-                
-                /* Adjust this scale number (0.85, 0.8, etc.) 
-                until the preview snaps to 1 page */
-                transform: scale(0.82); 
+                background: transparent !important;
+                color: black !important;
+                box-shadow: none !important;
+                transform: scale(0.95); /* Adjust scale if it still hits 2 pages */
                 transform-origin: top center;
             }
 
-            /* 3. Hide all UI junk */
+            /* Force black text for all athlete entries */
+            span, p, h1, h2, h3, div {
+                color: black !important;
+                text-shadow: none !important;
+            }
+
+            /* Keep labels red for visual hierarchy, but ensure they are dark enough to read */
+            .label, .text-red-500 {
+                color: #b91c1c !important; /* Darker red for print legibility */
+            }
+
+            /* Remove dark backgrounds from metric boxes */
+            .bg-gray-900, .bg-white\/5, .bg-black {
+                background: transparent !important;
+                border: 1px solid #e5e7eb !important; /* Light gray border for boxes */
+            }
+
+            /* Hide UI elements */
             .print-hide, 
-            button, 
+            #print-btn, 
             #back-btn, 
-            .edit-mode,
-            header {
+            .edit-mode, 
+            header, 
+            nav {
                 display: none !important;
             }
 
-            /* 4. Tighten internal spacing for the PDF */
-            .space-y-8 { margin-top: 0 !important; gap: 1rem !important; }
-            .mt-6 { margin-top: 0.5rem !important; }
+            /* Clean up the social links (hide the URL text, show the handle) */
+            .text-\[10px\] { font-size: 9pt !important; }
             
-            /* 5. Ensure text stays white/red */
-            .text-white { color: white !important; }
-            .text-red-500 { color: #ef4444 !important; }
-            
-            /* 6. Border fix (sometimes thin borders disappear in PDF) */
-            .border { border: 1px solid rgba(255,255,255,0.2) !important; }
-        }
-
-        /* Set the physical page size to Letter/A4 and remove browser headers/footers */
-        @page {
-            size: letter;
-            margin: 0;
+            /* Force background graphics off, but keep borders */
+            * {
+                -webkit-print-color-adjust: economy !important;
+                print-color-adjust: economy !important;
+            }
         }
     </style>
 </head>
