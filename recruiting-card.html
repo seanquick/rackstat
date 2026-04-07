@@ -358,6 +358,12 @@
             const urlParams = new URLSearchParams(window.location.search);
             const athleteId = urlParams.get('uid');
             const isEditMode = urlParams.get('edit') === 'true';
+            const formatHeight = (inches) => {
+                if (!inches || isNaN(inches)) return "--";
+                const feet = Math.floor(inches / 12);
+                const remainingInches = inches % 12;
+                return `${feet}'${remainingInches}"`;
+            };
 
             if (user) {
                 currentUser = user;
