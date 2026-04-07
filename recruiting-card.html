@@ -434,9 +434,15 @@
                     const d = recSnap.data(); // 'd' IS NOW DEFINED
                     const mx = maxesSnap.exists() ? maxesSnap.data() : {};
 
+                    // 1. DEFINE setVal FIRST (so it's ready for use)
+                    const setVal = (id, val) => {
+                        const el = document.getElementById(id);
+                        if (el) el.value = val || "";
+                    };
+                    
                     // --- SCHOOL LOGO LOGIC (MOVED HERE) ---
-                    if (d.schoolLogo) {
-                        console.log("Logo URL Found:", d.schoolLogo); // ADD THIS LINE
+                    if (d.logo_primary) {
+                        console.log("Logo URL Found:", d.logo_primary); // ADD THIS LINE
                         const logoEl = document.getElementById('disp-logo');
                         if (logoEl) {
                             logoEl.src = d.logo_primary;
