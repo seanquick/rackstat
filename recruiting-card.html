@@ -436,11 +436,14 @@
 
                     // --- SCHOOL LOGO LOGIC (MOVED HERE) ---
                     if (d.schoolLogo) {
+                        console.log("Logo URL Found:", d.schoolLogo); // ADD THIS LINE
                         const logoEl = document.getElementById('disp-logo');
                         if (logoEl) {
                             logoEl.src = d.schoolLogo;
                             logoEl.classList.remove('hidden');
                         }
+                    } else {
+                        console.log("No schoolLogo field found in Firestore for this user.");
                     }
 
                     // --- DISPLAY MAPPING: CORE IDENTITY ---
