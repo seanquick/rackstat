@@ -439,7 +439,7 @@
                         console.log("Logo URL Found:", d.schoolLogo); // ADD THIS LINE
                         const logoEl = document.getElementById('disp-logo');
                         if (logoEl) {
-                            logoEl.src = d.schoolLogo;
+                            logoEl.src = d.logo_primary;
                             logoEl.classList.remove('hidden');
                         }
                     } else {
@@ -546,9 +546,8 @@
                         setVal('edit-twitter', d.twitter);
                         setVal('edit-instagram', d.instagram);
                         setVal('edit-tiktok', d.tiktok);
-                        setVal('edit-logo', d.schoolLogo);
-                        setVal('edit-hudl', d.hudlLink || d.highlightUrl);
-                    }
+                        setVal('edit-logo', d.logo_primary); 
+}                       setVal('edit-hudl', d.hudlLink || d.highlightUrl);
 
                     const userSnap = await getDoc(doc(db, "users", user.uid));
                     const isCoach = userSnap.data()?.role === 'coach';
@@ -580,7 +579,7 @@
         const updatedData = {
             fullName: getVal('edit-name'),
             gradYear: getVal('edit-grad'),
-            schoolLogo: document.getElementById('edit-logo')?.value || "",
+            logo_primary: document.getElementById('edit-logo').value,
             jerseyNum: getVal('edit-number'), // Updated ID to match pre-fill
             offPrimary: getVal('edit-off-prim'),
             offSecondary: getVal('edit-off-sec'),
