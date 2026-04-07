@@ -391,7 +391,7 @@
                         safeSet('disp-number', d.jerseyNum ? "#" + d.jerseyNum : "#--");
 
                         // KEEP THESE: They match your <span> IDs
-                        safeSet('disp-height', d.height); 
+                        safeSet('disp-height', formatHeight(d.height));
                         safeSet('disp-weight', d.weight);
                         
                         safeSet('disp-pos', d.offPrimary);
