@@ -12,7 +12,6 @@
             color: white;
         }
         
-        /* Ensure cards and inputs look correct in dark mode */
         .bg-white\/5 { background-color: rgba(255, 255, 255, 0.05); }
         .text-gray-400 { color: #9ca3af; }
 
@@ -20,57 +19,62 @@
         @media print {
             @page {
                 size: letter;
-                margin: 0; /* Remove default margins to maximize single-page space */
+                margin: 0; /* Removing margins gives us more room to fit 1 page */
             }
 
             body {
                 background: white !important;
                 color: black !important;
-                overflow: hidden; /* Prevents an accidental second blank page */
+                overflow: hidden; 
             }
 
-            #main-card-wrapper {
-                background: transparent !important;
+            /* Target your existing ID directly */
+            #capture-area {
+                background: white !important; /* Force white for printing */
                 color: black !important;
                 box-shadow: none !important;
+                border: 1px solid #eee !important;
                 
-                /* FORCE SINGLE PAGE: Scale the entire card down slightly */
+                /* FORCE SINGLE PAGE SCALING */
                 position: absolute;
                 top: 0;
                 left: 50%;
-                transform: translateX(-50%) scale(0.88); /* Adjust scale (e.g., 0.85) if still 2 pages */
+                transform: translateX(-50%) scale(0.82); 
                 transform-origin: top center;
                 width: 100%;
+                max-width: 800px;
             }
 
-            /* Tighten vertical spacing to reclaim page length */
-            .space-y-8 > * + * { margin-top: 0.75rem !important; }
-            .space-y-4 > * + * { margin-top: 0.25rem !important; }
-            .mt-6 { margin-top: 0.5rem !important; }
+            /* Tighten vertical gaps to reclaim space */
+            .space-y-12 { margin-top: 1.5rem !important; }
+            .space-y-8 { margin-top: 1rem !important; }
+            .mt-12 { margin-top: 1.5rem !important; }
+            .p-8 { padding: 1.5rem !important; }
 
-            /* Force black text for all athlete entries */
+            /* Ensure text is visible (Black on White) */
             span, p, h1, h2, h3, div {
                 color: black !important;
                 text-shadow: none !important;
             }
 
-            /* Legible labels for print */
-            .label, .text-red-500 {
+            /* Keep labels red but legible */
+            .text-red-500, .label {
                 color: #b91c1c !important; 
             }
 
-            /* Remove dark backgrounds from metric boxes for ink-saving */
-            .bg-gray-900, .bg-white\/5, .bg-black {
-                background: transparent !important;
+            /* Convert dark boxes to light-bordered boxes for the PDF */
+            .stat-box, .bg-white\/5 {
+                background: #f9fafb !important;
                 border: 1px solid #e5e7eb !important; 
             }
 
-            /* Hide UI elements */
-            .print-hide, #print-btn, #back-btn, .edit-mode, header, nav {
+            /* Hide buttons and UI */
+            .no-print, #print-btn, #back-btn, .edit-mode, #save-profile-btn, button {
                 display: none !important;
             }
 
-            .text-\[10px\] { font-size: 9pt !important; }
+            /* Scale down the logo/footer area */
+            .opacity-50 { opacity: 1 !important; margin-top: 1rem !important; }
             
             * {
                 -webkit-print-color-adjust: economy !important;
