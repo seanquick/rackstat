@@ -68,6 +68,21 @@
                     Add Lift
                 </button>
             </div>
+
+            <section class="bg-gray-900 border border-gray-700 p-8 rounded-xl mt-10">
+                <h2 class="text-2xl font-black text-white uppercase mb-2 italic">Roster Maintenance</h2>
+                <p class="text-gray-400 text-sm mb-6">Use this at the end of the season to advance all athletes to the next grade level.</p>
+                
+                <div class="bg-red-900/20 border border-red-900/50 p-4 rounded-lg flex justify-between items-center">
+                    <div>
+                        <p class="text-red-500 font-bold uppercase text-xs">Danger Zone</p>
+                        <p class="text-gray-300 text-sm">Advance all athletes' Graduation Years by 1 year.</p>
+                    </div>
+                    <button onclick="bulkAdvanceGrades()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-black text-xs transition uppercase">
+                        Advance All Grades
+                    </button>
+                </div>
+            </section>
         </section>
 
     </main>
@@ -88,7 +103,8 @@
             if (user) {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 if (userDoc.exists() && userDoc.data().role === 'coach') {
-                    schoolID = userDoc.data().schoolID || "default_school";
+                    // Updated to match your Firestore: school_id
+                    schoolID = userDoc.data().school_id || "default_school"; 
                     loadSettings();
                 } else { window.location.href = 'index.html'; }
             } else { window.location.href = 'index.html'; }
@@ -104,21 +120,31 @@
                     const data = settingsSnap.data();
                     
                     // Set Recruiting Toggle
-                    document.getElementById('toggle-recruiting').checked = data.recruitingEnabled || false;
+                    document.getElementById('toggle-recruiting').checked = data.recruitingEnabled !== false;
 
                     // Set Active Lifts
                     const activeLifts = data.activeLifts || [];
                     const checkboxes = document.querySelectorAll('.lift-checkbox');
                     checkboxes.forEach(cb => {
-                        if (activeLifts.includes(cb.value)) cb.checked = true;
+                        cb.checked = activeLifts.includes(cb.value);
                     });
 
-                    // Load Custom Lifts
+                    // Load Custom Lifts into UI
                     const customLifts = data.customLifts || [];
                     customLifts.forEach(lift => renderNewLiftCheckbox(lift, activeLifts.includes(lift)));
+                    
                 } else {
-                    console.log("No existing settings found for this school. Starting fresh.");
-                    // Optional: You could pre-check Bench/Squat/Clean by default here
+                    console.log("No existing settings found for " + schoolID + ". Initializing defaults.");
+                    
+                    // 1. Pre-check Bench, Squat, Clean
+                    const defaultLifts = ["bench", "squat", "clean"];
+                    const checkboxes = document.querySelectorAll('.lift-checkbox');
+                    checkboxes.forEach(cb => {
+                        if (defaultLifts.includes(cb.value)) cb.checked = true;
+                    });
+
+                    // 2. Default Recruiting to Enabled
+                    document.getElementById('toggle-recruiting').checked = true;
                 }
             } catch (err) {
                 console.error("Error loading settings:", err);
@@ -184,6 +210,29 @@
             } catch (err) {
                 console.error("Save Error:", err);
                 alert("Error saving settings.");
+            }
+        };
+
+        window.bulkAdvanceGrades = async () => {
+            if (!confirm("Are you sure? This will increment the graduation year for EVERY athlete in your program. This cannot be undone easily.")) return;
+
+            try {
+                const athletesSnap = await getDocs(collection(db, "recruiting_profiles"));
+                const batch = writeBatch(db); // Use writeBatch for efficiency
+
+                athletesSnap.forEach((athleteDoc) => {
+                    const currentGrad = parseInt(athleteDoc.data().gradYear);
+                    if (!isNaN(currentGrad)) {
+                        const athleteRef = doc(db, "recruiting_profiles", athleteDoc.id);
+                        batch.update(athleteRef, { gradYear: (currentGrad + 1).toString() });
+                    }
+                });
+
+                await batch.commit();
+                alert("Roster advanced successfully!");
+            } catch (err) {
+                console.error("Bulk Update Error:", err);
+                alert("Failed to update roster.");
             }
         };
     </script>
