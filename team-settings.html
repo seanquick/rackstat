@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Program Settings | RACKSTAT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-[#0d1117] text-white font-sans antialiased">
+
+    <header class="p-6 flex justify-between items-center border-b border-gray-800">
+        <div class="flex items-center gap-4">
+            <a href="coach-lobby.html" class="text-gray-400 hover:text-white transition">← Back to Office</a>
+            <h1 class="text-xl font-black italic uppercase tracking-tighter text-red-500">Program Settings</h1>
+        </div>
+        <button onclick="saveAllSettings()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-black text-sm transition shadow-lg uppercase">
+            Save Changes
+        </button>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-6 py-12">
+        
+        <section class="mb-10">
+            <div class="flex justify-between items-center bg-gray-900 border border-gray-700 p-6 rounded-xl">
+                <div>
+                    <h3 class="text-white font-black italic uppercase text-lg">Recruiting Feature</h3>
+                    <p class="text-gray-500 text-sm uppercase tracking-wider">Enable or Disable the Recruiting-Card for all athletes</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="toggle-recruiting" class="sr-only peer">
+                    <div class="w-14 h-7 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                </label>
+            </div>
+        </section>
+
+        <section class="bg-gray-900 border border-gray-700 p-8 rounded-xl">
+            <h2 class="text-2xl font-black text-white uppercase mb-2 italic">Tracked Core Lifts</h2>
+            <p class="text-gray-400 text-sm mb-8">Select which lifts appear in athlete trackers. Custom lifts added here will become options for the entire team.</p>
+            
+            <div id="core-lifts-container" class="grid grid-cols-2 md:grid-cols-3 gap-6 text-gray-300 mb-8 font-bold uppercase text-sm">
+                <label class="flex items-center space-x-3 cursor-pointer group">
+                    <input type="checkbox" value="bench" class="lift-checkbox w-6 h-6 rounded bg-gray-800 border-gray-600 text-red-600 focus:ring-red-600 transition">
+                    <span class="group-hover:text-white">Bench</span>
+                </label>
+                <label class="flex items-center space-x-3 cursor-pointer group">
+                    <input type="checkbox" value="squat" class="lift-checkbox w-6 h-6 rounded bg-gray-800 border-gray-600 text-red-600 focus:ring-red-600 transition">
+                    <span class="group-hover:text-white">Squat</span>
+                </label>
+                <label class="flex items-center space-x-3 cursor-pointer group">
+                    <input type="checkbox" value="clean" class="lift-checkbox w-6 h-6 rounded bg-gray-800 border-gray-600 text-red-600 focus:ring-red-600 transition">
+                    <span class="group-hover:text-white">Clean</span>
+                </label>
+                <label class="flex items-center space-x-3 cursor-pointer group">
+                    <input type="checkbox" value="deadlift" class="lift-checkbox w-6 h-6 rounded bg-gray-800 border-gray-600 text-red-600 focus:ring-red-600 transition">
+                    <span class="group-hover:text-white">Deadlift</span>
+                </label>
+                <label class="flex items-center space-x-3 cursor-pointer group">
+                    <input type="checkbox" value="push_press" class="lift-checkbox w-6 h-6 rounded bg-gray-800 border-gray-600 text-red-600 focus:ring-red-600 transition">
+                    <span class="group-hover:text-white">Push Press</span>
+                </label>
+            </div>
+
+            <div class="flex gap-3 pt-8 border-t border-gray-800">
+                <input type="text" id="custom-lift-input" placeholder="e.g. Incline Bench" 
+                    class="flex-1 p-3 rounded-lg bg-[#0d1117] text-white border border-gray-700 focus:border-red-500 outline-none transition">
+                <button onclick="addCustomLiftToUI()" class="bg-gray-700 hover:bg-red-600 text-white px-8 font-black rounded-lg transition-all uppercase text-xs">
+                    Add Lift
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <script type="module">
+        import { firebaseConfig } from './firebase-config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let schoolID = "default_school"; // This should ideally come from user profile
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (userDoc.exists() && userDoc.data().role === 'coach') {
+                    schoolID = userDoc.data().schoolID || "default_school";
+                    loadSettings();
+                } else { window.location.href = 'index.html'; }
+            } else { window.location.href = 'index.html'; }
+        });
+
+        // 1. Load Settings from Firestore
+        async function loadSettings() {
+            const settingsSnap = await getDoc(doc(db, "school_settings", schoolID));
+            if (settingsSnap.exists()) {
+                const data = settingsSnap.data();
+                
+                // Set Recruiting Toggle
+                document.getElementById('toggle-recruiting').checked = data.recruitingEnabled || false;
+
+                // Set Active Lifts
+                const activeLifts = data.activeLifts || [];
+                const checkboxes = document.querySelectorAll('.lift-checkbox');
+                checkboxes.forEach(cb => {
+                    if (activeLifts.includes(cb.value)) cb.checked = true;
+                });
+
+                // Load Custom Lifts into UI
+                const customLifts = data.customLifts || [];
+                customLifts.forEach(lift => renderNewLiftCheckbox(lift, activeLifts.includes(lift)));
+            }
+        }
+
+        // 2. Add Custom Lift to UI (Temporary until saved)
+        window.addCustomLiftToUI = () => {
+            const input = document.getElementById('custom-lift-input');
+            const liftName = input.value.trim();
+            if (!liftName) return;
+
+            // Check if it already exists
+            const existing = Array.from(document.querySelectorAll('.lift-checkbox')).map(cb => cb.value.toLowerCase());
+            if (existing.includes(liftName.toLowerCase())) {
+                alert("Lift already exists.");
+                return;
+            }
+
+            renderNewLiftCheckbox(liftName, true);
+            input.value = "";
+        };
+
+        function renderNewLiftCheckbox(name, checked) {
+            const container = document.getElementById('core-lifts-container');
+            const label = document.createElement('label');
+            label.className = "flex items-center space-x-3 cursor-pointer group";
+            label.innerHTML = `
+                <input type="checkbox" value="${name}" class="lift-checkbox w-6 h-6 rounded bg-gray-800 border-gray-600 text-red-600 focus:ring-red-600 transition" ${checked ? 'checked' : ''}>
+                <span class="group-hover:text-white text-yellow-500">${name}</span>
+            `;
+            container.appendChild(label);
+        }
+
+        // 3. Save Everything to Firestore
+        window.saveAllSettings = async () => {
+            const recruitingEnabled = document.getElementById('toggle-recruiting').checked;
+            
+            const allCheckboxes = document.querySelectorAll('.lift-checkbox');
+            const activeLifts = [];
+            const customLifts = [];
+            
+            // Standard lifts we expect
+            const standardLifts = ["bench", "squat", "clean", "deadlift", "push_press"];
+
+            allCheckboxes.forEach(cb => {
+                if (cb.checked) activeLifts.push(cb.value);
+                if (!standardLifts.includes(cb.value)) customLifts.push(cb.value);
+            });
+
+            try {
+                await setDoc(doc(db, "school_settings", schoolID), {
+                    recruitingEnabled,
+                    activeLifts,
+                    customLifts,
+                    lastUpdated: new Date()
+                }, { merge: true });
+
+                alert("Settings saved successfully!");
+            } catch (err) {
+                console.error("Save Error:", err);
+                alert("Error saving settings.");
+            }
+        };
+    </script>
+</body>
+</html>
