@@ -5,377 +5,384 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scouting Report | RACKSTAT</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* --- APP VIEW (DARK MODE) --- */
+   <style>
+    /* --- APP VIEW (DARK MODE) --- */
+    body {
+        background-color: #0d1117; 
+        color: white;
+    }
+    
+    /* Ensure the logo is always visible in the card but hidden if URL is empty */
+    /* Added !important to override any conflicting Tailwind or default browser behavior */
+    #disp-logo[src]:not([src=""]) {
+        display: block !important;
+    }
+
+    /* --- PDF / PRINT VIEW --- */
+    @media print {
+        @page {
+            size: letter;
+            margin: 0; 
+        }
+
         body {
-            background-color: #0d1117; 
-            color: white;
-        }
-        
-        /* Ensure the logo is always visible in the card but hidden if URL is empty */
-        #disp-logo:not([src=""]) {
-            display: block;
+            background: white !important;
+            color: black !important;
+            overflow: hidden; 
+            -webkit-print-color-adjust: economy !important;
+            print-color-adjust: economy !important;
         }
 
-        /* --- PDF / PRINT VIEW --- */
-        @media print {
-            @page {
-                size: letter;
-                margin: 0; 
-            }
-
-            body {
-                background: white !important;
-                color: black !important;
-                overflow: hidden; 
-                -webkit-print-color-adjust: economy !important;
-                print-color-adjust: economy !important;
-            }
-
-            #capture-area {
-                background: white !important; 
-                color: black !important;
-                box-shadow: none !important;
-                border: 1px solid #eee !important;
-                
-                /* The 0.75 scale ensures the layout fits perfectly on a standard 8.5x11 page */
-                position: absolute;
-                top: 0;
-                left: 50%;
-                transform: translateX(-50%) scale(0.75); 
-                transform-origin: top center;
-                width: 100%;
-                max-width: 800px;
-            }
-
-            /* Logic to keep the center logo centered in print */
-            .flex-1 { flex: 1 !important; }
-
-            /* --- SOCIAL MEDIA EXPORT OVERRIDES --- */
-            body.social-export {
-                background-color: #0d1117 !important;
-            }
-
-            body.social-export #capture-area {
-                background-color: #0d1117 !important;
-                border: 1px solid #30363d !important;
-            }
-
-            body.social-export span, 
-            body.social-export p, 
-            body.social-export h1, 
-            body.social-export h2, 
-            body.social-export div:not(.label) {
-                color: white !important;
-            }
-
-            body.social-export .stat-box, 
-            body.social-export .bg-white\/5 {
-                background: rgba(255, 255, 255, 0.05) !important;
-                border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            }
-
-            body.social-export * {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-
-            /* --- LAYOUT COMPRESSION FOR PRINT --- */
-            .space-y-12 { margin-top: 0.5rem !important; }
-            .space-y-8 { margin-top: 0.5rem !important; }
-            .mt-12 { margin-top: 0.75rem !important; }
-            .mt-6 { margin-top: 0.5rem !important; }
-            .p-8 { padding: 1rem !important; }
+        #capture-area {
+            background: white !important; 
+            color: black !important;
+            box-shadow: none !important;
+            border: 1px solid #eee !important;
             
-            #character-section {
-                page-break-inside: avoid;
-                margin-top: 0.5rem !important;
-            }
-
-            /* Default Print Text Colors (Non-Social) */
-            span, p, h1, h2, h3, div {
-                color: black;
-                text-shadow: none !important;
-            }
-
-            .text-red-500, .label {
-                color: #b91c1c !important; 
-            }
-
-            .stat-box, .bg-white\/5 {
-                background: #f9fafb;
-                border: 1px solid #e5e7eb; 
-            }
-
-            /* Hide UI elements on print */
-            .no-print, button, .edit-mode, #save-profile-btn, #unlock-btn {
-                display: none !important;
-            }
-
-            .opacity-50 { opacity: 1 !important; margin-top: 0.5rem !important; }
+            /* The 0.75 scale ensures the layout fits perfectly on a standard 8.5x11 page */
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%) scale(0.75); 
+            transform-origin: top center;
+            width: 100%;
+            max-width: 800px;
         }
-    </style>
+
+        /* Logic to keep the center logo centered in print */
+        .flex-1 { flex: 1 !important; }
+
+        /* Ensure the logo prints regardless of background graphics settings */
+        #disp-logo[src]:not([src=""]) {
+            display: block !important;
+            visibility: visible !important;
+        }
+
+        /* --- SOCIAL MEDIA EXPORT OVERRIDES --- */
+        body.social-export {
+            background-color: #0d1117 !important;
+        }
+
+        body.social-export #capture-area {
+            background-color: #0d1117 !important;
+            border: 1px solid #30363d !important;
+        }
+
+        body.social-export span, 
+        body.social-export p, 
+        body.social-export h1, 
+        body.social-export h2, 
+        body.social-export div:not(.label) {
+            color: white !important;
+        }
+
+        body.social-export .stat-box, 
+        body.social-export .bg-white\/5 {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+
+        body.social-export * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        /* --- LAYOUT COMPRESSION FOR PRINT --- */
+        .space-y-12 { margin-top: 0.5rem !important; }
+        .space-y-8 { margin-top: 0.5rem !important; }
+        .mt-12 { margin-top: 0.75rem !important; }
+        .mt-6 { margin-top: 0.5rem !important; }
+        .p-8 { padding: 1rem !important; }
+        
+        #character-section {
+            page-break-inside: avoid;
+            margin-top: 0.5rem !important;
+        }
+
+        /* Default Print Text Colors (Non-Social) */
+        span, p, h1, h2, h3, div {
+            color: black;
+            text-shadow: none !important;
+        }
+
+        .text-red-500, .label {
+            color: #b91c1c !important; 
+        }
+
+        .stat-box, .bg-white\/5 {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb; 
+        }
+
+        /* Hide UI elements on print */
+        .no-print, button, .edit-mode, #save-profile-btn, #unlock-btn {
+            display: none !important;
+        }
+
+        .opacity-50 { opacity: 1 !important; margin-top: 0.5rem !important; }
+    }
+</style>
 </head>
 <body class="p-4">
 
 <div class="max-w-2xl mx-auto mb-6 flex justify-between no-print">
-        <button onclick="window.print()" class="bg-white text-black px-6 py-2 rounded-full font-bold uppercase text-xs">Print PDF</button>
-        
-        <button onclick="window.exportSocial()" class="bg-white text-black px-6 py-2 rounded-full font-bold uppercase text-xs">SHARE TO SOCIAL</button>
-        
-        <button id="unlock-btn" onclick="toggleEditMode()" class="hidden bg-yellow-600 text-black font-black px-4 py-2 rounded uppercase text-[10px] mb-4 transition-all"> 🔓 Unlock Profile for Editing</button>
-        <button onclick="location.href='index.html'" class="bg-gray-800 text-white px-6 py-2 rounded-full font-bold uppercase text-xs">Back to Lobby</button>
+    <button onclick="window.print()" class="bg-white text-black px-6 py-2 rounded-full font-bold uppercase text-xs">Print PDF</button>
+    
+    <button onclick="window.exportSocial()" class="bg-white text-black px-6 py-2 rounded-full font-bold uppercase text-xs">SHARE TO SOCIAL</button>
+    
+    <button id="unlock-btn" onclick="toggleEditMode()" class="hidden bg-yellow-600 text-black font-black px-4 py-2 rounded uppercase text-[10px] mb-4 transition-all"> 🔓 Unlock Profile for Editing</button>
+    <button onclick="location.href='index.html'" class="bg-gray-800 text-white px-6 py-2 rounded-full font-bold uppercase text-xs">Back to Lobby</button>
+</div>
+
+<div id="capture-area" class="max-w-2xl mx-auto card-container rounded-3xl p-8 shadow-2xl border-red-600/20">
+    
+    <div class="flex justify-between items-start mb-6 w-full">
+        <div class="flex-1 min-w-0">
+            <h1 id="disp-name" class="text-4xl font-black italic uppercase leading-none view-mode">--</h1>
+            <input id="edit-name" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-2xl font-black p-1 rounded mb-2 w-full">
+
+            <p id="disp-class" class="text-red-500 font-bold tracking-widest text-sm mt-1 view-mode">CLASS OF --</p>
+            
+            <div class="edit-mode hidden mb-4">
+                <label class="block text-[10px] uppercase text-gray-400">Grad Year</label>
+                <input id="edit-grad" type="number" class="bg-gray-900 border border-blue-500 text-red-500 text-sm p-1 w-24 rounded">
+            </div>
+
+            <div id="disp-pos-container" class="mt-4">
+                <div class="flex gap-4 items-center">
+                    <span class="label text-[10px] text-red-500">Offense:</span>
+                    <span id="disp-pos" class="text-white font-bold uppercase text-sm view-mode">--</span>
+                    <span id="disp-pos2" class="text-gray-400 font-bold uppercase text-sm view-mode"></span>
+                    
+                    <div class="edit-mode hidden flex gap-2">
+                        <input id="edit-off-prim" type="text" placeholder="Prim Off" class="bg-gray-900 border border-blue-500 text-white text-xs p-1 w-20 rounded">
+                        <input id="edit-off-sec" type="text" placeholder="Sec Off" class="bg-gray-900 border border-blue-500 text-white text-xs p-1 w-20 rounded">
+                    </div>
+                </div>
+
+                <div class="flex gap-4 items-center mt-1">
+                    <span class="label text-[10px] text-blue-500">Defense:</span>
+                    <span id="disp-def-pos" class="text-white font-bold uppercase text-sm view-mode">--</span>
+                    <span id="disp-def-pos2" class="text-gray-400 font-bold uppercase text-sm view-mode"></span>
+                    
+                    <div class="edit-mode hidden flex gap-2">
+                        <input id="edit-def-prim" type="text" placeholder="Prim Def" class="bg-gray-900 border border-blue-500 text-white text-xs p-1 w-20 rounded">
+                        <input id="edit-def-sec" type="text" placeholder="Sec Def" class="bg-gray-900 border border-blue-500 text-white text-xs p-1 w-20 rounded">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 flex flex-col items-center justify-center px-4 min-w-[120px]">
+            <img id="disp-logo" src="" class="h-20 w-20 object-contain view-mode mb-2" alt="School Logo" style="display: none;">
+            
+            <div class="edit-mode hidden w-full">
+                <label class="block text-[10px] uppercase text-gray-400 text-center mb-1">School Logo URL</label>
+                <input id="edit-logo" type="text" placeholder="images/logo.png" class="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]">
+            </div>
+        </div>
+
+        <div class="flex-1 text-right min-w-0">
+            <div id="disp-number" class="text-6xl font-black text-white/20 italic leading-none">#--</div>
+            <div class="mt-2 text-xs font-bold">
+                <span id="disp-height">--</span> | <span id="disp-weight">--</span>
+            </div>
+            
+            <div class="edit-mode hidden grid grid-cols-1 gap-2 mt-2">
+                <div>
+                    <label class="block text-[10px] uppercase text-gray-400">Ht/Wt</label>
+                    <div class="flex gap-1 justify-end">
+                        <input id="edit-height" type="text" placeholder="6'2" class="w-12 bg-white/10 border border-white/20 rounded px-1 py-1 text-white text-xs">
+                        <input id="edit-weight" type="text" placeholder="215" class="w-12 bg-white/10 border border-white/20 rounded px-1 py-1 text-white text-xs">
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div id="capture-area" class="max-w-2xl mx-auto card-container rounded-3xl p-8 shadow-2xl border-red-600/20">
-        
-        <div class="flex justify-between items-start mb-6">
-            <div class="flex-1">
-                <h1 id="disp-name" class="text-4xl font-black italic uppercase leading-none view-mode">--</h1>
-                <input id="edit-name" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-2xl font-black p-1 rounded mb-2 w-full">
-
-                <p id="disp-class" class="text-red-500 font-bold tracking-widest text-sm mt-1 view-mode">CLASS OF --</p>
-                
-                <div class="edit-mode hidden mb-4">
-                    <label class="block text-[10px] uppercase text-gray-400">Grad Year</label>
-                    <input id="edit-grad" type="number" class="bg-gray-900 border border-blue-500 text-red-500 text-sm p-1 w-24 rounded">
-                </div>
-
-                <div id="disp-pos-container" class="mt-4">
-                    <div class="flex gap-4 items-center">
-                        <span class="label text-[10px] text-red-500">Offense:</span>
-                        <span id="disp-pos" class="text-white font-bold uppercase text-sm view-mode">--</span>
-                        <span id="disp-pos2" class="text-gray-400 font-bold uppercase text-sm view-mode"></span>
-                        
-                        <div class="edit-mode hidden flex gap-2">
-                            <input id="edit-off-prim" type="text" placeholder="Prim Off" class="bg-gray-900 border border-blue-500 text-white text-xs p-1 w-20 rounded">
-                            <input id="edit-off-sec" type="text" placeholder="Sec Off" class="bg-gray-900 border border-blue-500 text-white text-xs p-1 w-20 rounded">
-                        </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="space-y-8">
+            <div>
+                <h3 class="label mb-4 text-red-500 text-sm">Verified Metrics</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="stat-box p-3">
+                        <span class="label">Bench Press</span>
+                        <div id="stat-bench" class="value view-mode">--</div>
+                        <input id="edit-bench" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
                     </div>
-
-                    <div class="flex gap-4 items-center mt-1">
-                        <span class="label text-[10px] text-blue-500">Defense:</span>
-                        <span id="disp-def-pos" class="text-white font-bold uppercase text-sm view-mode">--</span>
-                        <span id="disp-def-pos2" class="text-gray-400 font-bold uppercase text-sm view-mode"></span>
-                        
-                        <div class="edit-mode hidden flex gap-2">
-                            <input id="edit-def-prim" type="text" placeholder="Prim Def" class="bg-gray-900 border border-blue-500 text-white text-xs p-1 w-20 rounded">
-                            <input id="edit-def-sec" type="text" placeholder="Sec Def" class="bg-gray-900 border border-blue-500 text-white text-xs p-1 w-20 rounded">
-                        </div>
+                    <div class="stat-box p-3">
+                        <span class="label">Squat</span>
+                        <div id="stat-squat" class="value view-mode">--</div>
+                        <input id="edit-squat" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
+                    </div>
+                    <div class="stat-box p-3">
+                        <span class="label">Clean</span>
+                        <div id="stat-clean" class="value view-mode">--</div>
+                        <input id="edit-clean" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
+                    </div>
+                    <div class="stat-box p-3">
+                        <span class="label">Deadlift</span>
+                        <div id="stat-deadlift" class="value view-mode">--</div>
+                        <input id="edit-deadlift" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
+                    </div>
+                    <div class="stat-box p-3">
+                        <span class="label">Push Press</span>
+                        <div id="stat-push_press" class="value view-mode">--</div>
+                        <input id="edit-push_press" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
+                    </div>
+                    <div class="stat-box p-3">
+                        <span class="label">40 Yard</span>
+                        <div id="stat-forty" class="value view-mode">--</div>
+                        <input id="edit-forty" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
                     </div>
                 </div>
             </div>
 
-            <div class="flex-1 flex flex-col items-center justify-center px-4">
-                <img id="disp-logo" src="" class="h-20 w-20 object-contain view-mode hidden mb-2" alt="School Logo">
-                
-                <div class="edit-mode hidden w-full">
-                    <label class="block text-[10px] uppercase text-gray-400 text-center mb-1">School Logo URL</label>
-                    <input id="edit-logo" type="text" placeholder="https://..." class="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]">
+            <div>
+                <h3 class="label mb-4 text-red-500 text-sm">Academic Profile</h3>
+                <div class="space-y-2">
+                    <div class="flex justify-between border-b border-white/10 pb-1 items-center">
+                        <span class="label">Current GPA</span>
+                        <span id="disp-gpa" class="font-bold italic view-mode">--</span>
+                        <input id="edit-gpa" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-right p-1 w-16 rounded">
+                    </div>
+                    <div class="flex justify-between border-b border-white/10 pb-1 items-center">
+                        <span class="label">Core GPA</span>
+                        <span id="disp-core-gpa" class="font-bold italic view-mode">--</span>
+                        <input id="edit-core-gpa" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-right p-1 w-16 rounded">
+                    </div>
+                    <div class="flex justify-between border-b border-white/10 pb-1 items-center">
+                        <span class="label">ACT Score</span>
+                        <span id="disp-act" class="font-bold italic view-mode">--</span>
+                        <input id="edit-act" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-right p-1 w-16 rounded">
+                    </div>
+                    <div class="flex justify-between border-b border-white/10 pb-1 items-center">
+                        <span class="label">SAT Score</span>
+                        <span id="disp-sat" class="font-bold italic view-mode">--</span>
+                        <input id="edit-sat" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-right p-1 w-16 rounded">
+                    </div>
                 </div>
             </div>
+        </div>
 
-            <div class="flex-1 text-right">
-                <div id="disp-number" class="text-6xl font-black text-white/20 italic leading-none">#--</div>
-                <div class="mt-2 text-xs font-bold">
-                    <span id="disp-height">--</span> | <span id="disp-weight">--</span>
+        <div class="space-y-8">
+            <div>
+                <h3 class="label mb-4 text-red-500 text-sm">Contact & Links</h3>
+                <div class="space-y-4">
+                    <a id="link-twitter" href="#" target="_blank" class="flex items-center gap-3 group transition-opacity hover:opacity-80">
+                        <div class="h-8 w-8 bg-blue-600 rounded flex items-center justify-center font-black">X</div>
+                        <div class="flex-grow">
+                            <span class="label block">Twitter</span>
+                            <span id="disp-twitter" class="text-xs font-bold italic view-mode">@--</span>
+                            <input id="edit-twitter" type="text" placeholder="@handle" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
+                        </div>
+                    </a>
+
+                    <a id="link-instagram" href="#" target="_blank" class="flex items-center gap-3 group transition-opacity hover:opacity-80">
+                        <div class="h-8 w-8 bg-gradient-to-tr from-yellow-500 to-purple-600 rounded flex items-center justify-center font-black italic">IG</div>
+                        <div class="flex-grow">
+                            <span class="label block">Instagram</span>
+                            <span id="disp-instagram" class="text-xs font-bold italic view-mode">@--</span>
+                            <input id="edit-instagram" type="text" placeholder="@handle" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
+                        </div>
+                    </a>
+
+                    <a id="link-tiktok" href="#" target="_blank" class="flex items-center gap-3 group transition-opacity hover:opacity-80">
+                        <div class="h-8 w-8 bg-black border border-white/20 rounded flex items-center justify-center font-black italic text-[8px]">TikTok</div>
+                        <div class="flex-grow">
+                            <span class="label block">TikTok</span>
+                            <span id="disp-tiktok" class="text-xs font-bold italic view-mode">@--</span>
+                            <input id="edit-tiktok" type="text" placeholder="@handle" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
+                        </div>
+                    </a>
+                    
+                    <div class="view-mode">
+                        <a id="link-hudl" href="#" target="_blank" class="block">
+                            <button class="bg-red-600 hover:bg-red-700 w-full py-2 rounded font-black italic uppercase text-xs">View Hudl / Film</button>
+                        </a>
+                    </div>
+                    <div class="edit-mode hidden">
+                        <span class="label block mb-1">Highlight URL (Hudl/YouTube)</span>
+                        <input id="edit-hudl" type="text" placeholder="https://..." class="bg-gray-900 border border-blue-500 text-white text-xs p-2 w-full rounded">
+                    </div>
                 </div>
-                
-                <div class="edit-mode hidden grid grid-cols-1 gap-2 mt-2">
+
+                <div class="mt-6 p-3 bg-white/5 rounded-lg border border-white/10">
+                    <span class="label block mb-1">Parental Contact</span>
+                    <p id="disp-parents" class="text-xs font-bold text-white view-mode">--</p>
+                    <input id="edit-parents" type="text" placeholder="Names" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded mb-1">
+                    
+                    <p id="disp-parent-contact" class="text-[10px] text-gray-400 view-mode">--</p>
+                    <input id="edit-parent-contact" type="text" placeholder="Phone/Email" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-[10px] p-1 w-full rounded">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-12 space-y-12 border-t border-white/10 pt-8">
+        <div>
+            <h3 class="label mb-4 text-red-500 text-sm">Training & Commitment</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="stat-box p-3">
+                    <span class="label">Extra Training</span>
+                    <div id="disp-extra-days" class="text-sm font-bold uppercase italic view-mode">--</div>
+                    <input id="edit-extra-days" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
+                </div>
+                <div class="stat-box p-3">
+                    <span class="label">Nutrition Plan</span>
+                    <div id="disp-nutrition" class="text-sm font-bold uppercase italic view-mode">--</div>
+                    <input id="edit-nutrition" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
+                </div>
+                <div class="stat-box p-3">
+                    <span class="label">7-8+ Hrs Sleep</span>
+                    <div id="disp-sleep" class="text-sm font-bold uppercase italic view-mode">--</div>
+                    <input id="edit-sleep" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
+                </div>
+                <div class="stat-box p-3">
+                    <span class="label">Year-Round Lift</span>
+                    <div id="disp-lift" class="text-sm font-bold uppercase italic view-mode">--</div>
+                    <select id="edit-lift" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
+                        <option value="true">YES</option>
+                        <option value="false">NO</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <h3 class="label mb-4 text-red-500 text-sm uppercase">Character & Leadership</h3>
+            <div class="bg-white/5 p-8 rounded-3xl border border-white/10 italic text-sm text-gray-300 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
-                        <label class="block text-[10px] uppercase text-gray-400">Ht/Wt</label>
-                        <div class="flex gap-1 justify-end">
-                            <input id="edit-height" type="text" placeholder="6'2" class="w-12 bg-white/10 border border-white/20 rounded px-1 py-1 text-white text-xs">
-                            <input id="edit-weight" type="text" placeholder="215" class="w-12 bg-white/10 border border-white/20 rounded px-1 py-1 text-white text-xs">
-                        </div>
+                        <p class="label not-italic mb-2 text-white/40">Teammate Type:</p>
+                        <p id="disp-teammate-type" class="leading-relaxed view-mode">--</p>
+                        <textarea id="edit-team-type" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white w-full p-2 rounded h-20 text-xs mt-2"></textarea>
                     </div>
+                    <div>
+                        <p class="label not-italic mb-2 text-white/40">Sacrifices for the team:</p>
+                        <p id="disp-sacrifice" class="leading-relaxed view-mode">--</p>
+                        <textarea id="edit-sacrifice" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white w-full p-2 rounded h-20 text-xs mt-2"></textarea>
+                    </div>
+                </div>
+                <div class="pt-4 border-t border-white/5">
+                    <p class="label not-italic mb-2 text-white/40">What it means to be a good teammate:</p>
+                    <p id="disp-teammate-mean" class="leading-relaxed view-mode">--</p>
+                    <textarea id="edit-team-mean" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white w-full p-2 rounded h-24 text-xs mt-2"></textarea>
                 </div>
             </div>
         </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div class="space-y-8">
-                <div>
-                    <h3 class="label mb-4 text-red-500 text-sm">Verified Metrics</h3>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="stat-box p-3">
-                            <span class="label">Bench Press</span>
-                            <div id="stat-bench" class="value view-mode">--</div>
-                            <input id="edit-bench" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
-                        </div>
-                        <div class="stat-box p-3">
-                            <span class="label">Squat</span>
-                            <div id="stat-squat" class="value view-mode">--</div>
-                            <input id="edit-squat" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
-                        </div>
-                        <div class="stat-box p-3">
-                            <span class="label">Clean</span>
-                            <div id="stat-clean" class="value view-mode">--</div>
-                            <input id="edit-clean" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
-                        </div>
-                        <div class="stat-box p-3">
-                            <span class="label">Deadlift</span>
-                            <div id="stat-deadlift" class="value view-mode">--</div>
-                            <input id="edit-deadlift" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
-                        </div>
-                        <div class="stat-box p-3">
-                            <span class="label">Push Press</span>
-                            <div id="stat-push" class="value view-mode">--</div>
-                            <input id="edit-push" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
-                        </div>
-                        <div class="stat-box p-3">
-                            <span class="label">40 Yard</span>
-                            <div id="stat-forty" class="value view-mode">--</div>
-                            <input id="edit-forty" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <h3 class="label mb-4 text-red-500 text-sm">Academic Profile</h3>
-                    <div class="space-y-2">
-                        <div class="flex justify-between border-b border-white/10 pb-1 items-center">
-                            <span class="label">Current GPA</span>
-                            <span id="disp-gpa" class="font-bold italic view-mode">--</span>
-                            <input id="edit-gpa" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-right p-1 w-16 rounded">
-                        </div>
-                        <div class="flex justify-between border-b border-white/10 pb-1 items-center">
-                            <span class="label">Core GPA</span>
-                            <span id="disp-core-gpa" class="font-bold italic view-mode">--</span>
-                            <input id="edit-core-gpa" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-right p-1 w-16 rounded">
-                        </div>
-                        <div class="flex justify-between border-b border-white/10 pb-1 items-center">
-                            <span class="label">ACT Score</span>
-                            <span id="disp-act" class="font-bold italic view-mode">--</span>
-                            <input id="edit-act" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-right p-1 w-16 rounded">
-                        </div>
-                        <div class="flex justify-between border-b border-white/10 pb-1 items-center">
-                            <span class="label">SAT Score</span>
-                            <span id="disp-sat" class="font-bold italic view-mode">--</span>
-                            <input id="edit-sat" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-right p-1 w-16 rounded">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="space-y-8">
-                <div>
-                    <h3 class="label mb-4 text-red-500 text-sm">Contact & Links</h3>
-                    <div class="space-y-4">
-                        <a id="link-twitter" href="#" target="_blank" class="flex items-center gap-3 group transition-opacity hover:opacity-80">
-                            <div class="h-8 w-8 bg-blue-600 rounded flex items-center justify-center font-black">X</div>
-                            <div class="flex-grow">
-                                <span class="label block">Twitter</span>
-                                <span id="disp-twitter" class="text-xs font-bold italic view-mode">@--</span>
-                                <input id="edit-twitter" type="text" placeholder="@handle" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
-                            </div>
-                        </a>
-
-                        <a id="link-instagram" href="#" target="_blank" class="flex items-center gap-3 group transition-opacity hover:opacity-80">
-                            <div class="h-8 w-8 bg-gradient-to-tr from-yellow-500 to-purple-600 rounded flex items-center justify-center font-black italic">IG</div>
-                            <div class="flex-grow">
-                                <span class="label block">Instagram</span>
-                                <span id="disp-instagram" class="text-xs font-bold italic view-mode">@--</span>
-                                <input id="edit-instagram" type="text" placeholder="@handle" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
-                            </div>
-                        </a>
-
-                        <a id="link-tiktok" href="#" target="_blank" class="flex items-center gap-3 group transition-opacity hover:opacity-80">
-                            <div class="h-8 w-8 bg-black border border-white/20 rounded flex items-center justify-center font-black italic text-[8px]">TikTok</div>
-                            <div class="flex-grow">
-                                <span class="label block">TikTok</span>
-                                <span id="disp-tiktok" class="text-xs font-bold italic view-mode">@--</span>
-                                <input id="edit-tiktok" type="text" placeholder="@handle" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
-                            </div>
-                        </a>
-                        
-                        <div class="view-mode">
-                            <a id="link-hudl" href="#" target="_blank" class="block">
-                                <button class="bg-red-600 hover:bg-red-700 w-full py-2 rounded font-black italic uppercase text-xs">View Hudl / Film</button>
-                            </a>
-                        </div>
-                        <div class="edit-mode hidden">
-                            <span class="label block mb-1">Highlight URL (Hudl/YouTube)</span>
-                            <input id="edit-hudl" type="text" placeholder="https://..." class="bg-gray-900 border border-blue-500 text-white text-xs p-2 w-full rounded">
-                        </div>
-                    </div>
-
-                    <div class="mt-6 p-3 bg-white/5 rounded-lg border border-white/10">
-                        <span class="label block mb-1">Parental Contact</span>
-                        <p id="disp-parents" class="text-xs font-bold text-white view-mode">--</p>
-                        <input id="edit-parents" type="text" placeholder="Names" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded mb-1">
-                        
-                        <p id="disp-parent-contact" class="text-[10px] text-gray-400 view-mode">--</p>
-                        <input id="edit-parent-contact" type="text" placeholder="Phone/Email" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-[10px] p-1 w-full rounded">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="mt-12 space-y-12 border-t border-white/10 pt-8">
-            <div>
-                <h3 class="label mb-4 text-red-500 text-sm">Training & Commitment</h3>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="stat-box p-3">
-                        <span class="label">Extra Training</span>
-                        <div id="disp-extra-days" class="text-sm font-bold uppercase italic view-mode">--</div>
-                        <input id="edit-extra-days" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
-                    </div>
-                    <div class="stat-box p-3">
-                        <span class="label">Nutrition Plan</span>
-                        <div id="disp-nutrition" class="text-sm font-bold uppercase italic view-mode">--</div>
-                        <input id="edit-nutrition" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
-                    </div>
-                    <div class="stat-box p-3">
-                        <span class="label">7-8+ Hrs Sleep</span>
-                        <div id="disp-sleep" class="text-sm font-bold uppercase italic view-mode">--</div>
-                        <input id="edit-sleep" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
-                    </div>
-                    <div class="stat-box p-3">
-                        <span class="label">Year-Round Lift</span>
-                        <div id="disp-lift" class="text-sm font-bold uppercase italic view-mode">--</div>
-                        <select id="edit-lift" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
-                            <option value="true">YES</option>
-                            <option value="false">NO</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <div>
-                <h3 class="label mb-4 text-red-500 text-sm uppercase">Character & Leadership</h3>
-                <div class="bg-white/5 p-8 rounded-3xl border border-white/10 italic text-sm text-gray-300 space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div>
-                            <p class="label not-italic mb-2 text-white/40">Teammate Type:</p>
-                            <p id="disp-teammate-type" class="leading-relaxed view-mode">--</p>
-                            <textarea id="edit-team-type" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white w-full p-2 rounded h-20 text-xs mt-2"></textarea>
-                        </div>
-                        <div>
-                            <p class="label not-italic mb-2 text-white/40">Sacrifices for the team:</p>
-                            <p id="disp-sacrifice" class="leading-relaxed view-mode">--</p>
-                            <textarea id="edit-sacrifice" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white w-full p-2 rounded h-20 text-xs mt-2"></textarea>
-                        </div>
-                    </div>
-                    <div class="pt-4 border-t border-white/5">
-                        <p class="label not-italic mb-2 text-white/40">What it means to be a good teammate:</p>
-                        <p id="disp-teammate-mean" class="leading-relaxed view-mode">--</p>
-                        <textarea id="edit-team-mean" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white w-full p-2 rounded h-24 text-xs mt-2"></textarea>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="mt-12 pt-6 border-t border-white/10 flex justify-between items-center opacity-50">
-            <span class="text-[8px] font-black uppercase tracking-widest">Powered by RACKSTAT Elite Recruiting</span>
-            <img src="images/rackstat-logo.png" class="h-4 w-auto">
-        </div>
-
-        <button id="save-profile-btn" onclick="saveAthleteProfile()" 
-                class="hidden fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-500 text-white font-black px-10 py-4 rounded-full shadow-2xl uppercase italic tracking-tighter transition-all z-50">
-            Save Changes
-        </button>
     </div>
+
+    <div class="mt-12 pt-6 border-t border-white/10 flex justify-between items-center opacity-50">
+        <span class="text-[8px] font-black uppercase tracking-widest">Powered by RACKSTAT Elite Recruiting</span>
+        <img src="images/rackstat-logo.png" class="h-4 w-auto">
+    </div>
+
+    <button id="save-profile-btn" onclick="saveAthleteProfile()" 
+            class="hidden fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-500 text-white font-black px-10 py-4 rounded-full shadow-2xl uppercase italic tracking-tighter transition-all z-50">
+        Save Changes
+    </button>
+</div>
 
 <script type="module">
     // 1. ATTACH TO WINDOW SO THE BUTTON CAN SEE IT
@@ -435,6 +442,9 @@
                     if (d.logo_primary && logoEl) {
                         logoEl.src = d.logo_primary;
                         logoEl.classList.remove('hidden');
+                        logoEl.style.display = 'block'; // Direct style override to ensure visibility
+                    } else if (logoEl) {
+                        logoEl.classList.add('hidden');
                     }
 
                     // --- DISPLAY MAPPING ---
