@@ -374,13 +374,8 @@
 <script type="module">
     // 1. ATTACH TO WINDOW SO THE BUTTON CAN SEE IT
     window.exportSocial = () => {
-        // Add the dark mode class
         document.body.classList.add('social-export');
-        
-        // Trigger the print dialog
         window.print();
-        
-        // Remove the class after a delay to return to normal view
         setTimeout(() => {
             document.body.classList.remove('social-export');
         }, 500);
@@ -388,107 +383,99 @@
 
     import { firebaseConfig } from './firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, getDoc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
 
-    const updateSocialLink = (platform, handle, linkId, dispId) => {
-        const linkEl = document.getElementById(linkId);
-        const dispEl = document.getElementById(dispId);
-        if (handle && linkEl && dispEl) {
-            const cleanHandle = handle.replace('@', '');
-            dispEl.innerText = `@${cleanHandle}`;
-            linkEl.href = `https://www.${platform}.com/${cleanHandle}`;
-        }
+    // Global Helpers
+    const safeSet = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = text || "--";
     };
 
-    let currentUser = null;
+    const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val || "";
+    };
+
+    const formatHeight = (inches) => {
+        if (!inches || isNaN(inches)) return "--";
+        const feet = Math.floor(inches / 12);
+        const remainingInches = inches % 12;
+        return `${feet}'${remainingInches}"`;
+    };
 
     onAuthStateChanged(auth, async (user) => {
         const urlParams = new URLSearchParams(window.location.search);
         const athleteId = urlParams.get('uid');
         const isEditMode = urlParams.get('edit') === 'true';
 
-        // Helper function for height conversion
-        const formatHeight = (inches) => {
-            if (!inches || isNaN(inches)) return "--";
-            const feet = Math.floor(inches / 12);
-            const remainingInches = inches % 12;
-            return `${feet}'${remainingInches}"`;
-        };
-
         if (user) {
-            currentUser = user;
             try {
                 const targetUid = athleteId || user.uid;
                 const profileRef = doc(db, "recruiting_profiles", targetUid);
                 const maxesRef = doc(db, "recruiting_profiles", targetUid, "maxes", "latest");
                 const [recSnap, maxesSnap] = await Promise.all([getDoc(profileRef), getDoc(maxesRef)]);
 
-                const safeSet = (id, text) => {
-                    const el = document.getElementById(id);
-                    if (el) el.innerText = text || "--";
-                };
-
                 if (recSnap.exists()) {
-                    const d = recSnap.data(); // 'd' IS NOW DEFINED
+                    const d = recSnap.data();
                     const mx = maxesSnap.exists() ? maxesSnap.data() : {};
 
-                    // 1. DEFINE setVal FIRST (so it's ready for use)
-                    const setVal = (id, val) => {
-                        const el = document.getElementById(id);
-                        if (el) el.value = val || "";
-                    };
-                    
-                    // --- SCHOOL LOGO LOGIC (MOVED HERE) ---
-                    if (d.logo_primary) { 
-                        console.log("Logo URL Found:", d.logo_primary);
-                        const logoEl = document.getElementById('disp-logo');
-                        if (logoEl) {
-                            logoEl.src = d.logo_primary;
-                            logoEl.classList.remove('hidden');
-                        }
-                    } else {
-                        // This is what you are seeing now because it's looking for 'schoolLogo'
-                        console.log("No logo_primary field found in Firestore for this user.");
+                    // --- LOGO LOGIC ---
+                    const logoEl = document.getElementById('disp-logo');
+                    if (d.logo_primary && logoEl) {
+                        logoEl.src = d.logo_primary;
+                        logoEl.classList.remove('hidden');
                     }
 
-                    // --- DISPLAY MAPPING: CORE IDENTITY ---
+                    // --- DISPLAY MAPPING ---
                     safeSet('disp-name', d.fullName);
                     safeSet('disp-class', d.gradYear ? "CLASS OF " + d.gradYear : "--");
                     safeSet('disp-number', d.jerseyNum ? "#" + d.jerseyNum : "#--");
                     safeSet('disp-height', formatHeight(d.height));
-                    safeSet('disp-weight', d.weight);
+                    safeSet('disp-weight', d.weight ? d.weight + " lbs" : "--");
                     
+                    // Positions
                     safeSet('disp-pos', d.offPrimary);
-                    if (document.getElementById('disp-pos2'))
-                        document.getElementById('disp-pos2').innerText = d.offSecondary ? "/ " + d.offSecondary : "";
-
+                    const pos2 = document.getElementById('disp-pos2');
+                    if (pos2) pos2.innerText = d.offSecondary ? "/ " + d.offSecondary : "";
+                    
                     safeSet('disp-def-pos', d.defPrimary);
-                    if (document.getElementById('disp-def-pos2'))
-                        document.getElementById('disp-def-pos2').innerText = d.defSecondary ? "/ " + d.defSecondary : "";
+                    const defPos2 = document.getElementById('disp-def-pos2');
+                    if (defPos2) defPos2.innerText = d.defSecondary ? "/ " + d.defSecondary : "";
 
-                    // --- DISPLAY MAPPING: METRICS & MAXES ---
+                    // Stats & Academics
                     safeSet('stat-bench', mx.bench_press || d.bench);
                     safeSet('stat-squat', mx.squat || d.squat);
                     safeSet('stat-clean', mx.clean || d.clean);
                     safeSet('stat-deadlift', mx.deadlift || d.deadlift);
                     safeSet('stat-forty', d.forty ? d.forty + "s" : "--");
-
-                    // --- DISPLAY MAPPING: ACADEMICS ---
                     safeSet('disp-gpa', d.gpa);
                     safeSet('disp-core-gpa', d.coreGpa);
                     safeSet('disp-act', d.act);
                     safeSet('disp-sat', d.sat);
 
-                    // --- DISPLAY MAPPING: PARENTAL CONTACT ---
+                    // Socials
+                    const formatLink = (linkId, dispId, handle, platform = '') => {
+                        const linkEl = document.getElementById(linkId);
+                        const dispEl = document.getElementById(dispId);
+                        if (handle) {
+                            const cleanHandle = handle.replace('@', '');
+                            if (linkEl) linkEl.href = platform ? `https://www.${platform}.com/${cleanHandle}` : handle;
+                            if (dispEl) dispEl.innerText = platform ? `@${cleanHandle}` : handle;
+                        }
+                    };
+                    formatLink('link-hudl', null, d.hudlLink || d.highlightUrl);
+                    formatLink('link-twitter', 'disp-twitter', d.twitter, 'twitter');
+                    formatLink('link-instagram', 'disp-instagram', d.instagram, 'instagram');
+                    formatLink('link-tiktok', 'disp-tiktok', d.tiktok, 'tiktok');
+
+                    // Parent & Character
                     safeSet('disp-parents', d.parentNames);
                     safeSet('disp-parent-contact', d.parentContact);
-
-                    // --- DISPLAY MAPPING: TRAINING & CHARACTER ---
                     safeSet('disp-extra-days', d.weeklyExtraDays);
                     safeSet('disp-nutrition', d.hasNutritionPlan);
                     safeSet('disp-sleep', d.getsSleep);
@@ -497,38 +484,10 @@
                     safeSet('disp-teammate-mean', d.goodTeammateMeaning);
                     safeSet('disp-sacrifice', d.willingToSacrifice);
 
-                    // --- DISPLAY MAPPING: LINKS & SOCIAL ---
-                    const formatLink = (linkId, dispId, handle, platform = '') => {
-                        const linkEl = document.getElementById(linkId);
-                        const dispEl = document.getElementById(dispId);
-                        if (handle) {
-                            const cleanHandle = handle.replace('@', '');
-                            if (linkEl) {
-                                linkEl.href = platform ? `https://www.${platform}.com/${cleanHandle}` : handle;
-                                linkEl.classList.remove('hidden');
-                            }
-                            if (dispEl) {
-                                dispEl.innerText = platform ? `@${cleanHandle}` : handle;
-                            }
-                        } else if (linkEl) {
-                            linkEl.classList.add('hidden');
-                        }
-                    };
-
-                    formatLink('link-hudl', null, d.hudlLink || d.highlightUrl);
-                    formatLink('link-twitter', 'disp-twitter', d.twitter, 'twitter');
-                    formatLink('link-instagram', 'disp-instagram', d.instagram, 'instagram');
-                    formatLink('link-tiktok', 'disp-tiktok', d.tiktok, 'tiktok');
-
                     // --- EDIT MODE PRE-FILL ---
                     if (isEditMode) {
-                        const setVal = (id, val) => {
-                            const el = document.getElementById(id);
-                            if (el) el.value = val || "";
-                        };
                         setVal('edit-name', d.fullName);
                         setVal('edit-grad', d.gradYear);
-                        setVal('edit-number', d.jerseyNum);
                         setVal('edit-height', d.height);
                         setVal('edit-weight', d.weight);
                         setVal('edit-off-prim', d.offPrimary);
@@ -556,13 +515,14 @@
                         setVal('edit-twitter', d.twitter);
                         setVal('edit-instagram', d.instagram);
                         setVal('edit-tiktok', d.tiktok);
-                        setVal('edit-logo', d.logo_primary); 
-}                       setVal('edit-hudl', d.hudlLink || d.highlightUrl);
-
-                    const userSnap = await getDoc(doc(db, "users", user.uid));
-                    const isCoach = userSnap.data()?.role === 'coach';
-                    if (isCoach && isEditMode) {
-                        document.getElementById('unlock-btn')?.classList.remove('hidden');
+                        setVal('edit-logo', d.logo_primary);
+                        setVal('edit-hudl', d.hudlLink || d.highlightUrl);
+                        
+                        // Show unlock button for coaches
+                        const userSnap = await getDoc(doc(db, "users", user.uid));
+                        if (userSnap.data()?.role === 'coach') {
+                            document.getElementById('unlock-btn')?.classList.remove('hidden');
+                        }
                     }
                 }
             } catch (err) { console.error("Render Error:", err); }
@@ -584,41 +544,38 @@
         const playerUID = new URLSearchParams(window.location.search).get('uid');
         if (!playerUID) return alert("No athlete selected.");
 
-        const getVal = (id) => document.getElementById(id)?.value || "";
-
         const updatedData = {
-            fullName: getVal('edit-name'),
-            gradYear: getVal('edit-grad'),
-            logo_primary: document.getElementById('edit-logo').value,
-            jerseyNum: getVal('edit-number'), // Updated ID to match pre-fill
-            offPrimary: getVal('edit-off-prim'),
-            offSecondary: getVal('edit-off-sec'),
-            defPrimary: getVal('edit-def-prim'),
-            defSecondary: getVal('edit-def-sec'),
-            bench: getVal('edit-bench'),
-            squat: getVal('edit-squat'),
-            clean: getVal('edit-clean'),
-            deadlift: getVal('edit-deadlift'),
-            forty: getVal('edit-forty'),
-            gpa: getVal('edit-gpa'),
-            coreGpa: getVal('edit-core-gpa'),
-            act: getVal('edit-act'),
-            sat: getVal('edit-sat'),
+            fullName: document.getElementById('edit-name')?.value || "",
+            gradYear: document.getElementById('edit-grad')?.value || "",
+            logo_primary: document.getElementById('edit-logo')?.value || "",
+            offPrimary: document.getElementById('edit-off-prim')?.value || "",
+            offSecondary: document.getElementById('edit-off-sec')?.value || "",
+            defPrimary: document.getElementById('edit-def-prim')?.value || "",
+            defSecondary: document.getElementById('edit-def-sec')?.value || "",
+            bench: document.getElementById('edit-bench')?.value || "",
+            squat: document.getElementById('edit-squat')?.value || "",
+            clean: document.getElementById('edit-clean')?.value || "",
+            deadlift: document.getElementById('edit-deadlift')?.value || "",
+            forty: document.getElementById('edit-forty')?.value || "",
+            gpa: document.getElementById('edit-gpa')?.value || "",
+            coreGpa: document.getElementById('edit-core-gpa')?.value || "",
+            act: document.getElementById('edit-act')?.value || "",
+            sat: document.getElementById('edit-sat')?.value || "",
             height: document.getElementById('edit-height')?.value || "",
             weight: document.getElementById('edit-weight')?.value || "",
-            parentNames: getVal('edit-parents'),
-            parentContact: getVal('edit-parent-contact'),
-            weeklyExtraDays: getVal('edit-extra-days'),
-            hasNutritionPlan: getVal('edit-nutrition'),
-            getsSleep: getVal('edit-sleep'),
+            parentNames: document.getElementById('edit-parents')?.value || "",
+            parentContact: document.getElementById('edit-parent-contact')?.value || "",
+            weeklyExtraDays: document.getElementById('edit-extra-days')?.value || "",
+            hasNutritionPlan: document.getElementById('edit-nutrition')?.value || "",
+            getsSleep: document.getElementById('edit-sleep')?.value || "",
             liftYearRound: document.getElementById('edit-lift')?.value === "true",
-            teammateType: getVal('edit-team-type'),
-            willingToSacrifice: getVal('edit-sacrifice'),
-            goodTeammateMeaning: getVal('edit-team-mean'),
-            twitter: getVal('edit-twitter'),
-            instagram: getVal('edit-instagram'),
-            tiktok: getVal('edit-tiktok'),
-            hudlLink: getVal('edit-hudl')
+            teammateType: document.getElementById('edit-team-type')?.value || "",
+            willingToSacrifice: document.getElementById('edit-sacrifice')?.value || "",
+            goodTeammateMeaning: document.getElementById('edit-team-mean')?.value || "",
+            twitter: document.getElementById('edit-twitter')?.value || "",
+            instagram: document.getElementById('edit-instagram')?.value || "",
+            tiktok: document.getElementById('edit-tiktok')?.value || "",
+            hudlLink: document.getElementById('edit-hudl')?.value || ""
         };
 
         try {
