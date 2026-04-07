@@ -26,6 +26,8 @@
                 background: white !important;
                 color: black !important;
                 overflow: hidden; 
+                -webkit-print-color-adjust: economy !important;
+                print-color-adjust: economy !important;
             }
 
             #capture-area {
@@ -34,30 +36,60 @@
                 box-shadow: none !important;
                 border: 1px solid #eee !important;
                 
-                /* ADJUSTED SCALE: Lowered from 0.82 to 0.78 to fit extra content */
+                /* SCALE: Set to 0.75 to accommodate the new logo and contact info */
                 position: absolute;
                 top: 0;
                 left: 50%;
-                transform: translateX(-50%) scale(0.76); 
+                transform: translateX(-50%) scale(0.75); 
                 transform-origin: top center;
                 width: 100%;
                 max-width: 800px;
             }
 
-            /* Tighter vertical spacing to reclaim page real estate */
+            /* --- SOCIAL MEDIA EXPORT OVERRIDES --- */
+            /* This section triggers only when you click the 'Share to Social' button */
+            body.social-export {
+                background-color: #0d1117 !important;
+            }
+
+            body.social-export #capture-area {
+                background-color: #0d1117 !important;
+                border: 1px solid #30363d !important;
+            }
+
+            body.social-export span, 
+            body.social-export p, 
+            body.social-export h1, 
+            body.social-export h2, 
+            body.social-export div:not(.label) {
+                color: white !important;
+            }
+
+            body.social-export .stat-box, 
+            body.social-export .bg-white\/5 {
+                background: rgba(255, 255, 255, 0.05) !important;
+                border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            }
+
+            body.social-export * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* --- LAYOUT UTILITIES --- */
             .space-y-12 { margin-top: 1rem !important; }
             .space-y-8 { margin-top: 0.75rem !important; }
             .mt-12 { margin-top: 1rem !important; }
             .p-8 { padding: 1.25rem !important; }
             
-            /* Specifically target the Character section to prevent breaks */
             #character-section {
                 page-break-inside: avoid;
                 margin-top: 0.5rem !important;
             }
 
+            /* Default Print Text Colors (Non-Social) */
             span, p, h1, h2, h3, div {
-                color: black !important;
+                color: black;
                 text-shadow: none !important;
             }
 
@@ -66,8 +98,8 @@
             }
 
             .stat-box, .bg-white\/5 {
-                background: #f9fafb !important;
-                border: 1px solid #e5e7eb !important; 
+                background: #f9fafb;
+                border: 1px solid #e5e7eb; 
             }
 
             .no-print, #print-btn, #back-btn, .edit-mode, #save-profile-btn, button {
@@ -75,11 +107,6 @@
             }
 
             .opacity-50 { opacity: 1 !important; margin-top: 0.5rem !important; }
-            
-            * {
-                -webkit-print-color-adjust: economy !important;
-                print-color-adjust: economy !important;
-            }
         }
     </style>
 </head>
@@ -87,54 +114,63 @@
 
 <div class="max-w-2xl mx-auto mb-6 flex justify-between no-print">
         <button onclick="window.print()" class="bg-white text-black px-6 py-2 rounded-full font-bold uppercase text-xs">Print PDF</button>
+        <button onclick="exportSocial()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">SHARE TO SOCIAL</button>
         <button id="unlock-btn" onclick="toggleEditMode()" class="hidden bg-yellow-600 text-black font-black px-4 py-2 rounded uppercase text-[10px] mb-4 transition-all"> 🔓 Unlock Profile for Editing</button>
         <button onclick="location.href='index.html'" class="bg-gray-800 text-white px-6 py-2 rounded-full font-bold uppercase text-xs">Back to Lobby</button>
     </div>
 
     <div id="capture-area" class="max-w-2xl mx-auto card-container rounded-3xl p-8 shadow-2xl border-red-600/20">
         
-        <div class="flex justify-between items-start mb-6">
-            <div>
-                <h1 id="disp-name" class="text-4xl font-black italic uppercase leading-none view-mode">--</h1>
-                <input id="edit-name" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-2xl font-black p-1 rounded mb-2 w-full">
+    <div class="flex justify-between items-start mb-6">
+            <div class="flex items-center gap-4">
+                <img id="disp-logo" src="" class="h-16 w-16 object-contain view-mode hidden" alt="School Logo">
+                
+                <div>
+                    <h1 id="disp-name" class="text-4xl font-black italic uppercase leading-none view-mode">--</h1>
+                    <input id="edit-name" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-2xl font-black p-1 rounded mb-2 w-full">
 
-                <p id="disp-class" class="text-red-500 font-bold tracking-widest text-sm mt-1 view-mode">CLASS OF --</p>
-                <div class="edit-mode hidden mb-4">
-                    <label class="block text-[10px] uppercase text-gray-400">Grad Year</label>
-                    <input id="edit-grad" type="number" class="bg-gray-900 border border-blue-500 text-red-500 text-sm p-1 w-24 rounded">
-                </div>
-
-                <div class="edit-mode hidden grid grid-cols-2 gap-2 mt-2">
-                    <div>
-                        <label class="block text-[10px] uppercase text-gray-400">Height (in)</label>
-                        <input id="edit-height" type="text" class="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
+                    <p id="disp-class" class="text-red-500 font-bold tracking-widest text-sm mt-1 view-mode">CLASS OF --</p>
+                    <div class="edit-mode hidden mb-4">
+                        <label class="block text-[10px] uppercase text-gray-400">Grad Year</label>
+                        <input id="edit-grad" type="number" class="bg-gray-900 border border-blue-500 text-red-500 text-sm p-1 w-24 rounded">
                     </div>
-                    <div>
-                        <label class="block text-[10px] uppercase text-gray-400">Weight (lbs)</label>
-                        <input id="edit-weight" type="text" class="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
-                    </div>
-                </div>
 
-                <div id="disp-pos-container" class="mt-4">
-                    <div class="flex gap-4 items-center">
-                        <span class="label text-[10px] text-red-500">Offense:</span>
-                        <span id="disp-pos" class="text-white font-bold uppercase text-sm view-mode">--</span>
-                        <span id="disp-pos2" class="text-gray-400 font-bold uppercase text-sm view-mode"></span>
-                        
-                        <div class="edit-mode hidden flex gap-2">
-                            <input id="edit-off-prim" type="text" placeholder="Prim Off" class="bg-gray-900 border border-blue-500 text-white text-xs p-1 w-20 rounded">
-                            <input id="edit-off-sec" type="text" placeholder="Sec Off" class="bg-gray-900 border border-blue-500 text-white text-xs p-1 w-20 rounded">
+                    <div class="edit-mode hidden grid grid-cols-2 gap-2 mt-2">
+                        <div>
+                            <label class="block text-[10px] uppercase text-gray-400">Height (in)</label>
+                            <input id="edit-height" type="text" class="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] uppercase text-gray-400">Weight (lbs)</label>
+                            <input id="edit-weight" type="text" class="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-[10px] uppercase text-gray-400">School Logo URL</label>
+                            <input id="edit-logo" type="text" placeholder="https://link-to-logo.png" class="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs">
                         </div>
                     </div>
 
-                    <div class="flex gap-4 items-center mt-1">
-                        <span class="label text-[10px] text-blue-500">Defense:</span>
-                        <span id="disp-def-pos" class="text-white font-bold uppercase text-sm view-mode">--</span>
-                        <span id="disp-def-pos2" class="text-gray-400 font-bold uppercase text-sm view-mode"></span>
-                        
-                        <div class="edit-mode hidden flex gap-2">
-                            <input id="edit-def-prim" type="text" placeholder="Prim Def" class="bg-gray-900 border border-blue-500 text-white text-xs p-1 w-20 rounded">
-                            <input id="edit-def-sec" type="text" placeholder="Sec Def" class="bg-gray-900 border border-blue-500 text-white text-xs p-1 w-20 rounded">
+                    <div id="disp-pos-container" class="mt-4">
+                        <div class="flex gap-4 items-center">
+                            <span class="label text-[10px] text-red-500">Offense:</span>
+                            <span id="disp-pos" class="text-white font-bold uppercase text-sm view-mode">--</span>
+                            <span id="disp-pos2" class="text-gray-400 font-bold uppercase text-sm view-mode"></span>
+                            
+                            <div class="edit-mode hidden flex gap-2">
+                                <input id="edit-off-prim" type="text" placeholder="Prim Off" class="bg-gray-900 border border-blue-500 text-white text-xs p-1 w-20 rounded">
+                                <input id="edit-off-sec" type="text" placeholder="Sec Off" class="bg-gray-900 border border-blue-500 text-white text-xs p-1 w-20 rounded">
+                            </div>
+                        </div>
+
+                        <div class="flex gap-4 items-center mt-1">
+                            <span class="label text-[10px] text-blue-500">Defense:</span>
+                            <span id="disp-def-pos" class="text-white font-bold uppercase text-sm view-mode">--</span>
+                            <span id="disp-def-pos2" class="text-gray-400 font-bold uppercase text-sm view-mode"></span>
+                            
+                            <div class="edit-mode hidden flex gap-2">
+                                <input id="edit-def-prim" type="text" placeholder="Prim Def" class="bg-gray-900 border border-blue-500 text-white text-xs p-1 w-20 rounded">
+                                <input id="edit-def-sec" type="text" placeholder="Sec Def" class="bg-gray-900 border border-blue-500 text-white text-xs p-1 w-20 rounded">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -354,6 +390,14 @@
 
     let currentUser = null;
 
+    if (d.schoolLogo) {
+        const logoEl = document.getElementById('disp-logo');
+        if (logoEl) {
+            logoEl.src = d.schoolLogo;
+            logoEl.classList.remove('hidden');
+        }
+    }
+
     onAuthStateChanged(auth, async (user) => {
             const urlParams = new URLSearchParams(window.location.search);
             const athleteId = urlParams.get('uid');
@@ -364,6 +408,13 @@
                 const remainingInches = inches % 12;
                 return `${feet}'${remainingInches}"`;
             };
+            if (d.schoolLogo) {
+                const logoEl = document.getElementById('disp-logo');
+                if (logoEl) {
+                    logoEl.src = d.schoolLogo;
+                    logoEl.classList.remove('hidden');
+                }
+            }
 
             if (user) {
                 currentUser = user;
@@ -489,6 +540,7 @@
                             setVal('edit-twitter', d.twitter);
                             setVal('edit-instagram', d.instagram);
                             setVal('edit-tiktok', d.tiktok);
+                            setVal('edit-logo', d.schoolLogo);
                             setVal('edit-hudl', d.hudlLink || d.highlightUrl);
                         }
 
@@ -522,6 +574,7 @@
         const updatedData = {
             fullName: getVal('edit-name'),
             gradYear: getVal('edit-grad'),
+            schoolLogo: document.getElementById('edit-logo')?.value || "",
             jerseyNum: getVal('edit-number'), // Updated ID to match pre-fill
             offPrimary: getVal('edit-off-prim'),
             offSecondary: getVal('edit-off-sec'),
