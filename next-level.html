@@ -305,19 +305,39 @@
                     document.getElementById('seriousness').value = d.seriousness || "Very Serious";
                     document.getElementById('perceivedLevel').value = d.perceivedLevel || "D1";
 
-                    // SECTION 03-05: ACADEMICS & GOALS
+                    // SECTION 03-05: ACADEMICS, GOALS & PREFERENCES
                     document.getElementById('postCollegeGoals').value = d.postCollegeGoals || "";
                     document.getElementById('major').value = d.major || "";
                     document.getElementById('acadImportance').value = d.acadImportance || "Extremely";
+                    document.getElementById('acadPrioritize').value = d.acadPrioritize || "Yes";
                     document.getElementById('gpa').value = d.gpa || "";
                     document.getElementById('coreGpa').value = d.coreGpa || "";
+                    document.getElementById('act').value = d.act || "";
+                    document.getElementById('sat').value = d.sat || "";
                     document.getElementById('ncaaReg').value = d.ncaaReg || "No";
+                    document.getElementById('acadStrengths').value = d.acadStrengths || "";
+                    
+                    // Preferences
+                    document.getElementById('pref_d1').value = d.pref_d1 || "0";
+                    document.getElementById('pref_d2').value = d.pref_d2 || "0";
+                    document.getElementById('pref_d3').value = d.pref_d3 || "0";
+                    document.getElementById('pref_naia').value = d.pref_naia || "0";
+                    document.getElementById('pref_juco').value = d.pref_juco || "0";
+                    document.getElementById('prefSize').value = d.prefSize || "None";
+                    document.getElementById('prefLoc').value = d.prefLoc || "Anywhere";
+                    document.getElementById('prefOther').value = d.prefOther || "";
 
-                    // SECTION 06-08: TESTING & CHARACTER
+                    // SECTION 06: TESTING & FILM
                     document.getElementById('isStarter').value = d.isStarter || "No";
                     document.getElementById('highlightUrl').value = d.highlightUrl || "";
-                    document.getElementById('teammateDef').value = d.teammateDef || "";
+                    document.getElementById('honors').value = d.honors || "";
                     
+                    // SECTION 07: TRAINING & COMMITMENT
+                    // Mapped to match Recruiting Card keys
+                    document.getElementById('trainFreq').value = d.weeklyExtraDays || "0-1";
+                    document.getElementById('hasNutrition').value = d.hasNutritionPlan || "No";
+                    document.getElementById('hasSleep').value = d.getsSleep || "No";
+
                     // Re-check the commitment boxes
                     if (d.commitments && Array.isArray(d.commitments)) {
                         const checkboxes = document.querySelectorAll('#commitmentChecks input');
@@ -325,6 +345,12 @@
                             if (d.commitments.includes(cb.value)) cb.checked = true;
                         });
                     }
+
+                    // SECTION 08: CHARACTER & LEADERSHIP
+                    // Mapped to match Recruiting Card keys
+                    document.getElementById('teammateType').value = d.teammateType || "";
+                    document.getElementById('teammateDef').value = d.goodTeammateMeaning || d.teammateDef || ""; 
+                    document.getElementById('sacrifice').value = d.willingToSacrifice || "";
                 }
             } else { 
                 // Small delay to prevent the "flash and boot" on slow connections
@@ -346,9 +372,9 @@
                 jerseyNum: document.getElementById('jerseyNum').value,
                 playerPhone: document.getElementById('playerPhone').value, 
                 playerEmail: document.getElementById('playerEmail').value,
-                twitter: document.getElementById('twitter').value,         
-                instagram: document.getElementById('instagram').value,     
-                tiktok: document.getElementById('tiktok').value,           
+                twitter: document.getElementById('twitter').value,        
+                instagram: document.getElementById('instagram').value,    
+                tiktok: document.getElementById('tiktok').value,          
                 parentNames: document.getElementById('parentNames').value,
                 parentContact: document.getElementById('parentContact').value,
 
@@ -358,25 +384,45 @@
                 seriousness: document.getElementById('seriousness').value,
                 perceivedLevel: document.getElementById('perceivedLevel').value,
 
-                // 03-05 ACADEMICS & GOALS
+                // 03-05 ACADEMICS, GOALS & PREFS
                 postCollegeGoals: document.getElementById('postCollegeGoals').value,
                 major: document.getElementById('major').value,
                 acadImportance: document.getElementById('acadImportance').value,
+                acadPrioritize: document.getElementById('acadPrioritize').value,
                 gpa: document.getElementById('gpa').value,
                 coreGpa: document.getElementById('coreGpa').value,
-                
-                // --- ADD THESE TWO LINES ---
                 act: document.getElementById('act').value, 
                 sat: document.getElementById('sat').value, 
-                // ---------------------------
-
                 ncaaReg: document.getElementById('ncaaReg').value,
+                acadStrengths: document.getElementById('acadStrengths').value,
+                
+                pref_d1: document.getElementById('pref_d1').value,
+                pref_d2: document.getElementById('pref_d2').value,
+                pref_d3: document.getElementById('pref_d3').value,
+                pref_naia: document.getElementById('pref_naia').value,
+                pref_juco: document.getElementById('pref_juco').value,
+                prefSize: document.getElementById('prefSize').value,
+                prefLoc: document.getElementById('prefLoc').value,
+                prefOther: document.getElementById('prefOther').value,
 
-                // 06-08 TESTING & CHARACTER
+                // 06 TESTING & FILM
                 isStarter: document.getElementById('isStarter').value,
                 highlightUrl: document.getElementById('highlightUrl').value,
+                honors: document.getElementById('honors').value,
+                
+                // 07 TRAINING & COMMITMENT
+                // Naming these to perfectly match the recruiting card database keys
+                weeklyExtraDays: document.getElementById('trainFreq').value,
+                hasNutritionPlan: document.getElementById('hasNutrition').value,
+                getsSleep: document.getElementById('hasSleep').value,
                 commitments: commitments,
-                teammateDef: document.getElementById('teammateDef').value, // Confirmed update
+                liftYearRound: commitments.includes("Lift Year Round"), // Auto-sets the boolean for the card!
+
+                // 08 CHARACTER & LEADERSHIP
+                teammateType: document.getElementById('teammateType').value,
+                goodTeammateMeaning: document.getElementById('teammateDef').value, 
+                willingToSacrifice: document.getElementById('sacrifice').value,
+                teammateDef: document.getElementById('teammateDef').value, // Saving twice just for backward compatibility
                 
                 // SYSTEM DATA
                 lastUpdated: new Date().toISOString()
@@ -388,6 +434,6 @@
                 window.location.href = 'index.html';
             } catch (err) { alert("Error: " + err.message); }
         });
-    </script>
+        </script>
 </body>
 </html>
