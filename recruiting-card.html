@@ -139,35 +139,38 @@
                 <div>
                     <h3 class="label mb-4 text-red-500 text-sm">Contact & Links</h3>
                     <div class="space-y-4">
-                        <div class="flex items-center gap-3">
+                        
+                        <a id="link-twitter" href="#" target="_blank" class="flex items-center gap-3 group transition-opacity hover:opacity-80">
                             <div class="h-8 w-8 bg-blue-600 rounded flex items-center justify-center font-black">X</div>
                             <div class="flex-grow">
                                 <span class="label block">Twitter</span>
                                 <span id="disp-twitter" class="text-xs font-bold italic view-mode">@--</span>
                                 <input id="edit-twitter" type="text" placeholder="@handle" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
                             </div>
-                        </div>
-                        <div class="flex items-center gap-3">
+                        </a>
+
+                        <a id="link-instagram" href="#" target="_blank" class="flex items-center gap-3 group transition-opacity hover:opacity-80">
                             <div class="h-8 w-8 bg-gradient-to-tr from-yellow-500 to-purple-600 rounded flex items-center justify-center font-black italic">IG</div>
                             <div class="flex-grow">
                                 <span class="label block">Instagram</span>
                                 <span id="disp-instagram" class="text-xs font-bold italic view-mode">@--</span>
                                 <input id="edit-instagram" type="text" placeholder="@handle" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
                             </div>
-                        </div>
-                        <div class="flex items-center gap-3">
+                        </a>
+
+                        <a id="link-tiktok" href="#" target="_blank" class="flex items-center gap-3 group transition-opacity hover:opacity-80">
                             <div class="h-8 w-8 bg-black border border-white/20 rounded flex items-center justify-center font-black italic text-[8px]">TikTok</div>
                             <div class="flex-grow">
                                 <span class="label block">TikTok</span>
                                 <span id="disp-tiktok" class="text-xs font-bold italic view-mode">@--</span>
                                 <input id="edit-tiktok" type="text" placeholder="@handle" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
                             </div>
-                        </div>
+                        </a>
                         
                         <div class="view-mode">
-                             <a id="link-hudl" href="#" target="_blank" class="block">
+                            <a id="link-hudl" href="#" target="_blank" class="block">
                                 <button class="bg-red-600 hover:bg-red-700 w-full py-2 rounded font-black italic uppercase text-xs">View Hudl / Film</button>
-                             </a>
+                            </a>
                         </div>
                         <div class="edit-mode hidden">
                             <span class="label block mb-1">Highlight URL (Hudl/YouTube)</span>
@@ -262,6 +265,17 @@
     const db = getFirestore(app);
     const auth = getAuth(app);
 
+    // 1. PLACE THE DEFINITION AT THE TOP
+    const updateSocialLink = (platform, handle, linkId, dispId) => {
+        const linkEl = document.getElementById(linkId);
+        const dispEl = document.getElementById(dispId);
+        if (handle && linkEl && dispEl) {
+            const cleanHandle = handle.replace('@', '');
+            dispEl.innerText = `@${cleanHandle}`;
+            linkEl.href = `https://www.${platform}.com/${cleanHandle}`;
+        }
+    };
+
     let currentUser = null;
 
     onAuthStateChanged(auth, async (user) => {
@@ -299,7 +313,6 @@
                         document.getElementById('disp-def-pos2').innerText = d.defSecondary ? "/ " + d.defSecondary : "";
 
                     // --- DISPLAY MAPPING: METRICS & MAXES ---
-                    // Prioritize 'mx' sub-collection, fallback to profile root 'd'
                     safeSet('stat-bench', mx.bench_press || d.bench);
                     safeSet('stat-squat', mx.squat || d.squat);
                     safeSet('stat-clean', mx.clean || d.clean);
@@ -322,26 +335,30 @@
                     safeSet('disp-sacrifice', d.willingToSacrifice);
 
                     // --- DISPLAY MAPPING: LINKS & SOCIAL ---
-                    const formatLink = (id, url, isSocial = false, platform = '') => {
-                        const el = document.getElementById(id);
-                        if (!el) return;
-                        if (url) {
-                            let finalUrl = url;
-                            if (isSocial && !url.includes('http')) {
-                                finalUrl = `https://${platform}.com/${url.replace('@', '')}`;
-                            } else if (!url.startsWith('http')) {
-                                finalUrl = `https://${url}`;
+                    const formatLink = (linkId, dispId, handle, platform = '') => {
+                        const linkEl = document.getElementById(linkId);
+                        const dispEl = document.getElementById(dispId);
+                        
+                        if (handle) {
+                            const cleanHandle = handle.replace('@', '');
+                            // Set the clickable URL
+                            if (linkEl) {
+                                linkEl.href = platform ? `https://www.${platform}.com/${cleanHandle}` : handle;
+                                linkEl.classList.remove('hidden');
                             }
-                            el.href = finalUrl;
-                            el.classList.remove('hidden');
-                        } else {
-                            el.classList.add('hidden');
+                            // Set the visible text (@handle)
+                            if (dispEl) {
+                                dispEl.innerText = platform ? `@${cleanHandle}` : handle;
+                            }
+                        } else if (linkEl) {
+                            linkEl.classList.add('hidden');
                         }
                     };
 
-                    formatLink('link-hudl', d.hudlLink || d.highlightUrl);
-                    formatLink('link-instagram', d.instagram, true, 'instagram');
-                    formatLink('link-twitter', d.twitter, true, 'twitter');
+                    formatLink('link-hudl', null, d.hudlLink || d.highlightUrl);
+                    formatLink('link-twitter', 'disp-twitter', d.twitter, 'twitter');
+                    formatLink('link-instagram', 'disp-instagram', d.instagram, 'instagram');
+                    formatLink('link-tiktok', 'disp-tiktok', d.tiktok, 'tiktok');
 
                     // --- EDIT MODE PRE-FILL ---
                     if (isEditMode) {
@@ -372,7 +389,9 @@
                         setVal('edit-team-type', d.teammateType);
                         setVal('edit-team-mean', d.goodTeammateMeaning);
                         setVal('edit-sacrifice', d.willingToSacrifice);
+                        setVal('edit-twitter', d.twitter);
                         setVal('edit-instagram', d.instagram);
+                        setVal('edit-tiktok', d.tiktok);
                         setVal('edit-hudl', d.hudlLink || d.highlightUrl);
                     }
 
