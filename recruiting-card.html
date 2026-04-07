@@ -328,7 +328,6 @@
     const db = getFirestore(app);
     const auth = getAuth(app);
 
-    // 1. PLACE THE DEFINITION AT THE TOP
     const updateSocialLink = (platform, handle, linkId, dispId) => {
         const linkEl = document.getElementById(linkId);
         const dispEl = document.getElementById(dispId);
@@ -349,7 +348,6 @@
         if (user) {
             currentUser = user;
             try {
-                // 1. DATA RETRIEVAL
                 const targetUid = athleteId || user.uid;
                 const profileRef = doc(db, "recruiting_profiles", targetUid);
                 const maxesRef = doc(db, "recruiting_profiles", targetUid, "maxes", "latest");
@@ -367,6 +365,10 @@
                     // --- DISPLAY MAPPING: CORE IDENTITY ---
                     safeSet('disp-name', d.fullName);
                     safeSet('disp-class', d.gradYear ? "CLASS OF " + d.gradYear : "--");
+                    
+                    // Added Jersey Number Display logic
+                    safeSet('disp-number', d.jerseyNum ? "#" + d.jerseyNum : "#--");
+
                     safeSet('disp-pos', d.offPrimary);
                     if (document.getElementById('disp-pos2'))
                         document.getElementById('disp-pos2').innerText = d.offSecondary ? "/ " + d.offSecondary : "";
@@ -388,6 +390,10 @@
                     safeSet('disp-act', d.act);
                     safeSet('disp-sat', d.sat);
 
+                    // --- DISPLAY MAPPING: PARENTAL CONTACT ---
+                    safeSet('disp-parents', d.parentNames);
+                    safeSet('disp-parent-contact', d.parentContact);
+
                     // --- DISPLAY MAPPING: TRAINING & CHARACTER ---
                     safeSet('disp-extra-days', d.weeklyExtraDays);
                     safeSet('disp-nutrition', d.hasNutritionPlan);
@@ -404,12 +410,10 @@
                         
                         if (handle) {
                             const cleanHandle = handle.replace('@', '');
-                            // Set the clickable URL
                             if (linkEl) {
                                 linkEl.href = platform ? `https://www.${platform}.com/${cleanHandle}` : handle;
                                 linkEl.classList.remove('hidden');
                             }
-                            // Set the visible text (@handle)
                             if (dispEl) {
                                 dispEl.innerText = platform ? `@${cleanHandle}` : handle;
                             }
@@ -432,6 +436,7 @@
 
                         setVal('edit-name', d.fullName);
                         setVal('edit-grad', d.gradYear);
+                        setVal('edit-number', d.jerseyNum); // Pre-fill Jersey
                         setVal('edit-off-prim', d.offPrimary);
                         setVal('edit-off-sec', d.offSecondary);
                         setVal('edit-def-prim', d.defPrimary);
@@ -445,6 +450,8 @@
                         setVal('edit-core-gpa', d.coreGpa);
                         setVal('edit-act', d.act);
                         setVal('edit-sat', d.sat);
+                        setVal('edit-parents', d.parentNames); // Pre-fill Parents
+                        setVal('edit-parent-contact', d.parentContact); // Pre-fill Contact
                         setVal('edit-extra-days', d.weeklyExtraDays);
                         setVal('edit-nutrition', d.hasNutritionPlan);
                         setVal('edit-sleep', d.getsSleep);
@@ -458,7 +465,6 @@
                         setVal('edit-hudl', d.hudlLink || d.highlightUrl);
                     }
 
-                    // PERMISSION CHECK
                     const userSnap = await getDoc(doc(db, "users", user.uid));
                     const isCoach = userSnap.data()?.role === 'coach';
                     if (isCoach && isEditMode) {
@@ -484,31 +490,38 @@
         const playerUID = new URLSearchParams(window.location.search).get('uid');
         if (!playerUID) return alert("No athlete selected.");
 
+        const getVal = (id) => document.getElementById(id)?.value || "";
+
         const updatedData = {
-            fullName: document.getElementById('edit-name')?.value || "",
-            gradYear: document.getElementById('edit-grad')?.value || "",
-            offPrimary: document.getElementById('edit-off-prim')?.value || "",
-            offSecondary: document.getElementById('edit-off-sec')?.value || "",
-            defPrimary: document.getElementById('edit-def-prim')?.value || "",
-            defSecondary: document.getElementById('edit-def-sec')?.value || "",
-            bench: document.getElementById('edit-bench')?.value || "",
-            squat: document.getElementById('edit-squat')?.value || "",
-            clean: document.getElementById('edit-clean')?.value || "",
-            deadlift: document.getElementById('edit-deadlift')?.value || "",
-            forty: document.getElementById('edit-forty')?.value || "",
-            gpa: document.getElementById('edit-gpa')?.value || "",
-            coreGpa: document.getElementById('edit-core-gpa')?.value || "",
-            act: document.getElementById('edit-act')?.value || "",
-            sat: document.getElementById('edit-sat')?.value || "",
-            weeklyExtraDays: document.getElementById('edit-extra-days')?.value || "",
-            hasNutritionPlan: document.getElementById('edit-nutrition')?.value || "",
-            getsSleep: document.getElementById('edit-sleep')?.value || "",
+            fullName: getVal('edit-name'),
+            gradYear: getVal('edit-grad'),
+            jerseyNum: getVal('edit-number'), // Updated ID to match pre-fill
+            offPrimary: getVal('edit-off-prim'),
+            offSecondary: getVal('edit-off-sec'),
+            defPrimary: getVal('edit-def-prim'),
+            defSecondary: getVal('edit-def-sec'),
+            bench: getVal('edit-bench'),
+            squat: getVal('edit-squat'),
+            clean: getVal('edit-clean'),
+            deadlift: getVal('edit-deadlift'),
+            forty: getVal('edit-forty'),
+            gpa: getVal('edit-gpa'),
+            coreGpa: getVal('edit-core-gpa'),
+            act: getVal('edit-act'),
+            sat: getVal('edit-sat'),
+            parentNames: getVal('edit-parents'),
+            parentContact: getVal('edit-parent-contact'),
+            weeklyExtraDays: getVal('edit-extra-days'),
+            hasNutritionPlan: getVal('edit-nutrition'),
+            getsSleep: getVal('edit-sleep'),
             liftYearRound: document.getElementById('edit-lift')?.value === "true",
-            teammateType: document.getElementById('edit-team-type')?.value || "",
-            willingToSacrifice: document.getElementById('edit-sacrifice')?.value || "",
-            goodTeammateMeaning: document.getElementById('edit-team-mean')?.value || "",
-            instagram: document.getElementById('edit-instagram')?.value || "",
-            hudlLink: document.getElementById('edit-hudl')?.value || ""
+            teammateType: getVal('edit-team-type'),
+            willingToSacrifice: getVal('edit-sacrifice'),
+            goodTeammateMeaning: getVal('edit-team-mean'),
+            twitter: getVal('edit-twitter'),
+            instagram: getVal('edit-instagram'),
+            tiktok: getVal('edit-tiktok'),
+            hudlLink: getVal('edit-hudl')
         };
 
         try {
