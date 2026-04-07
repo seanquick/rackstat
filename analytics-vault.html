@@ -78,6 +78,7 @@
                 headerFilter: "list", 
                 headerFilterParams: {valuesLookup: "data", clearable: true}
             },
+            
             {title: "Bench", field: "bench", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--"},
             {title: "Squat", field: "squat", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--"},
             {title: "Clean", field: "clean", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--"},
@@ -167,11 +168,11 @@
 
                         if (type === 'rack') {
                             Object.assign(row, {
-                                bench: s.bench_press || 0, 
-                                squat: s.squat || 0,
-                                clean: s.clean || 0,
-                                deadlift: s.deadlift || 0,
-                                pushPress: s.push_press || 0
+                            bench: s.bench_press || s.benchMax || s.bench || 0, 
+                            squat: s.squat || 0,
+                            clean: s.clean || 0,
+                            deadlift: s.deadlift || 0,
+                            pushPress: s.push_press || s.pushPress || 0
                             });
                         } else {
                             Object.assign(row, {
