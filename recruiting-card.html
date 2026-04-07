@@ -38,7 +38,7 @@
                 position: absolute;
                 top: 0;
                 left: 50%;
-                transform: translateX(-50%) scale(0.78); 
+                transform: translateX(-50%) scale(0.76); 
                 transform-origin: top center;
                 width: 100%;
                 max-width: 800px;
@@ -96,8 +96,25 @@
         <div class="flex justify-between items-start mb-6">
             <div>
                 <h1 id="disp-name" class="text-4xl font-black italic uppercase leading-none view-mode">--</h1>
-                <input id="edit-name" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-2xl font-black p-1 rounded mb-2">
-                
+                <input id="edit-name" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-2xl font-black p-1 rounded mb-2 w-full">
+
+                <p id="disp-class" class="text-red-500 font-bold tracking-widest text-sm mt-1 view-mode">CLASS OF --</p>
+                <div class="edit-mode hidden mb-4">
+                    <label class="block text-[10px] uppercase text-gray-400">Grad Year</label>
+                    <input id="edit-grad" type="number" class="bg-gray-900 border border-blue-500 text-red-500 text-sm p-1 w-24 rounded">
+                </div>
+
+                <div class="edit-mode hidden grid grid-cols-2 gap-2 mt-2">
+                    <div>
+                        <label class="block text-[10px] uppercase text-gray-400">Height (in)</label>
+                        <input id="edit-height" type="text" class="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase text-gray-400">Weight (lbs)</label>
+                        <input id="edit-weight" type="text" class="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white">
+                    </div>
+                </div>
+
                 <p id="disp-class" class="text-red-500 font-bold tracking-widest text-sm mt-1 view-mode">CLASS OF --</p>
                 <input id="edit-grad" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-red-500 text-sm p-1 w-24 rounded block">
 
@@ -369,11 +386,11 @@
                         safeSet('disp-name', d.fullName);
                         safeSet('disp-class', d.gradYear ? "CLASS OF " + d.gradYear : "--");
                         safeSet('disp-number', d.jerseyNum ? "#" + d.jerseyNum : "#--");
-                        
-                        // Height and Weight Mapping
-                        const heightWeight = (d.height || "--") + " | " + (d.weight || "--");
-                        safeSet('disp-ht-wt', heightWeight);
 
+                        // Match your HTML spans: disp-height and disp-weight
+                        safeSet('disp-height', d.height); 
+                        safeSet('disp-weight', d.weight);
+                        
                         safeSet('disp-pos', d.offPrimary);
                         if (document.getElementById('disp-pos2'))
                             document.getElementById('disp-pos2').innerText = d.offSecondary ? "/ " + d.offSecondary : "";
@@ -516,6 +533,8 @@
             coreGpa: getVal('edit-core-gpa'),
             act: getVal('edit-act'),
             sat: getVal('edit-sat'),
+            height: document.getElementById('edit-height')?.value || "",
+            weight: document.getElementById('edit-weight')?.value || "",
             parentNames: getVal('edit-parents'),
             parentContact: getVal('edit-parent-contact'),
             weeklyExtraDays: getVal('edit-extra-days'),
