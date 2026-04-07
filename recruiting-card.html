@@ -163,46 +163,59 @@
     <div class="mt-12 space-y-12 border-t border-white/10 pt-8">
         
         <div>
-            <h3 class="label mb-4 text-red-500 text-sm">Training & Commitment</h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="stat-box p-3">
-                    <span class="label">Extra Training</span>
-                    <div id="disp-extra-days" class="text-sm font-bold uppercase italic">--</div>
-                </div>
-                <div class="stat-box p-3">
-                    <span class="label">Nutrition Plan</span>
-                    <div id="disp-nutrition" class="text-sm font-bold uppercase italic">--</div>
-                </div>
-                <div class="stat-box p-3">
-                    <span class="label">7-8+ Hrs Sleep</span>
-                    <div id="disp-sleep" class="text-sm font-bold uppercase italic">--</div>
-                </div>
-                <div class="stat-box p-3">
-                    <span class="label">Year-Round Lift</span>
-                    <div id="disp-lift" class="text-sm font-bold uppercase italic">--</div>
-                </div>
+      
+      <h3 class="label mb-4 text-red-500 text-sm">Training & Commitment</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="stat-box p-3">
+                <span class="label">Extra Training</span>
+                <div id="disp-extra-days" class="text-sm font-bold uppercase italic view-mode">--</div>
+                <input id="edit-extra-days" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
+            </div>
+            <div class="stat-box p-3">
+                <span class="label">Nutrition Plan</span>
+                <div id="disp-nutrition" class="text-sm font-bold uppercase italic view-mode">--</div>
+                <input id="edit-nutrition" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
+            </div>
+            <div class="stat-box p-3">
+                <span class="label">7-8+ Hrs Sleep</span>
+                <div id="disp-sleep" class="text-sm font-bold uppercase italic view-mode">--</div>
+                <input id="edit-sleep" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
+            </div>
+            <div class="stat-box p-3">
+                <span class="label">Year-Round Lift</span>
+                <div id="disp-lift" class="text-sm font-bold uppercase italic view-mode">--</div>
+                <select id="edit-lift" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
+                    <option value="true">YES</option>
+                    <option value="false">NO</option>
+                </select>
             </div>
         </div>
+    </div>
 
-        <div>
-            <h3 class="label mb-4 text-red-500 text-sm uppercase">Character & Leadership</h3>
-            <div class="bg-white/5 p-8 rounded-3xl border border-white/10 italic text-sm text-gray-300 space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div>
-                        <p class="label not-italic mb-2 text-white/40">Teammate Type:</p>
-                        <p id="disp-teammate-type" class="leading-relaxed">--</p>
-                    </div>
-                    <div>
-                        <p class="label not-italic mb-2 text-white/40">Sacrifices for the team:</p>
-                        <p id="disp-sacrifice" class="leading-relaxed">--</p>
-                    </div>
+    <div>
+        <h3 class="label mb-4 text-red-500 text-sm uppercase">Character & Leadership</h3>
+        <div class="bg-white/5 p-8 rounded-3xl border border-white/10 italic text-sm text-gray-300 space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <p class="label not-italic mb-2 text-white/40">Teammate Type:</p>
+                    <p id="disp-teammate-type" class="leading-relaxed view-mode">--</p>
+                    <textarea id="edit-team-type" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white w-full p-2 rounded h-20 text-xs mt-2"></textarea>
                 </div>
-                <div class="pt-4 border-t border-white/5">
-                    <p class="label not-italic mb-2 text-white/40">What it means to be a good teammate:</p>
-                    <p id="disp-teammate-mean" class="leading-relaxed">--</p>
+                <div>
+                    <p class="label not-italic mb-2 text-white/40">Sacrifices for the team:</p>
+                    <p id="disp-sacrifice" class="leading-relaxed view-mode">--</p>
+                    <textarea id="edit-sacrifice" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white w-full p-2 rounded h-20 text-xs mt-2"></textarea>
                 </div>
             </div>
+            <div class="pt-4 border-t border-white/5">
+                <p class="label not-italic mb-2 text-white/40">What it means to be a good teammate:</p>
+                <p id="disp-teammate-mean" class="leading-relaxed view-mode">--</p>
+                <textarea id="edit-team-mean" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white w-full p-2 rounded h-24 text-xs mt-2"></textarea>
+            </div>
         </div>
+    </div>
+
+        
     </div>
 
         <div class="mt-12 pt-6 border-t border-white/10 flex justify-between items-center opacity-50">
@@ -229,117 +242,88 @@
         let currentUser = null;
 
         onAuthStateChanged(auth, async (user) => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const athleteId = urlParams.get('uid');
-            const isEditMode = urlParams.get('edit') === 'true';
+        const urlParams = new URLSearchParams(window.location.search);
+        const athleteId = urlParams.get('uid');
+        const isEditMode = urlParams.get('edit') === 'true';
 
-            if (user) {
-                currentUser = user; 
-                try {
-                    // 1. GATEKEEPER / FEATURE FLAG
+        if (user) {
+            currentUser = user; 
+            try {
+                // 1. GATEKEEPER logic... (keep your existing code here)
+                
+                // 2. DATA RETRIEVAL
+                const targetUid = athleteId || user.uid;
+                const profileRef = doc(db, "recruiting_profiles", targetUid);
+                const maxesRef = doc(db, "recruiting_profiles", targetUid, "maxes", "latest");
+                const [recSnap, maxesSnap] = await Promise.all([getDoc(profileRef), getDoc(maxesRef)]);
+
+                const safeSet = (id, text) => {
+                    const el = document.getElementById(id);
+                    if (el) el.innerText = text || "--";
+                };
+
+                if (recSnap.exists()) {
+                    const d = recSnap.data();
+                    const mx = maxesSnap.exists() ? maxesSnap.data() : {};
+
+                    // --- DISPLAY MAPPING ---
+                    safeSet('disp-name', d.fullName);
+                    safeSet('disp-class', "CLASS OF " + (d.gradYear || "--"));
+                    safeSet('disp-pos', d.offPrimary);
+                    if(document.getElementById('disp-pos2')) 
+                        document.getElementById('disp-pos2').innerText = d.offSecondary ? "/ " + d.offSecondary : "";
+                    
+                    safeSet('disp-def-pos', d.defPrimary);
+                    if(document.getElementById('disp-def-pos2')) 
+                        document.getElementById('disp-def-pos2').innerText = d.defSecondary ? "/ " + d.defSecondary : "";
+
+                    // Metrics & Academics (Your existing safeSet calls)
+                    safeSet('stat-bench', mx.bench_press || d.bench);
+                    safeSet('stat-squat', mx.squat || d.squat);
+                    safeSet('disp-gpa', d.gpa);
+
+                    // Training & Character Displays
+                    safeSet('disp-extra-days', d.weeklyExtraDays); 
+                    safeSet('disp-nutrition', d.hasNutritionPlan); 
+                    safeSet('disp-sleep', d.getsSleep);
+                    safeSet('disp-lift', d.liftYearRound ? "YES" : "NO");
+                    
+                    safeSet('disp-teammate-type', d.teammateType);
+                    safeSet('disp-teammate-mean', d.goodTeammateMeaning);
+                    safeSet('disp-sacrifice', d.willingToSacrifice);
+
+                    // --- EDIT MODE PRE-FILL ---
+                    // This ensures the coach sees existing data in the edit boxes
+                    if (isEditMode) {
+                        const setVal = (id, val) => {
+                            const el = document.getElementById(id);
+                            if (el) el.value = val || "";
+                        };
+
+                        setVal('edit-name', d.fullName);
+                        setVal('edit-off-prim', d.offPrimary);
+                        setVal('edit-off-sec', d.offSecondary);
+                        setVal('edit-def-prim', d.defPrimary);
+                        setVal('edit-def-sec', d.defSecondary);
+                        setVal('edit-extra-days', d.weeklyExtraDays);
+                        setVal('edit-nutrition', d.hasNutritionPlan);
+                        setVal('edit-sleep', d.getsSleep);
+                        setVal('edit-lift', d.liftYearRound ? "true" : "false");
+                        setVal('edit-team-type', d.teammateType);
+                        setVal('edit-team-mean', d.goodTeammateMeaning);
+                        setVal('edit-sacrifice', d.willingToSacrifice);
+                    }
+
+                    // PERMISSION CHECK
                     const userSnap = await getDoc(doc(db, "users", user.uid));
-                    if (!userSnap.exists()) return;
-                    const userData = userSnap.data();
-                    const isCoach = userData.role === 'coach';
-
-                    if (userData.school_id) {
-                        const schoolSnap = await getDoc(doc(db, "schools", userData.school_id));
-                        if (schoolSnap.exists()) {
-                            const schoolSettings = schoolSnap.data();
-                            if (schoolSettings.hasRecruitingCard === false && !isCoach) {
-                                alert("Feature disabled by Athletic Department.");
-                                window.location.href = 'index.html'; 
-                                return;
-                            }
-                        }
+                    const isCoach = userSnap.data()?.role === 'coach';
+                    if (isCoach && isEditMode) {
+                        document.getElementById('unlock-btn')?.classList.remove('hidden');
                     }
-
-                    // 2. DATA RETRIEVAL
-                    const targetUid = athleteId || user.uid;
-                    const profileRef = doc(db, "recruiting_profiles", targetUid);
-                    const maxesRef = doc(db, "recruiting_profiles", targetUid, "maxes", "latest");
-
-                    const [recSnap, maxesSnap] = await Promise.all([getDoc(profileRef), getDoc(maxesRef)]);
-
-                    const safeSet = (id, text) => {
-                        const el = document.getElementById(id);
-                        if (el) el.innerText = text || "--";
-                    };
-
-                    if (recSnap.exists()) {
-                        const d = recSnap.data();
-                        const mx = maxesSnap.exists() ? maxesSnap.data() : {};
-
-                        // IDENTITY & POSITIONS
-                        safeSet('disp-name', d.fullName);
-                        safeSet('disp-class', "CLASS OF " + (d.gradYear || "--"));
-                        safeSet('disp-number', "#" + (d.jerseyNum || "--"));
-                        
-                        //  POSITION FIX (Using your specific Firestore Keys)
-                            safeSet('disp-pos', d.offPrimary); // Shows "TE"
-                            const offSec = document.getElementById('disp-pos2');
-                            if(offSec) offSec.innerText = d.offSecondary ? "/ " + d.offSecondary : ""; // Shows "T"
-
-                            safeSet('disp-def-pos', d.defPrimary); // Shows "LB"
-                            const defSec = document.getElementById('disp-def-pos2');
-                            if(defSec) defSec.innerText = d.defSecondary ? "/ " + d.defSecondary : ""; // Shows "DE"
-
-                        // VITALS
-                        const rawH = d.height;
-                        if (document.getElementById('disp-height')) {
-                            document.getElementById('disp-height').innerText = rawH ? `${Math.floor(rawH/12)}'${rawH%12}"` : "--";
-                        }
-                        safeSet('disp-weight', (mx.body_weight || d.weight) ? (mx.body_weight || d.weight) + " lbs" : "--");
-
-                        // CONTACTS & SOCIALS
-                        safeSet('disp-twitter', d.twitter ? "@" + d.twitter.split('/').pop() : "--");
-                        safeSet('disp-instagram', d.instagram ? "@" + d.instagram.split('/').pop() : "--");
-                        safeSet('disp-tiktok', d.tiktok ? "@" + d.tiktok.split('/').pop() : "--");
-                        safeSet('disp-parents', d.parentNames);
-                        safeSet('disp-parent-contact', d.parentContact);
-
-                        // ACADEMICS
-                        safeSet('disp-gpa', d.gpa); 
-                        safeSet('disp-core-gpa', d.coreGpa); 
-                        safeSet('disp-act', d.act);
-                        safeSet('disp-sat', d.sat);
-
-                        // CHARACTER
-                        safeSet('disp-character-def', d.teammateDef);
-
-                        // METRICS
-                        safeSet('stat-bench', mx.bench_press || mx.bench || d.bench);
-                        safeSet('stat-squat', mx.squat || d.squat);
-                        safeSet('stat-clean', mx.clean || d.clean);
-                        safeSet('stat-dead', mx.deadlift || d.deadlift); 
-                        safeSet('stat-push', mx.push_press || d.push_press);
-
-                        //  SECTIONS 07 & 08 MAPPING
-                            safeSet('disp-extra-train', d.weeklyExtraDays); 
-                            safeSet('disp-nutrition', d.hasNutritionPlan); 
-                            safeSet('disp-year-lift', d.liftYearRound ? "YES" : "NO");
-                            
-                            safeSet('disp-team-def', d.teammateType || d.teammateDef);
-                            safeSet('disp-sacrifice', d.willingToSacrifice || d.sacrificeDef);
-
-                        // Mapping Section 08
-                        safeSet('disp-teammate-type', d.teammateType);
-                        safeSet('disp-teammate-mean', d.goodTeammateMeaning);
-                        safeSet('disp-sacrifice', d.willingToSacrifice);
-
-                        // FILM
-                        const hudlBtn = document.getElementById('film-btn');
-                        const hudlUrl = d.highlightUrl || d.highlightLink || d.hudlLink;
-                        if (hudlBtn && hudlUrl) hudlBtn.onclick = () => window.open(hudlUrl, '_blank');
-
-                        // PERMISSION CHECK
-                        if (isCoach && isEditMode) {
-                            document.getElementById('unlock-btn')?.classList.remove('hidden');
-                        }
-                    }
-                } catch (err) { console.error("Render Error:", err); }
-            } else { location.href = 'index.html'; }
-        });
+                }
+            } catch (err) { console.error("Render Error:", err); }
+        } else { location.href = 'index.html'; }
+    });
 
         window.toggleEditMode = () => {
             document.querySelectorAll('.view-mode').forEach(el => el.classList.add('hidden'));
@@ -352,37 +336,52 @@
             }
         };
 
-        window.saveAthleteProfile = async () => {
-            const playerUID = new URLSearchParams(window.location.search).get('uid');
-            if (!playerUID) return alert("No athlete selected.");
+            window.saveAthleteProfile = async () => {window.saveAthleteProfile = async () => {
+                const playerUID = new URLSearchParams(window.location.search).get('uid');
+                if (!playerUID) return alert("No athlete selected.");
 
-            const updatedData = {
-                bench: document.getElementById('edit-bench').value,
-                squat: document.getElementById('edit-squat').value,
-                clean: document.getElementById('edit-clean').value,
-                deadlift: document.getElementById('edit-deadlift').value,
-                push_press: document.getElementById('edit-push').value,
-                gpa: document.getElementById('edit-gpa').value,
-                act: document.getElementById('edit-act').value,
-                sat: document.getElementById('edit-sat').value,
-                fullName: document.getElementById('edit-name').value,
-                gradYear: document.getElementById('edit-grad').value,
-                offPrimary: document.getElementById('edit-off-prim').value,
-                offSecondary: document.getElementById('edit-off-sec').value,
-                defPrimary: document.getElementById('edit-def-prim').value,
-                defSecondary: document.getElementById('edit-def-sec').value,
+                const updatedData = {
+                    // Core Identity
+                    fullName: document.getElementById('edit-name')?.value || "",
+                    gradYear: document.getElementById('edit-grad')?.value || "",
+                    offPrimary: document.getElementById('edit-off-prim')?.value || "",
+                    offSecondary: document.getElementById('edit-off-sec')?.value || "",
+                    defPrimary: document.getElementById('edit-def-prim')?.value || "",
+                    defSecondary: document.getElementById('edit-def-sec')?.value || "",
+
+                    // Metrics
+                    bench: document.getElementById('edit-bench')?.value || "",
+                    squat: document.getElementById('edit-squat')?.value || "",
+                    clean: document.getElementById('edit-clean')?.value || "",
+                    deadlift: document.getElementById('edit-deadlift')?.value || "",
+                    push_press: document.getElementById('edit-push')?.value || "",
+
+                    // Academics
+                    gpa: document.getElementById('edit-gpa')?.value || "",
+                    act: document.getElementById('edit-act')?.value || "",
+                    sat: document.getElementById('edit-sat')?.value || "",
+
+                    // 07 Training & Commitment
+                    weeklyExtraDays: document.getElementById('edit-extra-days')?.value || "",
+                    hasNutritionPlan: document.getElementById('edit-nutrition')?.value || "",
+                    getsSleep: document.getElementById('edit-sleep')?.value || "",
+                    liftYearRound: document.getElementById('edit-lift')?.value === "true",
+
+                    // 08 Character & Leadership
+                    teammateType: document.getElementById('edit-team-type')?.value || "",
+                    willingToSacrifice: document.getElementById('edit-sacrifice')?.value || "",
+                    goodTeammateMeaning: document.getElementById('edit-team-mean')?.value || ""
+                };
+
+                try {
+                    await updateDoc(doc(db, "recruiting_profiles", playerUID), updatedData);
+                    alert("Profile Updated Successfully!");
+                    location.reload();
+                } catch (error) {
+                    console.error("Save error:", error);
+                    alert("Failed to save changes.");
+                }}
             };
-
-            try {
-                await updateDoc(doc(db, "recruiting_profiles", playerUID), updatedData);
-                await setDoc(doc(db, "recruiting_profiles", playerUID, "maxes", "latest"), updatedData, { merge: true });
-                alert("Roster Updated Successfully!");
-                location.reload();
-            } catch (error) {
-                console.error("Save error:", error);
-                alert("Failed to save changes.");
-            }
-        };
     </script>
 </body>
 </html>
