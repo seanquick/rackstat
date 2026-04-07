@@ -115,9 +115,6 @@
                     </div>
                 </div>
 
-                <p id="disp-class" class="text-red-500 font-bold tracking-widest text-sm mt-1 view-mode">CLASS OF --</p>
-                <input id="edit-grad" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-red-500 text-sm p-1 w-24 rounded block">
-
                 <div id="disp-pos-container" class="mt-4">
                     <div class="flex gap-4 items-center">
                         <span class="label text-[10px] text-red-500">Offense:</span>
@@ -387,7 +384,7 @@
                         safeSet('disp-class', d.gradYear ? "CLASS OF " + d.gradYear : "--");
                         safeSet('disp-number', d.jerseyNum ? "#" + d.jerseyNum : "#--");
 
-                        // Match your HTML spans: disp-height and disp-weight
+                        // KEEP THESE: They match your <span> IDs
                         safeSet('disp-height', d.height); 
                         safeSet('disp-weight', d.weight);
                         
