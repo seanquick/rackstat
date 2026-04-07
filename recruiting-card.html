@@ -390,14 +390,6 @@
 
     let currentUser = null;
 
-    if (d.schoolLogo) {
-        const logoEl = document.getElementById('disp-logo');
-        if (logoEl) {
-            logoEl.src = d.schoolLogo;
-            logoEl.classList.remove('hidden');
-        }
-    }
-
     onAuthStateChanged(auth, async (user) => {
         const urlParams = new URLSearchParams(window.location.search);
         const athleteId = urlParams.get('uid');
