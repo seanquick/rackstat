@@ -7,55 +7,57 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @media print {
-            /* 1. Reset page background and force a single-page limit */
-            body {
-                background: white !important;
-                margin: 0;
-                padding: 0;
+            /* 1. Force the dark background to actually print */
+            html, body {
+                background-color: #000000 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                height: 100%;
+                overflow: hidden; /* Prevents a second blank page */
             }
 
-            /* 2. Scale the card to fit the page */
-            #recruiting-card-container { /* Replace with your actual main wrapper ID */
-                width: 100% !important;
-                max-width: 800px;
-                margin: 0 auto;
-                transform: scale(0.9); /* Slightly shrink to ensure fit */
+            /* 2. The Scale-to-Fit Trick */
+            /* Target your main wrapper. If it's a div, ensure it has this ID */
+            #main-card-wrapper {
+                width: 100vw !important;
+                height: 100vh !important;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-start;
+                
+                /* Adjust this scale number (0.85, 0.8, etc.) 
+                until the preview snaps to 1 page */
+                transform: scale(0.82); 
                 transform-origin: top center;
-                color: black !important;
             }
 
-            /* 3. Hide non-essential UI elements like buttons */
-            .print-hide, #print-btn, #back-btn, .edit-mode {
+            /* 3. Hide all UI junk */
+            .print-hide, 
+            button, 
+            #back-btn, 
+            .edit-mode,
+            header {
                 display: none !important;
             }
 
-            /* 4. Improve Legibility: Switch dark backgrounds to light */
-            .bg-gray-900, .bg-white\/5 {
-                background-color: #f3f4f6 !important; /* Light gray for sections */
-                border: 1px solid #d1d5db !important;
-                color: black !important;
-            }
-
-            /* 5. Tighten spacing to prevent overflow */
-            .space-y-8 > * + * { margin-top: 1rem !important; }
-            .space-y-4 > * + * { margin-top: 0.5rem !important; }
-            .mt-6 { margin-top: 1rem !important; }
-
-            /* 6. Ensure text remains black and bold */
-            .text-white, .text-gray-400 {
-                color: black !important;
-            }
+            /* 4. Tighten internal spacing for the PDF */
+            .space-y-8 { margin-top: 0 !important; gap: 1rem !important; }
+            .mt-6 { margin-top: 0.5rem !important; }
             
-            .label, h3 {
-                color: #dc2626 !important; /* Keep your red accents */
-                font-size: 0.75rem !important;
-            }
+            /* 5. Ensure text stays white/red */
+            .text-white { color: white !important; }
+            .text-red-500 { color: #ef4444 !important; }
+            
+            /* 6. Border fix (sometimes thin borders disappear in PDF) */
+            .border { border: 1px solid rgba(255,255,255,0.2) !important; }
+        }
 
-            /* 7. Force the browser to include background colors/images */
-            * {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
+        /* Set the physical page size to Letter/A4 and remove browser headers/footers */
+        @page {
+            size: letter;
+            margin: 0;
         }
     </style>
 </head>
