@@ -65,27 +65,45 @@
 
         // --- Column Definitions ---
         const rackColumns = [
-            {title: "Athlete", field: "name", widthGrow: 2, headerFilter: "text"},
-            {title: "Grad", field: "grad", width: 90, hozAlign: "center", headerFilter: "select", headerFilterParams: {valuesLookup: "data"}},
-            {title: "Bench", field: "bench", hozAlign: "right", sorter: "number"},
-            {title: "Squat", field: "squat", hozAlign: "right", sorter: "number"},
-            {title: "Clean", field: "clean", hozAlign: "right", sorter: "number"},
-            {title: "Deadlift", field: "deadlift", hozAlign: "right", sorter: "number"},
-            {title: "Push Press", field: "pushPress", hozAlign: "right", sorter: "number"},
-            {title: "Lift Date", field: "dateGroup", width: 150}
+            {title: "Athlete", field: "name", widthGrow: 2, headerFilter: "input"},
+            {title: "Lift Date", field: "dateGroup", width: 150},
+            {title: "Body Weight", field: "bodyWeight"}, // Added missing comma
+            {title: "Off.", field: "offPos", width: 80},
+            {title: "Def.", field: "defPos", width: 80},
+            {
+                title: "Grad", 
+                field: "grad", 
+                width: 90, 
+                hozAlign: "center", 
+                headerFilter: "list", // Modernized from 'select'
+                headerFilterParams: {valuesLookup: "data", clearable: true}
+            },
+            {title: "Bench", field: "bench", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--"},
+            {title: "Squat", field: "squat", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--"},
+            {title: "Clean", field: "clean", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--"},
+            {title: "Deadlift", field: "deadlift", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--"},
+            {title: "Push Press", field: "pushPress", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--"},
         ];
 
         const kitchenColumns = [
-            {title: "Athlete", field: "name", widthGrow: 2, headerFilter: "text"},
-            {title: "Off.", field: "offPos", width: 80},
-            {title: "Def.", field: "defPos", width: 80},
+            {title: "Athlete", field: "name", widthGrow: 2, headerFilter: "input"},
+            {title: "Date", field: "dateGroup", width: 150},
+            {title: "Body Weight", field: "bodyWeight"}, // Added missing comma
             {title: "Grad", field: "grad", width: 80},
-            {title: "Meal", field: "mealType", width: 120, headerFilter: "select", headerFilterParams: {values: ["Breakfast", "Lunch", "Dinner", "Snack/Shake"]}},
+            {
+                title: "Meal", 
+                field: "mealType", 
+                width: 120, 
+                headerFilter: "list", // Modernized from 'select'
+                headerFilterParams: {
+                    values: ["Breakfast", "Lunch", "Dinner", "Snack/Shake"],
+                    clearable: true
+                }
+            },
             {title: "Cals", field: "calories", hozAlign: "right", sorter: "number"},
             {title: "Protein", field: "protein", hozAlign: "right", sorter: "number"},
             {title: "Carbs", field: "carbs", hozAlign: "right", sorter: "number"},
             {title: "Fats", field: "fats", hozAlign: "right", sorter: "number"},
-            {title: "Date", field: "dateGroup", width: 150}
         ];
 
         const table = new Tabulator("#stats-table", {
@@ -136,11 +154,14 @@
                     
                     subSnap.forEach((subDoc) => {
                         const s = subDoc.data();
+                        
+                        // Base fields common to both table structures
                         const row = {
                             name: d.fullName || "Unnamed",
                             grad: d.gradYear || "--",
                             offPos: d.offPrimary || "--",
                             defPos: d.defPrimary || "--",
+                            bodyWeight: s.bodyWeight || s.body_weight || "--", // Supports both camelCase and snake_case
                             dateGroup: formatFirebaseDate(s.timestamp)
                         };
 
@@ -166,7 +187,10 @@
                 });
 
                 await Promise.all(dataPromises);
+                
+                // Sort by dateGroup or name if you want a default order
                 table.setData(tableData);
+                
             } catch (err) {
                 console.error("Data Load Error:", err);
             }
