@@ -114,7 +114,7 @@
 
 <div class="max-w-2xl mx-auto mb-6 flex justify-between no-print">
         <button onclick="window.print()" class="bg-white text-black px-6 py-2 rounded-full font-bold uppercase text-xs">Print PDF</button>
-        <button onclick="exportSocial()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">SHARE TO SOCIAL</button>
+        <button onclick="exportSocial()" class="bg-white text-black px-6 py-2 rounded-full font-bold uppercase text-xs">SHARE TO SOCIAL</button>
         <button id="unlock-btn" onclick="toggleEditMode()" class="hidden bg-yellow-600 text-black font-black px-4 py-2 rounded uppercase text-[10px] mb-4 transition-all"> 🔓 Unlock Profile for Editing</button>
         <button onclick="location.href='index.html'" class="bg-gray-800 text-white px-6 py-2 rounded-full font-bold uppercase text-xs">Back to Lobby</button>
     </div>
@@ -369,6 +369,20 @@
     </div>
 
 <script type="module">
+    // 1. ATTACH TO WINDOW SO THE BUTTON CAN SEE IT
+    window.exportSocial = () => {
+        // Add the dark mode class
+        document.body.classList.add('social-export');
+        
+        // Trigger the print dialog
+        window.print();
+        
+        // Remove the class after a delay to return to normal view
+        setTimeout(() => {
+            document.body.classList.remove('social-export');
+        }, 500);
+    };
+
     import { firebaseConfig } from './firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, doc, getDoc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
