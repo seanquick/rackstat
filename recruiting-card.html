@@ -8,7 +8,7 @@
     <style>
         /* --- APP VIEW (DARK MODE) --- */
         body {
-            background-color: #0d1117; /* Or your preferred dark hex */
+            background-color: #0d1117; 
             color: white;
         }
         
@@ -20,21 +20,33 @@
         @media print {
             @page {
                 size: letter;
-                margin: 0.5in; /* Adds a professional margin so content isn't cut off */
+                margin: 0; /* Remove default margins to maximize single-page space */
             }
 
             body {
                 background: white !important;
                 color: black !important;
+                overflow: hidden; /* Prevents an accidental second blank page */
             }
 
             #main-card-wrapper {
                 background: transparent !important;
                 color: black !important;
                 box-shadow: none !important;
-                transform: scale(0.95); /* Adjust scale if it still hits 2 pages */
+                
+                /* FORCE SINGLE PAGE: Scale the entire card down slightly */
+                position: absolute;
+                top: 0;
+                left: 50%;
+                transform: translateX(-50%) scale(0.88); /* Adjust scale (e.g., 0.85) if still 2 pages */
                 transform-origin: top center;
+                width: 100%;
             }
+
+            /* Tighten vertical spacing to reclaim page length */
+            .space-y-8 > * + * { margin-top: 0.75rem !important; }
+            .space-y-4 > * + * { margin-top: 0.25rem !important; }
+            .mt-6 { margin-top: 0.5rem !important; }
 
             /* Force black text for all athlete entries */
             span, p, h1, h2, h3, div {
@@ -42,31 +54,24 @@
                 text-shadow: none !important;
             }
 
-            /* Keep labels red for visual hierarchy, but ensure they are dark enough to read */
+            /* Legible labels for print */
             .label, .text-red-500 {
-                color: #b91c1c !important; /* Darker red for print legibility */
+                color: #b91c1c !important; 
             }
 
-            /* Remove dark backgrounds from metric boxes */
+            /* Remove dark backgrounds from metric boxes for ink-saving */
             .bg-gray-900, .bg-white\/5, .bg-black {
                 background: transparent !important;
-                border: 1px solid #e5e7eb !important; /* Light gray border for boxes */
+                border: 1px solid #e5e7eb !important; 
             }
 
             /* Hide UI elements */
-            .print-hide, 
-            #print-btn, 
-            #back-btn, 
-            .edit-mode, 
-            header, 
-            nav {
+            .print-hide, #print-btn, #back-btn, .edit-mode, header, nav {
                 display: none !important;
             }
 
-            /* Clean up the social links (hide the URL text, show the handle) */
             .text-\[10px\] { font-size: 9pt !important; }
             
-            /* Force background graphics off, but keep borders */
             * {
                 -webkit-print-color-adjust: economy !important;
                 print-color-adjust: economy !important;
