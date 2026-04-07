@@ -468,6 +468,7 @@
                     safeSet('stat-squat', mx.squat || d.squat);
                     safeSet('stat-clean', mx.clean || d.clean);
                     safeSet('stat-deadlift', mx.deadlift || d.deadlift);
+                    safeSet('stat-pushpress', mx.push_press || d.push_press);
                     safeSet('stat-forty', d.forty ? d.forty + "s" : "--");
                     safeSet('disp-gpa', d.gpa);
                     safeSet('disp-core-gpa', d.coreGpa);
@@ -514,6 +515,7 @@
                         setVal('edit-squat', d.squat);
                         setVal('edit-clean', d.clean);
                         setVal('edit-deadlift', d.deadlift);
+                        setVal('edit-push_press', d.push_press);
                         setVal('edit-forty', d.forty);
                         setVal('edit-gpa', d.gpa);
                         setVal('edit-core-gpa', d.coreGpa);
@@ -572,6 +574,7 @@
             squat: document.getElementById('edit-squat')?.value || "",
             clean: document.getElementById('edit-clean')?.value || "",
             deadlift: document.getElementById('edit-deadlift')?.value || "",
+            push_press: document.getElementById('edit-push_press')?.value || "",
             forty: document.getElementById('edit-forty')?.value || "",
             gpa: document.getElementById('edit-gpa')?.value || "",
             coreGpa: document.getElementById('edit-core-gpa')?.value || "",
