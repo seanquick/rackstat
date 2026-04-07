@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Vault | RACKSTAT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    
+    <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator_midnight.min.css" rel="stylesheet">
+    <script type="text/javascript" src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
+</head>
+<body class="bg-[#0d1117] text-white font-sans antialiased">
+
+    <header class="p-6 flex justify-between items-center border-b border-gray-800">
+        <div class="flex items-center gap-4">
+            <a href="coach-lobby.html" class="text-gray-400 hover:text-white transition">← Back to Office</a>
+            <h1 class="text-xl font-black italic uppercase tracking-tighter text-red-500">Analytics Vault</h1>
+        </div>
+        <button onclick="downloadCSV()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-bold text-sm transition shadow-lg">
+            EXPORT TO SHEETS
+        </button>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-12">
+        <div class="mb-8">
+            <h2 class="text-3xl font-bold">Team Performance Data</h2>
+            <p class="text-gray-400">Toggle between weight room maxes and recovery metrics.</p>
+        </div>
+
+        <div class="flex gap-2">
+            <button id="btn-rack" onclick="switchTable('rack')" 
+                class="px-6 py-3 rounded-t-lg bg-red-600 text-white font-bold transition-all duration-200">
+                THE RACK (Lifts)
+            </button>
+            <button id="btn-kitchen" onclick="switchTable('kitchen')" 
+                class="px-6 py-3 rounded-t-lg bg-gray-800 text-gray-400 hover:bg-gray-700 font-bold transition-all duration-200">
+                THE KITCHEN (Recovery)
+            </button>
+        </div>
+
+        <div class="bg-gray-900 rounded-b-xl rounded-tr-xl border border-gray-800 overflow-hidden shadow-2xl">
+            <div id="stats-table"></div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { firebaseConfig } from './firebase-config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentTab = 'rack';
+
+        // --- Column Definitions ---
+        const rackColumns = [
+            {title: "Athlete", field: "name", widthGrow: 2, headerFilter: "text"},
+            {title: "Grad", field: "grad", width: 90, hozAlign: "center", headerFilter: "list", headerFilterParams: {valuesLookup: true, clearable: true}},
+            {title: "Bench", field: "bench", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--"},
+            {title: "Squat", field: "squat", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--"},
+            {title: "Clean", field: "clean", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--"},
+            {title: "Deadlift", field: "deadlift", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--"},
+            {title: "Push Press", field: "pushPress", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--"},
+            {title: "Date", field: "dateGroup", width: 150}
+        ];
+
+        const kitchenColumns = [
+            {title: "Athlete", field: "name", widthGrow: 2, headerFilter: "text"},
+            {title: "Grad", field: "grad", width: 90, hozAlign: "center", headerFilter: "list", headerFilterParams: {valuesLookup: true}},
+            {title: "7-8+ Hrs Sleep", field: "sleep", hozAlign: "center", width: 140},
+            {title: "Nutrition Plan", field: "nutrition", hozAlign: "center", width: 140},
+            {title: "Extra Training", field: "extra", hozAlign: "center", width: 140},
+            {title: "Year-Round", field: "lift", hozAlign: "center", width: 120}
+        ];
+
+        // 1. Initialize Tabulator
+        const table = new Tabulator("#stats-table", {
+            layout: "fitColumns",
+            responsiveLayout: "collapse",
+            placeholder: "Searching the vault...",
+            pagination: "local",
+            paginationSize: 20,
+            columns: rackColumns // Default to Rack
+        });
+
+        // 2. Auth & Role Check
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (userDoc.exists() && userDoc.data().role === 'coach') {
+                    loadData('rack');
+                } else {
+                    window.location.href = 'index.html';
+                }
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        // 3. Tab Switching Logic
+        window.switchTable = (type) => {
+            if (type === currentTab) return;
+            currentTab = type;
+
+            const rackBtn = document.getElementById('btn-rack');
+            const kitchenBtn = document.getElementById('btn-kitchen');
+
+            if (type === 'rack') {
+                rackBtn.className = "px-6 py-3 rounded-t-lg bg-red-600 text-white font-bold transition-all duration-200";
+                kitchenBtn.className = "px-6 py-3 rounded-t-lg bg-gray-800 text-gray-400 hover:bg-gray-700 font-bold transition-all duration-200";
+                table.setColumns(rackColumns);
+                loadData('rack');
+            } else {
+                kitchenBtn.className = "px-6 py-3 rounded-t-lg bg-red-600 text-white font-bold transition-all duration-200";
+                rackBtn.className = "px-6 py-3 rounded-t-lg bg-gray-800 text-gray-400 hover:bg-gray-700 font-bold transition-all duration-200";
+                table.setColumns(kitchenColumns);
+                loadData('kitchen');
+            }
+        };
+
+        // 4. Unified Data Loader
+        async function loadData(type) {
+            table.clearData();
+            const tableData = [];
+            
+            try {
+                const athletesSnap = await getDocs(collection(db, "recruiting_profiles"));
+
+                if (type === 'rack') {
+                    const dataPromises = athletesSnap.docs.map(async (athleteDoc) => {
+                        const d = athleteDoc.data();
+                        const maxesSnap = await getDocs(collection(db, "recruiting_profiles", athleteDoc.id, "maxes"));
+                        
+                        maxesSnap.forEach((maxDoc) => {
+                            const mx = maxDoc.data();
+                            const ts = mx.timestamp?.toDate() || new Date();
+                            tableData.push({
+                                name: d.fullName || "Unnamed",
+                                grad: d.gradYear || "--",
+                                dateGroup: ts.toLocaleString('default', { month: 'long', year: 'numeric' }),
+                                bench: mx.bench_press,
+                                squat: mx.squat,
+                                clean: mx.clean,
+                                deadlift: mx.deadlift,
+                                pushPress: mx.push_press
+                            });
+                        });
+                    });
+                    await Promise.all(dataPromises);
+                } else {
+                    // Kitchen pulls from main profile
+                    athletesSnap.forEach((athleteDoc) => {
+                        const d = athleteDoc.data();
+                        tableData.push({
+                            name: d.fullName || "Unnamed",
+                            grad: d.gradYear || "--",
+                            sleep: d.getsSleep || "No Data",
+                            nutrition: d.hasNutritionPlan || "No Data",
+                            extra: d.weeklyExtraDays || "0",
+                            lift: d.liftYearRound ? "YES" : "NO"
+                        });
+                    });
+                }
+                
+                table.setData(tableData);
+            } catch (err) {
+                console.error("Data Load Error:", err);
+            }
+        }
+
+        // 5. Global Export Function
+        window.downloadCSV = () => {
+            const fileName = currentTab === 'rack' ? "Team_Maxes" : "Team_Kitchen_Metrics";
+            table.download("csv", `${fileName}_${new Date().getFullYear()}.csv`);
+        };
+    </script>
+</body>
+</html>
