@@ -96,23 +96,35 @@
 
         // 1. Load Settings from Firestore
         async function loadSettings() {
-            const settingsSnap = await getDoc(doc(db, "school_settings", schoolID));
-            if (settingsSnap.exists()) {
-                const data = settingsSnap.data();
+            try {
+                const settingsRef = doc(db, "school_settings", schoolID);
+                const settingsSnap = await getDoc(settingsRef);
                 
-                // Set Recruiting Toggle
-                document.getElementById('toggle-recruiting').checked = data.recruitingEnabled || false;
+                if (settingsSnap.exists()) {
+                    const data = settingsSnap.data();
+                    
+                    // Set Recruiting Toggle
+                    document.getElementById('toggle-recruiting').checked = data.recruitingEnabled || false;
 
-                // Set Active Lifts
-                const activeLifts = data.activeLifts || [];
-                const checkboxes = document.querySelectorAll('.lift-checkbox');
-                checkboxes.forEach(cb => {
-                    if (activeLifts.includes(cb.value)) cb.checked = true;
-                });
+                    // Set Active Lifts
+                    const activeLifts = data.activeLifts || [];
+                    const checkboxes = document.querySelectorAll('.lift-checkbox');
+                    checkboxes.forEach(cb => {
+                        if (activeLifts.includes(cb.value)) cb.checked = true;
+                    });
 
-                // Load Custom Lifts into UI
-                const customLifts = data.customLifts || [];
-                customLifts.forEach(lift => renderNewLiftCheckbox(lift, activeLifts.includes(lift)));
+                    // Load Custom Lifts
+                    const customLifts = data.customLifts || [];
+                    customLifts.forEach(lift => renderNewLiftCheckbox(lift, activeLifts.includes(lift)));
+                } else {
+                    console.log("No existing settings found for this school. Starting fresh.");
+                    // Optional: You could pre-check Bench/Squat/Clean by default here
+                }
+            } catch (err) {
+                console.error("Error loading settings:", err);
+                if (err.code === 'permission-denied') {
+                    alert("Permission Denied: Ensure your Firestore Rules allow coaches to access 'school_settings'.");
+                }
             }
         }
 
