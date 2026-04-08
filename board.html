@@ -98,30 +98,40 @@
             const grid = document.getElementById('player-club-grid');
             if (!grid) return; 
 
-            // 1. Fetch the school details first
+            // 1. Fetch the school details
             const schoolSnap = await getDoc(doc(db, "schools", schoolId));
             if (!schoolSnap.exists()) return;
             const school = schoolSnap.data();
             
-            // Update the school name in the header
+            // Update Header Text & Logo
             const schoolTag = document.getElementById('school-tag');
-            if (schoolTag) {
-                schoolTag.innerText = `${school.name} Weightroom`.toUpperCase();
+            if (schoolTag) schoolTag.innerText = `${school.name} Weightroom`.toUpperCase();
+            
+            const schoolLogo = document.getElementById('school-logo');
+            if (schoolLogo && school.logo_url) {
+                schoolLogo.src = school.logo_url; // Use DB URL if available
             }
 
-            // 2. FETCH ATHLETES (This must happen before updating the count)
+            // 2. Fetch Athletes
             const q = query(collection(db, "recruiting_profiles"), where("school_id", "==", schoolId));
             const pSnap = await getDocs(q);
 
-            // 3. NOW update the athlete count (pSnap is now defined)
+            // 3. Update Count & Formula Display
             const countEl = document.getElementById('athlete-count');
-            if (countEl) {
-                countEl.innerText = `${pSnap.size} Athletes Logged`;
+            if (countEl) countEl.innerText = `${pSnap.size} Athletes Logged`;
+
+            const formulaEl = document.getElementById('formula-display');
+            if (formulaEl) {
+                if (school.preferences?.formula_type === "power_index") {
+                    formulaEl.innerText = "INDEX: TOTAL LIFTED - (BW CAP * 4)";
+                } else {
+                    formulaEl.innerText = "RANKING: RAW TOTAL LBS";
+                }
             }
             
             let scores = [];
 
-            // 4. Loop through athletes and get their APPROVED 'latest' maxes
+            // 4. Loop through athletes...
             for (const d of pSnap.docs) {
                 const latestMaxSnap = await getDoc(doc(db, "recruiting_profiles", d.id, "maxes", "latest"));
                 
@@ -130,16 +140,16 @@
                     const trackedLifts = school.preferences?.tracked_lifts || ["bench", "squat", "clean"];
                     const scoringLifts = school.preferences?.scoring_lifts || trackedLifts;
                     
-                    const totalLifts = scoringLifts.reduce((acc, lift) => {
-                        return acc + (Number(m[lift]) || 0);
-                    }, 0);
+                    const totalLifts = scoringLifts.reduce((acc, lift) => acc + (Number(m[lift]) || 0), 0);
 
-                    // Apply Fairbanks Power Index Logic
+                    // APPLY CORRECTED FAIRBANKS POWER INDEX (Strength Surplus)
                     let displayScore = totalLifts;
                     if (school.preferences?.formula_type === "power_index") {
                         const bw = Number(m.bodyWeight) || 0;
                         const bwCap = Math.min(bw, 200); 
-                        displayScore = totalLifts - (bwCap * 4);
+                        const bwFactor = bwCap * 4;
+                        // TOTAL minus threshold = SURPLUS
+                        displayScore = totalLifts - bwFactor;
                     }
 
                     scores.push({ 
@@ -152,12 +162,12 @@
                 }
             }
 
-            // 5. Sort and Render the Club Cards
+            // 5. Sort and Render
             scores.sort((a, b) => b.total - a.total);
             grid.innerHTML = '';
 
-            const start = school.preferences?.club_start || 1000;
-            const end = school.preferences?.club_end || 50; // Updated to 50 for inclusivity
+            const start = 1000;
+            const end = 50; 
             
             for(let level = start; level >= end; level -= 50) {
                 const qualifiers = scores.filter(s => !s.placed && s.total >= level);
@@ -171,26 +181,17 @@
                                 <p class="text-[9px] text-gray-600 font-bold uppercase mb-1">Total Weight</p>
                             </div>
                             ${qualifiers.map(q => `
-                                <div class="flex justify-between items-center py-2 border-b border-white/5 last:border-0 group">
+                                <div class="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
                                     <div class="flex flex-col">
-                                        <span class="text-white font-bold uppercase tracking-tight group-hover:text-blue-400 transition-colors">${q.name}</span>
+                                        <span class="text-white font-bold uppercase tracking-tight">${q.name}</span>
                                         <div class="flex items-center gap-2">
-                                            <span class="text-[8px] text-gray-500 font-black uppercase">Index: ${q.displayScore}</span>
-                                            <button onclick="location.href='recruiting-card.html?id=${q.id}'" class="text-[8px] text-blue-500 hover:text-blue-300 font-bold uppercase transition-colors">View Card →</button>
+                                            <span class="text-[8px] text-gray-500 font-black uppercase">Board Index: ${q.displayScore}</span>
+                                            <button onclick="location.href='recruiting-card.html?id=${q.id}'" class="text-[8px] text-blue-500 font-bold uppercase hover:underline">View Card →</button>
                                         </div>
                                     </div>
                                     <span class="text-white font-black italic text-lg">${q.total}</span>
                                 </div>`).join('')}
                         </div>`;
-                }
-            }
-            // Update Formula Display based on School Preferences
-            const formulaEl = document.getElementById('formula-display');
-            if (formulaEl) {
-                if (school.preferences?.formula_type === "power_index") {
-                    formulaEl.innerText = "Formula: Total - (BW Cap * 4)";
-                } else {
-                    formulaEl.innerText = "Formula: Raw Total Weight";
                 }
             }
         }
