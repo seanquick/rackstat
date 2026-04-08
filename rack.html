@@ -184,29 +184,28 @@
         }
 
         async function loadCurrentMaxes(uid) {
-            const q = query(collection(db, "recruiting_profiles", uid, "maxes"), orderBy("timestamp", "desc"), limit(1));
-            const snap = await getDocs(q);
+            // 1. Point to the 'latest' document (The one the Coach Approves)
+            const latestDocRef = doc(db, "recruiting_profiles", uid, "maxes", "latest");
+            const snap = await getDoc(latestDocRef);
+            
             const display = document.getElementById('maxes-display');
             const formulaDisplay = document.getElementById('formula-detail');
             display.innerHTML = '';
 
-            if(!snap.empty) {
-                const data = snap.docs[0].data();
+            if(snap.exists()) {
+                const data = snap.data();
                 let scoringSum = 0;
 
-                // Use school-specific scoring lifts, or default to all tracked if missing
                 const scoringList = schoolPrefs.scoring_lifts || schoolPrefs.tracked_lifts || [];
 
                 schoolPrefs.tracked_lifts.forEach(lift => {
                     const val = data[lift] || 0;
                     const displayLabel = lift.replace('_', ' ').toUpperCase();
                     
-                    // Add to the sum ONLY if the lift is in the scoring_lifts array
                     if (scoringList.includes(lift)) {
                         scoringSum += val;
                     }
 
-                    // Always display the PR card for all tracked lifts (including Push Press)
                     display.innerHTML += `
                         <div class="max-card">
                             <p class="text-[8px] uppercase text-gray-400">${displayLabel}</p>
@@ -214,7 +213,6 @@
                         </div>`;
                 });
 
-                // Calculate Final Board Score & Formula Breakdown
                 let finalScore = scoringSum; 
                 let formulaText = "";
 
@@ -222,23 +220,19 @@
                     const bw = data.bodyWeight || 0;
                     const bwCap = Math.min(bw, 200);
                     const deduction = bwCap * 4;
-                    
                     finalScore = scoringSum - deduction;
-                    
-                    // Visual breakdown for Fairbanks style
                     formulaText = `Lifts: ${scoringSum} — (BW: ${bwCap} × 4) = ${Math.round(finalScore)}`;
                 } else {
-                    // Standard total breakdown
                     formulaText = `Total of scoring lifts: ${scoringSum}`;
                 }
 
-                // Update UI Elements
                 document.getElementById('view-total').innerText = Math.round(finalScore);
                 if (formulaDisplay) formulaDisplay.innerText = formulaText;
+                
+                // Populate inputs with current data so they aren't blank
                 document.getElementById('bodyWeight').value = data.bodyWeight || '';
             } else {
-                // Fallback if no history exists yet
-                if (formulaDisplay) formulaDisplay.innerText = "No data recorded yet";
+                if (formulaDisplay) formulaDisplay.innerText = "No approved data yet";
             }
         }
 
@@ -321,24 +315,19 @@
                     finalBoardScore = scoringSum - (bwCap * 4);
                 }
 
-                // 5. Save History Entry
-                await addDoc(collection(db, "recruiting_profiles", user.uid, "maxes"), newMax);
+                // 5. Save History Entry (For progress tracking over time)
+                        await addDoc(collection(db, "recruiting_profiles", user.uid, "maxes"), newMax);
 
-                // 6. Global Sync (Master User Doc & Recruiting Profile)
-                const now = new Date();
-                const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-                await setDoc(doc(db, "users", user.uid), { 
-                    weight: bodyWeight,
-                    lastWeightUpdate: serverTimestamp() 
-                }, { merge: true });
+                // 6. Global Sync (Master User Doc & THE LATEST MAXES DOC)
+                // This ensures the "latest" document is always the most recent entry
+                const latestRef = doc(db, "recruiting_profiles", user.uid, "maxes", "latest");
+                await setDoc(latestRef, newMax, { merge: true });
 
                 await setDoc(profileRef, {
                     ...newMax,
                     weight: bodyWeight,
                     boardScore: Math.round(finalBoardScore),
-                    lastUpdated: Date.now(),
-                    lastUpdatedStr: timeString
+                    lastUpdated: Date.now()
                 }, { merge: true });
 
                 // 7. Update UI Timestamp Label
