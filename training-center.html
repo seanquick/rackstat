@@ -42,7 +42,7 @@
             </div>
 
         <button id="add-exercise-btn" onclick="addExerciseBlock()" class="w-full py-4 border-2 border-dashed border-gray-800 text-gray-500 font-bold uppercase rounded-xl hover:border-gray-600 hover:text-white transition">
-            + Add Exercise
+            + Add Exercise Block
         </button>
     </main>
 
@@ -56,13 +56,11 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // State Management
         const coreLifts = ["Bench Press", "Squat", "Power Clean", "Deadlift", "Push Press"];
         let supplementLibrary = []; 
         let exercises = [];
         let isMaxOutMode = false;
 
-        // Fetch saved supplements on load
         async function fetchSupplements() {
             try {
                 const snap = await getDocs(collection(db, "supplement_library"));
@@ -70,17 +68,16 @@
             } catch (err) { console.error("Error fetching library", err); }
         }
 
-        // --- AUTH CHECK ---
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 await fetchSupplements();
-                addExerciseBlock(); // Start with one empty block
+                addExerciseBlock(); 
             } else {
                 window.location.href = 'index.html';
             }
         });
 
-        // --- UI LOGIC ---
+        // --- STATE MANAGERS ---
         window.toggleMaxOut = () => {
             isMaxOutMode = !isMaxOutMode;
             const bg = document.getElementById('max-out-indicator');
@@ -92,7 +89,6 @@
                 knob.classList.add('translate-x-5', 'bg-white');
                 addBtn.style.display = 'none';
                 
-                // Auto-populate Max Out Structure
                 exercises = coreLifts.map(lift => ({
                     id: Date.now() + Math.random(),
                     category: 'core',
@@ -116,6 +112,8 @@
                 category: 'core',
                 name: coreLifts[0],
                 isCircuit: false,
+                circuitExercises: [''], // Array for multiple exercises in a circuit
+                circuitConfig: { cycles: 3, work: 40, rest: 20 }, // Global rules for the circuit
                 sets: [{ reps: '', pct: '' }]
             });
             renderExercises();
@@ -125,7 +123,6 @@
             const ex = exercises.find(e => e.id === id);
             if (ex) {
                 ex[field] = value;
-                // Reset states if switching categories
                 if (field === 'category') {
                     ex.isCircuit = false;
                     ex.name = value === 'core' ? coreLifts[0] : '';
@@ -135,21 +132,54 @@
             }
         };
 
+        // --- CIRCUIT SPECIFIC LOGIC ---
         window.toggleCircuit = (id) => {
             const ex = exercises.find(e => e.id === id);
             if (ex) {
                 ex.isCircuit = !ex.isCircuit;
-                if (ex.isCircuit) ex.sets = [{ time: '', rest: '' }];
-                else ex.sets = [{ reps: '', pct: '' }];
+                // Ensure arrays are reset when toggled
+                if (ex.isCircuit && ex.circuitExercises.length === 0) {
+                    ex.circuitExercises = [ex.name || '']; 
+                }
                 renderExercises();
             }
         };
 
+        window.addCircuitExercise = (blockId) => {
+            const ex = exercises.find(e => e.id === blockId);
+            if (ex) {
+                ex.circuitExercises.push('');
+                renderExercises();
+            }
+        };
+
+        window.updateCircuitExercise = (blockId, exIndex, value) => {
+            const ex = exercises.find(e => e.id === blockId);
+            if (ex) {
+                ex.circuitExercises[exIndex] = value;
+            }
+        };
+
+        window.removeCircuitExercise = (blockId, exIndex) => {
+            const ex = exercises.find(e => e.id === blockId);
+            if (ex) {
+                ex.circuitExercises.splice(exIndex, 1);
+                renderExercises();
+            }
+        };
+
+        window.updateCircuitConfig = (blockId, field, value) => {
+            const ex = exercises.find(e => e.id === blockId);
+            if (ex) {
+                ex.circuitConfig[field] = value;
+            }
+        };
+
+        // --- SET SPECIFIC LOGIC ---
         window.addSet = (id) => {
             const ex = exercises.find(e => e.id === id);
             if (ex) {
-                if (ex.isCircuit) ex.sets.push({ time: '', rest: '' });
-                else if (ex.category === 'supplement') ex.sets.push({ reps: '' });
+                if (ex.category === 'supplement') ex.sets.push({ reps: '' });
                 else ex.sets.push({ reps: '', pct: '' });
                 renderExercises();
             }
@@ -167,7 +197,7 @@
             renderExercises();
         };
 
-        // --- RENDER LOGIC ---
+        // --- RENDER FUNCTION ---
         function renderExercises() {
             const container = document.getElementById('exercises-container');
             container.innerHTML = '';
@@ -184,60 +214,96 @@
 
                 if (ex.isMaxOut) {
                     innerHtml += `<h2 class="text-xl font-black uppercase text-red-500">${ex.name} (MAX OUT)</h2></div></div>`;
-                    innerHtml += `<div class="text-xs text-gray-400">3 Warm Up Sets, 3 Max Attempts auto-generated for athletes.</div>`;
-                } else {
-                    // Type Selector
-                    innerHtml += `
-                        <select onchange="updateExercise(${ex.id}, 'category', this.value)" class="bg-black border border-gray-700 text-xs font-bold uppercase rounded p-2 text-white">
-                            <option value="core" ${isCore ? 'selected' : ''}>Core</option>
-                            <option value="supplement" ${!isCore ? 'selected' : ''}>Supplement</option>
-                        </select>
-                    `;
+                    innerHtml += `<div class="text-xs text-gray-400">3 Warm Up Sets, 3 Max Attempts auto-generated.</div></div>`;
+                    container.insertAdjacentHTML('beforeend', innerHtml);
+                    return; // Skip the rest of the builder for max out blocks
+                } 
+                
+                // TYPE SELECTOR
+                innerHtml += `
+                    <select onchange="updateExercise(${ex.id}, 'category', this.value)" class="bg-black border border-gray-700 text-xs font-bold uppercase rounded p-2 text-white">
+                        <option value="core" ${isCore ? 'selected' : ''}>Core</option>
+                        <option value="supplement" ${!isCore ? 'selected' : ''}>Supplement</option>
+                    </select>
+                `;
 
-                    // Name Input (Dropdown for core, Text for Supp)
-                    if (isCore) {
-                        const options = coreLifts.map(l => `<option value="${l}" ${ex.name === l ? 'selected' : ''}>${l}</option>`).join('');
-                        innerHtml += `<select onchange="updateExercise(${ex.id}, 'name', this.value)" class="flex-1 bg-black border border-gray-700 rounded p-2 text-white font-bold uppercase">${options}</select>`;
-                    } else {
-                        const datalistId = `list-${ex.id}`;
+                // CIRCUIT TOGGLE (Supplement Only)
+                if (!isCore) {
+                    innerHtml += `
+                        <div class="flex items-center gap-2 ml-4">
+                            <input type="checkbox" id="circ-${ex.id}" ${ex.isCircuit ? 'checked' : ''} onchange="toggleCircuit(${ex.id})">
+                            <label for="circ-${ex.id}" class="text-xs font-bold text-gray-500 uppercase cursor-pointer">Circuit</label>
+                        </div>
+                    `;
+                }
+
+                // EXERCISE NAME INPUT(S)
+                if (isCore) {
+                    const options = coreLifts.map(l => `<option value="${l}" ${ex.name === l ? 'selected' : ''}>${l}</option>`).join('');
+                    innerHtml += `<select onchange="updateExercise(${ex.id}, 'name', this.value)" class="flex-1 bg-black border border-gray-700 rounded p-2 text-white font-bold uppercase">${options}</select></div>`;
+                } else if (!ex.isCircuit) {
+                    // Standard Supplement (Single)
+                    const datalistId = `list-${ex.id}`;
+                    const dlOptions = supplementLibrary.map(s => `<option value="${s}">`).join('');
+                    innerHtml += `
+                        <input type="text" list="${datalistId}" value="${ex.name}" onchange="updateExercise(${ex.id}, 'name', this.value)" placeholder="Enter Exercise Name" class="flex-1 bg-black border border-gray-700 rounded p-2 text-white font-bold uppercase">
+                        <datalist id="${datalistId}">${dlOptions}</datalist>
+                    </div>`;
+                } else {
+                    // Circuit Mode Active - Title area is empty, list is rendered below
+                    innerHtml += `<span class="flex-1 font-bold text-gray-400 uppercase italic">Circuit Builder</span></div>`;
+                }
+
+                // Close Top Bar, Add Delete Button
+                innerHtml += `<button onclick="removeExercise(${ex.id})" class="text-gray-600 hover:text-red-500 transition">✕</button></div>`;
+
+                // --- BUILDER AREA ---
+                if (ex.isCircuit && !isCore) {
+                    // CIRCUIT BUILDER UI
+                    innerHtml += `<div class="bg-black border border-gray-800 p-4 rounded mb-4 space-y-3">
+                        <label class="text-xs font-bold text-gray-500 uppercase">Circuit Exercises</label>`;
+                    
+                    ex.circuitExercises.forEach((cEx, cIdx) => {
+                        const dlId = `circ-list-${ex.id}-${cIdx}`;
                         const dlOptions = supplementLibrary.map(s => `<option value="${s}">`).join('');
                         innerHtml += `
-                            <input type="text" list="${datalistId}" value="${ex.name}" onchange="updateExercise(${ex.id}, 'name', this.value)" placeholder="Enter Exercise Name" class="flex-1 bg-black border border-gray-700 rounded p-2 text-white font-bold uppercase">
-                            <datalist id="${datalistId}">${dlOptions}</datalist>
-                        `;
-                    }
-
-                    innerHtml += `</div>
-                        <button onclick="removeExercise(${ex.id})" class="text-gray-600 hover:text-red-500 transition">✕</button>
-                    </div>`;
-
-                    // Circuit Toggle (Supplement Only)
-                    if (!isCore) {
-                        innerHtml += `
-                            <div class="flex items-center gap-2 mb-4">
-                                <input type="checkbox" id="circ-${ex.id}" ${ex.isCircuit ? 'checked' : ''} onchange="toggleCircuit(${ex.id})">
-                                <label for="circ-${ex.id}" class="text-xs font-bold text-gray-500 uppercase cursor-pointer">Circuit Mode (Time/Rest)</label>
+                            <div class="flex gap-2 items-center">
+                                <span class="text-gray-600 text-xs font-bold">${cIdx + 1}.</span>
+                                <input type="text" list="${dlId}" value="${cEx}" onchange="updateCircuitExercise(${ex.id}, ${cIdx}, this.value)" placeholder="Exercise ${cIdx + 1}" class="flex-1 bg-gray-900 border border-gray-700 rounded p-2 text-white text-sm font-bold uppercase">
+                                <datalist id="${dlId}">${dlOptions}</datalist>
+                                ${cIdx > 0 ? `<button onclick="removeCircuitExercise(${ex.id}, ${cIdx})" class="text-red-500 hover:text-red-400 font-bold px-2">✕</button>` : `<div class="w-6"></div>`}
                             </div>
                         `;
-                    }
+                    });
 
-                    // Sets Builder
+                    innerHtml += `<button onclick="addCircuitExercise(${ex.id})" class="text-xs font-bold text-red-500 hover:text-red-400 uppercase mt-2">+ Add Exercise to Circuit</button></div>`;
+
+                    // CIRCUIT TIMERS
+                    innerHtml += `
+                        <div class="flex gap-4 items-center bg-gray-800 p-3 rounded border border-gray-700">
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Total Cycles</label>
+                                <input type="number" value="${ex.circuitConfig.cycles}" onchange="updateCircuitConfig(${ex.id}, 'cycles', this.value)" class="w-16 bg-black border border-gray-600 rounded px-2 py-1 text-sm text-center">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Work (sec)</label>
+                                <input type="number" value="${ex.circuitConfig.work}" onchange="updateCircuitConfig(${ex.id}, 'work', this.value)" class="w-16 bg-black border border-gray-600 rounded px-2 py-1 text-sm text-center">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Rest (sec)</label>
+                                <input type="number" value="${ex.circuitConfig.rest}" onchange="updateCircuitConfig(${ex.id}, 'rest', this.value)" class="w-16 bg-black border border-gray-600 rounded px-2 py-1 text-sm text-center">
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // STANDARD SETS BUILDER
                     innerHtml += `<div class="space-y-2 mb-4">`;
-                    
                     ex.sets.forEach((set, sIndex) => {
                         innerHtml += `<div class="flex gap-2 items-center">
                             <span class="text-xs font-bold text-gray-500 w-12 uppercase">Set ${sIndex + 1}</span>`;
-
-                        if (ex.isCircuit) {
-                            innerHtml += `
-                                <input type="number" placeholder="Work (s)" value="${set.time || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'time', this.value)" class="w-24 bg-black border border-gray-700 rounded px-2 py-1 text-sm text-center">
-                                <input type="number" placeholder="Rest (s)" value="${set.rest || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'rest', this.value)" class="w-24 bg-black border border-gray-700 rounded px-2 py-1 text-sm text-center">
-                            `;
-                        } else {
-                            innerHtml += `<input type="number" placeholder="Reps" value="${set.reps || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'reps', this.value)" class="w-20 bg-black border border-gray-700 rounded px-2 py-1 text-sm text-center">`;
-                            if (isCore) {
-                                innerHtml += `<input type="number" placeholder="% Max" value="${set.pct || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'pct', this.value)" class="w-20 bg-black border border-gray-700 rounded px-2 py-1 text-sm text-center">`;
-                            }
+                        innerHtml += `<input type="number" placeholder="Reps" value="${set.reps || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'reps', this.value)" class="w-20 bg-black border border-gray-700 rounded px-2 py-1 text-sm text-center">`;
+                        if (isCore) {
+                            innerHtml += `<input type="number" placeholder="% Max" value="${set.pct || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'pct', this.value)" class="w-20 bg-black border border-gray-700 rounded px-2 py-1 text-sm text-center">`;
                         }
                         innerHtml += `</div>`;
                     });
@@ -259,13 +325,16 @@
             if (!date || !name) return alert("Please provide a Date and Workout Name.");
 
             try {
-                // 1. Save new supplement exercises to the global library
+                // 1. Save all new supplement exercises to library (single or circuit)
                 exercises.forEach(async (ex) => {
-                    if (ex.category === 'supplement' && ex.name.trim() !== '') {
-                        if (!supplementLibrary.includes(ex.name)) {
-                            supplementLibrary.push(ex.name);
-                            await setDoc(doc(db, "supplement_library", ex.name.toLowerCase().replace(/\s/g, '')), { name: ex.name });
-                        }
+                    if (ex.category === 'supplement') {
+                        const namesToSave = ex.isCircuit ? ex.circuitExercises : [ex.name];
+                        namesToSave.forEach(async (n) => {
+                            if (n && n.trim() !== '' && !supplementLibrary.includes(n)) {
+                                supplementLibrary.push(n);
+                                await setDoc(doc(db, "supplement_library", n.toLowerCase().replace(/\s/g, '')), { name: n });
+                            }
+                        });
                     }
                 });
 
