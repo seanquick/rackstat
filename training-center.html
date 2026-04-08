@@ -184,7 +184,7 @@
                 renderExercises();
             }
         };
-
+        
         window.updateSet = (exId, setIndex, field, value) => {
             const ex = exercises.find(e => e.id === exId);
             if (ex && ex.sets[setIndex]) {
@@ -195,6 +195,14 @@
         window.removeExercise = (id) => {
             exercises = exercises.filter(e => e.id !== id);
             renderExercises();
+        };
+
+        window.removeSet = (exId, setIndex) => {
+            const ex = exercises.find(e => e.id === exId);
+            if (ex) {
+                ex.sets.splice(setIndex, 1); // Removes that specific set from the array
+                renderExercises(); // Refreshes the display
+            }
         };
 
         // --- RENDER FUNCTION ---
@@ -216,7 +224,7 @@
                     innerHtml += `<h2 class="text-xl font-black uppercase text-red-500">${ex.name} (MAX OUT)</h2></div></div>`;
                     innerHtml += `<div class="text-xs text-gray-400">3 Warm Up Sets, 3 Max Attempts auto-generated.</div></div>`;
                     container.insertAdjacentHTML('beforeend', innerHtml);
-                    return; // Skip the rest of the builder for max out blocks
+                    return; 
                 } 
                 
                 // TYPE SELECTOR
@@ -242,7 +250,6 @@
                     const options = coreLifts.map(l => `<option value="${l}" ${ex.name === l ? 'selected' : ''}>${l}</option>`).join('');
                     innerHtml += `<select onchange="updateExercise(${ex.id}, 'name', this.value)" class="flex-1 bg-black border border-gray-700 rounded p-2 text-white font-bold uppercase">${options}</select></div>`;
                 } else if (!ex.isCircuit) {
-                    // Standard Supplement (Single)
                     const datalistId = `list-${ex.id}`;
                     const dlOptions = supplementLibrary.map(s => `<option value="${s}">`).join('');
                     innerHtml += `
@@ -250,11 +257,10 @@
                         <datalist id="${datalistId}">${dlOptions}</datalist>
                     </div>`;
                 } else {
-                    // Circuit Mode Active - Title area is empty, list is rendered below
                     innerHtml += `<span class="flex-1 font-bold text-gray-400 uppercase italic">Circuit Builder</span></div>`;
                 }
 
-                // Close Top Bar, Add Delete Button
+                // Close Top Bar, Add Delete Block Button
                 innerHtml += `<button onclick="removeExercise(${ex.id})" class="text-gray-600 hover:text-red-500 transition">✕</button></div>`;
 
                 // --- BUILDER AREA ---
@@ -296,15 +302,21 @@
                         </div>
                     `;
                 } else {
-                    // STANDARD SETS BUILDER
+                    // STANDARD SETS BUILDER WITH DELETE SET OPTION
                     innerHtml += `<div class="space-y-2 mb-4">`;
                     ex.sets.forEach((set, sIndex) => {
                         innerHtml += `<div class="flex gap-2 items-center">
                             <span class="text-xs font-bold text-gray-500 w-12 uppercase">Set ${sIndex + 1}</span>`;
+                        
                         innerHtml += `<input type="number" placeholder="Reps" value="${set.reps || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'reps', this.value)" class="w-20 bg-black border border-gray-700 rounded px-2 py-1 text-sm text-center">`;
+                        
                         if (isCore) {
                             innerHtml += `<input type="number" placeholder="% Max" value="${set.pct || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'pct', this.value)" class="w-20 bg-black border border-gray-700 rounded px-2 py-1 text-sm text-center">`;
                         }
+
+                        // INDIVIDUAL SET DELETE BUTTON
+                        innerHtml += `<button onclick="removeSet(${ex.id}, ${sIndex})" class="text-red-500 hover:text-red-400 font-bold px-2 transition" title="Remove Set">✕</button>`;
+                        
                         innerHtml += `</div>`;
                     });
 
@@ -326,12 +338,15 @@
 
             try {
                 // 1. Save all new supplement exercises to library (single or circuit)
+                // From your saveWorkout function:
                 exercises.forEach(async (ex) => {
                     if (ex.category === 'supplement') {
                         const namesToSave = ex.isCircuit ? ex.circuitExercises : [ex.name];
                         namesToSave.forEach(async (n) => {
+                            // Check if it's a new name we haven't saved yet
                             if (n && n.trim() !== '' && !supplementLibrary.includes(n)) {
                                 supplementLibrary.push(n);
+                                // Save to Firestore so it's there next time you log in
                                 await setDoc(doc(db, "supplement_library", n.toLowerCase().replace(/\s/g, '')), { name: n });
                             }
                         });
