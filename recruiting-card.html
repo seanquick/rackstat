@@ -131,7 +131,8 @@
     <button onclick="window.exportSocial()" class="bg-white text-black px-6 py-2 rounded-full font-bold uppercase text-xs">SHARE TO SOCIAL</button>
     
     <button id="unlock-btn" onclick="toggleEditMode()" class="hidden bg-yellow-600 text-black font-black px-4 py-2 rounded uppercase text-[10px] mb-4 transition-all"> 🔓 Unlock Profile for Editing</button>
-    <button onclick="location.href='index.html'" class="bg-gray-800 text-white px-6 py-2 rounded-full font-bold uppercase text-xs">Back to Lobby</button>
+    <a href="coach-lobby.html" class="text-gray-400 hover:text-white transition flex items-center gap-2 font-bold uppercase text-xs">← Back to Office
+</a>
 </div>
 
 <div id="capture-area" class="max-w-2xl mx-auto card-container rounded-3xl p-8 shadow-2xl border-red-600/20">
@@ -615,6 +616,16 @@
         } catch (error) {
             console.error("Save error:", error);
             alert("Failed to save changes.");
+        }
+    };
+    
+    window.handleBackNavigation = () => {
+        // If they came specifically from the roster manager, send them back there
+        if (document.referrer.includes('roster-manager.html')) {
+            window.location.href = 'roster-manager.html';
+        } else {
+            // Otherwise, always default to the Lobby
+            window.location.href = 'coach-lobby.html';
         }
     };
 </script>

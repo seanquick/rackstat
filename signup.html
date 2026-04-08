@@ -169,7 +169,7 @@
                 });
 
                 // 4. Save Public Recruiting Profile
-                // Coaches get a profile too, but it will be handled by coach-dashboard.html
+                // Coaches get a profile too, but it will be handled by coach-lobby.html
                 await setDoc(doc(db, "recruiting_profiles", user.uid), {
                     firstName: fullName.split(' ')[0],
                     lastName: fullName.split(' ').slice(1).join(' '),

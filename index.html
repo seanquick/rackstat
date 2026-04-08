@@ -96,9 +96,30 @@
         window.handleLogin = async () => {
             const email = document.getElementById('email').value.trim();
             const pass = document.getElementById('password').value;
+            
             try { 
-                await signInWithEmailAndPassword(auth, email, pass);
+                // 1. Sign in
+                const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+                const user = userCredential.user;
+
+                // 2. Fetch the user's role from your 'users' collection
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    
+                    // 3. Traffic Control: Route based on role
+                    if (userData.role === 'coach') {
+                        window.location.href = 'coach-lobby.html';
+                    } else {
+                        window.location.href = 'athlete-dashboard.html';
+                    }
+                } else {
+                    alert("No user profile found in database.");
+                }
+
             } catch (e) { 
+                console.error("Login Error:", e);
                 alert("Login failed: " + e.message); 
             }
         };
@@ -128,7 +149,7 @@
 
                         // Redirect Coaches
                         if (userData.role === 'coach') {
-                            window.location.href = 'coach-dashboard.html';
+                            window.location.href = 'coach-lobby.html';
                             return; 
                         }
 
