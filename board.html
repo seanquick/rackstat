@@ -154,8 +154,9 @@
             scores.sort((a, b) => b.total - a.total);
             grid.innerHTML = '';
 
+            // Uses school preference if it exists, otherwise defaults to your new 1000/50 range
             const start = school.preferences?.club_start || 1000;
-            const end = school.preferences?.club_end || 300;
+            const end = school.preferences?.club_end || 50;
             
             // 5. Build the Club Cards
             for(let level = start; level >= end; level -= 50) {
