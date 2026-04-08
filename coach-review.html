@@ -51,7 +51,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { firebaseConfig } from "./firebase-config.js"; 
-    import { getFirestore, collection, query, where, orderBy, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, query, where, orderBy, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
     const app = initializeApp(firebaseConfig);
@@ -143,9 +143,12 @@
                 ];
 
                 let previousMax = 0;
+                let matchedKey = cleanName; // Default to the clean name
+
                 for (let key of potentialKeys) {
                     if (currentMaxes[key] !== undefined && currentMaxes[key] !== null) {
                         previousMax = parseFloat(currentMaxes[key]);
+                        matchedKey = key; // Capture the exact spelling the database uses
                         break; 
                     }
                 }
@@ -159,7 +162,14 @@
                                 <span class="text-white font-bold text-xs uppercase tracking-wider">${ex.name}</span>
                                 <span class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">${completedSets}/${totalSets} Sets</span>
                             </div>
-                            ${isPR ? `<span class="bg-[#b91c1c] text-white text-[8px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-[0_0_10px_rgba(185,28,28,0.5)]">NEW PR</span>` : ''}
+                            ${isPR ? `
+                                <div class="flex items-center gap-2 ml-2">
+                                    <span class="bg-[#b91c1c] text-white text-[8px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-[0_0_10px_rgba(185,28,28,0.5)]">NEW PR</span>
+                                    <button onclick="window.approvePR('${log.athleteId}', '${matchedKey}', ${topWeight}, this)" class="bg-white/10 hover:bg-green-600 border border-white/10 text-[8px] font-black px-2 py-0.5 rounded-md text-white transition-colors uppercase">
+                                        Approve
+                                    </button>
+                                </div>
+                            ` : ''}
                         </div>
                         <div class="text-right">
                             <span class="text-white font-black italic text-lg">${topWeight > 0 ? topWeight : 'BW'}</span>
@@ -185,6 +195,29 @@
             feed.appendChild(card);
         }
     }
+
+    window.approvePR = async (athleteId, exerciseKey, newWeight, btnElement) => {
+        try {
+            btnElement.innerText = "SAVING...";
+            
+            const maxRef = doc(db, "recruiting_profiles", athleteId, "maxes", "latest");
+            
+            await updateDoc(maxRef, {
+                [exerciseKey]: newWeight
+            });
+
+            // UI Success Feedback
+            btnElement.innerText = "APPROVED ✓";
+            btnElement.classList.remove('bg-white/10', 'hover:bg-green-600', 'border-white/10');
+            btnElement.classList.add('bg-green-600', 'border-green-500');
+            btnElement.disabled = true;
+
+        } catch (error) {
+            console.error("Error approving PR:", error);
+            alert("Failed to update max. Check console.");
+            btnElement.innerText = "ERROR";
+        }
+    };
 </script>
 </body>
 </html>

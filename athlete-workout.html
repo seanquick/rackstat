@@ -172,7 +172,7 @@
             const workout = workoutSnap.data();
             const currentMaxes = maxSnap.exists() ? maxSnap.data() : {};
 
-            document.getElementById('athlete-dashboard').style.display = 'none';
+            document.getElementById('athlete-workout').style.display = 'none';
             document.getElementById('athlete-workout-container').style.display = 'block';
             document.getElementById('display-title').innerText = workout.name;
             document.getElementById('display-week').innerText = workout.date;
@@ -361,7 +361,7 @@
             alert("Workout Logged!");
             // 5. Use a small delay before redirecting to ensure Firestore finished
             setTimeout(() => {
-                location.href = 'athlete-dashboard.html'; 
+                location.href = 'athlete-workout.html'; 
             }, 500);
 
         } catch (error) {
