@@ -46,6 +46,12 @@
         </button>
     </main>
 
+    <div class="mb-4">
+        <input type="text" id="history-search" onkeyup="filterHistory()" placeholder="Search by name or date (YYYY-MM-DD)..." 
+            class="w-full bg-black border border-gray-800 rounded-lg px-4 py-2 text-sm text-gray-400 focus:outline-none focus:border-red-500">
+    </div>
+    <div id="history-container" class="space-y-3"> ... </div>
+
     <section class="max-w-4xl mx-auto p-6 mt-12 border-t border-gray-800">
         <h2 class="text-xl font-black italic uppercase tracking-tighter text-gray-500 mb-6">Workout History</h2>
         <div id="history-container" class="space-y-3">
@@ -266,7 +272,7 @@
 
                 if (ex.isMaxOut) {
                     innerHtml += `<h2 class="text-xl font-black uppercase text-red-500">${ex.name} (MAX OUT)</h2></div></div>`;
-                    innerHtml += `<div class="text-xs text-gray-400">3 Warm Up Sets, 3 Max Attempts auto-generated.</div></div>`;
+                    innerHtml += `<div class="text-xs text-gray-400 italic">3 Warm Up Sets, 3 Max Attempts auto-generated.</div></div>`;
                     container.insertAdjacentHTML('beforeend', innerHtml);
                     return; 
                 } 
@@ -279,12 +285,12 @@
                     </select>
                 `;
 
-                // CIRCUIT TOGGLE (Supplement Only)
+                // CIRCUIT TOGGLE
                 if (!isCore) {
                     innerHtml += `
-                        <div class="flex items-center gap-2 ml-4">
+                        <div class="flex items-center gap-2 ml-2 sm:ml-4">
                             <input type="checkbox" id="circ-${ex.id}" ${ex.isCircuit ? 'checked' : ''} onchange="toggleCircuit(${ex.id})">
-                            <label for="circ-${ex.id}" class="text-xs font-bold text-gray-500 uppercase cursor-pointer">Circuit</label>
+                            <label for="circ-${ex.id}" class="text-[10px] sm:text-xs font-bold text-gray-500 uppercase cursor-pointer">Circuit</label>
                         </div>
                     `;
                 }
@@ -292,24 +298,23 @@
                 // EXERCISE NAME INPUT(S)
                 if (isCore) {
                     const options = coreLifts.map(l => `<option value="${l}" ${ex.name === l ? 'selected' : ''}>${l}</option>`).join('');
-                    innerHtml += `<select onchange="updateExercise(${ex.id}, 'name', this.value)" class="flex-1 bg-black border border-gray-700 rounded p-2 text-white font-bold uppercase">${options}</select></div>`;
+                    innerHtml += `<select onchange="updateExercise(${ex.id}, 'name', this.value)" class="flex-1 bg-black border border-gray-700 rounded p-2 text-white font-bold uppercase text-sm">${options}</select></div>`;
                 } else if (!ex.isCircuit) {
                     const datalistId = `list-${ex.id}`;
                     const dlOptions = supplementLibrary.map(s => `<option value="${s}">`).join('');
                     innerHtml += `
-                        <input type="text" list="${datalistId}" value="${ex.name}" onchange="updateExercise(${ex.id}, 'name', this.value)" placeholder="Enter Exercise Name" class="flex-1 bg-black border border-gray-700 rounded p-2 text-white font-bold uppercase">
+                        <input type="text" list="${datalistId}" value="${ex.name}" onchange="updateExercise(${ex.id}, 'name', this.value)" placeholder="Enter Exercise Name" class="flex-1 bg-black border border-gray-700 rounded p-2 text-white font-bold uppercase text-sm">
                         <datalist id="${datalistId}">${dlOptions}</datalist>
                     </div>`;
                 } else {
-                    innerHtml += `<span class="flex-1 font-bold text-gray-400 uppercase italic">Circuit Builder</span></div>`;
+                    innerHtml += `<span class="flex-1 font-bold text-gray-400 uppercase italic text-sm">Circuit Builder</span></div>`;
                 }
 
-                // Close Top Bar, Add Delete Block Button
-                innerHtml += `<button onclick="removeExercise(${ex.id})" class="text-gray-600 hover:text-red-500 transition">✕</button></div>`;
+                // Delete Block Button
+                innerHtml += `<button onclick="removeExercise(${ex.id})" class="text-gray-600 hover:text-red-500 transition ml-2">✕</button></div>`;
 
                 // --- BUILDER AREA ---
                 if (ex.isCircuit && !isCore) {
-                    // CIRCUIT BUILDER UI
                     innerHtml += `<div class="bg-black border border-gray-800 p-4 rounded mb-4 space-y-3">
                         <label class="text-xs font-bold text-gray-500 uppercase">Circuit Exercises</label>`;
                     
@@ -319,7 +324,7 @@
                         innerHtml += `
                             <div class="flex gap-2 items-center">
                                 <span class="text-gray-600 text-xs font-bold">${cIdx + 1}.</span>
-                                <input type="text" list="${dlId}" value="${cEx}" onchange="updateCircuitExercise(${ex.id}, ${cIdx}, this.value)" placeholder="Exercise ${cIdx + 1}" class="flex-1 bg-gray-900 border border-gray-700 rounded p-2 text-white text-sm font-bold uppercase">
+                                <input type="text" list="${dlId}" value="${cEx}" onchange="updateCircuitExercise(${ex.id}, ${cIdx}, this.value)" placeholder="Exercise ${cIdx + 1}" class="flex-1 bg-gray-900 border border-gray-700 rounded p-2 text-white text-xs font-bold uppercase">
                                 <datalist id="${dlId}">${dlOptions}</datalist>
                                 ${cIdx > 0 ? `<button onclick="removeCircuitExercise(${ex.id}, ${cIdx})" class="text-red-500 hover:text-red-400 font-bold px-2">✕</button>` : `<div class="w-6"></div>`}
                             </div>
@@ -328,40 +333,42 @@
 
                     innerHtml += `<button onclick="addCircuitExercise(${ex.id})" class="text-xs font-bold text-red-500 hover:text-red-400 uppercase mt-2">+ Add Exercise to Circuit</button></div>`;
 
-                    // CIRCUIT TIMERS
+                    // CIRCUIT TIMERS (Responsive grid)
                     innerHtml += `
-                        <div class="flex gap-4 items-center bg-gray-800 p-3 rounded border border-gray-700">
+                        <div class="grid grid-cols-3 gap-2 bg-gray-800 p-3 rounded border border-gray-700">
                             <div>
-                                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Total Cycles</label>
-                                <input type="number" value="${ex.circuitConfig.cycles}" onchange="updateCircuitConfig(${ex.id}, 'cycles', this.value)" class="w-16 bg-black border border-gray-600 rounded px-2 py-1 text-sm text-center">
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1 text-center">Cycles</label>
+                                <input type="number" value="${ex.circuitConfig.cycles}" onchange="updateCircuitConfig(${ex.id}, 'cycles', this.value)" class="w-full bg-black border border-gray-600 rounded py-1 text-sm text-center">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Work (sec)</label>
-                                <input type="number" value="${ex.circuitConfig.work}" onchange="updateCircuitConfig(${ex.id}, 'work', this.value)" class="w-16 bg-black border border-gray-600 rounded px-2 py-1 text-sm text-center">
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1 text-center">Work (s)</label>
+                                <input type="number" value="${ex.circuitConfig.work}" onchange="updateCircuitConfig(${ex.id}, 'work', this.value)" class="w-full bg-black border border-gray-600 rounded py-1 text-sm text-center">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Rest (sec)</label>
-                                <input type="number" value="${ex.circuitConfig.rest}" onchange="updateCircuitConfig(${ex.id}, 'rest', this.value)" class="w-16 bg-black border border-gray-600 rounded px-2 py-1 text-sm text-center">
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1 text-center">Rest (s)</label>
+                                <input type="number" value="${ex.circuitConfig.rest}" onchange="updateCircuitConfig(${ex.id}, 'rest', this.value)" class="w-full bg-black border border-gray-600 rounded py-1 text-sm text-center">
                             </div>
                         </div>
                     `;
                 } else {
-                    // STANDARD SETS BUILDER WITH DELETE SET OPTION
+                    // STANDARD SETS BUILDER (Responsive Row/Col)
                     innerHtml += `<div class="space-y-2 mb-4">`;
                     ex.sets.forEach((set, sIndex) => {
-                        innerHtml += `<div class="flex gap-2 items-center">
-                            <span class="text-xs font-bold text-gray-500 w-12 uppercase">Set ${sIndex + 1}</span>`;
-                        
-                        innerHtml += `<input type="number" placeholder="Reps" value="${set.reps || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'reps', this.value)" class="w-20 bg-black border border-gray-700 rounded px-2 py-1 text-sm text-center">`;
+                        innerHtml += `
+                        <div class="flex flex-col sm:flex-row gap-2 sm:items-center bg-gray-800/30 sm:bg-transparent p-2 sm:p-0 rounded border border-gray-800 sm:border-0">
+                            <span class="text-[10px] sm:text-xs font-bold text-gray-500 w-12 uppercase">Set ${sIndex + 1}</span>
+                            <div class="flex gap-2 items-center flex-1">
+                                <input type="number" placeholder="Reps" value="${set.reps || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'reps', this.value)" class="flex-1 sm:w-20 bg-black border border-gray-700 rounded px-2 py-1 text-sm text-center">
+                        `;
                         
                         if (isCore) {
-                            innerHtml += `<input type="number" placeholder="% Max" value="${set.pct || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'pct', this.value)" class="w-20 bg-black border border-gray-700 rounded px-2 py-1 text-sm text-center">`;
+                            innerHtml += `<input type="number" placeholder="% Max" value="${set.pct || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'pct', this.value)" class="flex-1 sm:w-20 bg-black border border-gray-700 rounded px-2 py-1 text-sm text-center">`;
                         }
 
-                        // INDIVIDUAL SET DELETE BUTTON
-                        innerHtml += `<button onclick="removeSet(${ex.id}, ${sIndex})" class="text-red-500 hover:text-red-400 font-bold px-2 transition" title="Remove Set">✕</button>`;
-                        
-                        innerHtml += `</div>`;
+                        innerHtml += `
+                                <button onclick="removeSet(${ex.id}, ${sIndex})" class="text-red-500 hover:text-red-400 font-bold px-2 transition" title="Remove Set">✕</button>
+                            </div>
+                        </div>`;
                     });
 
                     innerHtml += `</div>
@@ -375,13 +382,30 @@
 
         // --- SAVE TO DATABASE ---
         window.saveWorkout = async () => {
-            const date = document.getElementById('workout-date').value;
-            const name = document.getElementById('workout-name').value;
+            const dateInput = document.getElementById('workout-date');
+            const nameInput = document.getElementById('workout-name');
+            const saveBtn = document.querySelector('button[onclick="saveWorkout()"]');
 
-            if (!date || !name) return alert("Please provide a Date and Workout Name.");
+            // 1. Reset validation styles
+            dateInput.classList.remove('border-red-500');
+            nameInput.classList.remove('border-red-500');
+
+            // 2. Validation Check
+            if (!dateInput.value || !nameInput.value) {
+                if (!dateInput.value) dateInput.classList.add('border-red-500');
+                if (!nameInput.value) nameInput.classList.add('border-red-500');
+                alert("Please provide both a Date and a Workout Name.");
+                return;
+            }
+
+            // 3. UI Feedback (Loading State)
+            const originalText = saveBtn.innerText;
+            saveBtn.innerText = "Saving...";
+            saveBtn.disabled = true;
+            saveBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
             try {
-                // 1. Save new supplement names to library
+                // Save new supplement names to library
                 for (const ex of exercises) {
                     if (ex.category === 'supplement') {
                         const namesToSave = ex.isCircuit ? ex.circuitExercises : [ex.name];
@@ -395,8 +419,8 @@
                 }
 
                 const workoutData = {
-                    date: date,
-                    name: name,
+                    date: dateInput.value,
+                    name: nameInput.value,
                     school_id: userSchoolId,
                     isMaxOutMode: isMaxOutMode,
                     exercises: exercises,
@@ -404,23 +428,24 @@
                 };
 
                 if (editingWorkoutId) {
-                    // UPDATE EXISTING
                     await updateDoc(doc(db, "workouts", editingWorkoutId), workoutData);
                     alert("Workout Updated Successfully!");
                 } else {
-                    // SAVE NEW
                     workoutData.createdAt = new Date();
                     await addDoc(collection(db, "workouts"), workoutData);
                     alert("Workout Saved Successfully!");
                 }
 
-                // Reset state and refresh history
                 editingWorkoutId = null;
                 window.location.reload();
 
             } catch (err) {
                 console.error(err);
                 alert("Error saving workout.");
+                // Reset button on error
+                saveBtn.innerText = originalText;
+                saveBtn.disabled = false;
+                saveBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             }
         };
 
@@ -537,6 +562,16 @@
                 window.location.href = 'index.html';
             }
         });
+
+        window.filterHistory = () => {
+            const searchTerm = document.getElementById('history-search').value.toLowerCase();
+            const items = document.querySelectorAll('#history-container > div');
+
+            items.forEach(item => {
+                const text = item.innerText.toLowerCase();
+                item.style.display = text.includes(searchTerm) ? 'flex' : 'none';
+            });
+        };
     </script>
 </body>
 </html>
