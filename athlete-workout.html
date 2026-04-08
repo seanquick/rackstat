@@ -340,6 +340,32 @@
         alert("Workout Logged!");
         location.href = 'index.html';
     };
+
+    // Add this inside your <script type="module"> in athlete-workout.html
+
+    window.recordMaxAttempt = async (exerciseName, setId, isWarmup, athleteId) => {
+        const weightInput = document.getElementById(`weight-${setId}`);
+        const weight = parseFloat(weightInput.value);
+
+        if (!weight || weight <= 0) {
+            alert("Please enter a valid weight.");
+            return;
+        }
+
+        // Visual feedback: Mark the set as completed
+        const container = document.getElementById(`container-${setId}`);
+        const btn = document.getElementById(`btn-${setId}`);
+        
+        container.style.borderColor = "#b91c1c";
+        container.style.backgroundColor = "rgba(185, 28, 28, 0.1)";
+        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#b91c1c]" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>`;
+        container.setAttribute('data-completed', 'true');
+
+        // If it's not a warmup, this is where we'd eventually trigger the "New PR" logic
+        console.log(`Recorded ${exerciseName} attempt: ${weight} lbs`);
+        
+        // Optional: Add a small toast or vibration feedback here
+    };
 </script>
 
 </body>
