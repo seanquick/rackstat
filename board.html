@@ -93,33 +93,33 @@
 
         window.loadBoard = async function(schoolId) {
             const grid = document.getElementById('player-club-grid');
-            if (!grid) return; // Safety check
+            if (!grid) return; 
 
+            // 1. Fetch the school details first
             const schoolSnap = await getDoc(doc(db, "schools", schoolId));
             if (!schoolSnap.exists()) return;
             const school = schoolSnap.data();
             
-            // FIX: Check if school-tag exists before setting
+            // Update the school name in the header
             const schoolTag = document.getElementById('school-tag');
             if (schoolTag) {
                 schoolTag.innerText = `${school.name} Weightroom`.toUpperCase();
             }
 
-            const countEl = document.getElementById('athlete-count');
-            if (countEl) {
-                // pSnap.size is the number of athletes found in the query
-                countEl.innerText = `${pSnap.size} Athletes Logged`;
-            }
-
-            // 1. Query all athletes for this school
+            // 2. FETCH ATHLETES (This must happen before updating the count)
             const q = query(collection(db, "recruiting_profiles"), where("school_id", "==", schoolId));
             const pSnap = await getDocs(q);
+
+            // 3. NOW update the athlete count (pSnap is now defined)
+            const countEl = document.getElementById('athlete-count');
+            if (countEl) {
+                countEl.innerText = `${pSnap.size} Athletes Logged`;
+            }
             
             let scores = [];
 
-            // 2. Loop through athletes and get their APPROVED 'latest' maxes
+            // 4. Loop through athletes and get their APPROVED 'latest' maxes
             for (const d of pSnap.docs) {
-                // We target the 'latest' doc to ensure we only show approved/official numbers
                 const latestMaxSnap = await getDoc(doc(db, "recruiting_profiles", d.id, "maxes", "latest"));
                 
                 if(latestMaxSnap.exists()) {
@@ -127,38 +127,35 @@
                     const trackedLifts = school.preferences?.tracked_lifts || ["bench", "squat", "clean"];
                     const scoringLifts = school.preferences?.scoring_lifts || trackedLifts;
                     
-                    // Calculate Total based on the school's scoring preferences
                     const totalLifts = scoringLifts.reduce((acc, lift) => {
                         return acc + (Number(m[lift]) || 0);
                     }, 0);
 
-                    // 3. APPLY FAIRBANKS POWER INDEX LOGIC
+                    // Apply Fairbanks Power Index Logic
                     let displayScore = totalLifts;
                     if (school.preferences?.formula_type === "power_index") {
                         const bw = Number(m.bodyWeight) || 0;
-                        const bwCap = Math.min(bw, 200); // The "Fairbanks Cap"
+                        const bwCap = Math.min(bw, 200); 
                         displayScore = totalLifts - (bwCap * 4);
                     }
 
                     scores.push({ 
                         id: d.id,
                         name: `${d.data().firstName} ${d.data().lastName}`, 
-                        total: totalLifts, // Used for "Club" placement (e.g., 1000lb Club)
-                        displayScore: Math.round(displayScore), // Used for the "Board Score"
+                        total: totalLifts, 
+                        displayScore: Math.round(displayScore),
                         placed: false 
                     });
                 }
             }
 
-            // 4. Sort by the raw total for club placement
+            // 5. Sort and Render the Club Cards
             scores.sort((a, b) => b.total - a.total);
             grid.innerHTML = '';
 
-            // Uses school preference if it exists, otherwise defaults to your new 1000/50 range
             const start = school.preferences?.club_start || 1000;
-            const end = school.preferences?.club_end || 50;
+            const end = school.preferences?.club_end || 50; // Updated to 50 for inclusivity
             
-            // 5. Build the Club Cards
             for(let level = start; level >= end; level -= 50) {
                 const qualifiers = scores.filter(s => !s.placed && s.total >= level);
                 qualifiers.forEach(s => s.placed = true);
