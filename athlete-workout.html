@@ -179,11 +179,37 @@
             list.innerHTML = '';
 
             for (const [exIndex, ex] of workout.exercises.entries()) {
-                let athleteCurrentMax = currentMaxes[ex.name.toLowerCase().trim()] || 0;
+                const cleanName = ex.name.toLowerCase().trim();
+                
+                // --- NEW: ROBUST MAX SEARCH LOGIC ---
+                // This creates a list of variations to check against the DB
+                const potentialKeys = [
+                    cleanName, 
+                    cleanName.replace(/\s+/g, '_'), // e.g. bench_press
+                    cleanName.replace(/\s+/g, ''),  // e.g. benchpress
+                    cleanName.split(" ")[0]         // e.g. bench
+                ];
+
+                // Specific aliases for common variations
+                if (cleanName.includes("bench")) potentialKeys.push("bench_press", "benchMax");
+                if (cleanName.includes("squat")) potentialKeys.push("back_squat", "squatMax", "squat");
+                if (cleanName.includes("clean")) potentialKeys.push("power_clean", "cleanMax", "clean");
+                if (cleanName.includes("deadlift")) potentialKeys.push("dead_lift", "deadliftMax", "deadlift");
+
+                let athleteCurrentMax = 0;
+
+                // Search the athlete's maxes for ANY of these keys
+                for (let key of potentialKeys) {
+                    if (currentMaxes[key] !== undefined && currentMaxes[key] !== null) {
+                        athleteCurrentMax = parseFloat(currentMaxes[key]);
+                        break; 
+                    }
+                }
+                // -------------------------------------
+
                 let setsHtml = '';
 
                 if (ex.isMaxOut) {
-                    // MAX OUT VIEW (Matches your existing logic)
                     for (let i = 0; i < 6; i++) {
                         const isWarmup = i < 3;
                         const setId = `set-${exIndex}-${i}`;
@@ -200,7 +226,6 @@
                             </div>`;
                     }
                 } else if (ex.isCircuit) {
-                    // NEW: CIRCUIT VIEW
                     const config = ex.circuitConfig;
                     setsHtml = `
                         <div class="bg-red-900/10 border border-red-900/30 p-3 rounded mb-4">
@@ -216,14 +241,13 @@
                             `).join('')}
                         </div>
                         <div id="container-circ-${ex.id}" data-completed="false" class="flex justify-between items-center bg-black p-4 rounded border border-gray-800">
-                             <span class="text-xs font-black text-gray-500 uppercase">Complete Circuit</span>
-                             <button onclick="toggleSetComplete('circ-${ex.id}')" id="btn-circ-${ex.id}" class="bg-[#1a1a1c] p-3 rounded-full text-gray-600 border border-[#2a2a2c]">
+                            <span class="text-xs font-black text-gray-500 uppercase">Complete Circuit</span>
+                            <button onclick="toggleSetComplete('circ-${ex.id}')" id="btn-circ-${ex.id}" class="bg-[#1a1a1c] p-3 rounded-full text-gray-600 border border-[#2a2a2c]">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>
-                             </button>
+                            </button>
                         </div>
                     `;
                 } else {
-                    // STANDARD SETS
                     setsHtml = ex.sets.map((s, i) => {
                         const suggestedWeight = window.calculateWeight(athleteCurrentMax, s.pct || 0);
                         const setId = `set-${exIndex}-${i}`;
@@ -252,16 +276,20 @@
                 const card = document.createElement('div');
                 card.className = "exercise-card bg-[#1a1a1c] border-l-4 border-[#b91c1c] p-5 rounded-r-lg mb-4 shadow-xl";
                 card.innerHTML = `
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-white font-black uppercase text-sm italic tracking-wider">${ex.name}</h3>
-                        ${ex.category === 'core' && athleteCurrentMax ? `<span class="text-[10px] font-bold text-gray-500">MAX: ${athleteCurrentMax}</span>` : ''}
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-white font-black uppercase text-sm italic tracking-wider mt-1">${ex.name}</h3>
+                        <div class="text-right bg-black/40 px-3 py-1 rounded-lg border border-white/5">
+                            <span class="text-[9px] font-black text-gray-500 uppercase block leading-none mb-1">Current Max</span>
+                            <span class="text-xl font-black text-white italic tracking-tighter">
+                                ${athleteCurrentMax > 0 ? athleteCurrentMax + '<span class="text-[10px] ml-0.5 non-italic text-gray-400">LBS</span>' : '--'}
+                            </span>
+                        </div>
                     </div>
                     <div class="space-y-2">${setsHtml}</div>
                 `;
                 list.appendChild(card);
             }
 
-            // Finish Button
             const fBtn = document.createElement('button');
             fBtn.className = "w-full bg-[#b91c1c] text-white font-black uppercase py-4 rounded-xl mt-6 mb-12 shadow-lg active:scale-95 transition-transform"; 
             fBtn.innerText = "Log Session & Finish";
@@ -270,7 +298,6 @@
 
         } catch (e) { console.error(e); }
     };
-
     window.toggleSetComplete = (setId) => {
         const container = document.getElementById(`container-${setId}`);
         const btn = document.getElementById(`btn-${setId}`);
