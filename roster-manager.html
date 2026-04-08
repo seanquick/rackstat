@@ -54,7 +54,7 @@
             paginationSize: 15,
             placeholder: "Loading Roster...",
             columns: [
-                {title: "Name", field: "fullName", widthGrow: 2, fontStyle: "bold"},
+                {title: "Name", field: "fullName", widthGrow: 2, formatter: (cell) => `<span class="font-bold text-white">${cell.getValue() || "Unnamed"}</span>`},
                 {title: "Grad", field: "gradYear", width: 100, hozAlign: "center"},
                 {title: "Off.", field: "offPrimary", width: 80},
                 {title: "Def.", field: "defPrimary", width: 80},
@@ -90,10 +90,10 @@
                     },
                     cellClick: function(e, cell) {
                         const rowData = cell.getRow().getData();
-                        if (e.target.classList.contains('edit-btn')) {
-                            // Redirect to recruiting card with an "edit=true" parameter
-                            window.location.href = `recruiting-card.html?id=${rowData.id}&mode=edit`;
-                        }
+                            if (e.target.classList.contains('edit-btn')) {
+                                // Changed 'id' to 'uid' and 'mode=edit' to 'edit=true'
+                                window.location.href = `recruiting-card.html?uid=${rowData.id}&edit=true`;
+                            }
                         if (e.target.classList.contains('delete-btn')) {
                             handleDelete(rowData);
                         }

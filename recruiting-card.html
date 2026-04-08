@@ -431,30 +431,30 @@
                 const targetUid = athleteId || user.uid;
                 const profileRef = doc(db, "recruiting_profiles", targetUid);
                 const maxesRef = doc(db, "recruiting_profiles", targetUid, "maxes", "latest");
+                
                 const [recSnap, maxesSnap] = await Promise.all([getDoc(profileRef), getDoc(maxesRef)]);
 
                 if (recSnap.exists()) {
                     const d = recSnap.data();
                     const mx = maxesSnap.exists() ? maxesSnap.data() : {};
 
-                    // --- LOGO LOGIC ---
+                    // --- 1. LOGO LOGIC ---
                     const logoEl = document.getElementById('disp-logo');
                     if (d.logo_primary && logoEl) {
                         logoEl.src = d.logo_primary;
                         logoEl.classList.remove('hidden');
-                        logoEl.style.display = 'block'; // Direct style override to ensure visibility
+                        logoEl.style.display = 'block';
                     } else if (logoEl) {
                         logoEl.classList.add('hidden');
                     }
 
-                    // --- DISPLAY MAPPING ---
+                    // --- 2. DISPLAY MAPPING (Card View) ---
                     safeSet('disp-name', d.fullName);
                     safeSet('disp-class', d.gradYear ? "CLASS OF " + d.gradYear : "--");
                     safeSet('disp-number', d.jerseyNum ? "#" + d.jerseyNum : "#--");
                     safeSet('disp-height', formatHeight(d.height));
                     safeSet('disp-weight', d.weight ? d.weight + " lbs" : "--");
                     
-                    // Positions
                     safeSet('disp-pos', d.offPrimary);
                     const pos2 = document.getElementById('disp-pos2');
                     if (pos2) pos2.innerText = d.offSecondary ? "/ " + d.offSecondary : "";
@@ -463,7 +463,6 @@
                     const defPos2 = document.getElementById('disp-def-pos2');
                     if (defPos2) defPos2.innerText = d.defSecondary ? "/ " + d.defSecondary : "";
 
-                    // Stats & Academics
                     safeSet('stat-bench', mx.bench_press || d.bench);
                     safeSet('stat-squat', mx.squat || d.squat);
                     safeSet('stat-clean', mx.clean || d.clean);
@@ -490,7 +489,6 @@
                     formatLink('link-instagram', 'disp-instagram', d.instagram, 'instagram');
                     formatLink('link-tiktok', 'disp-tiktok', d.tiktok, 'tiktok');
 
-                    // Parent & Character
                     safeSet('disp-parents', d.parentNames);
                     safeSet('disp-parent-contact', d.parentContact);
                     safeSet('disp-extra-days', d.weeklyExtraDays);
@@ -501,50 +499,63 @@
                     safeSet('disp-teammate-mean', d.goodTeammateMeaning);
                     safeSet('disp-sacrifice', d.willingToSacrifice);
 
-                    // --- EDIT MODE PRE-FILL ---
-                    if (isEditMode) {
-                        setVal('edit-name', d.fullName);
-                        setVal('edit-grad', d.gradYear);
-                        setVal('edit-height', d.height);
-                        setVal('edit-weight', d.weight);
-                        setVal('edit-off-prim', d.offPrimary);
-                        setVal('edit-off-sec', d.offSecondary);
-                        setVal('edit-def-prim', d.defPrimary);
-                        setVal('edit-def-sec', d.defSecondary);
-                        setVal('edit-bench', d.bench);
-                        setVal('edit-squat', d.squat);
-                        setVal('edit-clean', d.clean);
-                        setVal('edit-deadlift', d.deadlift);
-                        setVal('edit-push_press', d.push_press);
-                        setVal('edit-forty', d.forty);
-                        setVal('edit-gpa', d.gpa);
-                        setVal('edit-core-gpa', d.coreGpa);
-                        setVal('edit-act', d.act);
-                        setVal('edit-sat', d.sat);
-                        setVal('edit-parents', d.parentNames);
-                        setVal('edit-parent-contact', d.parentContact);
-                        setVal('edit-extra-days', d.weeklyExtraDays);
-                        setVal('edit-nutrition', d.hasNutritionPlan);
-                        setVal('edit-sleep', d.getsSleep);
-                        setVal('edit-lift', d.liftYearRound ? "true" : "false");
-                        setVal('edit-team-type', d.teammateType);
-                        setVal('edit-team-mean', d.goodTeammateMeaning);
-                        setVal('edit-sacrifice', d.willingToSacrifice);
-                        setVal('edit-twitter', d.twitter);
-                        setVal('edit-instagram', d.instagram);
-                        setVal('edit-tiktok', d.tiktok);
-                        setVal('edit-logo', d.logo_primary);
-                        setVal('edit-hudl', d.hudlLink || d.highlightUrl);
-                        
-                        // Show unlock button for coaches
-                        const userSnap = await getDoc(doc(db, "users", user.uid));
-                        if (userSnap.data()?.role === 'coach') {
-                            document.getElementById('unlock-btn')?.classList.remove('hidden');
+                    // --- 3. ALWAYS PRE-FILL EDIT INPUTS ---
+                    // We do this out here so the data is ready even if the user 
+                    // clicks "Unlock" later without a special URL.
+                    setVal('edit-name', d.fullName);
+                    setVal('edit-grad', d.gradYear);
+                    setVal('edit-height', d.height);
+                    setVal('edit-weight', d.weight);
+                    setVal('edit-off-prim', d.offPrimary);
+                    setVal('edit-off-sec', d.offSecondary);
+                    setVal('edit-def-prim', d.defPrimary);
+                    setVal('edit-def-sec', d.defSecondary);
+                    setVal('edit-bench', d.bench);
+                    setVal('edit-squat', d.squat);
+                    setVal('edit-clean', d.clean);
+                    setVal('edit-deadlift', d.deadlift);
+                    setVal('edit-push_press', d.push_press);
+                    setVal('edit-forty', d.forty);
+                    setVal('edit-gpa', d.gpa);
+                    setVal('edit-core-gpa', d.coreGpa);
+                    setVal('edit-act', d.act);
+                    setVal('edit-sat', d.sat);
+                    setVal('edit-parents', d.parentNames);
+                    setVal('edit-parent-contact', d.parentContact);
+                    setVal('edit-extra-days', d.weeklyExtraDays);
+                    setVal('edit-nutrition', d.hasNutritionPlan);
+                    setVal('edit-sleep', d.getsSleep);
+                    setVal('edit-lift', d.liftYearRound ? "true" : "false");
+                    setVal('edit-team-type', d.teammateType);
+                    setVal('edit-team-mean', d.goodTeammateMeaning);
+                    setVal('edit-sacrifice', d.willingToSacrifice);
+                    setVal('edit-twitter', d.twitter);
+                    setVal('edit-instagram', d.instagram);
+                    setVal('edit-tiktok', d.tiktok);
+                    setVal('edit-logo', d.logo_primary);
+                    setVal('edit-hudl', d.hudlLink || d.highlightUrl);
+
+                    // --- 4. COACH-SPECIFIC PERMISSIONS & AUTO-EDIT ---
+                    const userSnap = await getDoc(doc(db, "users", user.uid));
+                    const userData = userSnap.data();
+
+                    if (userData?.role === 'coach') {
+                        // Show the unlock button for any coach viewing a profile
+                        const unlockBtn = document.getElementById('unlock-btn');
+                        if (unlockBtn) unlockBtn.classList.remove('hidden');
+
+                        // If URL contains edit=true, automatically trigger the unlock
+                        if (isEditMode && typeof toggleEditMode === "function") {
+                            toggleEditMode();
                         }
                     }
                 }
-            } catch (err) { console.error("Render Error:", err); }
-        } else { location.href = 'index.html'; }
+            } catch (err) { 
+                console.error("Render Error:", err); 
+            }
+        } else { 
+            location.href = 'index.html'; 
+        }
     });
 
     window.toggleEditMode = () => {
