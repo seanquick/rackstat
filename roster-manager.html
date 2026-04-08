@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roster Manager | RACKSTAT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    
+    <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator_midnight.min.css" rel="stylesheet">
+    <script type="text/javascript" src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
+</head>
+<body class="bg-[#0d1117] text-white font-sans antialiased">
+
+    <header class="p-6 flex justify-between items-center border-b border-gray-800">
+        <div class="flex items-center gap-4">
+            <a href="coach-lobby.html" class="text-gray-400 hover:text-white transition">← Back to Office</a>
+            <h1 class="text-xl font-black italic uppercase tracking-tighter text-red-500">Roster Manager</h1>
+        </div>
+        <div class="flex gap-3">
+            <span id="player-count" class="bg-gray-800 px-3 py-2 rounded text-xs font-bold self-center">0 ATHLETES</span>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-12">
+        <div class="mb-8 flex justify-between items-end">
+            <div>
+                <h2 class="text-3xl font-bold">Team Roster</h2>
+                <p class="text-gray-400">Manage profiles, track Next-Level status, and cleanup the roster.</p>
+            </div>
+            <input type="text" id="roster-search" placeholder="Search by name..." class="bg-gray-900 border border-gray-700 px-4 py-2 rounded-lg outline-none focus:border-red-500 w-64">
+        </div>
+
+        <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden shadow-2xl">
+            <div id="roster-table"></div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { firebaseConfig } from './firebase-config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // --- Table Definition ---
+        const table = new Tabulator("#roster-table", {
+            layout: "fitColumns",
+            responsiveLayout: "collapse",
+            pagination: "local",
+            paginationSize: 15,
+            placeholder: "Loading Roster...",
+            columns: [
+                {title: "Name", field: "fullName", widthGrow: 2, fontStyle: "bold"},
+                {title: "Grad", field: "gradYear", width: 100, hozAlign: "center"},
+                {title: "Off.", field: "offPrimary", width: 80},
+                {title: "Def.", field: "defPrimary", width: 80},
+                {
+                    title: "Next-Level", 
+                    field: "nextLevelComplete", 
+                    width: 140, 
+                    hozAlign: "center",
+                    formatter: "tickCross", // Shows checkmark or X
+                    formatterParams: { allowEmpty: true },
+                    cellClick: async function(e, cell) {
+                        // Toggle Next-Level Status directly from table
+                        const newVal = !cell.getValue();
+                        const rowData = cell.getRow().getData();
+                        if (confirm(`Mark Next-Level as ${newVal ? 'Complete' : 'Incomplete'} for ${rowData.fullName}?`)) {
+                            await updateDoc(doc(db, "recruiting_profiles", rowData.id), { nextLevelComplete: newVal });
+                            cell.setValue(newVal);
+                        }
+                    }
+                },
+                {
+                    title: "Actions", 
+                    width: 200, 
+                    hozAlign: "center", 
+                    headerSort: false,
+                    formatter: function(cell) {
+                        return `
+                            <div class="flex gap-2">
+                                <button class="edit-btn bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-bold transition">EDIT</button>
+                                <button class="delete-btn bg-red-900/50 hover:bg-red-600 text-white px-3 py-1 rounded text-xs font-bold transition">DELETE</button>
+                            </div>
+                        `;
+                    },
+                    cellClick: function(e, cell) {
+                        const rowData = cell.getRow().getData();
+                        if (e.target.classList.contains('edit-btn')) {
+                            // Redirect to recruiting card with an "edit=true" parameter
+                            window.location.href = `recruiting-card.html?id=${rowData.id}&mode=edit`;
+                        }
+                        if (e.target.classList.contains('delete-btn')) {
+                            handleDelete(rowData);
+                        }
+                    }
+                }
+            ]
+        });
+
+        // --- Load Data ---
+        async function loadRoster() {
+            try {
+                const snap = await getDocs(collection(db, "recruiting_profiles"));
+                const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                table.setData(data);
+                document.getElementById('player-count').innerText = `${data.length} ATHLETES`;
+            } catch (err) {
+                console.error("Roster Load Error:", err);
+            }
+        }
+
+        // --- Delete Logic ---
+        async function handleDelete(player) {
+            const pin = prompt(`To delete ${player.fullName}, type "DELETE":`);
+            if (pin === "DELETE") {
+                try {
+                    await deleteDoc(doc(db, "recruiting_profiles", player.id));
+                    table.deleteRow(player.id);
+                    alert("Athlete removed from roster.");
+                } catch (err) {
+                    alert("Error deleting athlete.");
+                }
+            }
+        }
+
+        // --- Search Logic ---
+        document.getElementById("roster-search").addEventListener("input", function(e){
+            table.setFilter("fullName", "like", e.target.value);
+        });
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) loadRoster();
+            else window.location.href = 'index.html';
+        });
+
+    </script>
+</body>
+</html>
