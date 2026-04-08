@@ -46,20 +46,46 @@
         </button>
     </main>
 
+    <section class="max-w-4xl mx-auto p-6 mt-12 border-t border-gray-800">
+        <h2 class="text-xl font-black italic uppercase tracking-tighter text-gray-500 mb-6">Workout History</h2>
+        <div id="history-container" class="space-y-3">
+            <p class="text-gray-600 italic text-sm">Loading history...</p>
+        </div>
+    </section>
+
     <script type="module">
         import { firebaseConfig } from './firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        const coreLifts = ["Bench Press", "Squat", "Power Clean", "Deadlift", "Push Press"];
+        let coreLifts = ["Bench Press", "Squat", "Power Clean", "Deadlift", "Push Press"]; // Default fallback
         let supplementLibrary = []; 
         let exercises = [];
         let isMaxOutMode = false;
+        let userSchoolId = null;
+
+        async function fetchTeamSettings(schoolId) {
+            try {
+                const settingsRef = doc(db, "school_settings", schoolId);
+                const settingsSnap = await getDoc(settingsRef);
+                
+                if (settingsSnap.exists()) {
+                    const data = settingsSnap.data();
+                    // If the coach has defined custom core lifts, use them
+                    if (data.trackedCoreLifts && data.trackedCoreLifts.length > 0) {
+                        coreLifts = data.trackedCoreLifts;
+                        console.log("Team Core Lifts loaded:", coreLifts);
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching team settings:", err);
+            }
+        }
 
         async function fetchSupplements() {
             try {
@@ -70,8 +96,25 @@
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
+                // 1. Get the user's school_id from their profile
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (userDoc.exists()) {
+                    userSchoolId = userDoc.data().school_id;
+                    
+                    // 2. Fetch the custom Core Lifts for that school
+                    if (userSchoolId) {
+                        await fetchTeamSettings(userSchoolId);
+                    }
+                }
+
+                // 3. Load the rest of the app
                 await fetchSupplements();
-                addExerciseBlock(); 
+                await loadHistory();
+                
+                // Only add the first block once settings are loaded
+                if (exercises.length === 0) {
+                    addExerciseBlock(); 
+                }
             } else {
                 window.location.href = 'index.html';
             }
@@ -357,6 +400,7 @@
                 await addDoc(collection(db, "workouts"), {
                     date: date,
                     name: name,
+                    school_id: userSchoolId, // Add this line
                     isMaxOutMode: isMaxOutMode,
                     exercises: exercises,
                     createdAt: new Date()
@@ -370,6 +414,110 @@
                 alert("Error saving workout.");
             }
         };
+
+        // --- HISTORY & MANAGEMENT LOGIC ---
+
+        // Fetch and display all workouts
+        async function loadHistory() {
+            const container = document.getElementById('history-container');
+            try {
+                const snap = await getDocs(collection(db, "workouts"));
+                container.innerHTML = '';
+                
+                if (snap.empty) {
+                    container.innerHTML = '<p class="text-gray-600 text-sm">No saved workouts found.</p>';
+                    return;
+                }
+
+                // Sort by date descending
+                const docs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+                                 .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                docs.forEach(workout => {
+                    const item = document.createElement('div');
+                    item.className = "bg-gray-900 p-4 rounded-lg border border-gray-800 flex justify-between items-center group";
+                    item.innerHTML = `
+                        <div>
+                            <span class="text-red-500 font-bold text-xs uppercase">${workout.date}</span>
+                            <h3 class="font-black uppercase text-white">${workout.name}</h3>
+                            <p class="text-[10px] text-gray-500 uppercase">${workout.exercises.length} Exercise Blocks</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="duplicateWorkout('${workout.id}')" class="bg-gray-800 hover:bg-blue-600 text-white text-[10px] font-bold px-3 py-1 rounded uppercase transition">Duplicate</button>
+                            <button onclick="editWorkout('${workout.id}')" class="bg-gray-800 hover:bg-green-600 text-white text-[10px] font-bold px-3 py-1 rounded uppercase transition">Edit</button>
+                            <button onclick="deleteWorkout('${workout.id}')" class="bg-gray-800 hover:bg-red-600 text-white text-[10px] font-bold px-3 py-1 rounded uppercase transition">Delete</button>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+            } catch (err) {
+                console.error("Error loading history:", err);
+            }
+        }
+
+        // Delete a workout
+        window.deleteWorkout = async (id) => {
+            if (confirm("Are you sure you want to delete this workout?")) {
+                try {
+                    await deleteDoc(doc(db, "workouts", id));
+                    loadHistory();
+                } catch (err) { alert("Error deleting workout"); }
+            }
+        };
+
+        // Load workout back into the builder to Edit
+        window.editWorkout = async (id) => {
+            const snap = await getDoc(doc(db, "workouts", id));
+            if (snap.exists()) {
+                const data = snap.data();
+                document.getElementById('workout-date').value = data.date;
+                document.getElementById('workout-name').value = data.name;
+                isMaxOutMode = data.isMaxOutMode || false;
+                exercises = data.exercises;
+                
+                // Update UI state
+                const bg = document.getElementById('max-out-indicator');
+                const knob = document.getElementById('max-out-knob');
+                if (isMaxOutMode) {
+                    bg.classList.add('bg-red-600');
+                    knob.classList.add('translate-x-5', 'bg-white');
+                } else {
+                    bg.classList.remove('bg-red-600');
+                    knob.classList.remove('translate-x-5', 'bg-white');
+                }
+                
+                renderExercises();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        };
+
+        // Duplicate logic: Loads data but clears date/name for fresh input
+        window.duplicateWorkout = async (id) => {
+            const snap = await getDoc(doc(db, "workouts", id));
+            if (snap.exists()) {
+                const data = snap.data();
+                exercises = data.exercises;
+                
+                // Clear inputs so coach is forced to set new ones
+                document.getElementById('workout-date').value = '';
+                document.getElementById('workout-name').value = `${data.name} (Copy)`;
+                
+                renderExercises();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                alert("Workout copied! Please set a NEW DATE and NAME before saving.");
+            }
+        };
+
+        // Initial load
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                await fetchSupplements();
+                await loadHistory(); // Load history on login
+                addExerciseBlock(); 
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
     </script>
 </body>
 </html>
