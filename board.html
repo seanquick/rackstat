@@ -21,15 +21,28 @@
 </head>
 <body class="pb-24">
 
-    <header class="bg-black border-b-2 border-red-700 p-4">
-        <div class="flex justify-between items-center max-w-4xl mx-auto mb-4">
-            <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1 rounded text-gray-300 hover:text-white transition-colors">← Lobby</button>
+<header class="bg-black border-b-2 border-red-700 p-4">
+        <div class="flex justify-between items-center max-w-4xl mx-auto">
+            <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1 rounded text-gray-300 hover:text-white transition-colors">
+                ← Lobby
+            </button>
             
             <div class="flex items-center gap-4">
                 <img id="school-logo" src="images/panther-logo1.png" alt="School Logo" class="h-10 w-auto">
-                <div class="h-6 w-[1px] bg-gray-700"></div>
-                <span class="text-sm font-black italic uppercase tracking-widest text-white">FAIRBANKS</span>
-                <div class="h-6 w-[1px] bg-gray-700"></div>
+                
+                <div class="h-10 w-[1px] bg-gray-700"></div>
+                
+                <div class="flex flex-col items-center">
+                    <span id="school-tag" class="text-sm font-black italic uppercase tracking-widest text-white leading-tight">
+                        FAIRBANKS
+                    </span>
+                    <span id="athlete-count" class="text-[8px] font-bold text-gray-500 uppercase tracking-tighter">
+                        Updating...
+                    </span>
+                </div>
+                
+                <div class="h-10 w-[1px] bg-gray-700"></div>
+                
                 <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-10 w-auto">
             </div>
 
@@ -78,74 +91,94 @@
             } else { window.location.href = 'index.html'; }
         });
 
-        async function loadBoard(schoolId) {
+        window.loadBoard = async function(schoolId) {
             const grid = document.getElementById('player-club-grid');
+            if (!grid) return; // Safety check
+
             const schoolSnap = await getDoc(doc(db, "schools", schoolId));
             if (!schoolSnap.exists()) return;
             const school = schoolSnap.data();
             
-            document.getElementById('school-tag').innerText = `${school.name} Weightroom`;
+            // FIX: Check if school-tag exists before setting
+            const schoolTag = document.getElementById('school-tag');
+            if (schoolTag) {
+                schoolTag.innerText = `${school.name} Weightroom`.toUpperCase();
+            }
 
+            const countEl = document.getElementById('athlete-count');
+            if (countEl) {
+                // pSnap.size is the number of athletes found in the query
+                countEl.innerText = `${pSnap.size} Athletes Logged`;
+            }
+
+            // 1. Query all athletes for this school
             const q = query(collection(db, "recruiting_profiles"), where("school_id", "==", schoolId));
             const pSnap = await getDocs(q);
             
             let scores = [];
 
+            // 2. Loop through athletes and get their APPROVED 'latest' maxes
             for (const d of pSnap.docs) {
-                // Fetch the absolute latest max entry for this athlete
-                const maxSnap = await getDocs(query(
-                    collection(db, "recruiting_profiles", d.id, "maxes"), 
-                    orderBy("timestamp", "desc"), 
-                    limit(1)
-                ));
+                // We target the 'latest' doc to ensure we only show approved/official numbers
+                const latestMaxSnap = await getDoc(doc(db, "recruiting_profiles", d.id, "maxes", "latest"));
                 
-                if(!maxSnap.empty) {
-                    const m = maxSnap.docs[0].data();
+                if(latestMaxSnap.exists()) {
+                    const m = latestMaxSnap.data();
                     const trackedLifts = school.preferences?.tracked_lifts || ["bench", "squat", "clean"];
+                    const scoringLifts = school.preferences?.scoring_lifts || trackedLifts;
                     
-                    const totalLifts = trackedLifts.reduce((acc, lift) => {
+                    // Calculate Total based on the school's scoring preferences
+                    const totalLifts = scoringLifts.reduce((acc, lift) => {
                         return acc + (Number(m[lift]) || 0);
                     }, 0);
 
-                    // P4P Logic if school prefers it
-                    let finalScore = totalLifts;
+                    // 3. APPLY FAIRBANKS POWER INDEX LOGIC
+                    let displayScore = totalLifts;
                     if (school.preferences?.formula_type === "power_index") {
-                        const bw = Number(m.bodyWeight) || 1;
-                        finalScore = (totalLifts / bw).toFixed(2); 
+                        const bw = Number(m.bodyWeight) || 0;
+                        const bwCap = Math.min(bw, 200); // The "Fairbanks Cap"
+                        displayScore = totalLifts - (bwCap * 4);
                     }
 
                     scores.push({ 
                         id: d.id,
                         name: `${d.data().firstName} ${d.data().lastName}`, 
-                        total: totalLifts, 
-                        displayScore: finalScore,
+                        total: totalLifts, // Used for "Club" placement (e.g., 1000lb Club)
+                        displayScore: Math.round(displayScore), // Used for the "Board Score"
                         placed: false 
                     });
                 }
             }
 
-            // Sort by the raw total for club placement
+            // 4. Sort by the raw total for club placement
             scores.sort((a, b) => b.total - a.total);
             grid.innerHTML = '';
 
             const start = school.preferences?.club_start || 1000;
             const end = school.preferences?.club_end || 300;
             
+            // 5. Build the Club Cards
             for(let level = start; level >= end; level -= 50) {
                 const qualifiers = scores.filter(s => !s.placed && s.total >= level);
                 qualifiers.forEach(s => s.placed = true);
                 
                 if(qualifiers.length > 0) {
                     grid.innerHTML += `
-                        <div class="club-card border-l-4" style="border-color: ${school.colors?.primary || '#b91c1c'}">
-                            <p class="font-black italic text-lg border-b border-gray-800 mb-3 pb-1" style="color: ${school.colors?.primary || '#b91c1c'}">${level} LB CLUB</p>
+                        <div class="club-card border-l-4 mb-4 bg-[#111827] p-4 rounded-r-xl shadow-lg" style="border-color: ${school.colors?.primary || '#b91c1c'}">
+                            <div class="flex justify-between items-end border-b border-gray-800 mb-3 pb-1">
+                                <p class="font-black italic text-lg uppercase" style="color: ${school.colors?.primary || '#b91c1c'}">${level} LB CLUB</p>
+                                <p class="text-[9px] text-gray-600 font-bold uppercase mb-1">Total Weight</p>
+                            </div>
                             ${qualifiers.map(q => `
-                                <div class="flex justify-between items-center text-sm py-2 border-b border-white/5 last:border-0">
+                                <div class="flex justify-between items-center py-2 border-b border-white/5 last:border-0 group">
                                     <div class="flex flex-col">
-                                        <span class="font-bold uppercase tracking-tight">${q.name}</span>
-                                        <button onclick="location.href='player-card.html?id=${q.id}'" class="text-[8px] text-blue-500 text-left font-bold uppercase">View Card →</button>
+                                        <span class="text-white font-bold uppercase tracking-tight group-hover:text-blue-400 transition-colors">${q.name}</span>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[8px] text-gray-500 font-black uppercase">Index: ${q.displayScore}</span>
+                                            <button onclick="location.href='player-card.html?id=${q.id}'" class="text-[8px] text-blue-500 hover:text-blue-300 font-bold uppercase transition-colors">View Card →</button>
+                                        </div>
                                     </div>
-                                    <span class="text-white font-black">${q.total}</span>
+                                    <span class="text-white font-black italic text-lg">${q.total}</span>
                                 </div>`).join('')}
                         </div>`;
                 }
