@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training Center | Coach Lobby</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-black text-white font-sans antialiased min-h-screen pb-20">
+
+    <header class="p-6 flex justify-between items-center border-b border-gray-800">
+        <div class="flex items-center gap-4">
+            <a href="coach-lobby.html" class="text-gray-400 hover:text-white transition flex items-center gap-2 font-bold uppercase text-xs">
+                ← Back to Office
+            </a>
+            <h1 class="text-xl font-black italic uppercase tracking-tighter text-red-500">Training Center</h1>
+        </div>
+        <button onclick="saveWorkout()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-black text-sm transition shadow-lg uppercase">
+            Save Workout
+        </button>
+    </header>
+
+    <main class="max-w-4xl mx-auto p-6 space-y-6">
+        <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 flex flex-wrap gap-6 items-end">
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Date</label>
+                <input type="date" id="workout-date" class="w-full bg-black border border-gray-700 rounded px-4 py-2 text-white focus:outline-none focus:border-red-500">
+            </div>
+            <div class="flex-[2] min-w-[200px]">
+                <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Workout Name</label>
+                <input type="text" id="workout-name" placeholder="e.g., Upper Body Power" class="w-full bg-black border border-gray-700 rounded px-4 py-2 text-white focus:outline-none focus:border-red-500">
+            </div>
+            <div class="flex items-center gap-3 bg-gray-800 px-4 py-2 rounded border border-gray-700 cursor-pointer" onclick="toggleMaxOut()">
+                <div class="text-sm font-bold uppercase">Max Out Mode</div>
+                <div id="max-out-indicator" class="w-10 h-5 bg-black rounded-full relative transition-colors">
+                    <div id="max-out-knob" class="w-4 h-4 bg-gray-500 rounded-full absolute top-0.5 left-0.5 transition-transform"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="exercises-container" class="space-y-4">
+            </div>
+
+        <button id="add-exercise-btn" onclick="addExerciseBlock()" class="w-full py-4 border-2 border-dashed border-gray-800 text-gray-500 font-bold uppercase rounded-xl hover:border-gray-600 hover:text-white transition">
+            + Add Exercise
+        </button>
+    </main>
+
+    <script type="module">
+        import { firebaseConfig } from './firebase-config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // State Management
+        const coreLifts = ["Bench Press", "Squat", "Power Clean", "Deadlift", "Push Press"];
+        let supplementLibrary = []; 
+        let exercises = [];
+        let isMaxOutMode = false;
+
+        // Fetch saved supplements on load
+        async function fetchSupplements() {
+            try {
+                const snap = await getDocs(collection(db, "supplement_library"));
+                snap.forEach(doc => supplementLibrary.push(doc.data().name));
+            } catch (err) { console.error("Error fetching library", err); }
+        }
+
+        // --- AUTH CHECK ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                await fetchSupplements();
+                addExerciseBlock(); // Start with one empty block
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        // --- UI LOGIC ---
+        window.toggleMaxOut = () => {
+            isMaxOutMode = !isMaxOutMode;
+            const bg = document.getElementById('max-out-indicator');
+            const knob = document.getElementById('max-out-knob');
+            const addBtn = document.getElementById('add-exercise-btn');
+            
+            if (isMaxOutMode) {
+                bg.classList.add('bg-red-600');
+                knob.classList.add('translate-x-5', 'bg-white');
+                addBtn.style.display = 'none';
+                
+                // Auto-populate Max Out Structure
+                exercises = coreLifts.map(lift => ({
+                    id: Date.now() + Math.random(),
+                    category: 'core',
+                    name: lift,
+                    isMaxOut: true,
+                    sets: [{ reps: 5, pct: 50 }, { reps: 3, pct: 70 }, { reps: 1, pct: 85 }, { reps: 1, pct: 100 }, { reps: 1, pct: 105 }, { reps: 1, pct: 110 }]
+                }));
+            } else {
+                bg.classList.remove('bg-red-600');
+                knob.classList.remove('translate-x-5', 'bg-white');
+                addBtn.style.display = 'block';
+                exercises = [];
+                addExerciseBlock();
+            }
+            renderExercises();
+        };
+
+        window.addExerciseBlock = () => {
+            exercises.push({
+                id: Date.now(),
+                category: 'core',
+                name: coreLifts[0],
+                isCircuit: false,
+                sets: [{ reps: '', pct: '' }]
+            });
+            renderExercises();
+        };
+
+        window.updateExercise = (id, field, value) => {
+            const ex = exercises.find(e => e.id === id);
+            if (ex) {
+                ex[field] = value;
+                // Reset states if switching categories
+                if (field === 'category') {
+                    ex.isCircuit = false;
+                    ex.name = value === 'core' ? coreLifts[0] : '';
+                    ex.sets = [{ reps: '', pct: '' }];
+                }
+                renderExercises();
+            }
+        };
+
+        window.toggleCircuit = (id) => {
+            const ex = exercises.find(e => e.id === id);
+            if (ex) {
+                ex.isCircuit = !ex.isCircuit;
+                if (ex.isCircuit) ex.sets = [{ time: '', rest: '' }];
+                else ex.sets = [{ reps: '', pct: '' }];
+                renderExercises();
+            }
+        };
+
+        window.addSet = (id) => {
+            const ex = exercises.find(e => e.id === id);
+            if (ex) {
+                if (ex.isCircuit) ex.sets.push({ time: '', rest: '' });
+                else if (ex.category === 'supplement') ex.sets.push({ reps: '' });
+                else ex.sets.push({ reps: '', pct: '' });
+                renderExercises();
+            }
+        };
+
+        window.updateSet = (exId, setIndex, field, value) => {
+            const ex = exercises.find(e => e.id === exId);
+            if (ex && ex.sets[setIndex]) {
+                ex.sets[setIndex][field] = value;
+            }
+        };
+
+        window.removeExercise = (id) => {
+            exercises = exercises.filter(e => e.id !== id);
+            renderExercises();
+        };
+
+        // --- RENDER LOGIC ---
+        function renderExercises() {
+            const container = document.getElementById('exercises-container');
+            container.innerHTML = '';
+
+            exercises.forEach((ex, index) => {
+                const isCore = ex.category === 'core';
+                
+                let innerHtml = `
+                    <div class="bg-gray-900 border ${ex.isMaxOut ? 'border-red-600' : 'border-gray-800'} rounded-xl p-4">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex gap-4 items-center w-full">
+                                <span class="text-gray-600 font-black text-xl">0${index + 1}</span>
+                `;
+
+                if (ex.isMaxOut) {
+                    innerHtml += `<h2 class="text-xl font-black uppercase text-red-500">${ex.name} (MAX OUT)</h2></div></div>`;
+                    innerHtml += `<div class="text-xs text-gray-400">3 Warm Up Sets, 3 Max Attempts auto-generated for athletes.</div>`;
+                } else {
+                    // Type Selector
+                    innerHtml += `
+                        <select onchange="updateExercise(${ex.id}, 'category', this.value)" class="bg-black border border-gray-700 text-xs font-bold uppercase rounded p-2 text-white">
+                            <option value="core" ${isCore ? 'selected' : ''}>Core</option>
+                            <option value="supplement" ${!isCore ? 'selected' : ''}>Supplement</option>
+                        </select>
+                    `;
+
+                    // Name Input (Dropdown for core, Text for Supp)
+                    if (isCore) {
+                        const options = coreLifts.map(l => `<option value="${l}" ${ex.name === l ? 'selected' : ''}>${l}</option>`).join('');
+                        innerHtml += `<select onchange="updateExercise(${ex.id}, 'name', this.value)" class="flex-1 bg-black border border-gray-700 rounded p-2 text-white font-bold uppercase">${options}</select>`;
+                    } else {
+                        const datalistId = `list-${ex.id}`;
+                        const dlOptions = supplementLibrary.map(s => `<option value="${s}">`).join('');
+                        innerHtml += `
+                            <input type="text" list="${datalistId}" value="${ex.name}" onchange="updateExercise(${ex.id}, 'name', this.value)" placeholder="Enter Exercise Name" class="flex-1 bg-black border border-gray-700 rounded p-2 text-white font-bold uppercase">
+                            <datalist id="${datalistId}">${dlOptions}</datalist>
+                        `;
+                    }
+
+                    innerHtml += `</div>
+                        <button onclick="removeExercise(${ex.id})" class="text-gray-600 hover:text-red-500 transition">✕</button>
+                    </div>`;
+
+                    // Circuit Toggle (Supplement Only)
+                    if (!isCore) {
+                        innerHtml += `
+                            <div class="flex items-center gap-2 mb-4">
+                                <input type="checkbox" id="circ-${ex.id}" ${ex.isCircuit ? 'checked' : ''} onchange="toggleCircuit(${ex.id})">
+                                <label for="circ-${ex.id}" class="text-xs font-bold text-gray-500 uppercase cursor-pointer">Circuit Mode (Time/Rest)</label>
+                            </div>
+                        `;
+                    }
+
+                    // Sets Builder
+                    innerHtml += `<div class="space-y-2 mb-4">`;
+                    
+                    ex.sets.forEach((set, sIndex) => {
+                        innerHtml += `<div class="flex gap-2 items-center">
+                            <span class="text-xs font-bold text-gray-500 w-12 uppercase">Set ${sIndex + 1}</span>`;
+
+                        if (ex.isCircuit) {
+                            innerHtml += `
+                                <input type="number" placeholder="Work (s)" value="${set.time || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'time', this.value)" class="w-24 bg-black border border-gray-700 rounded px-2 py-1 text-sm text-center">
+                                <input type="number" placeholder="Rest (s)" value="${set.rest || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'rest', this.value)" class="w-24 bg-black border border-gray-700 rounded px-2 py-1 text-sm text-center">
+                            `;
+                        } else {
+                            innerHtml += `<input type="number" placeholder="Reps" value="${set.reps || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'reps', this.value)" class="w-20 bg-black border border-gray-700 rounded px-2 py-1 text-sm text-center">`;
+                            if (isCore) {
+                                innerHtml += `<input type="number" placeholder="% Max" value="${set.pct || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'pct', this.value)" class="w-20 bg-black border border-gray-700 rounded px-2 py-1 text-sm text-center">`;
+                            }
+                        }
+                        innerHtml += `</div>`;
+                    });
+
+                    innerHtml += `</div>
+                    <button onclick="addSet(${ex.id})" class="text-xs font-bold bg-gray-800 text-gray-300 px-3 py-1 rounded hover:bg-gray-700 transition uppercase">+ Add Set</button>`;
+                }
+                
+                innerHtml += `</div>`;
+                container.insertAdjacentHTML('beforeend', innerHtml);
+            });
+        }
+
+        // --- SAVE TO DATABASE ---
+        window.saveWorkout = async () => {
+            const date = document.getElementById('workout-date').value;
+            const name = document.getElementById('workout-name').value;
+
+            if (!date || !name) return alert("Please provide a Date and Workout Name.");
+
+            try {
+                // 1. Save new supplement exercises to the global library
+                exercises.forEach(async (ex) => {
+                    if (ex.category === 'supplement' && ex.name.trim() !== '') {
+                        if (!supplementLibrary.includes(ex.name)) {
+                            supplementLibrary.push(ex.name);
+                            await setDoc(doc(db, "supplement_library", ex.name.toLowerCase().replace(/\s/g, '')), { name: ex.name });
+                        }
+                    }
+                });
+
+                // 2. Save Workout
+                await addDoc(collection(db, "workouts"), {
+                    date: date,
+                    name: name,
+                    isMaxOutMode: isMaxOutMode,
+                    exercises: exercises,
+                    createdAt: new Date()
+                });
+
+                alert("Workout Saved Successfully!");
+                window.location.reload();
+
+            } catch (err) {
+                console.error(err);
+                alert("Error saving workout.");
+            }
+        };
+    </script>
+</body>
+</html>
