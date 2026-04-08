@@ -47,6 +47,8 @@
         </button>
     </div>
 
+    <div id="workout-status-message" class="text-green-500 font-bold text-center mt-4"></div>
+
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { firebaseConfig } from "./firebase-config.js"; 
@@ -315,30 +317,63 @@
     };
 
     window.logFullWorkout = async (workoutId) => {
-        const btn = document.querySelector('button[onclick*="logFullWorkout"]');
-        btn.innerText = "SAVING...";
-        btn.disabled = true;
+        // 1. Better button selector to prevent "null" error
+        const finishBtn = document.querySelector('button[onclick*="logFullWorkout"]');
+        if (finishBtn) {
+            finishBtn.innerText = "SAVING...";
+            finishBtn.disabled = true;
+        }
 
-        const performance = [];
-        document.querySelectorAll('.exercise-card').forEach(card => {
-            const name = card.querySelector('h3').innerText;
-            const sets = Array.from(card.querySelectorAll('[id^="container-"]')).map(row => ({
-                weight: row.querySelector('input')?.value || "BW",
-                completed: row.getAttribute('data-completed') === 'true'
-            }));
-            performance.push({ name, sets });
-        });
+        try {
+            const performance = [];
+            
+            // 2. Loop through each exercise card
+            document.querySelectorAll('.exercise-card').forEach(card => {
+                const nameEl = card.querySelector('h3');
+                if (!nameEl) return; // Skip if card is malformed
 
-        await addDoc(collection(db, "completed_workouts"), {
-            athleteId: window.currentAthleteId,
-            workoutId: workoutId,
-            schoolId: window.currentSchoolId,
-            performance,
-            timestamp: serverTimestamp()
-        });
+                const name = nameEl.innerText;
+                
+                // 3. Find all set rows within this specific card
+                const sets = Array.from(card.querySelectorAll('[id^="container-"]')).map(row => {
+                    const weightInput = row.querySelector('input');
+                    const isCompleted = row.getAttribute('data-completed') === 'true';
+                    
+                    return {
+                        // Grab value if input exists, otherwise default to BW
+                        weight: weightInput ? (weightInput.value || "BW") : "BW",
+                        completed: isCompleted
+                    };
+                });
 
-        alert("Workout Logged!");
-        location.href = 'index.html';
+                performance.push({ name, sets });
+            });
+
+            // 4. Save to Firestore
+            await addDoc(collection(db, "completed_workouts"), {
+                athleteId: window.currentAthleteId,
+                workoutId: workoutId,
+                school_id: window.currentSchoolId, // Ensure naming matches your review page (school_id)
+                performance,
+                timestamp: serverTimestamp()
+            });
+
+            alert("Workout Logged!");
+            // 5. Use a small delay before redirecting to ensure Firestore finished
+            setTimeout(() => {
+                location.href = 'athlete-dashboard.html'; 
+            }, 500);
+
+        } catch (error) {
+            console.error("Critical Error saving workout:", error);
+            alert("Error saving workout. Please check your connection.");
+            
+            // Reset button if it fails so they can try again
+            if (finishBtn) {
+                finishBtn.innerText = "Log Session & Finish";
+                finishBtn.disabled = false;
+            }
+        }
     };
 
     // Add this inside your <script type="module"> in athlete-workout.html
