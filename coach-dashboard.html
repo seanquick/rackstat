@@ -567,56 +567,85 @@
             }
         };
 
-        async function loadWorkouts(schoolId) {
-            const container = document.getElementById('workout-feed');
-            
-            if (!container) {
-                console.error("CRITICAL: Element #workout-feed not found in HTML!");
-                return;
-            }
+    async function loadWorkouts(schoolId) {
+        const container = document.getElementById('workout-feed');
+        
+        if (!container) {
+            console.error("CRITICAL: Element #workout-feed not found in HTML!");
+            return;
+        }
 
-            try {
-                const workoutsRef = collection(db, "schools", schoolId, "workouts");
-                const q = query(workoutsRef, orderBy("createdAt", "desc"));
+        // Defensive check: Ensure schoolId exists before querying
+        if (!schoolId) {
+            container.innerHTML = '<p class="text-red-500 font-black uppercase text-[10px]">Error: No School Context Found</p>';
+            return;
+        }
 
-                onSnapshot(q, (snapshot) => {
-                    container.innerHTML = ''; 
+        try {
+            // Path: schools/{schoolId}/workouts
+            // Our new Firestore Rules will block this if the logged-in coach's school_id != schoolId
+            const workoutsRef = collection(db, "schools", schoolId, "workouts");
+            const q = query(workoutsRef, orderBy("createdAt", "desc"));
 
-                    if (snapshot.empty) {
-                        container.innerHTML = '<p class="text-gray-500 italic">No workouts published yet.</p>';
-                        return;
-                    }
+            // Use onSnapshot for real-time updates when a coach adds/deletes a workout
+            onSnapshot(q, (snapshot) => {
+                container.innerHTML = ''; 
 
-                    snapshot.forEach((doc) => {
-                        const workout = doc.data();
-                        const workoutId = doc.id;
-                        const dateStr = workout.createdAt ? workout.createdAt.toDate().toLocaleDateString() : 'Just now';
-                        
-                        container.innerHTML += `
-                            <div class="bg-gray-800 border border-gray-700 p-4 rounded flex justify-between items-center mb-3">
-                                <div>
-                                    <div class="text-white font-bold uppercase text-sm">${workout.title || 'Untitled Workout'}</div>
-                                    <div class="text-gray-400 text-[10px] mt-1">WEEK ${workout.week || '?'} • ${dateStr}</div>
+                if (snapshot.empty) {
+                    container.innerHTML = `
+                        <div class="py-10 text-center border-2 border-dashed border-zinc-800 rounded-2xl">
+                            <p class="text-zinc-600 font-black uppercase text-xs tracking-widest">No Workouts Published</p>
+                        </div>`;
+                    return;
+                }
+
+                snapshot.forEach((doc) => {
+                    const workout = doc.data();
+                    const workoutId = doc.id;
+                    const dateStr = workout.createdAt ? workout.createdAt.toDate().toLocaleDateString() : 'Just now';
+                    
+                    container.innerHTML += `
+                        <div class="bg-zinc-900 border border-zinc-800 p-5 rounded-xl flex justify-between items-center mb-4 transition-all hover:border-zinc-600">
+                            <div>
+                                <div class="text-white font-black uppercase italic text-sm tracking-tight">
+                                    ${workout.title || 'Untitled Session'}
                                 </div>
-                                <div class="flex gap-3">
-                                    <button onclick="editWorkout('${workoutId}')" class="text-blue-400 font-black text-[10px] hover:text-white transition uppercase">
-                                        Edit
-                                    </button>
-                                    <button onclick="deleteWorkout('${workoutId}')" class="text-red-500 font-black text-[10px] hover:text-white transition uppercase">
-                                        Delete
-                                    </button>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="bg-zinc-800 text-zinc-400 text-[9px] px-2 py-0.5 rounded font-black uppercase tracking-tighter">
+                                        Week ${workout.week || '—'}
+                                    </span>
+                                    <span class="text-zinc-600 text-[9px] font-bold uppercase tracking-widest">
+                                        ${dateStr}
+                                    </span>
                                 </div>
                             </div>
-                        `;
-                    });
-                }, (error) => {
-                    console.error("Firestore Listener Error:", error);
-                    container.innerHTML = `<p class="text-red-500 text-xs">Error loading workouts. Check console for index link.</p>`;
+                            <div class="flex gap-4">
+                                <button onclick="editWorkout('${workoutId}')" 
+                                    class="text-blue-500 font-black text-[10px] hover:text-white transition uppercase tracking-widest">
+                                    Edit
+                                </button>
+                                <button onclick="deleteWorkout('${workoutId}')" 
+                                    class="text-red-600 font-black text-[10px] hover:text-white transition uppercase tracking-widest">
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    `;
                 });
-            } catch (err) {
-                console.error("Function Setup Error:", err);
-            }
+            }, (error) => {
+                // This triggers if the Sandbox Rules block the request
+                console.error("Privacy/Sandbox Violation or Query Error:", error);
+                container.innerHTML = `
+                    <div class="p-4 bg-red-900/20 border border-red-900/50 rounded-xl">
+                        <p class="text-red-500 font-black uppercase text-[10px] text-center tracking-widest">
+                            Access Denied: You do not have permission to view this school's data.
+                        </p>
+                    </div>`;
+            });
+        } catch (err) {
+            console.error("Function Setup Error:", err);
         }
+    }
 
         function toggleExerciseType(id) {
             const typeSelect = document.getElementById(`type-${id}`);
@@ -699,110 +728,217 @@
             }
         };
 
-        async function loadRoster(schoolId) {
-            const rosterBody = document.getElementById('roster-table-body');
-            const q = query(collection(db, "recruiting_profiles"), where("school_id", "==", schoolId), where("role", "==", "player"));
-            const querySnapshot = await getDocs(q);
+    async function loadRoster(schoolId) {
+        const rosterBody = document.getElementById('roster-table-body');
+        if (!rosterBody) return;
 
+        // Loading state for better UX
+        rosterBody.innerHTML = '<tr><td colspan="10" class="p-10 text-center text-zinc-600 animate-pulse uppercase text-[10px] font-black tracking-widest">Accessing Secure Roster...</td></tr>';
+
+        try {
+            // SANDBOX CORE: This query must include school_id to satisfy Firestore Rules
+            const q = query(
+                collection(db, "recruiting_profiles"), 
+                where("school_id", "==", schoolId), 
+                where("role", "==", "player")
+            );
+
+            const querySnapshot = await getDocs(q);
             rosterBody.innerHTML = '';
+
+            if (querySnapshot.empty) {
+                rosterBody.innerHTML = '<tr><td colspan="10" class="p-10 text-center text-zinc-500 italic uppercase text-xs">No athletes registered under this school code.</td></tr>';
+                return;
+            }
+
             querySnapshot.forEach((docSnap) => {
                 const p = docSnap.data();
                 const uid = docSnap.id;
 
-                // Only allow clicking the name if recruiting card is enabled
+                // Use CSS variables for school colors if they are loaded
+                const schoolColor = getComputedStyle(document.documentElement).getPropertyValue('--school-primary') || '#dc2626';
+
                 const nameCell = isRecruitingEnabled 
-                    ? `<td class="p-4 text-white font-bold cursor-pointer hover:text-red-500" onclick="location.href='recruiting-card.html?uid=${uid}'">${p.firstName} ${p.lastName}</td>`
-                    : `<td class="p-4 text-white font-bold">${p.firstName} ${p.lastName}</td>`;
+                    ? `<td class="p-4 text-white font-black cursor-pointer hover:text-blue-500 transition-colors uppercase italic tracking-tighter" onclick="location.href='recruiting-card.html?uid=${uid}'">${p.firstName} ${p.lastName}</td>`
+                    : `<td class="p-4 text-zinc-400 font-bold uppercase tracking-tighter">${p.firstName} ${p.lastName}</td>`;
 
                 const editButton = isRecruitingEnabled
-                    ? `<button onclick="location.href='recruiting-card.html?uid=${uid}&edit=true'" class="text-blue-500 hover:underline">EDIT</button>`
-                    : `<span class="text-gray-600 italic">Locked</span>`;
+                    ? `<button onclick="location.href='recruiting-card.html?uid=${uid}&edit=true'" class="text-blue-500 font-black hover:text-white transition uppercase">Edit</button>`
+                    : `<span class="text-zinc-700 text-[10px] font-black uppercase tracking-widest">Locked</span>`;
 
                 rosterBody.innerHTML += `
-                    <tr class="hover:bg-gray-900/50 transition-all border-b border-gray-800">
+                    <tr class="hover:bg-zinc-900/50 transition-all border-b border-zinc-800/50">
                         ${nameCell}
-                        <td class="p-4 text-gray-400">${p.gradYear || '--'}</td>
-                        <td class="p-4 text-xs">
-                            <span class="text-blue-400">${p.primaryPos || '--'}</span> / 
-                            <span class="text-red-400">${p.primaryDefPos || '--'}</span>
+                        <td class="p-4 text-zinc-500 font-mono text-sm">${p.gradYear || '--'}</td>
+                        <td class="p-4 text-[10px] font-black uppercase tracking-tight">
+                            <span class="text-blue-500">${p.primaryPos || '--'}</span> 
+                            <span class="text-zinc-700">/</span> 
+                            <span class="text-red-600">${p.primaryDefPos || '--'}</span>
                         </td>
-                        <td class="p-4">${p.bench || '--'}</td>
-                        <td class="p-4">${p.squat || '--'}</td>
-                        <td class="p-4">${p.clean || '--'}</td>
-                        <td class="p-4">${p.deadlift || '--'}</td>
-                        <td class="p-4">${p.push_press || '--'}</td>
+                        <td class="p-4 font-mono font-bold text-zinc-300">${p.bench || '--'}</td>
+                        <td class="p-4 font-mono font-bold text-zinc-300">${p.squat || '--'}</td>
+                        <td class="p-4 font-mono font-bold text-zinc-300">${p.clean || '--'}</td>
+                        <td class="p-4 font-mono font-bold text-zinc-300">${p.deadlift || '--'}</td>
+                        <td class="p-4 font-mono font-bold text-zinc-300">${p.push_press || '--'}</td>
                         <td class="p-4">
-                            <button onclick="viewMeals('${uid}', '${p.firstName}')" class="text-[9px] bg-gray-800 px-2 py-1 rounded hover:bg-red-700">
-                                VIEW LOGS
+                            <button onclick="viewMeals('${uid}', '${p.firstName}')" 
+                                    class="text-[9px] font-black bg-zinc-800 text-zinc-400 px-3 py-1 rounded-full hover:bg-zinc-700 hover:text-white transition-all uppercase tracking-widest">
+                                Logs
                             </button>
                         </td>
-                        <td class="p-4 flex gap-3">
+                        <td class="p-4 flex gap-4 text-[10px] font-black">
                             ${editButton}
-                            <button onclick="deleteAthlete('${uid}', '${p.firstName} ${p.lastName}')" class="text-red-500 hover:underline">DEL</button>
+                            <button onclick="deleteAthlete('${uid}', '${p.firstName} ${p.lastName}')" 
+                                    class="text-red-900 hover:text-red-500 transition-colors uppercase">Del</button>
                         </td>
                     </tr>
                 `;
             });
+        } catch (error) {
+            console.error("Roster Privacy Error:", error);
+            rosterBody.innerHTML = `
+                <tr>
+                    <td colspan="10" class="p-8 text-center bg-red-900/10">
+                        <p class="text-red-600 font-black uppercase text-xs tracking-widest">
+                            Data Sandbox Violation: Unauthorized School ID
+                        </p>
+                    </td>
+                </tr>`;
+        }
+    }
+
+    window.bulkPromoteGrades = async () => {
+        // 1. Context Check: Ensure we actually have a school ID before starting
+        if (!currentSchoolId) {
+            alert("Action Denied: No school context found. Please refresh the page.");
+            return;
         }
 
-        window.bulkPromoteGrades = async () => {
-            if (!confirm("Are you sure? This will promote all athletes to the next grade level.")) return;
-            const q = query(collection(db, "recruiting_profiles"), where("school_id", "==", currentSchoolId), where("role", "==", "player"));
+        const confirmation = confirm(
+            "DANGER ZONE: This will modify EVERY athlete in your school's roster.\n\n" +
+            "Are you sure you want to promote all athletes to the next grade level?"
+        );
+
+        if (!confirmation) return;
+
+        try {
+            // 2. Query Sandbox: Strictly limit the fetch to ONLY this school's athletes
+            const q = query(
+                collection(db, "recruiting_profiles"), 
+                where("school_id", "==", currentSchoolId), 
+                where("role", "==", "player")
+            );
+
             const snapshot = await getDocs(q);
+
+            if (snapshot.empty) {
+                alert("No athletes found to promote.");
+                return;
+            }
+
             const batch = writeBatch(db);
+            let count = 0;
+
             snapshot.forEach((doc) => {
-                const currentYear = parseInt(doc.data().gradYear);
-                if (currentYear) {
-                    batch.update(doc.ref, { gradYear: (currentYear + 1).toString() });
+                const data = doc.data();
+                const currentYear = parseInt(data.gradYear);
+                
+                // 3. Data Validation: Only update if the record actually belongs to this school
+                // This is a double-check to support the Firestore Security Rules
+                if (currentYear && data.school_id === currentSchoolId) {
+                    // For Class Years: 2026 becomes 2025 (closer to graduation)
+                    // If you are using Grade Levels (9th, 10th): Change to (currentYear + 1)
+                    batch.update(doc.ref, { gradYear: (currentYear - 1).toString() });
+                    count++;
                 }
             });
-            await batch.commit();
-            alert("Roster promoted successfully!");
-            location.reload();
-        };
 
-            window.deleteAthlete = async (athleteId, athleteName) => {
-                        if (confirm(`Are you sure you want to PERMANENTLY delete ${athleteName}?`)) {
-                            try {
-                                // Delete the document from Firestore
-                                await deleteDoc(doc(db, "recruiting_profiles", athleteId));
-                                alert(`${athleteName} has been deleted.`);
-                                // Reload the roster to reflect the deletion
-                                loadRoster(window.currentSchoolId); 
-                            } catch (error) {
-                                console.error("Error deleting athlete:", error);
-                                alert("Failed to delete athlete. Check console for details.");
-                            }
-                        }
-                    };
+            if (count > 0) {
+                await batch.commit();
+                alert(`SUCCESS: ${count} athletes promoted to the next class year.`);
+                location.reload();
+            } else {
+                alert("No eligible athletes found with valid graduation years.");
+            }
 
-                    // --- MISSING FUNCTION: Generates the Set/Rep/Percent inputs ---
-                    function generateSetInputs(id) {
-                        const setCount = parseInt(document.getElementById(`sets-${id}`).value) || 1;
-                        const container = document.getElementById(`sets-container-${id}`);
-                        const typeSelect = document.getElementById(`type-${id}`);
-                        const isCore = typeSelect && typeSelect.value === 'core';
+        } catch (error) {
+            console.error("Bulk Update Privacy Error:", error);
+            // This will trigger if the coach tries to update a doc they don't own
+            alert("PERMISSION DENIED: You do not have authority to modify these records.");
+        }
+    };
 
-                        // Clear out the existing inputs
-                        container.innerHTML = ''; 
+    window.deleteAthlete = async (athleteId, athleteName) => {
+        // 1. Initial Confirmation
+        const confirmed = confirm(`DANGER: You are about to PERMANENTLY delete ${athleteName}.\n\nThis action cannot be undone. Proceed?`);
+        if (!confirmed) return;
 
-                        // Generate new inputs based on the number of sets
-                        for (let i = 1; i <= setCount; i++) {
-                            // Only show the % input if it is a Core lift
-                            const percentHtml = isCore 
-                                ? `<input type="number" placeholder="%" id="percent-${id}-${i}" class="w-12 bg-gray-800 text-white text-xs p-1 rounded border border-gray-600">`
-                                : ``;
+        try {
+            // 2. Sandbox Pre-Flight Check
+            // We fetch the document first to ensure it belongs to this coach's school
+            const athleteRef = doc(db, "recruiting_profiles", athleteId);
+            const athleteSnap = await getDoc(athleteRef);
 
-                            container.innerHTML += `
-                                <div class="flex items-center gap-2 bg-gray-900 p-2 rounded border border-gray-700">
-                                    <span class="text-red-500 font-black text-[10px]">S${i}:</span>
-                                    <input type="text" placeholder="Reps" id="reps-${id}-${i}" 
-                                        class="w-full bg-transparent text-white text-xs outline-none">
-                                    ${percentHtml}
-                                </div>
-                            `;
-                        }
-                    }
+            if (!athleteSnap.exists()) {
+                alert("Error: Athlete record not found.");
+                return;
+            }
+
+            const athleteData = athleteSnap.data();
+
+            // 3. Security Validation
+            if (athleteData.school_id !== window.currentSchoolId) {
+                console.error("SECURITY ALERT: Attempted unauthorized deletion of athlete from another school.");
+                alert("PERMISSION DENIED: You do not have authority to delete athletes from other schools.");
+                return;
+            }
+
+            // 4. Execute Deletion
+            await deleteDoc(athleteRef);
+            
+            // 5. Success Feedback
+            alert(`${athleteName.toUpperCase()} has been removed from the roster.`);
+            
+            // Refresh the roster using the global school ID
+            if (window.currentSchoolId) {
+                loadRoster(window.currentSchoolId);
+            } else {
+                location.reload();
+            }
+
+        } catch (error) {
+            console.error("Deletion Error:", error);
+            alert("CRITICAL ERROR: Could not complete deletion. You may lack the necessary permissions.");
+        }
+    };
+
+        // --- MISSING FUNCTION: Generates the Set/Rep/Percent inputs ---
+        function generateSetInputs(id) {
+            const setCount = parseInt(document.getElementById(`sets-${id}`).value) || 1;
+            const container = document.getElementById(`sets-container-${id}`);
+            const typeSelect = document.getElementById(`type-${id}`);
+            const isCore = typeSelect && typeSelect.value === 'core';
+
+            // Clear out the existing inputs
+            container.innerHTML = ''; 
+
+            // Generate new inputs based on the number of sets
+            for (let i = 1; i <= setCount; i++) {
+                // Only show the % input if it is a Core lift
+                const percentHtml = isCore 
+                    ? `<input type="number" placeholder="%" id="percent-${id}-${i}" class="w-12 bg-gray-800 text-white text-xs p-1 rounded border border-gray-600">`
+                    : ``;
+
+                container.innerHTML += `
+                    <div class="flex items-center gap-2 bg-gray-900 p-2 rounded border border-gray-700">
+                        <span class="text-red-500 font-black text-[10px]">S${i}:</span>
+                        <input type="text" placeholder="Reps" id="reps-${id}-${i}" 
+                            class="w-full bg-transparent text-white text-xs outline-none">
+                        ${percentHtml}
+                    </div>
+                `;
+            }
+        }
 
         window.viewMeals = async (uid, name) => {
             document.getElementById('modal-player-name').innerText = `${name.toUpperCase()}'S MEAL HISTORY`;
