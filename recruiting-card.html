@@ -131,7 +131,8 @@
     <button onclick="window.exportSocial()" class="bg-white text-black px-6 py-2 rounded-full font-bold uppercase text-xs">SHARE TO SOCIAL</button>
     
     <button id="unlock-btn" onclick="toggleEditMode()" class="hidden bg-yellow-600 text-black font-black px-4 py-2 rounded uppercase text-[10px] mb-4 transition-all"> 🔓 Unlock Profile for Editing</button>
-    <a href="coach-lobby.html" class="text-gray-400 hover:text-white transition flex items-center gap-2 font-bold uppercase text-xs">← Back to Office
+    <button id="back-button" class="text-gray-400 hover:text-white transition flex items-center gap-2 font-bold uppercase text-xs">← Back
+</button>
 </a>
 </div>
 
@@ -439,7 +440,23 @@
                     const d = recSnap.data();
                     const mx = maxesSnap.exists() ? maxesSnap.data() : {};
 
-                    // --- 1. LOGO LOGIC ---
+                    // --- 1. SMART BACK BUTTON LOGIC ---
+                    // We fetch the current viewer's role from the 'users' collection
+                    const userSnap = await getDoc(doc(db, "users", user.uid));
+                    const userData = userSnap.data();
+                    const backBtn = document.getElementById('back-button');
+
+                    if (backBtn && userData) {
+                        if (userData.role === 'coach') {
+                            backBtn.innerText = "← BACK TO OFFICE";
+                            backBtn.onclick = () => location.href = 'coach-lobby.html';
+                        } else {
+                            backBtn.innerText = "← BACK TO RACK";
+                            backBtn.onclick = () => location.href = 'rack.html';
+                        }
+                    }
+
+                    // --- 2. LOGO LOGIC ---
                     const logoEl = document.getElementById('disp-logo');
                     if (d.logo_primary && logoEl) {
                         logoEl.src = d.logo_primary;
@@ -449,7 +466,7 @@
                         logoEl.classList.add('hidden');
                     }
 
-                    // --- 2. DISPLAY MAPPING (Card View) ---
+                    // --- 3. DISPLAY MAPPING (Card View) ---
                     safeSet('disp-name', d.fullName);
                     safeSet('disp-class', d.gradYear ? "CLASS OF " + d.gradYear : "--");
                     safeSet('disp-number', d.jerseyNum ? "#" + d.jerseyNum : "#--");
@@ -500,9 +517,7 @@
                     safeSet('disp-teammate-mean', d.goodTeammateMeaning);
                     safeSet('disp-sacrifice', d.willingToSacrifice);
 
-                    // --- 3. ALWAYS PRE-FILL EDIT INPUTS ---
-                    // We do this out here so the data is ready even if the user 
-                    // clicks "Unlock" later without a special URL.
+                    // --- 4. PRE-FILL EDIT INPUTS ---
                     setVal('edit-name', d.fullName);
                     setVal('edit-grad', d.gradYear);
                     setVal('edit-height', d.height);
@@ -536,16 +551,12 @@
                     setVal('edit-logo', d.logo_primary);
                     setVal('edit-hudl', d.hudlLink || d.highlightUrl);
 
-                    // --- 4. COACH-SPECIFIC PERMISSIONS & AUTO-EDIT ---
-                    const userSnap = await getDoc(doc(db, "users", user.uid));
-                    const userData = userSnap.data();
-
+                    // --- 5. COACH-SPECIFIC PERMISSIONS & AUTO-EDIT ---
+                    // (Already handled in the smart back button check above, but keeping unlock logic)
                     if (userData?.role === 'coach') {
-                        // Show the unlock button for any coach viewing a profile
                         const unlockBtn = document.getElementById('unlock-btn');
                         if (unlockBtn) unlockBtn.classList.remove('hidden');
 
-                        // If URL contains edit=true, automatically trigger the unlock
                         if (isEditMode && typeof toggleEditMode === "function") {
                             toggleEditMode();
                         }

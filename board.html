@@ -109,7 +109,7 @@
             if (schoolLogo && school.logo_url) schoolLogo.src = school.logo_url;
 
             // Define scoring lifts globally for the function scope
-            const scoringLifts = school.preferences?.scoring_lifts || ["bench", "squat", "clean"];
+            const scoringLifts = school.preferences?.scoring_lifts || ["bench", "squat", "clean", "deadlift"];
 
             // 2. Fetch Athletes
             const q = query(collection(db, "recruiting_profiles"), where("school_id", "==", schoolId));
