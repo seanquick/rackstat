@@ -7,54 +7,54 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root { --school-primary: #dc2626; } 
+        /* 1. DEFAULT THEME (Before Login) */
+        :root { 
+            --school-primary: #dc2626; /* Default Rackstat Red */
+        } 
+        
         .btn-primary-dynamic {
             background-color: var(--school-primary);
             border-bottom: 4px solid rgba(0,0,0,0.3);
         }
-        .btn-primary-dynamic:hover { filter: brightness(1.1); }
         
-        /* Ensure the body is never accidentally hidden */
-        body { background-color: black !important; display: block !important; }
+        /* Ensure the login form is readable against black */
+        input::placeholder { color: #4b5563; }
     </style>
 </head>
-<body class="text-white font-sans antialiased">
+<body class="bg-black text-white font-sans antialiased">
 
 <header class="brand-header flex flex-col items-center py-10 space-y-6">
-    <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-20 w-auto">
+    <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-20 w-auto transition-transform duration-500 hover:scale-105">
 
-    <div id="school-branding" class="flex items-center justify-center gap-6 opacity-100 transition-opacity duration-700">
-        <img src="" class="school-logo-primary h-14 w-auto object-contain" alt="" onerror="this.style.display='none'">
+    <div id="school-branding" class="flex items-center justify-center gap-6 transition-opacity duration-700">
+        <img id="logo-primary" src="" class="h-14 w-auto object-contain" style="display:none">
         <div class="flex items-center">
-            <div class="h-8 w-[2px] bg-red-600"></div>
-            <h2 id="school-name-display" class="text-2xl font-black italic uppercase tracking-tighter text-white px-5">Athlete Portal</h2>
-            <div class="h-8 w-[2px] bg-red-600"></div>
+            <div id="bar-left" class="h-8 w-[2px] bg-[var(--school-primary)] hidden"></div>
+            <h2 id="school-name-display" class="text-2xl font-black italic uppercase tracking-tighter text-white px-5">
+                ATHLETE PORTAL
+            </h2>
+            <div id="bar-right" class="h-8 w-[2px] bg-[var(--school-primary)] hidden"></div>
         </div>
-        <img src="" class="school-logo-secondary h-14 w-auto object-contain" alt="" onerror="this.style.display='none'">
+        <img id="logo-secondary" src="" class="h-14 w-auto object-contain" style="display:none">
     </div>
 </header>
 
 <div class="container mx-auto max-w-md px-6 pb-20">
-    <div id="loading-spinner" class="hidden justify-center py-10">
-        <div class="animate-spin h-6 w-6 border-2 border-red-600 border-t-transparent rounded-full"></div>
-    </div>
-
-    <div id="auth-section" style="display: block !important;">
-        <h2 class="text-center font-black uppercase tracking-widest text-xs mb-8 text-gray-500">Athlete Login</h2>
-        <div id="login-form" class="space-y-4">
-            <div class="form-group bg-[#111] p-4 rounded-xl border border-gray-800 focus-within:border-red-600">
-                <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Email Address</label>
+    <div id="auth-section">
+        <h2 class="text-center font-black uppercase tracking-widest text-xs mb-8 text-gray-500">Credentials Required</h2>
+        <div class="space-y-4">
+            <div class="form-group bg-[#111] p-4 rounded-xl border border-gray-800 focus-within:border-[var(--school-primary)]">
+                <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Email</label>
                 <input type="email" id="email" placeholder="athlete@school.edu" class="w-full bg-transparent text-white outline-none">
             </div>
-            <div class="form-group bg-[#111] p-4 rounded-xl border border-gray-800 focus-within:border-red-600">
+            <div class="form-group bg-[#111] p-4 rounded-xl border border-gray-800 focus-within:border-[var(--school-primary)]">
                 <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Password</label>
                 <input type="password" id="password" placeholder="••••••••" class="w-full bg-transparent text-white outline-none">
             </div>
-            <button type="button" id="login-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-xl uppercase tracking-widest transition-all">
+            <button type="button" id="login-btn" class="w-full bg-[var(--school-primary)] hover:brightness-110 text-white font-black py-4 rounded-xl uppercase tracking-widest shadow-lg">
                 Login to Rackstat
             </button>
         </div>
-        
         <div class="mt-10 text-center">
             <p class="text-gray-600 text-[10px] font-black uppercase tracking-widest">
                 New Athlete? <a href="signup.html" class="text-white hover:underline">Create Account</a>
@@ -71,19 +71,11 @@
             <button onclick="location.href='athlete-workout.html'" class="bg-zinc-800 border-b-4 border-zinc-950 py-6 rounded-2xl">
                 <span class="text-2xl font-black italic uppercase">THE RACK</span>
             </button>
-            <button id="btn-kitchen" onclick="location.href='kitchen.html'" class="bg-emerald-700 border-b-4 border-emerald-900 py-6 rounded-2xl">
-                <span class="text-2xl font-black italic uppercase">THE KITCHEN</span>
-            </button>
             <button id="btn-recruiting-card" onclick="location.href='next-level.html'" class="btn-primary-dynamic py-6 rounded-2xl">
-                <span class="text-xl font-black italic uppercase leading-none">NEXT LEVEL<br><span class="text-[10px] tracking-[0.4em] opacity-80 font-sans">RECRUITING</span></span>
-            </button>
-            <button onclick="location.href='profile.html'" class="bg-blue-700 border-b-4 border-blue-900 py-6 rounded-2xl">
-                <span class="text-2xl font-black italic uppercase text-white">MY PROFILE</span>
+                <span class="text-xl font-black italic uppercase">NEXT LEVEL</span>
             </button>
         </div>
-        <button id="logout-btn" class="w-full mt-12 text-[10px] font-black uppercase text-gray-600 hover:text-white tracking-[0.3em]">
-            Sign Out / Switch User
-        </button>
+        <button id="logout-btn" class="w-full mt-12 text-[10px] font-black uppercase text-gray-600">Sign Out</button>
     </div>
 </div>
 
@@ -101,54 +93,51 @@
     const authSection = document.getElementById('auth-section');
     const mainMenu = document.getElementById('main-menu');
 
+    // UI Toggle
     const showAuth = () => {
-        authSection.style.setProperty('display', 'block', 'important');
+        authSection.classList.remove('hidden');
         mainMenu.classList.add('hidden');
     };
 
     const showMenu = (name) => {
-        authSection.style.setProperty('display', 'none', 'important');
+        authSection.classList.add('hidden');
         mainMenu.classList.remove('hidden');
-        document.getElementById('welcome-msg').innerText = `Welcome, ${name || 'Athlete'}`;
+        document.getElementById('welcome-msg').innerText = `Welcome, ${name}`;
+        // Show design bars once theme is ready
+        document.getElementById('bar-left').classList.remove('hidden');
+        document.getElementById('bar-right').classList.remove('hidden');
     };
 
-    window.handleLogin = async () => {
+    // Handlers
+    document.getElementById('login-btn').addEventListener('click', async () => {
         const email = document.getElementById('email').value.trim();
         const pass = document.getElementById('password').value;
-        if(!email || !pass) return alert("Enter credentials");
         try { 
             await signInWithEmailAndPassword(auth, email, pass);
-        } catch (e) { alert("Login failed: " + e.message); }
-    };
+        } catch (e) { alert("Error: " + e.message); }
+    });
 
-    window.handleLogout = async () => {
-        try {
-            await signOut(auth);
-            window.location.reload();
-        } catch (error) { console.error(error); }
-    };
+    document.getElementById('logout-btn').addEventListener('click', () => signOut(auth).then(() => location.reload()));
 
-    document.getElementById('login-btn').addEventListener('click', window.handleLogin);
-    document.getElementById('logout-btn').addEventListener('click', window.handleLogout);
-
+    // Auth State
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            try {
-                const userSnap = await getDoc(doc(db, "users", user.uid));
-                if (userSnap.exists()) {
-                    const userData = userSnap.data();
-                    if (userData.role === 'coach') {
-                        window.location.href = 'coach-lobby.html';
-                        return; 
-                    }
-                    showMenu(userData.fullName);
-                    
-                    const schoolId = userData.schoolId || userData.school_id;
-                    if (schoolId) {
-                        try { await applyTheme(db, schoolId); } catch (e) {}
-                    }
-                } else { showAuth(); }
-            } catch (err) { showAuth(); }
+            const userSnap = await getDoc(doc(db, "users", user.uid));
+            if (userSnap.exists()) {
+                const userData = userSnap.data();
+                if (userData.role === 'coach') {
+                    window.location.href = 'coach-lobby.html';
+                    return;
+                }
+                
+                showMenu(userData.fullName || 'Athlete');
+
+                // Load School Theme
+                try {
+                    const sId = userData.schoolId || userData.school_id;
+                    await applyTheme(db, sId);
+                } catch (err) { console.warn("Theme load failed."); }
+            }
         } else {
             showAuth();
         }
