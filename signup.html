@@ -9,31 +9,19 @@
 </head>
 <body class="bg-[#0a0a0b] min-h-screen flex flex-col items-center justify-center p-4">
 
-    <header class="bg-black border-b-2 border-red-700 p-4 sticky top-0 z-50">
+    <header class="bg-black border-b-2 border-red-700 p-4 w-full fixed top-0 z-50">
         <div class="flex justify-between items-center max-w-5xl mx-auto">
             <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1.5 rounded text-gray-400 hover:text-white transition-all">
                 ← Lobby
             </button>
-            
             <div class="flex items-center gap-5">
-                <img id="school-logo" src="images/panther-logo1.png" alt="School" class="h-10 w-auto">
-                
-                <div class="h-6 w-[1px] bg-gray-800"></div>
-                
-                <span class="text-sm font-black italic uppercase tracking-[0.15em] text-white">
-                    FAIRBANKS
-                </span>
-                
-                <div class="h-6 w-[1px] bg-gray-800"></div>
-                
-                <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-10 w-auto">
+                <span class="text-sm font-black italic uppercase tracking-[0.15em] text-white">RACKSTAT REGISTRATION</span>
             </div>
-
             <div class="w-[65px]"></div>
         </div>
     </header>
 
-    <div class="container mt-0">
+    <div class="container mt-20">
         <div class="text-center mb-6">
             <h2 id="reg-title" class="text-xl font-black italic uppercase tracking-widest text-white">Athlete Registration</h2>
             <div id="school-id-badge" class="hidden mt-2 text-[10px] font-bold text-red-500 uppercase tracking-widest">Verified School Found</div>
@@ -46,34 +34,34 @@
             </div>
 
             <div class="form-group">
-                <label>Full Name</label>
-                <input type="text" id="reg-name" placeholder="First & Last Name">
+                <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Full Name</label>
+                <input type="text" id="reg-name" placeholder="First & Last Name" class="w-full bg-zinc-900 p-3 rounded border border-zinc-800 text-white outline-none focus:border-red-600">
             </div>
 
             <div class="form-group">
-                <label>Email Address</label>
-                <input type="email" id="reg-email" placeholder="personal@email.com">
+                <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Email Address</label>
+                <input type="email" id="reg-email" placeholder="personal@email.com" class="w-full bg-zinc-900 p-3 rounded border border-zinc-800 text-white outline-none focus:border-red-600">
             </div>
 
             <div class="form-group">
-                <label>Create Password</label>
-                <input type="password" id="reg-pass" placeholder="••••••••">
+                <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Create Password</label>
+                <input type="password" id="reg-pass" placeholder="••••••••" class="w-full bg-zinc-900 p-3 rounded border border-zinc-800 text-white outline-none focus:border-red-600">
             </div>
 
             <div class="form-group">
-                <label id="code-label">Athlete Registration Code</label>
-                <input type="text" id="school-code" placeholder="Enter Code" class="border-red-900/50 bg-red-900/10">
+                <label id="code-label" class="block text-[10px] font-black uppercase text-gray-500 mb-1">Athlete Registration Code</label>
+                <input type="text" id="school-code" placeholder="Enter Code" class="w-full bg-red-900/10 p-3 rounded border border-red-900/50 text-white outline-none focus:border-red-600">
             </div>
 
-            <div class="flex items-start gap-3 p-3 bg-black border border-gray-800 rounded mt-4">
-                <input type="checkbox" id="legal-agree" class="mt-1 accent-red-600">
-                <label for="legal-agree" class="text-[10px] leading-tight text-gray-400">
-                    I agree to the <button onclick="openTermsModal()" class="text-red-500 hover:underline">Terms</button> and 
-                    <button onclick="openPrivacyModal()" class="text-red-500 hover:underline">Privacy Policy (SB29)</button>.
+            <div class="flex items-start gap-3 p-4 bg-zinc-900/50 border border-zinc-800 rounded mt-6">
+                <input type="checkbox" id="legal-agree" class="mt-1 w-4 h-4 accent-red-600 cursor-pointer">
+                <label for="legal-agree" class="text-[11px] leading-tight text-gray-400">
+                    I agree to the <button type="button" id="open-terms" class="text-white underline hover:text-red-500">Terms & Conditions</button> 
+                    and have reviewed the <button type="button" id="open-privacy" class="text-white underline hover:text-red-500">Privacy Policy (SB29)</button>.
                 </label>
             </div>
 
-            <button onclick="handleSignUp()" id="signup-btn" class="btn-primary">
+            <button onclick="handleSignUp()" id="signup-btn" class="w-full bg-red-700 hover:bg-red-600 text-white font-black py-4 rounded uppercase tracking-widest transition-all mt-4">
                 Create My Profile
             </button>
         </div>
@@ -83,22 +71,36 @@
         </p>
     </div>
 
+    <div id="privacy-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-black/95">
+        <div class="bg-zinc-900 w-full max-w-2xl max-h-[80vh] rounded-2xl border border-zinc-800 flex flex-col">
+            <div class="p-6 border-b border-zinc-800 flex justify-between items-center">
+                <h3 class="text-xl font-black italic uppercase text-white">Privacy Policy</h3>
+                <button type="button" class="close-modal text-gray-500 text-2xl">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto text-sm text-gray-300 space-y-4">
+                <p><strong>Effective Date: April 2026</strong></p>
+                <p>This app complies with Ohio Senate Bill 29. Data is used strictly for athletic development. We do not sell data or use it for advertising.</p>
+                </div>
+        </div>
+    </div>
+
+    <div id="terms-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-black/95">
+        <div class="bg-zinc-900 w-full max-w-2xl max-h-[80vh] rounded-2xl border border-zinc-800 flex flex-col">
+            <div class="p-6 border-b border-zinc-800 flex justify-between items-center">
+                <h3 class="text-xl font-black italic uppercase text-white">Terms & Conditions</h3>
+                <button type="button" class="close-modal text-gray-500 text-2xl">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto text-sm text-gray-300 space-y-4">
+                <p><strong>Assumption of Risk:</strong> Participation in athletics and strength training involves inherent risks. By using this App, you assume full responsibility for any injuries.</p>
+                </div>
+        </div>
+    </div>
+
     <script type="module">
         import { firebaseConfig } from './firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { 
-            getFirestore, 
-            doc, 
-            setDoc, 
-            collection, 
-            query, 
-            where, 
-            getDocs 
-        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { 
-            getAuth, 
-            createUserWithEmailAndPassword 
-        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -106,6 +108,21 @@
 
         let currentRole = 'player';
 
+        // --- MODAL LOGIC ---
+        const pModal = document.getElementById('privacy-modal');
+        const tModal = document.getElementById('terms-modal');
+
+        document.getElementById('open-privacy').onclick = () => pModal.classList.remove('hidden');
+        document.getElementById('open-terms').onclick = () => tModal.classList.remove('hidden');
+        
+        document.querySelectorAll('.close-modal').forEach(btn => {
+            btn.onclick = () => {
+                pModal.classList.add('hidden');
+                tModal.classList.add('hidden');
+            }
+        });
+
+        // --- ROLE SELECTION ---
         window.setRole = (role) => {
             currentRole = role;
             const pBtn = document.getElementById('btn-player');
@@ -126,6 +143,7 @@
             }
         };
 
+        // --- SIGNUP PROCESS ---
         window.handleSignUp = async () => {
             const isAgreed = document.getElementById('legal-agree').checked;
             const fullName = document.getElementById('reg-name').value.trim();
@@ -134,63 +152,45 @@
             const inputCode = document.getElementById('school-code').value.trim();
 
             if (!fullName || !email || !pass || !inputCode) return alert("All fields required.");
-            if (fullName.split(' ').length < 2) return alert("Please enter both First and Last name.");
-            if (!isAgreed) return alert("Please accept the terms (SB29 Compliance).");
+            if (!isAgreed) return alert("You must accept the Terms and Privacy Policy to register.");
             
             const signupBtn = document.getElementById('signup-btn');
             signupBtn.innerText = "VERIFYING CODE...";
             signupBtn.disabled = true;
 
             try {
-                // 1. Verify Code against Schools collection
                 const schoolsRef = collection(db, "schools");
                 const codeField = currentRole === 'coach' ? "coach_code" : "player_code";
                 const q = query(schoolsRef, where(codeField, "==", inputCode));
                 const querySnapshot = await getDocs(q);
 
                 if (querySnapshot.empty) {
-                    throw new Error(`Invalid ${currentRole} code. Please contact your school.`);
+                    throw new Error(`Invalid ${currentRole} code.`);
                 }
 
                 const schoolDoc = querySnapshot.docs[0];
                 const schoolData = schoolDoc.data();
 
-                // 2. Create Authentication Account
                 const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
                 const user = userCredential.user;
 
-                // 3. Save Master User Record (CRITICAL for Security Rules)
                 await setDoc(doc(db, "users", user.uid), {
                     fullName: fullName,
                     email: email,
                     role: currentRole,
-                    school_id: schoolDoc.id,
+                    schoolId: schoolDoc.id,
                     createdAt: Date.now()
                 });
 
-                // 4. Save Public Recruiting Profile
-                // Coaches get a profile too, but it will be handled by coach-lobby.html
-                await setDoc(doc(db, "recruiting_profiles", user.uid), {
-                    firstName: fullName.split(' ')[0],
-                    lastName: fullName.split(' ').slice(1).join(' '),
-                    email: email,
-                    role: currentRole,
-                    school_id: schoolDoc.id,
-                    school_name: schoolData.name,
-                    createdAt: Date.now()
-                });
-
-                alert(`Welcome to the program, ${fullName}!`);
+                alert(`Welcome, ${fullName}!`);
                 window.location.href = 'index.html';
 
             } catch (e) {
-                console.error(e);
                 alert(e.message);
                 signupBtn.innerText = "Create My Profile";
                 signupBtn.disabled = false;
             }
         };
     </script>
-
 </body>
 </html>
