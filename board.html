@@ -203,18 +203,30 @@
         // 3. Render Records
         recordBody.innerHTML = '';
         weightClasses.forEach(wc => {
-            const finalData = { ...classRecords[wc], ...(manualRecords[wc] || {}) };
+            // We create a clean object for this row by checking every lift individually
+            const getLiftData = (lift) => {
+                // Priority 1: Manual Record from Coach
+                // Priority 2: Automated Record from Athlete Maxes
+                return (manualRecords[wc] && manualRecords[wc][lift]) 
+                    ? manualRecords[wc][lift] 
+                    : classRecords[wc][lift];
+            };
+
             const row = `
                 <tr>
                     <td class="bg-gray-900/50 font-black text-red-500">${wc}</td>
-                    ${['bench', 'squat', 'clean', 'deadlift', 'dash'].map(lift => `
-                        <td contenteditable="${isCoachMode}" 
-                            class="record-cell ${isCoachMode ? 'bg-red-500/10 outline outline-1 outline-red-500/30' : ''}" 
-                            data-wc="${wc}" data-lift="${lift}">
-                            <span class="record-name">${finalData[lift].name}</span>
-                            <span class="record-value">${finalData[lift].val}${lift === 'dash' ? 's' : ''}</span>
-                        </td>
-                    `).join('')}
+                    ${['bench', 'squat', 'clean', 'deadlift', 'dash'].map(lift => {
+                        const data = getLiftData(lift);
+                        return `
+                            <td contenteditable="${isCoachMode}" 
+                                class="record-cell ${isCoachMode ? 'bg-red-500/10 outline outline-1 outline-red-500/30' : ''}" 
+                                data-wc="${wc}" 
+                                data-lift="${lift}">
+                                <span class="record-name">${data.name || '-'}</span>
+                                <span class="record-value">${data.val || 0}${lift === 'dash' ? 's' : ''}</span>
+                            </td>
+                        `;
+                    }).join('')}
                 </tr>
             `;
             recordBody.innerHTML += row;
@@ -224,16 +236,21 @@
         if (isCoachMode) {
             document.querySelectorAll('.record-cell').forEach(cell => {
                 cell.addEventListener('blur', async (e) => {
+                    // 1. Get the raw text from the cell
+                    const rawText = e.target.innerText;
+                    
+                    // 2. Split it by new line (Name is usually first, value second)
+                    const parts = rawText.split('\n').map(p => p.trim()).filter(p => p !== "");
+                    
+                    // 3. Extract Name and Value with fallbacks
+                    const newName = parts[0] || "-";
+                    let newVal = parts[1] || "0";
+                    newVal = newVal.replace('s', '').trim(); // Clean up 's' from dash times
+
                     const wc = e.target.getAttribute('data-wc');
                     const lift = e.target.getAttribute('data-lift');
-                    
-                    // Look for the spans, but provide a fallback so it doesn't crash
-                    const nameSpan = e.target.querySelector('.record-name');
-                    const valSpan = e.target.querySelector('.record-value');
-                    
-                    const newName = nameSpan ? nameSpan.innerText : "Unknown";
-                    const newVal = valSpan ? valSpan.innerText.replace('s', '').trim() : "0";
 
+                    console.log(`Attempting save: ${newName} | ${newVal} for ${lift}`);
                     await saveManualRecord(wc, lift, newVal, newName);
                 });
             });
