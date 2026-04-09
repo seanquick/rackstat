@@ -22,13 +22,17 @@ body {
     background-color: var(--rackstat-black);
     color: white;
     min-height: 100vh;
-    /* Starts hidden to prevent "Red Flash" */
-    opacity: 0;
-    transition: opacity 0.3s ease-in-out;
+    /* CHANGE: Remove opacity: 0; we want the login form visible immediately */
+    opacity: 1; 
 }
 
-/* theme.js will add this class once colors are fetched */
-body.theme-loaded {
+/* CHANGE: Apply the hidden state to branding instead of the whole body */
+#school-branding {
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+}
+
+#school-branding.theme-loaded {
     opacity: 1;
 }
 

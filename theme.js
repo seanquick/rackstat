@@ -44,10 +44,13 @@ export async function applyTheme(db, schoolID) {
         } else {
             console.error("School document not found in Firestore.");
         }
-    } catch (error) {
-        console.error("Error applying theme:", error);
-    } finally {
-        // 4. Reveal the body once the theme is processed
-        document.body.classList.add('theme-loaded');
-    }
-}
+        } catch (error) {
+                console.error("Error applying theme:", error);
+            } finally {
+                // 4. Reveal the BRANDING (not the body) once processed
+                const branding = document.getElementById('school-branding');
+                if (branding) {
+                    branding.classList.add('theme-loaded');
+                }
+            }
+        }
