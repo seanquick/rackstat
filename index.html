@@ -7,14 +7,14 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom Button Hover State for primary school color */
+        :root { --school-primary: #dc2626; } /* Default Red */
         .btn-primary-dynamic {
             background-color: var(--school-primary);
             border-bottom: 4px solid rgba(0,0,0,0.3);
         }
-        .btn-primary-dynamic:hover {
-            filter: brightness(1.1);
-        }
+        .btn-primary-dynamic:hover { filter: brightness(1.1); }
+        /* Prevent flash of unstyled content */
+        [v-cloak] { display: none; }
     </style>
 </head>
 <body class="bg-black text-white font-sans antialiased">
@@ -24,31 +24,32 @@
 
     <div id="school-branding" class="flex items-center justify-center gap-6 opacity-0 transition-opacity duration-700">
         <img src="" class="school-logo-primary h-14 w-auto object-contain" alt="Team Logo" onerror="this.style.display='none'">
-        
         <div class="flex items-center">
             <div class="h-8 w-[2px] bg-[var(--school-primary)]"></div>
-            <h2 id="school-name-display" class="school-name text-2xl font-black italic uppercase tracking-tighter text-white px-5">
-                </h2>
+            <h2 id="school-name-display" class="school-name text-2xl font-black italic uppercase tracking-tighter text-white px-5"></h2>
             <div class="h-8 w-[2px] bg-[var(--school-primary)]"></div>
         </div>
-
         <img src="" class="school-logo-secondary h-14 w-auto object-contain" alt="Alt Logo" onerror="this.style.display='none'">
     </div>
 </header>
 
 <div class="container mx-auto max-w-md px-6 pb-20">
-    <div id="auth-section">
+    <div id="loading-spinner" class="flex justify-center py-10">
+        <div class="animate-spin h-6 w-6 border-2 border-red-600 border-t-transparent rounded-full"></div>
+    </div>
+
+    <div id="auth-section" class="hidden">
         <h2 class="text-center font-black uppercase tracking-widest text-xs mb-8 text-gray-500">Athlete Login</h2>
         <div id="login-form" class="space-y-4">
             <div class="form-group bg-[#111] p-4 rounded-xl border border-gray-800 transition-all focus-within:border-[var(--school-primary)]">
                 <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Email Address</label>
-                <input type="email" id="email" placeholder="email" class="w-full bg-transparent text-white outline-none">
+                <input type="email" id="email" placeholder="coach@school.edu" class="w-full bg-transparent text-white outline-none">
             </div>
             <div class="form-group bg-[#111] p-4 rounded-xl border border-gray-800 transition-all focus-within:border-[var(--school-primary)]">
                 <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Password</label>
                 <input type="password" id="password" placeholder="••••••••" class="w-full bg-transparent text-white outline-none">
             </div>
-            <button type="button" onclick="handleLogin()" class="w-full bg-[var(--school-primary)] hover:brightness-110 text-white font-black py-4 rounded-xl uppercase tracking-widest transition-all shadow-lg shadow-[var(--school-primary)]/20">
+            <button type="button" id="login-btn" class="w-full bg-[var(--school-primary)] hover:brightness-110 text-white font-black py-4 rounded-xl uppercase tracking-widest transition-all shadow-lg shadow-[var(--school-primary)]/20">
                 Login to Rackstat
             </button>
         </div>
@@ -65,27 +66,23 @@
         
         <div class="grid grid-cols-1 gap-4">
             <button onclick="location.href='board.html'" class="btn-primary-dynamic py-6 rounded-2xl transition-transform active:scale-95">
-                <span class="text-2xl font-black italic uppercase italic">THE BOARD</span>
+                <span class="text-2xl font-black italic uppercase">THE BOARD</span>
             </button>
-
             <button onclick="location.href='athlete-workout.html'" class="bg-zinc-800 border-b-4 border-zinc-950 py-6 rounded-2xl transition-transform active:scale-95">
-                <span class="text-2xl font-black italic uppercase italic">THE RACK</span>
+                <span class="text-2xl font-black italic uppercase">THE RACK</span>
             </button>
-
             <button id="btn-kitchen" onclick="location.href='kitchen.html'" class="bg-emerald-700 border-b-4 border-emerald-900 py-6 rounded-2xl transition-transform active:scale-95">
-                <span class="text-2xl font-black italic uppercase italic">THE KITCHEN</span>
+                <span class="text-2xl font-black italic uppercase">THE KITCHEN</span>
             </button>
-
             <button id="btn-recruiting-card" onclick="location.href='next-level.html'" class="btn-primary-dynamic py-6 rounded-2xl transition-transform active:scale-95">
-                <span class="text-xl font-black italic uppercase italic leading-none">NEXT LEVEL<br><span class="text-[10px] tracking-[0.4em] opacity-80">RECRUITING</span></span>
+                <span class="text-xl font-black italic uppercase leading-none">NEXT LEVEL<br><span class="text-[10px] tracking-[0.4em] opacity-80 font-sans">RECRUITING</span></span>
             </button>
-
             <button onclick="location.href='profile.html'" class="bg-blue-700 border-b-4 border-blue-900 py-6 rounded-2xl transition-transform active:scale-95">
-                <span class="text-2xl font-black italic uppercase italic text-white">MY PROFILE</span>
+                <span class="text-2xl font-black italic uppercase text-white">MY PROFILE</span>
             </button>
         </div>
 
-        <button onclick="handleLogout()" class="w-full mt-12 text-[10px] font-black uppercase text-gray-600 hover:text-white tracking-[0.3em] transition-colors">
+        <button id="logout-btn" class="w-full mt-12 text-[10px] font-black uppercase text-gray-600 hover:text-white tracking-[0.3em] transition-colors">
             Sign Out / Switch User
         </button>
     </div>
@@ -97,92 +94,96 @@
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     
-    // --- IMPORT CENTRAL THEME ENGINE ---
+    // Ensure applyTheme is exported from theme.js
     import { applyTheme } from './theme.js';
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
 
-    // LOGIN FUNCTION
+    const loader = document.getElementById('loading-spinner');
+    const authSection = document.getElementById('auth-section');
+    const mainMenu = document.getElementById('main-menu');
+    const branding = document.getElementById('school-branding');
+
+    // UI HELPER
+    const showAuth = () => {
+        loader.classList.add('hidden');
+        authSection.classList.remove('hidden');
+        mainMenu.classList.add('hidden');
+        branding.classList.add('opacity-0');
+    };
+
+    const showMenu = () => {
+        loader.classList.add('hidden');
+        authSection.classList.add('hidden');
+        mainMenu.classList.remove('hidden');
+    };
+
+    // LOGIN
     window.handleLogin = async () => {
         const email = document.getElementById('email').value.trim();
         const pass = document.getElementById('password').value;
+        if(!email || !pass) return alert("Enter credentials");
         
         try { 
             const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-            const user = userCredential.user;
-            const userDoc = await getDoc(doc(db, "users", user.uid));
-            
-            if (userDoc.exists()) {
-                const userData = userDoc.data();
-                if (userData.role === 'coach') {
-                    window.location.href = 'coach-lobby.html';
-                } else {
-                    window.location.reload(); 
-                }
-            }
+            // onAuthStateChanged will handle the redirect
         } catch (e) { 
-            console.error("Login Error:", e);
             alert("Login failed: " + e.message); 
         }
     };
 
-    // LOGOUT FUNCTION
+    // LOGOUT
     window.handleLogout = async () => {
         try {
             await signOut(auth);
-            window.location.href = 'index.html';
-        } catch (error) {
-            console.error("Error signing out:", error);
-        }
+            window.location.reload();
+        } catch (error) { console.error(error); }
     };
 
-    // AUTH STATE LISTENER
+    // Listeners
+    document.getElementById('login-btn').addEventListener('click', window.handleLogin);
+    document.getElementById('logout-btn').addEventListener('click', window.handleLogout);
+
+    // AUTH STATE
     onAuthStateChanged(auth, async (user) => {
-        const authSection = document.getElementById('auth-section');
-        const mainMenu = document.getElementById('main-menu');
-        const branding = document.getElementById('school-branding');
-        
         if (user) {
             try {
                 const userSnap = await getDoc(doc(db, "users", user.uid));
-                
                 if (userSnap.exists()) {
                     const userData = userSnap.data();
 
-                    // Redirect Coaches
                     if (userData.role === 'coach') {
                         window.location.href = 'coach-lobby.html';
                         return; 
                     }
 
-                    // --- APPLY CENTRAL THEME ---
+                    // Apply Theme
                     const schoolId = userData.schoolId || userData.school_id;
-                    const schoolData = await applyTheme(db, schoolId);
-
-                    if (schoolData) {
-                        // Handle Feature Toggles
-                        const recruitingBtn = document.getElementById('btn-recruiting-card');
-                        if (schoolData.hasRecruitingCard === false && recruitingBtn) {
-                            recruitingBtn.classList.add('hidden');
+                    if (schoolId) {
+                        const schoolData = await applyTheme(db, schoolId);
+                        if (schoolData) {
+                            const recruitingBtn = document.getElementById('btn-recruiting-card');
+                            if (schoolData.hasRecruitingCard === false && recruitingBtn) {
+                                recruitingBtn.classList.add('hidden');
+                            }
+                            branding.classList.remove('opacity-0');
                         }
-                        // Reveal Branding
-                        branding.classList.remove('opacity-0');
                     }
 
-                    // UI Transition
-                    authSection.classList.add('hidden');
-                    mainMenu.classList.remove('hidden');
                     document.getElementById('welcome-msg').innerText = `Welcome, ${userData.fullName || 'Athlete'}`;
+                    showMenu();
+                } else {
+                    // Logged in but no user doc found
+                    showAuth();
                 }
             } catch (err) {
-                console.error("Auth Error:", err);
+                console.error("Auth Logic Error:", err);
+                showAuth(); 
             }
         } else {
-            authSection.classList.remove('hidden');
-            mainMenu.classList.add('hidden');
-            branding.classList.add('opacity-0');
+            showAuth();
         }
     });
 </script>
