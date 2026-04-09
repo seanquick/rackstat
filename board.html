@@ -99,6 +99,7 @@
 
             // 1. Fetch school settings
             const schoolSnap = await getDoc(doc(db, "schools", schoolId));
+            console.log("School Formula Type:", school.preferences?.formula_type);
             if (!schoolSnap.exists()) return;
             const school = schoolSnap.data();
             
@@ -121,7 +122,8 @@
 
             const formulaEl = document.getElementById('formula-display');
             if (formulaEl) {
-                if (school.preferences?.formula_type === "power_index") {
+                const formula = school.preferences?.formula_type?.toLowerCase();
+                    if (formula === "power_index" || formula === "power index") {
                     formulaEl.innerText = "INDEX: TOTAL LIFTED - (BW CAP * 4)";
                 } else {
                     formulaEl.innerText = "RANKING: RAW TOTAL LBS";
