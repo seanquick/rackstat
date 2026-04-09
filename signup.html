@@ -74,25 +74,37 @@
     <div id="privacy-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-black/95">
         <div class="bg-zinc-900 w-full max-w-2xl max-h-[80vh] rounded-2xl border border-zinc-800 flex flex-col">
             <div class="p-6 border-b border-zinc-800 flex justify-between items-center">
-                <h3 class="text-xl font-black italic uppercase text-white">Privacy Policy</h3>
-                <button type="button" class="close-modal text-gray-500 text-2xl">&times;</button>
+                <h3 class="text-xl font-black italic uppercase tracking-tight">Privacy Policy</h3>
+                <button class="close-p text-gray-500 hover:text-white text-2xl">&times;</button>
             </div>
-            <div class="p-6 overflow-y-auto text-sm text-gray-300 space-y-4">
-                <p><strong>Effective Date: April 2026</strong></p>
-                <p>This app complies with Ohio Senate Bill 29. Data is used strictly for athletic development. We do not sell data or use it for advertising.</p>
+            <div class="p-6 overflow-y-auto text-sm leading-relaxed text-gray-300 space-y-6">
+                <p class="font-bold text-white">Effective Date: April 2026</p>
+                <p>This application is designed to support student-athletes in accordance with Ohio Senate Bill 29. We collect name, school affiliation, athletic metrics, and nutritional data strictly for performance development.</p>
+                <p><strong>We do NOT sell student data or use it for advertising.</strong> Access is limited to authorized coaches and the student-athlete.</p>
+                <div class="p-4 bg-zinc-950 rounded-lg border border-zinc-800 italic text-xs">
+                    <strong>Disclaimer:</strong> Not a substitute for professional medical or nutritional advice.
                 </div>
+            </div>
+            <div class="p-4 border-t border-zinc-800 text-center">
+                <button class="close-p px-8 py-2 bg-white text-black font-black uppercase text-xs rounded-full">Close</button>
+            </div>
         </div>
     </div>
 
-    <div id="terms-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-black/95">
+    <div id="terms-modal" class="fixed inset-0 z-[101] hidden flex items-center justify-center p-4 bg-black/95">
         <div class="bg-zinc-900 w-full max-w-2xl max-h-[80vh] rounded-2xl border border-zinc-800 flex flex-col">
             <div class="p-6 border-b border-zinc-800 flex justify-between items-center">
-                <h3 class="text-xl font-black italic uppercase text-white">Terms & Conditions</h3>
-                <button type="button" class="close-modal text-gray-500 text-2xl">&times;</button>
+                <h3 class="text-xl font-black italic uppercase tracking-tight text-white">Terms & Conditions</h3>
+                <button class="close-t text-gray-500 hover:text-white text-2xl">&times;</button>
             </div>
-            <div class="p-6 overflow-y-auto text-sm text-gray-300 space-y-4">
-                <p><strong>Assumption of Risk:</strong> Participation in athletics and strength training involves inherent risks. By using this App, you assume full responsibility for any injuries.</p>
-                </div>
+            <div class="p-6 overflow-y-auto text-sm leading-relaxed text-gray-300 space-y-6">
+                <p class="font-bold text-white">Effective Date: April 9, 2026</p>
+                <p><strong>Assumption of Risk:</strong> Participation in athletics involves inherent risks. By using this App, you assume full responsibility for any injuries that may occur.</p>
+                <p><strong>Acceptable Use:</strong> Users agree not to enter false data or use the App to harass others. Violation may result in account termination.</p>
+            </div>
+            <div class="p-4 border-t border-zinc-800 text-center">
+                <button class="close-t px-8 py-2 bg-white text-black font-black uppercase text-xs rounded-full">Close</button>
+            </div>
         </div>
     </div>
 
