@@ -108,6 +108,9 @@
             const schoolLogo = document.getElementById('school-logo');
             if (schoolLogo && school.logo_url) schoolLogo.src = school.logo_url;
 
+            // Define scoring lifts globally for the function scope
+            const scoringLifts = school.preferences?.scoring_lifts || ["bench", "squat", "clean"];
+
             // 2. Fetch Athletes
             const q = query(collection(db, "recruiting_profiles"), where("school_id", "==", schoolId));
             const pSnap = await getDocs(q);
@@ -133,13 +136,12 @@
                 
                 if(latestMaxSnap.exists()) {
                     const m = latestMaxSnap.data();
-                    const scoringLifts = school.preferences?.scoring_lifts || ["bench", "squat", "clean"];
                     
                     const totalLifts = scoringLifts.reduce((acc, lift) => acc + (Number(m[lift]) || 0), 0);
 
-                    // --- MATH CALCULATION (Strength Surplus) ---
+                    // --- UPDATED BW LOGIC: Uses "weight" as primary ---
                     let displayScore = totalLifts;
-                    const bw = Number(m.bodyWeight) || 0;
+                    const bw = Number(m.weight || m.bodyWeight) || 0; 
                     const bwCap = Math.min(bw, 200); 
                     const bwFactor = bwCap * 4;
 
@@ -149,10 +151,10 @@
 
                     // --- CONSOLE DEBUGGER ---
                     console.log(`--- DEBUG: ${d.data().firstName} ${d.data().lastName} ---`);
-                    console.log(`Lifts used:`, scoringLifts);
+                    console.log(`Bodyweight Key used: ${m.weight ? 'weight' : 'bodyWeight'}`);
+                    console.log(`Bodyweight found: ${bw} lbs`);
                     console.log(`Total Lifted: ${totalLifts} lbs`);
-                    console.log(`Bodyweight: ${bw} lbs (Capped at ${bwCap})`);
-                    console.log(`BW Factor (BW Cap * 4): ${bwFactor}`);
+                    console.log(`BW Factor: ${bwFactor}`);
                     console.log(`Final Board Index: ${displayScore}`);
 
                     scores.push({ 
@@ -183,7 +185,7 @@
                                 <p class="font-black italic text-lg uppercase" style="color: ${school.colors?.primary || '#b91c1c'}">${level} LB CLUB</p>
                                 <div class="text-right">
                                     <p class="text-[7px] text-gray-600 font-bold uppercase tracking-widest">RANKING BASIS:</p>
-                                    <p class="text-[8px] text-white font-black uppercase italic">${scoringLifts.join(' + ')}</p>
+                                    <p class="text-[8px] text-white font-black uppercase italic">${scoringLifts.join(' + ').toUpperCase()}</p>
                                 </div>
                             </div>
                             ${qualifiers.map(q => `
