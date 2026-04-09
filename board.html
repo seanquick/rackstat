@@ -226,8 +226,14 @@
                 cell.addEventListener('blur', async (e) => {
                     const wc = e.target.getAttribute('data-wc');
                     const lift = e.target.getAttribute('data-lift');
-                    const newName = e.target.querySelector('.record-name').innerText;
-                    const newVal = e.target.querySelector('.record-value').innerText.replace('s', '');
+                    
+                    // Look for the spans, but provide a fallback so it doesn't crash
+                    const nameSpan = e.target.querySelector('.record-name');
+                    const valSpan = e.target.querySelector('.record-value');
+                    
+                    const newName = nameSpan ? nameSpan.innerText : "Unknown";
+                    const newVal = valSpan ? valSpan.innerText.replace('s', '').trim() : "0";
+
                     await saveManualRecord(wc, lift, newVal, newName);
                 });
             });
@@ -258,11 +264,24 @@
     };
 
     async function saveManualRecord(wc, lift, val, name) {
-        if (!currentSchoolId) return;
+        if (!currentSchoolId) {
+            console.error("No School ID found. Cannot save.");
+            return;
+        }
+        
         const recordRef = doc(db, "schools", currentSchoolId, "settings", "manual_records");
         try {
-            await setDoc(recordRef, { [wc]: { [lift]: { val: val, name: name } } }, { merge: true });
-        } catch (err) { console.error("Save failed:", err); }
+            await setDoc(recordRef, { 
+                [wc]: { 
+                    [lift]: { val: val, name: name } 
+                } 
+            }, { merge: true });
+            console.log(`Saved ${lift} for ${wc}: ${name} (${val})`);
+        } catch (err) { 
+            // This will catch the "Insufficient Permissions" error specifically
+            console.error("FIREBASE ERROR:", err); 
+            alert("Permission Denied: Your account does not have permission to edit this school's records.");
+        }
     }
 
     // Single Toggle Listener
