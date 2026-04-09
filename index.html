@@ -8,179 +8,108 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --school-primary: #dc2626; } 
-        .btn-primary-dynamic {
-            background-color: var(--school-primary);
-            border-bottom: 4px solid rgba(0,0,0,0.3);
-        }
-        .btn-primary-dynamic:hover { filter: brightness(1.1); }
-        #school-branding { transition: opacity 0.7s ease-in-out; }
+        body { background-color: #000; color: #fff; }
+        .btn-primary-dynamic { background-color: var(--school-primary); border-bottom: 4px solid rgba(0,0,0,0.3); }
+        /* Force display of the auth section initially to prevent black screen */
+        #auth-section { display: block; }
+        #main-menu { display: none; }
     </style>
 </head>
-<body class="bg-black text-white font-sans antialiased">
+<body class="font-sans antialiased">
 
-<header class="brand-header flex flex-col items-center py-10 space-y-6">
-    <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-20 w-auto transition-transform duration-500 hover:scale-105">
-
-    <div id="school-branding" class="flex items-center justify-center gap-6 opacity-0">
-        <img src="" class="school-logo-primary h-14 w-auto object-contain" alt="Team Logo" onerror="this.style.display='none'">
-        <div class="flex items-center">
-            <div class="h-8 w-[2px] bg-[var(--school-primary)]"></div>
-            <h2 id="school-name-display" class="school-name text-2xl font-black italic uppercase tracking-tighter text-white px-5"></h2>
-            <div class="h-8 w-[2px] bg-[var(--school-primary)]"></div>
-        </div>
-        <img src="" class="school-logo-secondary h-14 w-auto object-contain" alt="Alt Logo" onerror="this.style.display='none'">
+<header class="flex flex-col items-center py-10 space-y-6">
+    <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-20 w-auto">
+    <div id="school-branding" class="opacity-0 flex items-center justify-center gap-6">
+        <h2 id="school-name-display" class="text-2xl font-black italic uppercase"></h2>
     </div>
 </header>
 
 <div class="container mx-auto max-w-md px-6 pb-20">
-    <div id="loading-spinner" class="flex justify-center py-10">
-        <div class="animate-spin h-6 w-6 border-2 border-red-600 border-t-transparent rounded-full"></div>
-    </div>
-
-    <div id="auth-section" class="hidden">
+    <div id="auth-section">
         <h2 class="text-center font-black uppercase tracking-widest text-xs mb-8 text-gray-500">Athlete Login</h2>
         <div class="space-y-4">
-            <div class="form-group bg-[#111] p-4 rounded-xl border border-gray-800 transition-all focus-within:border-[var(--school-primary)]">
-                <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Email Address</label>
-                <input type="email" id="email" placeholder="athlete@school.edu" class="w-full bg-transparent text-white outline-none">
-            </div>
-            <div class="form-group bg-[#111] p-4 rounded-xl border border-gray-800 transition-all focus-within:border-[var(--school-primary)]">
-                <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Password</label>
-                <input type="password" id="password" placeholder="••••••••" class="w-full bg-transparent text-white outline-none">
-            </div>
-            <button type="button" id="login-btn" class="w-full bg-[var(--school-primary)] hover:brightness-110 text-white font-black py-4 rounded-xl uppercase tracking-widest transition-all shadow-lg shadow-[var(--school-primary)]/20">
+            <input type="email" id="email" placeholder="Email" class="w-full bg-[#111] border border-gray-800 p-4 rounded-xl outline-none">
+            <input type="password" id="password" placeholder="Password" class="w-full bg-[#111] border border-gray-800 p-4 rounded-xl outline-none">
+            <button type="button" id="login-btn" class="w-full bg-red-600 font-black py-4 rounded-xl uppercase tracking-widest shadow-lg">
                 Login to Rackstat
             </button>
         </div>
-        <div class="mt-10 text-center">
-            <p class="text-gray-600 text-[10px] font-black uppercase tracking-widest">
-                New Athlete? <a href="signup.html" class="text-white hover:underline">Create Account</a>
-            </p>
-        </div>
     </div>
 
-    <div id="main-menu" class="hidden space-y-4">
-        <h2 id="welcome-msg" class="text-2xl font-black italic uppercase text-center mb-8 text-white tracking-tight"></h2>
+    <div id="main-menu">
+        <h2 id="welcome-msg" class="text-2xl font-black italic uppercase text-center mb-8"></h2>
         <div class="grid grid-cols-1 gap-4">
-            <button onclick="location.href='board.html'" class="btn-primary-dynamic py-6 rounded-2xl">
-                <span class="text-2xl font-black italic uppercase">THE BOARD</span>
-            </button>
-            <button onclick="location.href='athlete-workout.html'" class="bg-zinc-800 border-b-4 border-zinc-950 py-6 rounded-2xl">
-                <span class="text-2xl font-black italic uppercase">THE RACK</span>
-            </button>
-            <button id="btn-kitchen" onclick="location.href='kitchen.html'" class="bg-emerald-700 border-b-4 border-emerald-900 py-6 rounded-2xl">
-                <span class="text-2xl font-black italic uppercase">THE KITCHEN</span>
-            </button>
-            <button id="btn-recruiting-card" onclick="location.href='next-level.html'" class="btn-primary-dynamic py-6 rounded-2xl">
-                <span class="text-xl font-black italic uppercase leading-none">Next Level<br><span class="text-[10px] tracking-[0.4em] opacity-80 font-sans font-bold">RECRUITING</span></span>
-            </button>
-            <button onclick="location.href='profile.html'" class="bg-blue-700 border-b-4 border-blue-900 py-6 rounded-2xl">
-                <span class="text-2xl font-black italic text-white uppercase">MY PROFILE</span>
-            </button>
+            <button onclick="location.href='board.html'" class="btn-primary-dynamic py-6 rounded-2xl font-black italic uppercase">THE BOARD</button>
+            <button onclick="location.href='athlete-workout.html'" class="bg-zinc-800 border-b-4 border-zinc-950 py-6 rounded-2xl font-black italic uppercase">THE RACK</button>
         </div>
-        <button id="logout-btn" class="w-full mt-12 text-[10px] font-black uppercase text-gray-600 hover:text-white tracking-[0.3em]">
-            Sign Out / Switch User
-        </button>
+        <button id="logout-btn" class="w-full mt-12 text-[10px] font-black uppercase text-gray-600">Sign Out</button>
     </div>
 </div>
 
 <script type="module">
+    // 1. Log to the screen itself so we can see it on mobile/hosting
+    const debug = (msg) => {
+        console.log(msg);
+        // Optional: Uncomment next line to see debug text on the black screen
+        // document.body.insertAdjacentHTML('beforeend', `<p style="color:green; font-size:10px">${msg}</p>`);
+    };
+
+    debug("Script started...");
+
     import { firebaseConfig } from './firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { applyTheme } from './theme.js';
+    
+    // Attempting theme import
+    let applyTheme;
+    try {
+        const themeModule = await import('./theme.js');
+        applyTheme = themeModule.applyTheme;
+        debug("Theme engine loaded.");
+    } catch(e) {
+        debug("Theme engine failed to load - continuing anyway.");
+    }
 
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
     const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    const loader = document.getElementById('loading-spinner');
-    const authSection = document.getElementById('auth-section');
-    const mainMenu = document.getElementById('main-menu');
-    const branding = document.getElementById('school-branding');
-
-    // UI REVEAL FUNCTIONS
-    const showAuthUI = () => {
-        loader.classList.add('hidden');
-        authSection.classList.remove('hidden');
-        mainMenu.classList.add('hidden');
-    };
-
-    const showMenuUI = (name) => {
-        loader.classList.add('hidden');
-        authSection.classList.add('hidden');
-        mainMenu.classList.remove('hidden');
-        document.getElementById('welcome-msg').innerText = `Welcome, ${name || 'Athlete'}`;
-    };
-
-    // SAFETY TIMEOUT: If nothing happens in 4 seconds, show login
-    const safetyTimer = setTimeout(() => {
-        if (loader.classList.contains('hidden')) return;
-        console.warn("Auth took too long. Forcing Login UI.");
-        showAuthUI();
-    }, 4000);
-
-    // HANDLERS
-    window.handleLogin = async () => {
-        const email = document.getElementById('email').value.trim();
-        const pass = document.getElementById('password').value;
-        try { 
-            await signInWithEmailAndPassword(auth, email, pass);
-        } catch (e) { alert("Login failed: " + e.message); }
-    };
-
-    window.handleLogout = async () => {
-        try { await signOut(auth); window.location.reload(); } 
-        catch (error) { console.error(error); }
-    };
-
-    document.getElementById('login-btn').addEventListener('click', window.handleLogin);
-    document.getElementById('logout-btn').addEventListener('click', window.handleLogout);
-
-    // AUTH OBSERVER
     onAuthStateChanged(auth, async (user) => {
-        clearTimeout(safetyTimer); // Cancel safety timer once Firebase responds
+        const authSection = document.getElementById('auth-section');
+        const mainMenu = document.getElementById('main-menu');
 
-        if (!user) {
-            showAuthUI();
-            return;
-        }
-
-        try {
-            const userSnap = await getDoc(doc(db, "users", user.uid));
-            if (userSnap.exists()) {
-                const userData = userSnap.data();
-
-                if (userData.role === 'coach') {
-                    window.location.href = 'coach-lobby.html';
-                    return;
-                }
-
-                // STEP 1: Show UI immediately
-                showMenuUI(userData.fullName);
-
-                // STEP 2: Load Theme (if it fails, page stays visible)
-                try {
-                    const schoolId = userData.schoolId || userData.school_id;
-                    if (schoolId) {
-                        const schoolData = await applyTheme(db, schoolId);
-                        if (schoolData) {
-                            if (schoolData.hasRecruitingCard === false) {
-                                document.getElementById('btn-recruiting-card')?.classList.add('hidden');
-                            }
-                            branding.classList.remove('opacity-0');
-                        }
+        if (user) {
+            debug("User detected: " + user.uid);
+            try {
+                const userSnap = await getDoc(doc(db, "users", user.uid));
+                if (userSnap.exists()) {
+                    authSection.style.display = 'none';
+                    mainMenu.style.display = 'block';
+                    document.getElementById('welcome-msg').innerText = "Welcome Back";
+                    
+                    // Background Theme Load
+                    if (applyTheme) {
+                        const sId = userSnap.data().schoolId || userSnap.data().school_id;
+                        await applyTheme(db, sId);
                     }
-                } catch (tErr) { console.warn("Theme delay:", tErr); }
-            } else {
-                showAuthUI();
-            }
-        } catch (err) {
-            console.error("Critical Auth Error:", err);
-            showAuthUI();
+                }
+            } catch (e) { debug("Firestore Error: " + e.message); }
+        } else {
+            debug("No user session. Showing login.");
+            authSection.style.display = 'block';
+            mainMenu.style.display = 'none';
         }
     });
+
+    document.getElementById('login-btn').addEventListener('click', async () => {
+        const e = document.getElementById('email').value;
+        const p = document.getElementById('password').value;
+        try { await signInWithEmailAndPassword(auth, e, p); } 
+        catch (err) { alert(err.message); }
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', () => signOut(auth).then(() => location.reload()));
 </script>
 </body>
 </html>
