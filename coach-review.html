@@ -5,18 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RackStat | Session Review</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
     <style>
         body { background-color: #0a0a0b; color: white; }
         .hide-scroll::-webkit-scrollbar { display: none; }
+        
+        /* Dynamic PR Badge Glow */
+        .pr-badge {
+            background-color: var(--school-primary);
+            box-shadow: 0 0 12px var(--school-primary);
+        }
     </style>
 </head>
 <body class="bg-[#0a0a0b] text-white antialiased min-h-screen">
 
     <div class="max-w-5xl mx-auto p-6">
         <div class="flex justify-between items-end border-b border-[#2a2a2c] pb-6 mb-8">
-            <div>
-                <h2 class="text-[10px] font-black text-[#b91c1c] uppercase tracking-[0.2em] mb-1">Intelligence</h2>
-                <h1 class="text-4xl font-black uppercase tracking-tighter italic">Session Review</h1>
+            <div class="flex items-center gap-4">
+                <img src="" class="school-logo-primary h-12 w-auto hidden" alt="Logo" onerror="this.style.display='none'">
+                <div>
+                    <h2 class="text-[10px] font-black text-[var(--school-primary)] uppercase tracking-[0.2em] mb-1">Intelligence</h2>
+                    <h1 class="text-4xl font-black uppercase tracking-tighter italic">Session Review</h1>
+                </div>
             </div>
             <button onclick="location.href='coach-lobby.html'" class="text-xs font-bold text-gray-500 hover:text-white transition-colors uppercase tracking-widest">
                 ← Coach Lobby
@@ -53,6 +63,9 @@
     import { firebaseConfig } from "./firebase-config.js"; 
     import { getFirestore, collection, query, where, orderBy, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    
+    // --- IMPORT CENTRAL THEME ENGINE ---
+    import { applyTheme } from './theme.js';
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
@@ -64,7 +77,13 @@
         if (user) {
             const userSnap = await getDoc(doc(db, "users", user.uid));
             if (userSnap.exists()) {
-                currentSchoolId = userSnap.data().school_id;
+                const userData = userSnap.data();
+                currentSchoolId = userData.school_id;
+
+                // 1. APPLY THEME FIRST
+                await applyTheme(db, currentSchoolId);
+
+                // 2. LOAD DATA
                 loadWorkouts();
             }
         } else {
@@ -81,17 +100,16 @@
         snap.forEach(doc => {
             const data = doc.data();
             const btn = document.createElement('button');
-            btn.className = "w-full text-left p-4 rounded-xl bg-[#1a1a1c] border border-transparent hover:border-[#b91c1c] transition-all group";
+            btn.className = "w-full text-left p-4 rounded-xl bg-[#1a1a1c] border border-transparent transition-all group hover:border-[var(--school-primary)]";
             btn.onclick = () => window.loadPerformance(doc.id, data.name);
             btn.innerHTML = `
-                <p class="text-[10px] text-[#b91c1c] font-black uppercase mb-1">${data.date}</p>
+                <p class="text-[10px] font-black uppercase mb-1" style="color: var(--school-primary)">${data.date}</p>
                 <p class="text-white font-black uppercase text-sm italic group-hover:translate-x-1 transition-transform">${data.name}</p>
             `;
             list.appendChild(btn);
         });
     }
 
-    // --- UPDATED LOAD PERFORMANCE WITH PR LOGIC ---
     window.loadPerformance = async function(workoutId, workoutName) {
         const feed = document.getElementById('performance-feed');
         feed.innerHTML = '<div class="text-center py-10 animate-pulse uppercase text-xs font-black text-gray-500 tracking-widest">Retrieving Athlete Logs...</div>';
@@ -114,7 +132,6 @@
         for (const logDoc of snap.docs) {
             const log = logDoc.data();
             
-            // Get Athlete Name and their current maxes for comparison
             const [athleteSnap, maxSnap] = await Promise.all([
                 getDoc(doc(db, "recruiting_profiles", log.athleteId)),
                 getDoc(doc(db, "recruiting_profiles", log.athleteId, "maxes", "latest"))
@@ -129,27 +146,20 @@
             let exerciseRows = log.performance.map(ex => {
                 const completedSets = ex.sets.filter(s => s.completed).length;
                 const totalSets = ex.sets.length;
-                
-                // Find the heaviest weight they lifted in this session
-                const topWeight = Math.max(...ex.sets.map(s => parseFloat(s.weight) || 0));
+                const weights = ex.sets.map(s => parseFloat(s.weight) || 0);
+                const topWeight = weights.length > 0 ? Math.max(...weights) : 0;
 
-                // PR LOGIC: Match the exercise name to the maxes database
                 const cleanName = ex.name.toLowerCase().trim();
-                const potentialKeys = [
-                    cleanName, 
-                    cleanName.replace(/\s+/g, '_'), 
-                    cleanName.replace(/\s+/g, ''), 
-                    cleanName.split(" ")[0]
-                ];
-
                 let previousMax = 0;
-                let matchedKey = cleanName; // Default to the clean name
+                let matchedKey = cleanName;
 
-                for (let key of potentialKeys) {
-                    if (currentMaxes[key] !== undefined && currentMaxes[key] !== null) {
+                // Flexible Matching for Maxes
+                const searchKeys = [cleanName, cleanName.replace(/\s+/g, '_'), cleanName.split(" ")[0]];
+                for (let key of searchKeys) {
+                    if (currentMaxes[key]) {
                         previousMax = parseFloat(currentMaxes[key]);
-                        matchedKey = key; // Capture the exact spelling the database uses
-                        break; 
+                        matchedKey = key;
+                        break;
                     }
                 }
 
@@ -164,7 +174,7 @@
                             </div>
                             ${isPR ? `
                                 <div class="flex items-center gap-2 ml-2">
-                                    <span class="bg-[#b91c1c] text-white text-[8px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-[0_0_10px_rgba(185,28,28,0.5)]">NEW PR</span>
+                                    <span class="pr-badge text-white text-[8px] font-black px-2 py-0.5 rounded-full animate-pulse uppercase">NEW PR</span>
                                     <button onclick="window.approvePR('${log.athleteId}', '${matchedKey}', ${topWeight}, this)" class="bg-white/10 hover:bg-green-600 border border-white/10 text-[8px] font-black px-2 py-0.5 rounded-md text-white transition-colors uppercase">
                                         Approve
                                     </button>
@@ -199,14 +209,11 @@
     window.approvePR = async (athleteId, exerciseKey, newWeight, btnElement) => {
         try {
             btnElement.innerText = "SAVING...";
-            
             const maxRef = doc(db, "recruiting_profiles", athleteId, "maxes", "latest");
-            
             await updateDoc(maxRef, {
                 [exerciseKey]: newWeight
             });
 
-            // UI Success Feedback
             btnElement.innerText = "APPROVED ✓";
             btnElement.classList.remove('bg-white/10', 'hover:bg-green-600', 'border-white/10');
             btnElement.classList.add('bg-green-600', 'border-green-500');
@@ -214,7 +221,6 @@
 
         } catch (error) {
             console.error("Error approving PR:", error);
-            alert("Failed to update max. Check console.");
             btnElement.innerText = "ERROR";
         }
     };

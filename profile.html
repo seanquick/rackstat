@@ -4,26 +4,78 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MY PROFILE | RACKSTAT</title>
+    
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="theme.js" defer></script>
+
     <style>
-        body { background-color: var(--rackstat-black); color: white; }
-        .profile-card { background: var(--rackstat-gray); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--rackstat-border); }
-        .goal-progress { background: #1a1a1a; border-radius: 10px; height: 12px; width: 100%; overflow: hidden; margin-top: 8px; border: 1px solid #333; }
+        :root {
+            --rackstat-black: #0a0a0a;
+            --rackstat-gray: #111111;
+            --rackstat-border: #262626;
+            --rackstat-red: #b91c1c;
+        }
+
+        body { background-color: var(--rackstat-black); color: white; font-family: sans-serif; }
+        
+        /* Profile Card Styling */
+        .profile-card { 
+            background: var(--rackstat-gray); 
+            border-radius: 12px; 
+            padding: 1.5rem; 
+            border: 1px solid var(--rackstat-border); 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+
+        /* Goal Progress Bar */
+        .goal-progress { background: #000; border-radius: 10px; height: 12px; width: 100%; overflow: hidden; margin-top: 8px; border: 1px solid #333; }
         .progress-fill { 
             background: linear-gradient(90deg, #b91c1c 0%, #ef4444 100%); 
             height: 100%; 
             transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); 
             box-shadow: 0 0 10px rgba(185, 28, 28, 0.4);
         }
-        input, select { 
-            background: #000 !important; border: 1px solid var(--rackstat-border) !important; 
-            color: white !important; padding: 0.6rem !important; border-radius: 4px !important; width: 100%; font-size: 14px;
+
+        /* Input Styling */
+        input, select, textarea { 
+            background: #000 !important; 
+            border: 1px solid var(--rackstat-border) !important; 
+            color: white !important; 
+            padding: 0.6rem !important; 
+            border-radius: 4px !important; 
+            width: 100%; 
+            font-size: 14px;
+            transition: border-color 0.2s;
         }
-        label { font-size: 9px; font-weight: 800; text-transform: uppercase; color: #94a3b8; margin-left: 2px; margin-bottom: 4px; display: block; }
+        input:focus, textarea:focus { border-color: var(--rackstat-red) !important; outline: none; }
+
+        label { 
+            font-size: 9px; 
+            font-weight: 800; 
+            text-transform: uppercase; 
+            color: #94a3b8; 
+            margin-left: 2px; 
+            margin-bottom: 4px; 
+            display: block; 
+            letter-spacing: 0.05em;
+        }
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        
+        .btn-primary {
+            background: var(--rackstat-red);
+            font-weight: 900;
+            font-style: italic;
+            text-transform: uppercase;
+            padding: 1rem;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .btn-primary:hover { background: #dc2626; transform: scale(1.01); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
 </head>
 <body class="pb-24">
@@ -54,8 +106,8 @@
                 <span id="last-updated-date" class="text-[10px] text-gray-400 not-italic uppercase font-bold"></span>
             </h2>
 
-            <div id="goals-container" class="space-y-4">
-                <select id="goal-selector" class="w-full bg-black border border-gray-800 p-3 rounded-lg text-white font-bold text-xs">
+            <div class="space-y-4">
+                <select id="goal-selector">
                     <option value="0">Select Target Weight Club...</option>
                     <option value="100">100 Club</option>
                     <option value="200">200 Club</option>
@@ -65,14 +117,14 @@
                 </select>
 
                 <div class="relative w-full bg-gray-900 h-4 rounded-full overflow-hidden border border-gray-800">
-                    <div id="goal-progress-bar" class="bg-green-600 h-full transition-all duration-1000 shadow-[0_0_10px_rgba(22,163,74,0.5)]" style="width: 0%"></div>
+                    <div id="goal-progress-bar" class="bg-green-600 h-full transition-all duration-1000" style="width: 0%"></div>
                 </div>
 
                 <p id="goal-message" class="text-[9px] text-center text-gray-400 font-bold uppercase italic tracking-wider">
                     Update stats in the RACK to see progress
                 </p>
 
-                <button onclick="saveGoal()" id="save-goal-btn" class="w-full mt-2 bg-gray-800 hover:bg-green-700 text-white text-[9px] font-black p-2 rounded-lg transition-all uppercase italic">
+                <button id="save-goal-btn" class="w-full mt-2 bg-gray-800 hover:bg-green-700 text-white text-[9px] font-black p-2 rounded-lg transition-all uppercase italic">
                     Set Target Club
                 </button>
             </div>
@@ -82,58 +134,58 @@
             <h2 class="text-red-600 font-black uppercase italic mb-6">Recruiting Essentials</h2>
             
             <div class="mb-6">
-                <label class="text-[10px] font-black uppercase tracking-widest text-gray-500">Athlete Full Name</label>
+                <label>Athlete Full Name</label>
                 <input id="full-name" type="text" placeholder="First & Last Name" 
-                       class="w-full bg-transparent border-b-2 border-gray-800 py-2 focus:border-red-600 outline-none font-black uppercase italic text-lg transition-all">
+                       class="!bg-transparent !border-0 !border-b-2 !border-gray-800 !rounded-none !px-0 py-2 focus:!border-red-600 font-black uppercase italic text-lg transition-all">
             </div>
 
             <div class="grid grid-cols-2 gap-6 mb-6">
                 <div>
-                    <label class="text-[10px] font-black uppercase tracking-widest text-gray-500">Height</label>
-                    <input id="height" placeholder="6'2" class="w-full bg-transparent border-b border-gray-800 py-1 focus:border-red-600 outline-none">
+                    <label>Height</label>
+                    <input id="height" placeholder="6'2" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0">
                 </div>
                 <div>
-                    <label class="text-[10px] font-black uppercase tracking-widest text-gray-500">Weight (LBS)</label>
-                    <input id="weight" type="number" placeholder="215" class="w-full bg-transparent border-b border-gray-800 py-1 focus:border-red-600 outline-none">
+                    <label>Weight (LBS)</label>
+                    <input id="weight" type="number" placeholder="215" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0">
                 </div>
             </div>
 
             <div class="grid grid-cols-2 gap-6 mb-6">
                 <div>
-                    <label class="text-[10px] font-black uppercase tracking-widest text-red-900/50">Offense (Prim / Sec)</label>
+                    <label class="!text-red-900/50">Offense (Prim / Sec)</label>
                     <div class="flex gap-2">
-                        <input id="off-primary" placeholder="QB" class="w-1/2 bg-transparent border-b border-gray-800 py-1 focus:border-red-600 outline-none text-sm font-bold uppercase">
-                        <input id="off-secondary" placeholder="WR" class="w-1/2 bg-transparent border-b border-gray-800 py-1 focus:border-red-600 outline-none text-sm font-bold uppercase">
+                        <input id="off-primary" placeholder="QB" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0 text-sm font-bold uppercase">
+                        <input id="off-secondary" placeholder="WR" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0 text-sm font-bold uppercase">
                     </div>
                 </div>
                 <div>
-                    <label class="text-[10px] font-black uppercase tracking-widest text-red-900/50">Defense (Prim / Sec)</label>
+                    <label class="!text-red-900/50">Defense (Prim / Sec)</label>
                     <div class="flex gap-2">
-                        <input id="def-primary" placeholder="LB" class="w-1/2 bg-transparent border-b border-gray-800 py-1 focus:border-red-600 outline-none text-sm font-bold uppercase">
-                        <input id="def-secondary" placeholder="S" class="w-1/2 bg-transparent border-b border-gray-800 py-1 focus:border-red-600 outline-none text-sm font-bold uppercase">
+                        <input id="def-primary" placeholder="LB" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0 text-sm font-bold uppercase">
+                        <input id="def-secondary" placeholder="S" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0 text-sm font-bold uppercase">
                     </div>
                 </div>
             </div>
 
             <div class="grid grid-cols-3 gap-6 mb-6">
                 <div>
-                    <label class="text-[10px] font-black uppercase tracking-widest text-gray-500">GPA</label>
-                    <input id="gpa" type="number" step="0.01" placeholder="4.0" class="w-full bg-transparent border-b border-gray-800 py-1 focus:border-red-600 outline-none">
+                    <label>GPA</label>
+                    <input id="gpa" type="number" step="0.01" placeholder="4.0" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0">
                 </div>
                 <div>
-                    <label class="text-[10px] font-black uppercase tracking-widest text-gray-500">SAT</label>
-                    <input id="sat" type="number" placeholder="Total" class="w-full bg-transparent border-b border-gray-800 py-1 focus:border-red-600 outline-none">
+                    <label>SAT</label>
+                    <input id="sat" type="number" placeholder="Total" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0">
                 </div>
                 <div>
-                    <label class="text-[10px] font-black uppercase tracking-widest text-gray-500">ACT</label>
-                    <input id="act" type="number" placeholder="Comp" class="w-full bg-transparent border-b border-gray-800 py-1 focus:border-red-600 outline-none">
+                    <label>ACT</label>
+                    <input id="act" type="number" placeholder="Comp" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0">
                 </div>
             </div>
 
             <div>
-                <label class="text-[10px] font-black uppercase tracking-widest text-gray-500">Character Statement / Quote</label>
-                <textarea id="character-statement" rows="3" placeholder="I am a leader in the weightroom and a student of the game..." 
-                          class="w-full bg-black/40 border border-gray-800 rounded p-3 mt-2 text-sm italic focus:border-red-600 outline-none text-gray-300"></textarea>
+                <label>Character Statement / Quote</label>
+                <textarea id="character-statement" rows="3" placeholder="I am a leader in the weightroom..." 
+                          class="bg-black/40 border border-gray-800 rounded p-3 mt-2 text-sm italic focus:border-red-600 outline-none text-gray-300"></textarea>
             </div>
         </section>
 
@@ -147,12 +199,14 @@
             </div>
         </section>
 
+        <div id="goals-container" class="space-y-4"></div>
+
         <div class="space-y-3">
-            <button onclick="saveProfile()" id="save-btn" class="w-full py-4 font-black italic uppercase bg-red-700 rounded-lg hover:bg-red-600 transition-all shadow-lg shadow-red-900/20">
+            <button id="save-btn" class="btn-primary w-full shadow-lg shadow-red-900/20">
                 Save Profile
             </button>
 
-            <button id="btn-view-card" onclick="viewCard()" class="w-full py-4 font-black italic uppercase bg-gray-900 border border-gray-700 rounded-lg hover:bg-gray-800 transition-all text-gray-300">
+            <button id="btn-view-card" class="w-full py-4 font-black italic uppercase bg-gray-900 border border-gray-700 rounded-lg hover:bg-gray-800 transition-all text-gray-300">
                 View My Recruiting Card →
             </button>
         </div>
@@ -168,232 +222,172 @@
             <label>Target Weight (LBS)</label>
             <input id="goal-target" type="number" class="mb-6">
             <div class="flex gap-2">
-                <button onclick="closeGoalModal()" class="flex-1 bg-gray-800 py-3 rounded-lg font-bold text-[10px] uppercase">Cancel</button>
-                <button onclick="addGoal()" class="flex-1 bg-red-700 py-3 rounded-lg font-bold text-[10px] uppercase">Set Goal</button>
+                <button id="close-modal-btn" class="flex-1 bg-gray-800 py-3 rounded-lg font-bold text-[10px] uppercase">Cancel</button>
+                <button id="confirm-goal-btn" class="flex-1 bg-red-700 py-3 rounded-lg font-bold text-[10px] uppercase">Set Goal</button>
             </div>
         </div>
     </div>
 
     <script type="module">
-            // 1. Pull the config from your central file
-            import { firebaseConfig } from './firebase-config.js';
+        import { firebaseConfig } from './firebase-config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-            // 2. Pull the tools from Google's servers
-            import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-            import { getFirestore, doc, getDoc, collection, query, where, orderBy, getDocs, limit, updateDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-            import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-            // 3. Initialize using the imported config
-            const app = initializeApp(firebaseConfig);
-            const db = getFirestore(app);
-            const auth = getAuth(app);
-            
-            // ... rest of your code ...
-
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        
         let currentGoals = [];
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // Fetch both the profile and the latest maxes simultaneously
                 const profileRef = doc(db, "recruiting_profiles", user.uid);
                 const maxesRef = doc(db, "recruiting_profiles", user.uid, "maxes", "latest");
                 
-                const [snap, maxSnap] = await Promise.all([
-                    getDoc(profileRef),
-                    getDoc(maxesRef)
-                ]);
+                const [snap, maxSnap] = await Promise.all([getDoc(profileRef), getDoc(maxesRef)]);
 
                 if(snap.exists()) {
                     const data = snap.data();
                     const maxData = maxSnap.exists() ? maxSnap.data() : {};
-                    
-                    // Create a combined object so the UI can find 'weight' or 'body_weight'
                     const combinedData = { ...data, ...maxData };
 
-                    // 1. Identity & Positions
-                    document.getElementById('full-name').value = data.fullName || '';
-                    document.getElementById('off-primary').value = data.offPrimary || '';
-                    document.getElementById('off-secondary').value = data.offSecondary || '';
-                    document.getElementById('def-primary').value = data.defPrimary || '';
-                    document.getElementById('def-secondary').value = data.defSecondary || '';
+                    // Utility to safely set values
+                    const safeSet = (id, val) => { const el = document.getElementById(id); if(el) el.value = val || ""; };
                     
-                    // 2. Physical & Academic Stats
-                    document.getElementById('height').value = data.height || '';
+                    safeSet('full-name', data.fullName);
+                    safeSet('off-primary', data.offPrimary);
+                    safeSet('off-secondary', data.offSecondary);
+                    safeSet('def-primary', data.defPrimary);
+                    safeSet('def-secondary', data.defSecondary);
+                    safeSet('height', data.height);
+                    safeSet('weight', combinedData.body_weight || combinedData.bodyWeight || data.weight || '');
+                    safeSet('gpa', data.gpa);
+                    safeSet('sat', data.sat);
+                    safeSet('act', data.act);
+                    safeSet('character-statement', data.statement);
+                    safeSet('hudl-link', data.hudlLink);
+                    safeSet('twitter-link', data.twitterLink);
+                    safeSet('youtube-link', data.youtubeLink);
+                    safeSet('other-link', data.otherLink);
                     
-                    // Logic: Check maxes sub-collection first, then fall back to profile weight
-                    const displayWeight = combinedData.body_weight || combinedData.bodyWeight || data.weight || '';
-                    document.getElementById('weight').value = displayWeight;
-                    
-                    document.getElementById('gpa').value = data.gpa || '';
-                    document.getElementById('sat').value = data.sat || '';
-                    document.getElementById('act').value = data.act || '';
-                    
-                    // 3. Character Statement
-                    document.getElementById('character-statement').value = data.statement || '';
-                    
-                    // 4. Recruiting Links
-                    document.getElementById('hudl-link').value = data.hudlLink || '';
-                    document.getElementById('twitter-link').value = data.twitterLink || '';
-                    document.getElementById('youtube-link').value = data.youtubeLink || '';
-                    document.getElementById('other-link').value = data.otherLink || '';
-                    
-                    // 5. School Logic (Branding/Lifts/Toggles)
-                    const schoolId = data.schoolId || data.school_id; 
-                    if(schoolId) {
-                        const schoolSnap = await getDoc(doc(db, "schools", schoolId));
+                    // School Branding logic
+                    if(data.schoolId) {
+                        const schoolSnap = await getDoc(doc(db, "schools", data.schoolId));
                         if(schoolSnap.exists()){
                             const sData = schoolSnap.data();
-
                             const viewCardBtn = document.getElementById('btn-view-card');
-                            if (sData.hasRecruitingCard === false) {
-                                if (viewCardBtn) viewCardBtn.classList.add('hidden');
-                            } else {
-                                if (viewCardBtn) viewCardBtn.classList.remove('hidden');
-                            }
+                            if (viewCardBtn && sData.hasRecruitingCard === false) viewCardBtn.classList.add('hidden');
 
                             const select = document.getElementById('goal-category');
                             if(select) {
                                 const lifts = sData.trackedLifts || ['bench', 'squat', 'clean'];
-                                select.innerHTML = lifts.map(l => {
-                                    const display = l.replace('_', ' ').toUpperCase();
-                                    return `<option value="${l}">${display}</option>`;
-                                }).join('');
+                                select.innerHTML = lifts.map(l => `<option value="${l}">${l.replace('_', ' ').toUpperCase()}</option>`).join('');
                             }
                         }
                     }
 
-                    // 6. Render Goals
                     currentGoals = data.goals || [];
-                    if (typeof renderGoals === "function") renderGoals(user.uid, currentGoals);
-
-                    // 7. SYNC THE CLUB GOAL PROGRESS BAR
-                    // We pass combinedData so the boardScore calculation sees the newest maxes
+                    renderGoals(user.uid, currentGoals);
                     syncGoalDisplay(combinedData); 
                 }
             } else { 
-                location.href = 'index.html'; 
+                window.location.href = 'index.html'; 
             }
         });
 
         async function renderGoals(uid, goals) {
             const container = document.getElementById('goals-container');
+            if (!container || !goals) return;
             
-            if (!goals || goals.length === 0) {
-                container.innerHTML = '<p class="text-center text-[10px] text-gray-600 uppercase font-bold py-4 italic">No goals active</p>';
-                return;
-            }
-            
-            container.innerHTML = '';
-            
-            try {
-                // 1. Fetch both the Latest Maxes AND the Profile (for body weight fallback)
-                const latestMaxRef = doc(db, "recruiting_profiles", uid, "maxes", "latest");
-                const profileRef = doc(db, "recruiting_profiles", uid);
-                
-                const [maxSnap, profileSnap] = await Promise.all([
-                    getDoc(latestMaxRef),
-                    getDoc(profileRef)
-                ]);
-                
-                const latestStats = maxSnap.exists() ? maxSnap.data() : {};
-                const profileData = profileSnap.exists() ? profileSnap.data() : {};
+            const latestMaxRef = doc(db, "recruiting_profiles", uid, "maxes", "latest");
+            const maxSnap = await getDoc(latestMaxRef);
+            const stats = maxSnap.exists() ? maxSnap.data() : {};
 
-                goals.forEach((goal, index) => {
-                    // Standardize naming (e.g., "Bench Press" -> "bench_press")
-                    const liftKey = goal.type.toLowerCase().trim().replace(/\s+/g, '_');
-                    
-                    // 2. SMART VALUE LOOKUP
-                    // We check: 
-                    // - The specific key in maxes (bench_press)
-                    // - The raw goal type (Bench Press)
-                    // - Fallbacks for body weight (body_weight, bodyWeight, or just weight)
-                    let currentVal = Number(
-                        latestStats[liftKey] || 
-                        latestStats[goal.type] || 
-                        latestStats['body_weight'] || 
-                        profileData['weight'] || 
-                        profileData['bodyWeight'] || 0
-                    );
-
-                    const targetVal = Number(goal.target) || 0;
-                    const progress = targetVal > 0 ? Math.min((currentVal / targetVal) * 100, 100) : 0;
-                    
-                    // Format "bench_press" to "BENCH PRESS" for display
-                    const displayName = goal.type.replace('_', ' ').replace(/([A-Z])/g, ' $1').trim();
-                    
-                    container.innerHTML += `
-                        <div class="animate-fade-in group mb-6 last:mb-0">
-                            <div class="flex justify-between items-end mb-1">
-                                <div>
-                                    <div class="flex items-center gap-2">
-                                        <p class="text-[10px] font-black text-gray-500 uppercase tracking-wider">${displayName}</p>
-                                        <button onclick="removeGoal(${index})" class="text-[9px] text-red-900 opacity-0 group-hover:opacity-100 transition-opacity font-bold uppercase">[Remove]</button>
-                                    </div>
-                                    <p class="text-lg font-black italic uppercase leading-none">${targetVal} LBS</p>
-                                </div>
-                                <div class="text-right">
-                                    <p class="text-[9px] font-bold text-gray-400 uppercase">Current: ${currentVal}</p>
-                                    <p class="text-xs font-black ${progress >= 100 ? 'text-green-500' : 'text-red-600'}">${Math.round(progress)}%</p>
-                                </div>
+            container.innerHTML = goals.map((goal, index) => {
+                const currentVal = Number(stats[goal.type.toLowerCase().trim().replace(/\s+/g, '_')] || 0);
+                const progress = goal.target > 0 ? Math.min((currentVal / goal.target) * 100, 100) : 0;
+                
+                return `
+                    <div class="animate-fade-in profile-card mb-4 relative group">
+                        <button onclick="window.removeGoal(${index})" class="absolute top-4 right-4 text-[9px] text-red-900 opacity-0 group-hover:opacity-100 transition-opacity font-bold uppercase">Remove</button>
+                        <div class="flex justify-between items-end mb-1">
+                            <div>
+                                <p class="text-[10px] font-black text-gray-500 uppercase">${goal.type}</p>
+                                <p class="text-lg font-black italic uppercase">${goal.target} LBS</p>
                             </div>
-                            <div class="goal-progress">
-                                <div class="progress-fill" style="width: ${progress}%"></div>
+                            <div class="text-right">
+                                <p class="text-[9px] font-bold text-gray-400">Current: ${currentVal}</p>
+                                <p class="text-xs font-black ${progress >= 100 ? 'text-green-500' : 'text-red-600'}">${Math.round(progress)}%</p>
                             </div>
                         </div>
-                    `;
-                });
-            } catch (error) {
-                console.error("Error rendering goals:", error);
-                renderFallbackGoals(container, goals);
-            }
-        }
-
-    // Helper function to show goals at 0% if the Maxes query fails or is blocked
-    function renderFallbackGoals(container, goals) {
-        container.innerHTML = '';
-        goals.forEach((goal, index) => {
-            const displayName = goal.type.replace('_', ' ').replace(/([A-Z])/g, ' $1').trim();
-            container.innerHTML += `
-                <div class="animate-fade-in group mb-6">
-                    <div class="flex justify-between items-end mb-1">
-                        <div>
-                            <p class="text-[10px] font-black text-gray-500 uppercase tracking-wider">${displayName}</p>
-                            <p class="text-lg font-black italic uppercase leading-none">${goal.target} LBS</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-[9px] font-bold text-gray-400 uppercase">Current: 0</p>
-                            <p class="text-xs font-black text-red-600">0%</p>
-                        </div>
-                    </div>
-                    <div class="goal-progress"><div class="progress-fill" style="width: 0%"></div></div>
-                </div>
-            `;
-        });
-    }
-
-    async function loadSchoolLifts(schoolId) {
-        const schoolRef = doc(db, "schools", schoolId);
-        const schoolSnap = await getDoc(schoolRef);
-
-        if (schoolSnap.exists()) {
-            const data = schoolSnap.data();
-            const lifts = data.trackedLifts || [];
-            const select = document.getElementById('goal-category');
-            
-            // Clear the existing dropdown and map the new lifts
-            select.innerHTML = lifts.map(lift => {
-                // Pretty format: "push_press" -> "PUSH PRESS"
-                const display = lift.replace('_', ' ').toUpperCase();
-                return `<option value="${lift}">${display}</option>`;
+                        <div class="goal-progress"><div class="progress-fill" style="width: ${progress}%"></div></div>
+                    </div>`;
             }).join('');
         }
-    }
-        window.viewCard = () => {
+
+        // --- Event Listeners and Global Window Assignments ---
+        
+        window.saveProfile = async () => {
             const user = auth.currentUser;
-            if(user) {
-                window.location.href = `recruiting-card.html?uid=${user.uid}`;
-            }
+            const btn = document.getElementById('save-btn');
+            if (!user) return;
+
+            btn.disabled = true;
+            btn.innerText = "UPDATING...";
+            
+            try {
+                await updateDoc(doc(db, "recruiting_profiles", user.uid), {
+                    fullName: document.getElementById('full-name').value,
+                    offPrimary: document.getElementById('off-primary').value,
+                    offSecondary: document.getElementById('off-secondary').value,
+                    defPrimary: document.getElementById('def-primary').value,
+                    defSecondary: document.getElementById('def-secondary').value,
+                    height: document.getElementById('height').value,
+                    weight: Number(document.getElementById('weight').value),
+                    gpa: Number(document.getElementById('gpa').value),
+                    sat: document.getElementById('sat').value,
+                    act: document.getElementById('act').value,
+                    statement: document.getElementById('character-statement').value,
+                    hudlLink: document.getElementById('hudl-link').value,
+                    twitterLink: document.getElementById('twitter-link').value,
+                    youtubeLink: document.getElementById('youtube-link').value,
+                    otherLink: document.getElementById('other-link').value,
+                    lastUpdated: new Date().toISOString()
+                });
+                btn.innerText = "PROFILE SAVED!";
+            } catch (e) { btn.innerText = "ERROR SAVING"; }
+            setTimeout(() => { btn.disabled = false; btn.innerText = "SAVE PROFILE"; }, 2000);
         };
+
+        window.saveGoal = async () => {
+            const user = auth.currentUser;
+            const targetClub = Number(document.getElementById('goal-selector').value);
+            const btn = document.getElementById('save-goal-btn');
+            if (!user || targetClub === 0) return;
+
+            btn.innerText = "SAVING...";
+            try {
+                const profileRef = doc(db, "recruiting_profiles", user.uid);
+                await updateDoc(profileRef, { clubGoal: targetClub });
+                const snap = await getDoc(profileRef);
+                syncGoalDisplay(snap.data());
+                btn.innerText = "TARGET UPDATED!";
+            } catch (e) { btn.innerText = "ERROR"; }
+            setTimeout(() => { btn.innerText = "SET TARGET CLUB"; }, 2000);
+        };
+
+        function syncGoalDisplay(pData) {
+            const currentScore = pData.boardScore || 0; 
+            const targetGoal = pData.clubGoal || 0;
+            const progressBar = document.getElementById('goal-progress-bar');
+            const goalMsg = document.getElementById('goal-message');
+            if (targetGoal > 0 && progressBar) {
+                const percent = Math.min((currentScore / targetGoal) * 100, 100);
+                progressBar.style.width = `${percent}%`;
+                goalMsg.innerText = percent >= 100 ? `🔥 ${targetGoal} CLUB ACHIEVED` : `${Math.round(targetGoal - currentScore)} POINTS TO ${targetGoal} CLUB`;
+            }
+        }
 
         window.removeGoal = async (index) => {
             if(!confirm("Remove this goal?")) return;
@@ -401,165 +395,11 @@
             await updateDoc(doc(db, "recruiting_profiles", auth.currentUser.uid), { goals: currentGoals });
             renderGoals(auth.currentUser.uid, currentGoals);
         };
-       
-        // --- NEW: CLUB GOAL LOGIC ---
-            function syncGoalDisplay(pData) {
-                const currentScore = pData.boardScore || 0; 
-                const targetGoal = pData.clubGoal || 0;
-                const lastUpdated = pData.lastUpdated;
-                
-                const progressBar = document.getElementById('goal-progress-bar');
-                const goalMsg = document.getElementById('goal-message');
-                const selector = document.getElementById('goal-selector');
-                const dateLabel = document.getElementById('last-updated-date');
-                
-                if (lastUpdated && dateLabel) {
-                    const dateObj = new Date(lastUpdated);
-                    dateLabel.innerText = `UPDATED: ${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
-                }
 
-                if (targetGoal > 0 && progressBar) {
-                    selector.value = targetGoal;
-                    const percent = Math.min((currentScore / targetGoal) * 100, 100);
-                    progressBar.style.width = `${percent}%`;
-                    
-                    const remaining = targetGoal - currentScore;
-                    if (remaining <= 0) {
-                        goalMsg.innerText = `🔥 GOAL ACHIEVED: ${targetGoal} CLUB MEMBER`;
-                        progressBar.classList.add('bg-green-500');
-                    } else {
-                        goalMsg.innerText = `${Math.round(remaining)} POINTS UNTIL ${targetGoal} CLUB`;
-                    }
-                }
-            }
-        
-        window.saveGoal = async () => {
-            const user = auth.currentUser;
-            const selector = document.getElementById('goal-selector');
-            const newGoal = Number(selector.value);
-            const btn = document.getElementById('save-goal-btn');
-            
-            if (!user) return;
-            
-            // Validation: Don't save if they haven't picked a club
-            if (newGoal === 0) {
-                alert("Please select a Target Weight Club first.");
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerText = "SAVING...";
-            
-            try {
-                const profileRef = doc(db, "recruiting_profiles", user.uid);
-                
-                // 1. Update the clubGoal field in Firestore
-                await updateDoc(profileRef, {
-                    clubGoal: newGoal
-                });
-
-                // 2. Pull the latest data to refresh the UI immediately
-                const snap = await getDoc(profileRef);
-                if (snap.exists()) {
-                    // This forces the progress bar and message to update instantly
-                    syncGoalDisplay(snap.data());
-                }
-
-                btn.innerText = "TARGET UPDATED!";
-                
-                // Reset button appearance after 2 seconds
-                setTimeout(() => { 
-                    btn.disabled = false;
-                    btn.innerText = "SET TARGET CLUB"; 
-                }, 2000);
-
-            } catch (e) {
-                console.error("Error saving goal:", e);
-                alert("Failed to save goal. Check your connection.");
-                btn.disabled = false;
-                btn.innerText = "SET TARGET CLUB";
-            }
-        };
-
-         window.saveProfile = async () => {
-            const user = auth.currentUser;
-            const btn = document.getElementById('save-btn');
-            const originalText = btn.innerText;
-            btn.innerText = "UPDATING...";
-            
-            try {
-                await updateDoc(doc(db, "recruiting_profiles", user.uid), {
-                    // New Identity and Position Fields
-                    fullName: document.getElementById('full-name').value,
-                    offPrimary: document.getElementById('off-primary').value,
-                    offSecondary: document.getElementById('off-secondary').value,
-                    defPrimary: document.getElementById('def-primary').value,
-                    defSecondary: document.getElementById('def-secondary').value,
-                    
-                    // Stats and Academics
-                    height: document.getElementById('height').value,
-                    weight: Number(document.getElementById('weight').value),
-                    gpa: Number(document.getElementById('gpa').value),
-                    sat: document.getElementById('sat').value,
-                    act: document.getElementById('act').value,
-                    
-                    // Character Statement
-                    statement: document.getElementById('character-statement').value,
-                    
-                    // Social Media Links
-                    hudlLink: document.getElementById('hudl-link').value,
-                    twitterLink: document.getElementById('twitter-link').value,
-                    youtubeLink: document.getElementById('youtube-link').value,
-                    otherLink: document.getElementById('other-link').value
-                });
-                
-                btn.innerText = "PROFILE SAVED!";
-            } catch (e) {
-                console.error("Save Error:", e);
-                btn.innerText = "ERROR SAVING";
-            }
-            
-            setTimeout(() => { btn.innerText = originalText; }, 2000);
-        };
-
-        window.openGoalModal = () => document.getElementById('goal-modal').classList.remove('hidden');
-        window.closeGoalModal = () => document.getElementById('goal-modal').classList.add('hidden');
-
-        window.addGoal = async () => {
-            const categorySelect = document.getElementById('goal-category');
-            const targetInput = document.getElementById('goal-target');
-            
-            const type = categorySelect.value;
-            const target = Number(targetInput.value);
-            
-            if(!target || target <= 0) {
-                alert("Please enter a valid target weight.");
-                return;
-            }
-
-            // 1. Update local state: remove existing goal of same type, add new one
-            const updatedGoals = currentGoals.filter(g => g.type !== type);
-            updatedGoals.push({ type, target });
-
-            try {
-                // 2. Sync with Firebase
-                await updateDoc(doc(db, "recruiting_profiles", auth.currentUser.uid), { 
-                    goals: updatedGoals 
-                });
-
-                // 3. Update local reference and UI
-                currentGoals = updatedGoals;
-                renderGoals(auth.currentUser.uid, currentGoals);
-                
-                // 4. Cleanup UI
-                targetInput.value = ''; // Clear input for next time
-                closeGoalModal();
-                
-            } catch (error) {
-                console.error("Error saving goal:", error);
-                alert("Failed to save goal. Please check your connection.");
-            }
-        };
+        // Attach listeners to DOM
+        document.getElementById('save-btn').onclick = window.saveProfile;
+        document.getElementById('save-goal-btn').onclick = window.saveGoal;
+        document.getElementById('btn-view-card').onclick = () => { if(auth.currentUser) window.location.href = `recruiting-card.html?uid=${auth.currentUser.uid}`; };
     </script>
 </body>
 </html>

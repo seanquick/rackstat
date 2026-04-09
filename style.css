@@ -1,5 +1,10 @@
 :root {
-    --rackstat-red: #b91c1c;
+    /* DEFAULT THEME (Fairbanks Red) */
+    /* These will be overwritten dynamically by theme.js */
+    --school-primary: #b91c1c;
+    --school-secondary: #0a0a0b;
+    
+    /* SYSTEM COLORS */
     --rackstat-black: #0a0a0b;
     --rackstat-gray: #1a1a1c;
     --rackstat-border: #2a2a2c;
@@ -12,15 +17,24 @@
     font-family: 'Inter', sans-serif;
 }
 
+/* --- THEME LOAD LOGIC --- */
 body {
     background-color: var(--rackstat-black);
     color: white;
     min-height: 100vh;
+    /* Starts hidden to prevent "Red Flash" */
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+/* theme.js will add this class once colors are fetched */
+body.theme-loaded {
+    opacity: 1;
 }
 
 /* --- BRANDING HEADER --- */
 .brand-header {
-    background: linear-gradient(to bottom, #000, var(--rackstat-black));
+    background: linear-gradient(to bottom, var(--school-secondary), var(--rackstat-black));
     padding: 40px 20px;
     border-bottom: 2px solid var(--rackstat-border);
     display: flex;
@@ -51,7 +65,8 @@ body {
     height: 140px;
     width: auto;
     object-fit: contain;
-    filter: drop-shadow(0 0 15px rgba(185, 28, 28, 0.4));
+    filter: drop-shadow(0 0 15px var(--school-primary));
+    opacity: 1; /* Increased opacity for branded look */
 }
 
 .school-name {
@@ -62,8 +77,8 @@ body {
     letter-spacing: 3px;
     color: #ffffff;
     text-align: center;
-    border-left: 4px solid var(--rackstat-red);
-    border-right: 4px solid var(--rackstat-red);
+    border-left: 4px solid var(--school-primary);
+    border-right: 4px solid var(--school-primary);
     padding: 0 25px;
     line-height: 1;
 }
@@ -79,40 +94,15 @@ body {
     box-shadow: 0 20px 40px rgba(0,0,0,0.5);
 }
 
-.form-group {
-    margin-bottom: 20px;
-}
-
-.form-group label, .sub-label {
-    display: block;
-    font-size: 10px;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    color: #666;
-    margin-bottom: 8px;
-}
-
-.form-group input, select {
-    width: 100%;
-    background: #000;
-    border: 1px solid var(--rackstat-border);
-    padding: 14px;
-    color: white;
-    font-size: 14px;
-    border-radius: 4px;
-    transition: border 0.3s ease;
-}
-
 .form-group input:focus, select:focus {
     outline: none;
-    border-color: var(--rackstat-red);
+    border-color: var(--school-primary);
 }
 
 /* --- BUTTONS --- */
 .btn-primary {
     width: 100%;
-    background-color: var(--rackstat-red);
+    background-color: var(--school-primary);
     color: white;
     padding: 16px;
     border: none;
@@ -126,106 +116,22 @@ body {
 }
 
 .btn-primary:hover {
-    background-color: #991b1b;
+    filter: brightness(1.2);
     transform: translateY(-2px);
 }
 
-.btn-primary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* --- TRAINING & COMMITMENT (SECTION 07) --- */
-
-#commitmentChecks {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
-    background: rgba(0, 0, 0, 0.3);
-    padding: 15px;
-    border-radius: 4px;
-    border: 1px solid var(--rackstat-border);
-    margin-top: 10px;
-}
-
-.check-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 10px;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    cursor: pointer;
-    color: #aaa;
-    transition: color 0.2s ease;
-}
-
+/* --- CHECKBOXES & BADGES --- */
 .check-item:hover {
-    color: var(--rackstat-red);
-}
-
-.check-item input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    appearance: none;
-    background: #000;
-    border: 1px solid var(--rackstat-border);
-    border-radius: 2px;
-    position: relative;
-    cursor: pointer;
-    flex-shrink: 0;
+    color: var(--school-primary);
 }
 
 .check-item input[type="checkbox"]:checked {
-    background: var(--rackstat-red);
-    border-color: var(--rackstat-red);
-}
-
-.check-item input[type="checkbox"]:checked::after {
-    content: '✓';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: white;
-    font-size: 10px;
-}
-
-/* --- WORKOUT BUILDER DROPDOWN FIXES --- */
-
-.exercise-row {
-    position: relative;
-    overflow: visible !important;
-    z-index: 10;
-    margin-bottom: 20px;
-}
-
-[id^="name-container-"] {
-    position: relative;
-    z-index: 100 !important;
-}
-
-select {
-    position: relative;
-    z-index: 100;
-    cursor: pointer;
-    color-scheme: dark;
-}
-
-select option {
-    background-color: var(--rackstat-gray) !important;
-    color: white !important;
-    padding: 12px;
-}
-
-[id^="sets-container-"] {
-    position: relative;
-    z-index: 1;
+    background: var(--school-primary);
+    border-color: var(--school-primary);
 }
 
 .badge-red {
-    background-color: var(--rackstat-red);
+    background-color: var(--school-primary);
     color: white;
     padding: 2px 8px;
     border-radius: 4px;
@@ -236,37 +142,27 @@ select option {
     margin-right: 4px;
 }
 
-/* Special Style for Social Media Export */
-body.social-export {
-    background: #0a0a0a !important; /* Deep Black */
-}
-
-body.social-export #capture-area {
-    background: #111 !important; /* Slightly lighter card */
-    border: 1px solid #333 !important;
-    color: white !important;
-}
-
-body.social-export .stat-box {
-    background: rgba(255,255,255,0.05) !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
-}
-
-body.social-export span, 
-body.social-export p, 
-body.social-export h1 {
-    color: white !important;
-}
-
-/* Coach Office Component Styles */
-.office-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    transition: all 0.3s ease;
-}
-
+/* --- OFFICE CARDS --- */
 .office-card:hover {
-    border-color: #ef4444; 
+    border-color: var(--school-primary); 
     background: rgba(255, 255, 255, 0.05);
     transform: translateY(-4px);
+}
+
+/* --- DYNAMIC UTILITIES --- */
+/* Use these for inline text or backgrounds in your HTML */
+.dynamic-text { color: var(--school-primary) !important; }
+.dynamic-bg { background-color: var(--school-primary) !important; }
+.dynamic-border { border-color: var(--school-primary) !important; }
+
+/* Scrollbar styling to match the theme */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: var(--rackstat-black);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--school-primary);
+    border-radius: 4px;
 }

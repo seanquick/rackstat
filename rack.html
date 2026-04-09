@@ -4,29 +4,53 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>THE RACK | RACKSTAT</title>
+    
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="theme.js" defer></script>
+
     <style>
-        body { background-color: #020617; color: white; }
+        :root {
+            --rackstat-black: #020617;
+            --rackstat-card: #1e293b;
+            --rackstat-red: #b91c1c;
+            --rackstat-blue: #3b82f6;
+            --rackstat-border: #334155;
+        }
+
+        body { background-color: var(--rackstat-black); color: white; }
+        
         .max-card { 
-            background: #1e293b; 
+            background: var(--rackstat-card); 
             border-radius: 1rem; 
             padding: 1rem; 
             text-align: center; 
-            border-bottom: 4px solid #b91c1c; 
+            border: 1px solid var(--rackstat-border);
+            border-bottom: 4px solid var(--rackstat-red); 
+            transition: transform 0.2s;
         }
+
+        .board-score-card {
+            border-bottom-color: var(--rackstat-blue);
+            background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+        }
+
         input { 
             background-color: #000 !important; 
             color: white !important; 
-            border: 1px solid #334155 !important; 
+            border: 1px solid var(--rackstat-border) !important; 
             padding: 0.75rem !important; 
             border-radius: 8px !important; 
             width: 100%; 
-            margin-bottom: 0.75rem; 
+            margin-bottom: 0.75rem;
+            transition: border-color 0.2s;
         }
+        input:focus { border-color: var(--rackstat-red) !important; outline: none; }
+
         .btn-primary {
             width: 100%;
-            background-color: #b91c1c;
+            background-color: var(--rackstat-red);
             color: white;
             font-weight: 900;
             text-transform: uppercase;
@@ -34,11 +58,18 @@
             padding: 1rem;
             border-radius: 0.75rem;
             transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(185, 28, 28, 0.3);
         }
+        .btn-primary:hover { background-color: #dc2626; transform: translateY(-1px); }
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        label { font-size: 9px; font-weight: 800; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.05em; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
     </style>
 </head>
-<body class="font-sans pb-20">
+<body class="font-sans pb-24">
 
     <header class="bg-black border-b-2 border-red-700 p-4 sticky top-0 z-50">
         <div class="flex justify-between items-center max-w-5xl mx-auto">
@@ -49,13 +80,10 @@
             <div class="flex items-center gap-5">
                 <img id="school-logo" src="images/rackstat-logo-placeholder.png" alt="School" class="h-10 w-auto object-contain">
                 <div class="h-6 w-[1px] bg-gray-800"></div>
-                <span id="school-tag" class="text-sm font-black italic uppercase tracking-[0.15em] text-white">
-                    RACKSTAT
-                </span>
+                <span id="school-tag" class="text-sm font-black italic uppercase tracking-[0.15em] text-white">RACKSTAT</span>
                 <div class="h-6 w-[1px] bg-gray-800"></div>
                 <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-10 w-auto object-contain">
             </div>
-
             <div class="w-[65px]"></div>
         </div>
     </header>
@@ -64,12 +92,13 @@
         
         <section>
             <p class="text-[10px] font-black uppercase text-gray-500 mb-3 italic tracking-widest text-center">Your Personal Records</p>
+            
             <div class="grid grid-cols-3 gap-2 mb-2" id="maxes-display">
                 </div>
             
-            <div class="max-card border-blue-600 w-full flex flex-col justify-center items-center py-4 px-6 relative overflow-hidden group">
+            <div class="max-card board-score-card w-full flex flex-col justify-center items-center py-4 px-6">
                 <div class="flex justify-between items-center w-full">
-                    <p class="text-[10px] font-black uppercase text-blue-400 tracking-tighter">Board Score</p>
+                    <p class="text-[10px] font-black uppercase text-blue-400 tracking-tighter">Board Score (Power Index)</p>
                     <p id="view-total" class="text-3xl font-black text-blue-400">0</p>
                 </div>
                 
@@ -84,75 +113,58 @@
         </section>
 
         <section class="bg-[#111827] p-6 rounded-2xl border border-[#1f2937] shadow-2xl">
-            <h2 class="text-center font-black uppercase italic text-red-600 mb-6 tracking-tight tracking-widest">Update Performance</h2>
+            <h2 class="text-center font-black uppercase italic text-red-600 mb-6 tracking-widest">Update Performance</h2>
             
-            <div class="form-group">
-                <label class="text-[9px] uppercase font-bold text-gray-400 ml-1">Current Bodyweight</label>
+            <div class="mb-4">
+                <label>Current Bodyweight (LBS)</label>
                 <input id="bodyWeight" type="number" placeholder="Enter Weight">
+                <p id="rack-body-weight-display" class="text-[8px] text-gray-600 uppercase font-bold mt-[-8px] ml-1">Currently: -- lbs</p>
             </div>
 
-            <div id="dynamic-inputs" class="grid grid-cols-2 gap-2">
+            <div id="dynamic-inputs" class="grid grid-cols-2 gap-3">
                 </div>
 
-            <button id="save-btn" onclick="saveMaxes()" class="btn-primary mt-4">
+            <button id="save-btn" class="btn-primary mt-6">
                 Sync Stats to Profile
             </button>
         </section>
     </div>
 
     <script type="module">
-            // 1. Pull the config from your central file
-            import { firebaseConfig } from './firebase-config.js';
+        import { firebaseConfig } from './firebase-config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, addDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-            // 2. Pull the tools from Google's servers
-            import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-            import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, orderBy, limit, getDocs, onSnapshot, updateDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-            import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-            // 3. Initialize using the imported config
-            const app = initializeApp(firebaseConfig);
-            const db = getFirestore(app);
-            const auth = getAuth(app);
-            
-            // ... rest of your code ...
-
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        
         let schoolPrefs = null;
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // --- 1. REAL-TIME WEIGHT SYNC ---
-                // Listens to the master 'users' doc so weight stays synced across all pages
+                // Real-time bodyweight sync across master record
                 onSnapshot(doc(db, "users", user.uid), (userDoc) => {
                     if (userDoc.exists() && userDoc.data().weight) {
                         const weight = userDoc.data().weight;
-                        
-                        // Update the weight display in the RACK (ensure this ID exists in your HTML)
-                        const rackWeightDisplay = document.getElementById('rack-body-weight');
-                        if (rackWeightDisplay) rackWeightDisplay.innerText = weight + " lbs";
-                        
-                        // If you have an input field for body weight, update it too
-                        const rackWeightInput = document.getElementById('bodyWeight');
-                        if (rackWeightInput) rackWeightInput.value = weight;
+                        if (document.getElementById('bodyWeight')) document.getElementById('bodyWeight').value = weight;
+                        if (document.getElementById('rack-body-weight-display')) {
+                            document.getElementById('rack-body-weight-display').innerText = `Currently: ${weight} lbs`;
+                        }
                     }
                 });
 
-                // --- 2. EXISTING PROFILE & SCHOOL LOGIC ---
                 const profileSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
                 if (profileSnap.exists()) {
-                    const pData = profileSnap.data();
-                    // SCALABLE: Pull the specific school assigned to the user
-                    const schoolId = pData.schoolId || pData.school_id;
-                    
+                    const schoolId = profileSnap.data().schoolId || profileSnap.data().school_id;
                     if (schoolId) {
                         await fetchSchoolData(schoolId);
                         loadCurrentMaxes(user.uid);
-                    } else {
-                        const schoolTag = document.getElementById('school-tag');
-                        if (schoolTag) schoolTag.innerText = "Assign School";
                     }
                 }
             } else { 
-                location.href = 'index.html'; 
+                window.location.href = 'index.html'; 
             }
         });
 
@@ -160,99 +172,58 @@
             const schoolSnap = await getDoc(doc(db, "schools", schoolId));
             if (schoolSnap.exists()) {
                 const data = schoolSnap.data();
-                schoolPrefs = data.preferences || {};
-                
-                // Tracked lifts are now specific to the school's configuration
-                const lifts = data.trackedLifts || schoolPrefs.tracked_lifts || ['bench', 'squat', 'clean'];
-                schoolPrefs.tracked_lifts = lifts;
-                schoolPrefs.formula_type = data.formula_type || schoolPrefs.formula_type || "standard";
+                schoolPrefs = {
+                    tracked_lifts: data.trackedLifts || ['bench', 'squat', 'clean'],
+                    formula_type: data.formula_type || "standard",
+                    scoring_lifts: data.scoring_lifts || (data.trackedLifts || ['bench', 'squat', 'clean'])
+                };
                 
                 document.getElementById('school-tag').innerText = data.name.toUpperCase();
                 if(data.logo_primary) document.getElementById('school-logo').src = data.logo_primary;
 
                 const container = document.getElementById('dynamic-inputs');
-                container.innerHTML = ""; 
-                lifts.forEach(lift => {
-                    const display = lift.replace('_', ' ').toUpperCase();
-                    container.innerHTML += `
-                        <div>
-                            <label class="text-[9px] uppercase font-bold text-gray-400 ml-1">${display}</label>
-                            <input id="input-${lift}" type="number" placeholder="Lbs" class="lift-entry">
-                        </div>`;
-                });
+                container.innerHTML = schoolPrefs.tracked_lifts.map(lift => `
+                    <div class="animate-fade-in">
+                        <label>${lift.replace('_', ' ')}</label>
+                        <input id="input-${lift}" type="number" placeholder="Lbs">
+                    </div>`).join('');
             }
         }
 
         async function loadCurrentMaxes(uid) {
-            // 1. Point to the 'latest' document (The one the Coach Approves)
             const latestDocRef = doc(db, "recruiting_profiles", uid, "maxes", "latest");
             const snap = await getDoc(latestDocRef);
-            
-            const display = document.getElementById('maxes-display');
-            const formulaDisplay = document.getElementById('formula-detail');
-            display.innerHTML = '';
-
-            if(snap.exists()) {
+            if(snap.exists() && schoolPrefs) {
                 const data = snap.data();
+                const display = document.getElementById('maxes-display');
                 let scoringSum = 0;
 
-                const scoringList = schoolPrefs.scoring_lifts || schoolPrefs.tracked_lifts || [];
-
-                schoolPrefs.tracked_lifts.forEach(lift => {
+                display.innerHTML = schoolPrefs.tracked_lifts.map(lift => {
                     const val = data[lift] || 0;
-                    const displayLabel = lift.replace('_', ' ').toUpperCase();
-                    
-                    if (scoringList.includes(lift)) {
-                        scoringSum += val;
-                    }
-
-                    display.innerHTML += `
+                    if (schoolPrefs.scoring_lifts.includes(lift)) scoringSum += val;
+                    return `
                         <div class="max-card">
-                            <p class="text-[8px] uppercase text-gray-400">${displayLabel}</p>
-                            <p class="text-xl font-black italic text-white">${val}</p>
+                            <p class="text-[8px] uppercase text-gray-500 font-bold">${lift.replace('_', ' ')}</p>
+                            <p class="text-xl font-black italic">${val}</p>
                         </div>`;
-                });
+                }).join('');
 
-                let finalScore = scoringSum; 
-                let formulaText = "";
-
+                // Power Index Formula: Sum - (BW capped at 200 * 4)
+                let finalScore = scoringSum;
                 if (schoolPrefs.formula_type === "power_index") {
                     const bw = data.bodyWeight || 0;
-                    const bwCap = Math.min(bw, 200);
-                    const deduction = bwCap * 4;
-                    finalScore = scoringSum - deduction;
-                    formulaText = `Lifts: ${scoringSum} — (BW: ${bwCap} × 4) = ${Math.round(finalScore)}`;
-                } else {
-                    formulaText = `Total of scoring lifts: ${scoringSum}`;
+                    finalScore = scoringSum - (Math.min(bw, 200) * 4);
                 }
 
                 document.getElementById('view-total').innerText = Math.round(finalScore);
-                if (formulaDisplay) formulaDisplay.innerText = formulaText;
+                document.getElementById('formula-detail').innerText = schoolPrefs.formula_type === "power_index" 
+                    ? `Lifts: ${scoringSum} — (BW Cap Deduction) = ${Math.round(finalScore)}`
+                    : `Total Score: ${scoringSum}`;
                 
-                // Populate inputs with current data so they aren't blank
-                document.getElementById('bodyWeight').value = data.bodyWeight || '';
-            } else {
-                if (formulaDisplay) formulaDisplay.innerText = "No approved data yet";
-            }
-        }
-
-        async function checkGoalAchievement(newStats) {
-            const user = auth.currentUser;
-            const profileSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
-            if (!profileSnap.exists()) return;
-
-            const goals = profileSnap.data().goals || [];
-            let achieved = [];
-
-            goals.forEach(goal => {
-                const currentVal = newStats[goal.type];
-                if (currentVal && currentVal >= goal.target) {
-                    achieved.push(goal.type.replace('_', ' ').toUpperCase());
+                if (data.timestamp) {
+                    const d = new Date(data.timestamp);
+                    document.getElementById('sync-timestamp').innerText = `Last Sync: ${d.toLocaleString()}`;
                 }
-            });
-
-            if (achieved.length > 0) {
-                alert(`🔥 GOAL CRUSHED: ${achieved.join(', ')}! \n\nCheck your profile to set a new target.`);
             }
         }
 
@@ -265,87 +236,44 @@
             saveBtn.innerText = "UPDATING...";
 
             try {
-                // 1. Fetch current profile for merging
-                const profileRef = doc(db, "recruiting_profiles", user.uid);
-                const profileSnap = await getDoc(profileRef);
-                const currentData = profileSnap.exists() ? profileSnap.data() : {};
+                const bodyWeight = Number(document.getElementById('bodyWeight').value);
+                if (!bodyWeight || bodyWeight <= 0) throw new Error("Enter valid body weight");
 
-                // 2. Handle Body Weight (Safety check for 0)
-                const weightInput = document.getElementById('bodyWeight').value;
-                const bodyWeight = weightInput ? Number(weightInput) : (currentData.bodyWeight || currentData.weight || 0);
-
-                if (bodyWeight <= 0) {
-                    alert("Please enter a valid body weight to calculate scores.");
-                    saveBtn.disabled = false;
-                    saveBtn.innerText = "SYNC STATS TO PROFILE";
-                    return;
-                }
-
-                // 3. Prepare the New Max object
-                const newMax = {
-                    timestamp: Date.now(),
-                    bodyWeight: bodyWeight
-                };
-
-                // Loop through lifts and merge with existing data if input is blank
-                schoolPrefs.tracked_lifts.forEach(lift => {
-                    const inputField = document.getElementById(`input-${lift}`);
-                    const val = inputField ? inputField.value : "";
-                    
-                    if (val !== "") {
-                        newMax[lift] = Number(val);
-                    } else {
-                        newMax[lift] = currentData[lift] || 0;
-                    }
-                });
-
-                // 4. CALCULATE BOARD SCORE (Matching Fairbanks/Standard Logic)
+                const newMax = { timestamp: Date.now(), bodyWeight };
                 let scoringSum = 0;
-                const scoringList = schoolPrefs.scoring_lifts || schoolPrefs.tracked_lifts || [];
 
                 schoolPrefs.tracked_lifts.forEach(lift => {
-                    if (scoringList.includes(lift)) {
-                        scoringSum += (newMax[lift] || 0);
-                    }
+                    const val = Number(document.getElementById(`input-${lift}`).value) || 0;
+                    newMax[lift] = val;
+                    if (schoolPrefs.scoring_lifts.includes(lift)) scoringSum += val;
                 });
 
                 let finalBoardScore = scoringSum;
                 if (schoolPrefs.formula_type === "power_index") {
-                    const bwCap = Math.min(bodyWeight, 200);
-                    finalBoardScore = scoringSum - (bwCap * 4);
+                    finalBoardScore = scoringSum - (Math.min(bodyWeight, 200) * 4);
                 }
 
-                // 5. Save History Entry (For progress tracking over time)
-                        await addDoc(collection(db, "recruiting_profiles", user.uid, "maxes"), newMax);
+                const profileRef = doc(db, "recruiting_profiles", user.uid);
+                await Promise.all([
+                    setDoc(doc(db, "recruiting_profiles", user.uid, "maxes", "latest"), newMax, { merge: true }),
+                    setDoc(profileRef, { 
+                        ...newMax, 
+                        boardScore: Math.round(finalBoardScore),
+                        weight: bodyWeight 
+                    }, { merge: true }),
+                    setDoc(doc(db, "users", user.uid), { weight: bodyWeight }, { merge: true })
+                ]);
 
-                // 6. Global Sync (Master User Doc & THE LATEST MAXES DOC)
-                // This ensures the "latest" document is always the most recent entry
-                const latestRef = doc(db, "recruiting_profiles", user.uid, "maxes", "latest");
-                await setDoc(latestRef, newMax, { merge: true });
-
-                await setDoc(profileRef, {
-                    ...newMax,
-                    weight: bodyWeight,
-                    boardScore: Math.round(finalBoardScore),
-                    lastUpdated: Date.now()
-                }, { merge: true });
-
-                // 7. Update UI Timestamp Label
-                const syncLabel = document.getElementById('sync-timestamp');
-                if (syncLabel) syncLabel.innerText = `Last Sync: Today at ${timeString}`;
-
-                alert("Stats Synchronized Successfully!");
-                
-                // Optional: reload to refresh all PR cards, or just clear inputs
+                alert("Stats Synchronized!");
                 location.reload();
-
             } catch (e) {
-                console.error("Save Error:", e);
-                alert("Error saving: " + e.message);
+                alert(e.message);
                 saveBtn.disabled = false;
-                saveBtn.innerText = "SYNC STATS TO PROFILE";
+                saveBtn.innerText = "Sync Stats to Profile";
             }
         };
+
+        document.getElementById('save-btn').onclick = window.saveMaxes;
     </script>
 </body>
 </html>

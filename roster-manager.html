@@ -9,32 +9,50 @@
     
     <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator_midnight.min.css" rel="stylesheet">
     <script type="text/javascript" src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
+    <style>
+        /* Custom Overrides for Tabulator to match RACKSTAT RED */
+        .tabulator { border: none !important; background-color: transparent !important; }
+        .tabulator-header { background-color: #111827 !important; border-bottom: 2px solid #ef4444 !important; }
+        .tabulator-row { background-color: #0d1117 !important; border-bottom: 1px solid #1f2937 !important; }
+        .tabulator-row:hover { background-color: #1f2937 !important; }
+        .tabulator-col-title { font-weight: 900 !important; letter-spacing: -0.025em !important; color: #9ca3af !important; }
+    </style>
 </head>
-<body class="bg-[#0d1117] text-white font-sans antialiased">
+<body class="bg-[#0d1117] text-white font-sans antialiased selection:bg-red-500/30">
 
-    <header class="p-6 flex justify-between items-center border-b border-gray-800">
-        <div class="flex items-center gap-4">
-            <a href="coach-lobby.html" class="text-gray-400 hover:text-white transition">← Back to Office</a>
-            <h1 class="text-xl font-black italic uppercase tracking-tighter text-red-500">Roster Manager</h1>
+    <header class="p-6 flex justify-between items-center border-b border-gray-800 bg-[#0d1117]/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="flex items-center gap-6">
+            <a href="coach-lobby.html" class="group flex items-center gap-2 text-xs font-black tracking-widest uppercase text-gray-500 hover:text-white transition-all">
+                <span class="group-hover:-translate-x-1 transition-transform">←</span> Office
+            </a>
+            <h1 class="text-2xl font-black italic uppercase tracking-tighter text-red-600">Roster <span class="text-white">Manager</span></h1>
         </div>
         <div class="flex gap-3">
-            <span id="player-count" class="bg-gray-800 px-3 py-2 rounded text-xs font-bold self-center">0 ATHLETES</span>
+            <span id="player-count" class="bg-red-600/10 border border-red-600/20 text-red-500 px-4 py-2 rounded-full text-[10px] font-black tracking-widest uppercase">0 ATHLETES ON FILE</span>
         </div>
     </header>
 
     <main class="max-w-7xl mx-auto px-6 py-12">
-        <div class="mb-8 flex justify-between items-end">
+        <div class="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
             <div>
-                <h2 class="text-3xl font-bold">Team Roster</h2>
-                <p class="text-gray-400">Manage profiles, track Next-Level status, and cleanup the roster.</p>
+                <h2 class="text-4xl font-black tracking-tighter uppercase italic">Team Roster</h2>
+                <p class="text-gray-500 font-medium max-w-md">Edit profiles, track recruiting status, or prune the roster to keep data clean.</p>
             </div>
-            <input type="text" id="roster-search" placeholder="Search by name..." class="bg-gray-900 border border-gray-700 px-4 py-2 rounded-lg outline-none focus:border-red-500 w-64">
+            <div class="relative w-full md:w-80 group">
+                <input type="text" id="roster-search" placeholder="Search athlete name..." 
+                       class="w-full bg-gray-900 border-2 border-gray-800 px-5 py-3 rounded-xl outline-none focus:border-red-600 transition-all text-sm font-bold placeholder:text-gray-600">
+                <div class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-red-600 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                </div>
+            </div>
         </div>
 
-        <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden shadow-2xl">
-            <div id="roster-table"></div>
+        <div class="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden shadow-2xl">
+            <div id="roster-table" data-theme-ignore="true"></div>
         </div>
     </main>
+
+    <script src="theme.js"></script>
 
     <script type="module">
         import { firebaseConfig } from './firebase-config.js';
@@ -52,48 +70,53 @@
             responsiveLayout: "collapse",
             pagination: "local",
             paginationSize: 15,
-            placeholder: "Loading Roster...",
+            placeholder: "Searching Database...",
             columns: [
-                {title: "Name", field: "fullName", widthGrow: 2, formatter: (cell) => `<span class="font-bold text-white">${cell.getValue() || "Unnamed"}</span>`},
-                {title: "Grad", field: "gradYear", width: 100, hozAlign: "center"},
-                {title: "Off.", field: "offPrimary", width: 80},
-                {title: "Def.", field: "defPrimary", width: 80},
                 {
-                    title: "Next-Level", 
+                    title: "ATHLETE NAME", 
+                    field: "fullName", 
+                    widthGrow: 2, 
+                    formatter: (cell) => `<div class="py-1"><span class="block font-black text-white tracking-tight uppercase leading-none">${cell.getValue() || "Unnamed"}</span></div>`
+                },
+                {title: "CLASS", field: "gradYear", width: 90, hozAlign: "center", cssClass: "text-gray-400 font-bold"},
+                {title: "OFF.", field: "offPrimary", width: 80, hozAlign: "center", cssClass: "text-red-600 font-black italic"},
+                {title: "DEF.", field: "defPrimary", width: 80, hozAlign: "center", cssClass: "text-blue-500 font-black italic"},
+                {
+                    title: "NEXT-LEVEL", 
                     field: "nextLevelComplete", 
-                    width: 140, 
+                    width: 130, 
                     hozAlign: "center",
-                    formatter: "tickCross", // Shows checkmark or X
-                    formatterParams: { allowEmpty: true },
+                    formatter: "tickCross", 
+                    formatterParams: { allowEmpty: true, crossElement: false },
                     cellClick: async function(e, cell) {
-                        // Toggle Next-Level Status directly from table
                         const newVal = !cell.getValue();
                         const rowData = cell.getRow().getData();
-                        if (confirm(`Mark Next-Level as ${newVal ? 'Complete' : 'Incomplete'} for ${rowData.fullName}?`)) {
-                            await updateDoc(doc(db, "recruiting_profiles", rowData.id), { nextLevelComplete: newVal });
-                            cell.setValue(newVal);
+                        if (confirm(`Toggle recruiting status for ${rowData.fullName}?`)) {
+                            try {
+                                await updateDoc(doc(db, "recruiting_profiles", rowData.id), { nextLevelComplete: newVal });
+                                cell.setValue(newVal);
+                            } catch (err) { alert("Update failed."); }
                         }
                     }
                 },
                 {
-                    title: "Actions", 
+                    title: "COMMANDS", 
                     width: 200, 
-                    hozAlign: "center", 
+                    hozAlign: "right", 
                     headerSort: false,
-                    formatter: function(cell) {
+                    formatter: function() {
                         return `
-                            <div class="flex gap-2">
-                                <button class="edit-btn bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-bold transition">EDIT</button>
-                                <button class="delete-btn bg-red-900/50 hover:bg-red-600 text-white px-3 py-1 rounded text-xs font-bold transition">DELETE</button>
+                            <div class="flex gap-2 justify-end pr-2">
+                                <button class="edit-btn bg-white/5 hover:bg-white text-white hover:text-black px-4 py-1.5 rounded-md text-[10px] font-black transition-all border border-white/10 italic">EDIT</button>
+                                <button class="delete-btn bg-red-900/10 hover:bg-red-600 text-red-600 hover:text-white px-4 py-1.5 rounded-md text-[10px] font-black transition-all border border-red-900/20 italic">DELETE</button>
                             </div>
                         `;
                     },
                     cellClick: function(e, cell) {
                         const rowData = cell.getRow().getData();
-                            if (e.target.classList.contains('edit-btn')) {
-                                // Changed 'id' to 'uid' and 'mode=edit' to 'edit=true'
-                                window.location.href = `recruiting-card.html?uid=${rowData.id}&edit=true`;
-                            }
+                        if (e.target.classList.contains('edit-btn')) {
+                            window.location.href = `recruiting-card.html?uid=${rowData.id}&edit=true`;
+                        }
                         if (e.target.classList.contains('delete-btn')) {
                             handleDelete(rowData);
                         }
@@ -102,42 +125,45 @@
             ]
         });
 
-        // --- Load Data ---
         async function loadRoster() {
             try {
                 const snap = await getDocs(collection(db, "recruiting_profiles"));
-                const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const data = snap.docs.map(doc => ({ 
+                    id: doc.id, 
+                    ...doc.data(),
+                    nextLevelComplete: doc.data().nextLevelComplete || false 
+                }));
                 table.setData(data);
-                document.getElementById('player-count').innerText = `${data.length} ATHLETES`;
+                const countEl = document.getElementById('player-count');
+                if (countEl) countEl.innerText = `${data.length} ATHLETES ON FILE`;
             } catch (err) {
                 console.error("Roster Load Error:", err);
             }
         }
 
-        // --- Delete Logic ---
         async function handleDelete(player) {
-            const pin = prompt(`To delete ${player.fullName}, type "DELETE":`);
-            if (pin === "DELETE") {
+            const confirmName = prompt(`Type "${player.fullName.toUpperCase()}" to confirm deletion:`);
+            if (confirmName === player.fullName.toUpperCase()) {
                 try {
                     await deleteDoc(doc(db, "recruiting_profiles", player.id));
                     table.deleteRow(player.id);
-                    alert("Athlete removed from roster.");
+                    const currentData = table.getData();
+                    document.getElementById('player-count').innerText = `${currentData.length} ATHLETES ON FILE`;
                 } catch (err) {
-                    alert("Error deleting athlete.");
+                    alert("Delete failed.");
                 }
             }
         }
 
-        // --- Search Logic ---
-        document.getElementById("roster-search").addEventListener("input", function(e){
-            table.setFilter("fullName", "like", e.target.value);
-        });
+        const searchInput = document.getElementById("roster-search");
+        if (searchInput) {
+            searchInput.addEventListener("input", (e) => table.setFilter("fullName", "like", e.target.value));
+        }
 
         onAuthStateChanged(auth, (user) => {
             if (user) loadRoster();
             else window.location.href = 'index.html';
         });
-
     </script>
 </body>
 </html>

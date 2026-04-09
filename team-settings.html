@@ -7,12 +7,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-[#0d1117] text-white font-sans antialiased">
+<body class="bg-[#0d1117] text-white font-sans antialiased pb-24">
 
     <header class="p-6 flex justify-between items-center border-b border-gray-800">
         <div class="flex items-center gap-4">
             <a href="coach-lobby.html" class="text-gray-400 hover:text-white transition">← Back to Office</a>
-            <h1 class="text-xl font-black italic uppercase tracking-tighter text-red-500">Roster Manager</h1>
+            <h1 class="text-xl font-black italic uppercase tracking-tighter text-red-500">Program Settings</h1>
         </div>
         <div class="flex gap-3">
             <span id="player-count" class="bg-gray-800 px-3 py-2 rounded text-xs font-bold self-center uppercase">0 Athletes</span>
@@ -21,6 +21,40 @@
 
     <main class="max-w-4xl mx-auto px-6 py-12">
         
+        <section class="bg-gray-900 border border-gray-700 p-8 rounded-xl mb-10 shadow-2xl">
+            <h2 class="text-2xl font-black text-white uppercase mb-2 italic">Program Branding & Logic</h2>
+            <p class="text-gray-400 text-sm mb-8">Customize the board's appearance and the algorithm used for rankings.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Primary Color (Theme)</label>
+                    <input type="color" id="primary-color" class="w-full h-12 bg-gray-800 border border-gray-700 rounded cursor-pointer">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Secondary Color (Accents)</label>
+                    <input type="color" id="secondary-color" class="w-full h-12 bg-gray-800 border border-gray-700 rounded cursor-pointer">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">School Logo URL</label>
+                    <input type="text" id="logo-url" placeholder="https://..." class="w-full p-3 rounded-lg bg-[#0d1117] text-white border border-gray-700 focus:border-red-500 outline-none transition">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Ranking Formula</label>
+                    <select id="formula-type" class="w-full p-3 rounded-lg bg-[#0d1117] text-white border border-gray-700 outline-none">
+                        <option value="straight_calculation">Straight Total (Core Lifts)</option>
+                        <option value="power_index">Fairbanks Power Index</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Weight Club Threshold (Min LB)</label>
+                    <input type="number" id="club-start" placeholder="50" class="w-full p-3 rounded-lg bg-[#0d1117] text-white border border-gray-700 outline-none">
+                </div>
+            </div>
+        </section>
+
         <section class="mb-10">
             <div class="flex justify-between items-center bg-gray-900 border border-gray-700 p-6 rounded-xl">
                 <div>
@@ -34,9 +68,9 @@
             </div>
         </section>
 
-        <section class="bg-gray-900 border border-gray-700 p-8 rounded-xl">
+        <section class="bg-gray-900 border border-gray-700 p-8 rounded-xl mb-10">
             <h2 class="text-2xl font-black text-white uppercase mb-2 italic">Tracked Core Lifts</h2>
-            <p class="text-gray-400 text-sm mb-8">Select which lifts appear in athlete trackers. Custom lifts added here will become options for the entire team.</p>
+            <p class="text-gray-400 text-sm mb-8">Select which lifts appear in athlete trackers.</p>
             
             <div id="core-lifts-container" class="grid grid-cols-2 md:grid-cols-3 gap-6 text-gray-300 mb-8 font-bold uppercase text-sm">
                 <label class="flex items-center space-x-3 cursor-pointer group">
@@ -68,22 +102,28 @@
                     Add Lift
                 </button>
             </div>
-
-            <section class="bg-gray-900 border border-gray-700 p-8 rounded-xl mt-10">
-                <h2 class="text-2xl font-black text-white uppercase mb-2 italic">Roster Maintenance</h2>
-                <p class="text-gray-400 text-sm mb-6">Use this at the end of the season to advance all athletes to the next grade level.</p>
-                
-                <div class="bg-red-900/20 border border-red-900/50 p-4 rounded-lg flex justify-between items-center">
-                    <div>
-                        <p class="text-red-500 font-bold uppercase text-xs">Danger Zone</p>
-                        <p class="text-gray-300 text-sm">Advance all athletes' Graduation Years by 1 year.</p>
-                    </div>
-                    <button onclick="bulkAdvanceGrades()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-black text-xs transition uppercase">
-                        Advance All Grades
-                    </button>
-                </div>
-            </section>
         </section>
+
+        <section class="bg-gray-900 border border-gray-700 p-8 rounded-xl">
+            <h2 class="text-2xl font-black text-white uppercase mb-2 italic">Roster Maintenance</h2>
+            <p class="text-gray-400 text-sm mb-6">Use this at the end of the season to advance all athletes to the next grade level.</p>
+            
+            <div class="bg-red-900/20 border border-red-900/50 p-4 rounded-lg flex justify-between items-center">
+                <div>
+                    <p class="text-red-500 font-bold uppercase text-xs">Danger Zone</p>
+                    <p class="text-gray-300 text-sm">Advance all athletes' Graduation Years by 1 year.</p>
+                </div>
+                <button onclick="bulkAdvanceGrades()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-black text-xs transition uppercase">
+                    Advance All Grades
+                </button>
+            </div>
+        </section>
+
+        <div class="fixed bottom-0 left-0 right-0 p-6 bg-[#0d1117]/90 backdrop-blur-md border-t border-gray-800 flex justify-center z-50">
+            <button onclick="saveAllSettings()" id="master-save-btn" class="bg-red-600 hover:bg-red-700 text-white px-16 py-4 rounded-full font-black uppercase tracking-widest transition-all shadow-lg hover:scale-105 active:scale-95">
+                Save All Changes
+            </button>
+        </div>
 
     </main>
 
@@ -91,82 +131,70 @@
         import { firebaseConfig } from './firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        let schoolID = "default_school"; // This should ideally come from user profile
+        let schoolID = null;
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 if (userDoc.exists() && userDoc.data().role === 'coach') {
-                    // Updated to match your Firestore: school_id
-                    schoolID = userDoc.data().school_id || "default_school"; 
+                    schoolID = userDoc.data().school_id; 
                     loadSettings();
+                    fetchPlayerCount();
                 } else { window.location.href = 'index.html'; }
             } else { window.location.href = 'index.html'; }
         });
 
-        // 1. Load Settings from Firestore
+        async function fetchPlayerCount() {
+            const q = await getDocs(collection(db, "recruiting_profiles"));
+            const count = q.docs.filter(d => d.data().school_id === schoolID).length;
+            document.getElementById('player-count').innerText = `${count} Athletes`;
+        }
+
         async function loadSettings() {
             try {
-                const settingsRef = doc(db, "school_settings", schoolID);
-                const settingsSnap = await getDoc(settingsRef);
+                const schoolRef = doc(db, "schools", schoolID);
+                const snap = await getDoc(schoolRef);
                 
-                if (settingsSnap.exists()) {
-                    const data = settingsSnap.data();
+                if (snap.exists()) {
+                    const data = snap.data();
                     
-                    // Set Recruiting Toggle
+                    // Branding
+                    document.getElementById('primary-color').value = data.colors?.primary || '#ff0000';
+                    document.getElementById('secondary-color').value = data.colors?.secondary || '#000000';
+                    document.getElementById('logo-url').value = data.logo_url || '';
+                    
+                    // Logic
+                    document.getElementById('formula-type').value = data.formula_type || 'power_index';
+                    document.getElementById('club-start').value = data.club_start || 50;
+
+                    // Recruiting Toggle
                     document.getElementById('toggle-recruiting').checked = data.recruitingEnabled !== false;
 
-                    // Set Active Lifts
-                    const activeLifts = data.activeLifts || [];
-                    const checkboxes = document.querySelectorAll('.lift-checkbox');
-                    checkboxes.forEach(cb => {
+                    // Lifts
+                    const activeLifts = data.activeLifts || ["bench", "squat", "clean"];
+                    const customLifts = data.customLifts || [];
+                    
+                    document.querySelectorAll('.lift-checkbox').forEach(cb => {
                         cb.checked = activeLifts.includes(cb.value);
                     });
 
-                    // Load Custom Lifts into UI
-                    const customLifts = data.customLifts || [];
                     customLifts.forEach(lift => renderNewLiftCheckbox(lift, activeLifts.includes(lift)));
-                    
-                } else {
-                    console.log("No existing settings found for " + schoolID + ". Initializing defaults.");
-                    
-                    // 1. Pre-check Bench, Squat, Clean
-                    const defaultLifts = ["bench", "squat", "clean"];
-                    const checkboxes = document.querySelectorAll('.lift-checkbox');
-                    checkboxes.forEach(cb => {
-                        if (defaultLifts.includes(cb.value)) cb.checked = true;
-                    });
-
-                    // 2. Default Recruiting to Enabled
-                    document.getElementById('toggle-recruiting').checked = true;
                 }
             } catch (err) {
                 console.error("Error loading settings:", err);
-                if (err.code === 'permission-denied') {
-                    alert("Permission Denied: Ensure your Firestore Rules allow coaches to access 'school_settings'.");
-                }
             }
         }
 
-        // 2. Add Custom Lift to UI (Temporary until saved)
         window.addCustomLiftToUI = () => {
             const input = document.getElementById('custom-lift-input');
             const liftName = input.value.trim();
             if (!liftName) return;
-
-            // Check if it already exists
-            const existing = Array.from(document.querySelectorAll('.lift-checkbox')).map(cb => cb.value.toLowerCase());
-            if (existing.includes(liftName.toLowerCase())) {
-                alert("Lift already exists.");
-                return;
-            }
-
             renderNewLiftCheckbox(liftName, true);
             input.value = "";
         };
@@ -182,56 +210,61 @@
             container.appendChild(label);
         }
 
-        // 3. Save Everything to Firestore
         window.saveAllSettings = async () => {
-            const recruitingEnabled = document.getElementById('toggle-recruiting').checked;
-            
-            const allCheckboxes = document.querySelectorAll('.lift-checkbox');
+            if (!schoolID) return;
+            const btn = document.getElementById('master-save-btn');
+            const originalText = btn.innerText;
+            btn.innerText = "SAVING CHANGES...";
+            btn.disabled = true;
+
             const activeLifts = [];
             const customLifts = [];
-            
-            // Standard lifts we expect
             const standardLifts = ["bench", "squat", "clean", "deadlift", "push_press"];
 
-            allCheckboxes.forEach(cb => {
+            document.querySelectorAll('.lift-checkbox').forEach(cb => {
                 if (cb.checked) activeLifts.push(cb.value);
                 if (!standardLifts.includes(cb.value)) customLifts.push(cb.value);
             });
 
             try {
-                await setDoc(doc(db, "school_settings", schoolID), {
-                    recruitingEnabled,
+                await updateDoc(doc(db, "schools", schoolID), {
+                    "colors.primary": document.getElementById('primary-color').value,
+                    "colors.secondary": document.getElementById('secondary-color').value,
+                    logo_url: document.getElementById('logo-url').value,
+                    formula_type: document.getElementById('formula-type').value,
+                    club_start: parseInt(document.getElementById('club-start').value) || 50,
+                    recruitingEnabled: document.getElementById('toggle-recruiting').checked,
                     activeLifts,
                     customLifts,
                     lastUpdated: new Date()
-                }, { merge: true });
-
-                alert("Settings saved successfully!");
+                });
+                alert("All settings updated successfully!");
             } catch (err) {
                 console.error("Save Error:", err);
-                alert("Error saving settings.");
+                alert("Error: " + err.message);
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
             }
         };
 
         window.bulkAdvanceGrades = async () => {
-            if (!confirm("Are you sure? This will increment the graduation year for EVERY athlete in your program. This cannot be undone easily.")) return;
-
+            if (!confirm("Are you sure? This will increment the graduation year for EVERY athlete. This cannot be undone easily.")) return;
             try {
-                const athletesSnap = await getDocs(collection(db, "recruiting_profiles"));
-                const batch = writeBatch(db); // Use writeBatch for efficiency
-
-                athletesSnap.forEach((athleteDoc) => {
-                    const currentGrad = parseInt(athleteDoc.data().gradYear);
-                    if (!isNaN(currentGrad)) {
-                        const athleteRef = doc(db, "recruiting_profiles", athleteDoc.id);
-                        batch.update(athleteRef, { gradYear: (currentGrad + 1).toString() });
+                const q = await getDocs(collection(db, "recruiting_profiles"));
+                const batch = writeBatch(db);
+                q.forEach((athleteDoc) => {
+                    if (athleteDoc.data().school_id === schoolID) {
+                        const currentGrad = parseInt(athleteDoc.data().gradYear);
+                        if (!isNaN(currentGrad)) {
+                            batch.update(doc(db, "recruiting_profiles", athleteDoc.id), { gradYear: (currentGrad + 1).toString() });
+                        }
                     }
                 });
-
                 await batch.commit();
                 alert("Roster advanced successfully!");
             } catch (err) {
-                console.error("Bulk Update Error:", err);
+                console.error(err);
                 alert("Failed to update roster.");
             }
         };

@@ -3,66 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RackStat | Athlete Workout</title>
+    <title>RackStat | Athlete Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
     <style>
+        /* Essential UI Overrides */
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {
             -webkit-appearance: none; margin: 0;
         }
         body { background-color: #0a0a0b; color: white; }
+        
+        /* Skeleton loading animation */
+        .loading-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
     </style>
 </head>
 <body class="bg-[#0a0a0b] text-white antialiased min-h-screen">
 
+    <header class="brand-header">
+        <img src="" class="school-logo-primary" alt="Team Logo" onerror="this.style.display='none'">
+        <div class="school-section">
+            <h1 class="school-name">LOADING TEAM...</h1>
+        </div>
+    </header>
+
     <div id="athlete-dashboard" class="max-w-md mx-auto p-4">
         <div class="mb-8 border-b border-[#2a2a2c] pb-4 mt-4">
-            <h2 class="text-[10px] font-black text-[#b91c1c] uppercase tracking-widest mb-1">Athlete Portal</h2>
+            <h2 class="text-[10px] font-black text-[var(--school-primary)] uppercase tracking-widest mb-1">Athlete Portal</h2>
             <h1 class="text-3xl font-black text-white uppercase tracking-tighter italic">Current Workouts</h1>
         </div>
+        
         <div id="available-workouts" class="space-y-3">
-            <div class="animate-pulse text-gray-500 text-xs uppercase font-bold text-center py-10 tracking-widest">
-                Loading training session...
+            <div class="loading-pulse text-gray-500 text-xs uppercase font-bold text-center py-10 tracking-widest">
+                Syncing training session...
             </div>
         </div>
-    </div>
 
-    <div class="p-6">
-        <button id="finish-workout-btn" class="w-full bg-red-600 text-white font-black py-4 rounded-xl uppercase italic hidden">
-            Finish & Log Workout
-        </button>
-        <div id="workout-status-badge" class="hidden text-center p-2 bg-green-500/20 text-green-500 rounded-lg text-[10px] font-bold uppercase">
-            Workout Completed
+        <div class="mt-10 pt-6 border-t border-gray-900">
+            <button onclick="location.href='index.html'" class="flex items-center text-gray-500 hover:text-white transition-colors group">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7" />
+                </svg>
+                <span class="text-xs font-black uppercase tracking-widest italic">Return to Lobby</span>
+            </button>
         </div>
     </div>
 
     <div id="athlete-workout-container" class="max-w-md mx-auto p-4" style="display: none;">
         <button onclick="location.reload()" class="text-gray-500 text-[10px] uppercase font-bold mb-4 flex items-center gap-1 hover:text-white transition-colors">
-            ← Back to Workouts
+            ← Back to List
         </button>
+        
         <div class="mb-6">
             <h1 id="display-title" class="text-3xl font-black text-white uppercase tracking-tighter italic">--</h1>
-            <p id="display-week" class="text-[#b91c1c] font-black text-sm uppercase tracking-widest">WEEK --</p>
+            <p id="display-week" class="text-[var(--school-primary)] font-black text-sm uppercase tracking-widest">WEEK --</p>
         </div>
+
         <div id="athlete-exercise-list" class="space-y-4"></div>
-    </div>
 
-    <div class="flex items-center mb-6">
-        <button onclick="location.href='index.html'" class="flex items-center text-gray-500 hover:text-white transition-colors group">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7" />
-            </svg>
-            <span class="text-xs font-black uppercase tracking-widest italic">Lobby</span>
-        </button>
+        <div class="py-10">
+            <button id="finish-workout-btn" class="w-full bg-[var(--school-primary)] text-white font-black py-5 rounded-xl uppercase italic tracking-widest shadow-lg shadow-[var(--school-primary)]/20">
+                Log Session & Finish
+            </button>
+        </div>
     </div>
-
-    <div id="workout-status-message" class="text-green-500 font-bold text-center mt-4"></div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { firebaseConfig } from "./firebase-config.js"; 
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, collection, query, where, orderBy, limit, getDocs, addDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, collection, query, where, orderBy, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    
+    // --- IMPORT THE THEME ENGINE ---
+    import { applyTheme } from './theme.js'; 
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -73,28 +91,33 @@
     const directWorkoutId = urlParams.get('id');
     window.currentAthleteId = null;
     window.currentSchoolId = null;
+    let activeWorkoutData = null;
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             window.currentAthleteId = user.uid;
             
-            // Check both possible profile locations
+            // Fetch User Context
             const profileSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
             const userSnap = await getDoc(doc(db, "users", user.uid));
-            
             const profileData = profileSnap.exists() ? profileSnap.data() : (userSnap.exists() ? userSnap.data() : null);
 
             if (profileData) {
                 window.currentSchoolId = profileData.school_id || profileData.schoolId;
                 
                 if (window.currentSchoolId) {
+                    // 1. APPLY THEME FIRST (Reveals the page)
+                    await applyTheme(db, window.currentSchoolId);
+
+                    // 2. LOAD CONTENT
                     if (directWorkoutId) {
                         window.loadAthleteWorkout(directWorkoutId, user.uid);
                     } else {
                         window.loadAvailableWorkouts(); 
                     }
                 } else {
-                    alert("No school associated with this account.");
+                    console.error("No school found for user.");
+                    document.body.classList.add('theme-loaded');
                 }
             }
         } else {
@@ -102,7 +125,7 @@
         }
     });
 
-    // --- MATH HELPERS ---
+    // --- LOGIC HELPERS ---
     window.calculateWeight = (max, percentage) => {
         const m = parseFloat(max);
         const p = parseFloat(percentage);
@@ -111,16 +134,10 @@
         return Math.round((m * (p / 100)) / 5) * 5; 
     };
 
-    // --- WORKOUT LISTING ---
     window.loadAvailableWorkouts = async () => {
         const workoutContainer = document.getElementById('available-workouts');
-        
-        // NEW PATH: Pulling from the root 'workouts' collection
-        const workoutRef = collection(db, "workouts");
-        
-        // Filter by the athlete's school_id and sort by the date field
         const q = query(
-            workoutRef, 
+            collection(db, "workouts"), 
             where("school_id", "==", window.currentSchoolId), 
             orderBy("date", "desc")
         );
@@ -130,160 +147,100 @@
             workoutContainer.innerHTML = ''; 
 
             if (querySnapshot.empty) {
-                workoutContainer.innerHTML = `
-                    <div class="text-gray-500 text-xs uppercase font-bold text-center py-10 tracking-widest">
-                        No workouts found for your school.
-                    </div>`;
+                workoutContainer.innerHTML = `<div class="text-gray-600 text-[10px] uppercase font-bold text-center py-20 tracking-widest">No training sessions scheduled.</div>`;
                 return;
             }
 
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
-                // Note: Training Center uses 'name' and 'date' fields
-                const workoutName = data.name || "Untitled Workout";
-                const workoutDate = data.date || "No Date";
                 const isMax = data.isMaxOutMode || false;
 
                 const btn = document.createElement('button');
-                btn.className = "w-full bg-[#1a1a1c] border border-[#2a2a2c] p-5 rounded-xl flex justify-between items-center group text-left mb-3 transition-all hover:border-[#b91c1c]";
+                btn.className = "w-full bg-[#161618] border border-[#2a2a2c] p-5 rounded-xl flex justify-between items-center group text-left mb-3 transition-all hover:border-[var(--school-primary)] hover:translate-y-[-2px]";
                 btn.onclick = () => window.loadAthleteWorkout(doc.id, window.currentAthleteId);
                 
                 btn.innerHTML = `
                     <div>
-                        <div class="flex items-center">
-                            <h3 class="text-white font-black uppercase text-lg mb-1 italic">${workoutName}</h3>
-                            ${isMax ? `<span class="ml-2 bg-red-600 text-white text-[8px] px-1.5 py-0.5 rounded font-black">MAX</span>` : ''}
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-white font-black uppercase text-lg italic">${data.name || "Workout"}</h3>
+                            ${isMax ? `<span class="bg-[var(--school-primary)] text-white text-[8px] px-2 py-0.5 rounded-full font-black tracking-tighter">MAX</span>` : ''}
                         </div>
-                        <span class="text-[#b91c1c] font-bold text-[10px] uppercase tracking-widest">${workoutDate}</span>
+                        <span class="text-[var(--school-primary)] font-black text-[9px] uppercase tracking-[0.2em] opacity-80">${data.date || "Scheduled"}</span>
                     </div>
-                    <span class="text-gray-600 group-hover:text-[#b91c1c] transition-transform">→</span>
+                    <span class="text-gray-700 group-hover:text-[var(--school-primary)] font-black text-xl transition-colors">→</span>
                 `;
                 workoutContainer.appendChild(btn);
             });
         } catch (err) {
-            console.error("Error loading workouts:", err);
-            workoutContainer.innerHTML = `<div class="text-red-500 text-xs text-center uppercase py-10 font-bold">Failed to load workouts.</div>`;
+            console.error(err);
+            workoutContainer.innerHTML = `<div class="text-red-500 text-[10px] text-center uppercase py-10 font-black">Connection Error.</div>`;
         }
     };
 
-    // --- MAIN RENDERER ---
     window.loadAthleteWorkout = async (workoutId, athleteId) => {
         try {
-            const workoutDocRef = doc(db, "workouts", workoutId);
-            const latestMaxRef = doc(db, "recruiting_profiles", athleteId, "maxes", "latest");
-            
             const [workoutSnap, maxSnap] = await Promise.all([
-                getDoc(workoutDocRef), 
-                getDoc(latestMaxRef)
+                getDoc(doc(db, "workouts", workoutId)), 
+                getDoc(doc(db, "recruiting_profiles", athleteId, "maxes", "latest"))
             ]);
 
             if (!workoutSnap.exists()) return;
-            const workout = workoutSnap.data();
+            activeWorkoutData = { id: workoutId, ...workoutSnap.data() };
             const currentMaxes = maxSnap.exists() ? maxSnap.data() : {};
 
-            // --- FIXED: Safety Guards for Elements ---
-            const viewList = document.getElementById('athlete-workout');
-            const viewContainer = document.getElementById('athlete-workout-container');
-            const titleEl = document.getElementById('display-title');
-            const weekEl = document.getElementById('display-week');
-
-            if (viewList) viewList.style.display = 'none';
-            if (viewContainer) viewContainer.style.display = 'block';
-            if (titleEl) titleEl.innerText = workout.name;
-            if (weekEl) weekEl.innerText = workout.date;
+            // Toggle Views
+            document.getElementById('athlete-dashboard').style.display = 'none';
+            document.getElementById('athlete-workout-container').style.display = 'block';
+            document.getElementById('display-title').innerText = activeWorkoutData.name;
+            document.getElementById('display-week').innerText = activeWorkoutData.date;
 
             const list = document.getElementById('athlete-exercise-list');
-            if (!list) {
-                console.error("Critical Error: 'athlete-exercise-list' element not found in HTML.");
-                return;
-            }
-            
             list.innerHTML = '';
 
-            for (const [exIndex, ex] of workout.exercises.entries()) {
+            activeWorkoutData.exercises.forEach((ex, exIndex) => {
                 const cleanName = ex.name.toLowerCase().trim();
-                
-                // --- ROBUST MAX SEARCH LOGIC ---
-                const potentialKeys = [
-                    cleanName, 
-                    cleanName.replace(/\s+/g, '_'),
-                    cleanName.replace(/\s+/g, ''),
-                    cleanName.split(" ")[0]
-                ];
+                let athleteCurrentMax = currentMaxes[cleanName] || 0;
 
-                if (cleanName.includes("bench")) potentialKeys.push("bench_press", "benchMax");
-                if (cleanName.includes("squat")) potentialKeys.push("back_squat", "squatMax", "squat");
-                if (cleanName.includes("clean")) potentialKeys.push("power_clean", "cleanMax", "clean");
-                if (cleanName.includes("deadlift")) potentialKeys.push("dead_lift", "deadliftMax", "deadlift");
-
-                let athleteCurrentMax = 0;
-                for (let key of potentialKeys) {
-                    if (currentMaxes[key] !== undefined && currentMaxes[key] !== null) {
-                        athleteCurrentMax = parseFloat(currentMaxes[key]);
-                        break; 
-                    }
+                // Fallback for specific lift naming conventions
+                if (!athleteCurrentMax) {
+                    if (cleanName.includes("bench")) athleteCurrentMax = currentMaxes.bench_press || 0;
+                    if (cleanName.includes("squat")) athleteCurrentMax = currentMaxes.back_squat || 0;
+                    if (cleanName.includes("clean")) athleteCurrentMax = currentMaxes.power_clean || 0;
                 }
 
                 let setsHtml = '';
-
                 if (ex.isMaxOut) {
                     for (let i = 0; i < 6; i++) {
                         const isWarmup = i < 3;
                         const setId = `set-${exIndex}-${i}`;
-                        const label = isWarmup ? `Warmup ${i + 1}` : `MAX ATTEMPT ${i - 2}`;
                         setsHtml += `
-                            <div id="container-${setId}" data-completed="false" class="flex justify-between items-center bg-black p-3 rounded-lg border border-gray-800 mb-2">
+                            <div id="container-${setId}" data-completed="false" class="flex justify-between items-center bg-black p-4 rounded-lg border border-gray-800 mb-2">
                                 <div class="flex flex-col">
-                                    <span class="text-[9px] text-gray-500 font-bold uppercase">${label}</span>
-                                    <input type="number" id="weight-${setId}" placeholder="LBS" class="bg-transparent text-white font-black text-xl w-20 outline-none">
+                                    <span class="text-[8px] text-gray-600 font-black uppercase">${isWarmup ? 'Warmup' : 'MAX ATTEMPT'}</span>
+                                    <input type="number" id="weight-${setId}" placeholder="LBS" class="bg-transparent text-white font-black text-xl w-24 outline-none">
                                 </div>
-                                <button onclick="recordMaxAttempt('${ex.name.replace(/'/g, "\\'")}', '${setId}', ${isWarmup}, '${athleteId}')" id="btn-${setId}" class="bg-[#1a1a1c] p-3 rounded-full text-gray-600 border border-[#2a2a2c]">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>
+                                <button onclick="window.recordMaxAttempt('${ex.name}', '${setId}')" id="btn-${setId}" class="bg-[#1a1a1c] p-3 rounded-full text-gray-700 border border-gray-800">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path d="M5 13l4 4L19 7" /></svg>
                                 </button>
                             </div>`;
                     }
-                } else if (ex.isCircuit) {
-                    const config = ex.circuitConfig;
-                    setsHtml = `
-                        <div class="bg-red-900/10 border border-red-900/30 p-3 rounded mb-4">
-                            <p class="text-[10px] font-black text-red-500 uppercase italic">Circuit Protocol: ${config.cycles} Rounds</p>
-                            <p class="text-xs text-gray-400">${config.work}s Work / ${config.rest}s Rest</p>
-                        </div>
-                        <div class="space-y-2 mb-4">
-                            ${ex.circuitExercises.map((ce, ci) => `
-                                <div class="flex items-center gap-3 py-1 border-b border-gray-800/50">
-                                    <span class="text-gray-600 font-bold text-xs">${ci + 1}.</span>
-                                    <span class="text-white font-bold uppercase text-sm">${ce}</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                        <div id="container-circ-${exIndex}" data-completed="false" class="flex justify-between items-center bg-black p-4 rounded border border-gray-800">
-                            <span class="text-xs font-black text-gray-500 uppercase">Complete Circuit</span>
-                            <button onclick="toggleSetComplete('circ-${exIndex}')" id="btn-circ-${exIndex}" class="bg-[#1a1a1c] p-3 rounded-full text-gray-600 border border-[#2a2a2c]">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>
-                            </button>
-                        </div>
-                    `;
                 } else {
                     setsHtml = ex.sets.map((s, i) => {
-                        const suggestedWeight = window.calculateWeight ? window.calculateWeight(athleteCurrentMax, s.pct || 0) : s.pct + "%";
+                        const suggWeight = window.calculateWeight(athleteCurrentMax, s.pct || 0);
                         const setId = `set-${exIndex}-${i}`;
                         return `
-                            <div id="container-${setId}" data-completed="false" class="flex justify-between items-center bg-[#0a0a0b] p-3 rounded-lg mb-2 border border-[#2a2a2c]">
+                            <div id="container-${setId}" data-completed="false" class="flex justify-between items-center bg-black p-4 rounded-lg mb-2 border border-gray-800">
                                 <div class="flex flex-col">
-                                    <span class="text-[9px] text-gray-500 font-bold uppercase">Set ${i+1}</span>
-                                    <div class="flex items-center">
-                                        <input type="text" id="weight-${setId}" value="${suggestedWeight}" class="bg-transparent text-[#b91c1c] font-black text-xl italic w-20 outline-none">
-                                        <small class="text-[10px] ml-1 text-gray-500 font-bold">${suggestedWeight === "BW" ? "" : "LBS"}</small>
-                                    </div>
+                                    <span class="text-[8px] text-gray-600 font-black uppercase">Set ${i+1} — ${s.pct || 0}%</span>
+                                    <input type="text" id="weight-${setId}" value="${suggWeight}" class="bg-transparent text-[var(--school-primary)] font-black text-xl italic w-24 outline-none">
                                 </div>
-                                <div class="flex items-center gap-4">
-                                    <div class="flex flex-col items-center min-w-[50px]">
-                                        <label class="text-[8px] text-gray-600 uppercase font-black">Reps</label>
-                                        <span class="text-white font-black text-lg">${s.reps}</span>
+                                <div class="flex items-center gap-6">
+                                    <div class="text-center">
+                                        <p class="text-[8px] text-gray-700 uppercase font-black">Reps</p>
+                                        <p class="text-white font-black text-lg">${s.reps}</p>
                                     </div>
-                                    <button onclick="toggleSetComplete('${setId}')" id="btn-${setId}" class="bg-[#1a1a1c] p-3 rounded-full text-gray-600 border border-[#2a2a2c]">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" /></svg>
+                                    <button onclick="window.toggleSetComplete('${setId}')" id="btn-${setId}" class="bg-[#1a1a1c] p-3 rounded-full text-gray-700 border border-gray-800">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path d="M5 13l4 4L19 7" /></svg>
                                     </button>
                                 </div>
                             </div>`;
@@ -291,124 +248,80 @@
                 }
 
                 const card = document.createElement('div');
-                card.className = "exercise-card bg-[#1a1a1c] border-l-4 border-[#b91c1c] p-5 rounded-r-lg mb-4 shadow-xl";
+                card.className = "exercise-card bg-[#111113] border-l-4 border-[var(--school-primary)] p-5 rounded-r-xl mb-4 shadow-2xl";
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-4">
-                        <h3 class="text-white font-black uppercase text-sm italic tracking-wider mt-1">${ex.name}</h3>
-                        <div class="text-right bg-black/40 px-3 py-1 rounded-lg border border-white/5">
-                            <p class="text-[8px] text-gray-500 font-bold uppercase">Estimated 1RM</p>
-                            <p class="text-xs text-white font-black italic">${athleteCurrentMax} LBS</p>
+                        <h3 class="text-white font-black uppercase text-sm italic tracking-widest">${ex.name}</h3>
+                        <div class="text-right">
+                            <p class="text-[8px] text-gray-600 font-black uppercase">Current 1RM</p>
+                            <p class="text-xs text-white font-black">${athleteCurrentMax} LBS</p>
                         </div>
                     </div>
                     ${setsHtml}
                 `;
                 list.appendChild(card);
-            }
-        } catch (error) {
-            console.error("Workout Load Failed:", error);
-        }
+            });
+
+            // Set up Finish Button
+            document.getElementById('finish-workout-btn').onclick = () => window.logFullWorkout(workoutId);
+
+        } catch (err) { console.error(err); }
     };
-    
+
     window.toggleSetComplete = (setId) => {
         const container = document.getElementById(`container-${setId}`);
         const btn = document.getElementById(`btn-${setId}`);
         const isCompleted = container.getAttribute('data-completed') === 'true';
         
         if (!isCompleted) {
-            container.classList.add('border-[#b91c1c]', 'bg-[#b91c1c]/10');
-            btn.classList.add('text-green-500', 'border-green-500/50');
+            container.style.borderColor = "var(--school-primary)";
+            btn.classList.add('text-green-500', 'border-green-500');
             container.setAttribute('data-completed', 'true');
         } else {
-            container.classList.remove('border-[#b91c1c]', 'bg-[#b91c1c]/10');
-            btn.classList.remove('text-green-500', 'border-green-500/50');
+            container.style.borderColor = "#1f2937";
+            btn.classList.remove('text-green-500', 'border-green-500');
             container.setAttribute('data-completed', 'false');
         }
     };
 
+    window.recordMaxAttempt = (exName, setId) => {
+        const weight = document.getElementById(`weight-${setId}`).value;
+        if (!weight) return alert("Enter weight");
+        window.toggleSetComplete(setId);
+        console.log(`Max Attempt: ${exName} @ ${weight} LBS`);
+    };
+
     window.logFullWorkout = async (workoutId) => {
-        // 1. Better button selector to prevent "null" error
-        const finishBtn = document.querySelector('button[onclick*="logFullWorkout"]');
-        if (finishBtn) {
-            finishBtn.innerText = "SAVING...";
-            finishBtn.disabled = true;
-        }
+        const btn = document.getElementById('finish-workout-btn');
+        btn.disabled = true;
+        btn.innerText = "UPLOADING...";
 
         try {
             const performance = [];
-            
-            // 2. Loop through each exercise card
             document.querySelectorAll('.exercise-card').forEach(card => {
-                const nameEl = card.querySelector('h3');
-                if (!nameEl) return; // Skip if card is malformed
-
-                const name = nameEl.innerText;
-                
-                // 3. Find all set rows within this specific card
-                const sets = Array.from(card.querySelectorAll('[id^="container-"]')).map(row => {
-                    const weightInput = row.querySelector('input');
-                    const isCompleted = row.getAttribute('data-completed') === 'true';
-                    
-                    return {
-                        // Grab value if input exists, otherwise default to BW
-                        weight: weightInput ? (weightInput.value || "BW") : "BW",
-                        completed: isCompleted
-                    };
-                });
-
+                const name = card.querySelector('h3').innerText;
+                const sets = Array.from(card.querySelectorAll('[id^="container-"]')).map(row => ({
+                    weight: row.querySelector('input').value,
+                    completed: row.getAttribute('data-completed') === 'true'
+                }));
                 performance.push({ name, sets });
             });
 
-            // 4. Save to Firestore
             await addDoc(collection(db, "completed_workouts"), {
                 athleteId: window.currentAthleteId,
                 workoutId: workoutId,
-                school_id: window.currentSchoolId, // Ensure naming matches your review page (school_id)
+                school_id: window.currentSchoolId,
                 performance,
                 timestamp: serverTimestamp()
             });
 
-            alert("Workout Logged!");
-            // 5. Use a small delay before redirecting to ensure Firestore finished
-            setTimeout(() => {
-                location.href = 'athlete-workout.html'; 
-            }, 500);
-
+            alert("Session Recorded.");
+            location.href = 'athlete-workout.html';
         } catch (error) {
-            console.error("Critical Error saving workout:", error);
-            alert("Error saving workout. Please check your connection.");
-            
-            // Reset button if it fails so they can try again
-            if (finishBtn) {
-                finishBtn.innerText = "Log Session & Finish";
-                finishBtn.disabled = false;
-            }
+            console.error(error);
+            btn.disabled = false;
+            btn.innerText = "Try Again";
         }
-    };
-
-    // Add this inside your <script type="module"> in athlete-workout.html
-
-    window.recordMaxAttempt = async (exerciseName, setId, isWarmup, athleteId) => {
-        const weightInput = document.getElementById(`weight-${setId}`);
-        const weight = parseFloat(weightInput.value);
-
-        if (!weight || weight <= 0) {
-            alert("Please enter a valid weight.");
-            return;
-        }
-
-        // Visual feedback: Mark the set as completed
-        const container = document.getElementById(`container-${setId}`);
-        const btn = document.getElementById(`btn-${setId}`);
-        
-        container.style.borderColor = "#b91c1c";
-        container.style.backgroundColor = "rgba(185, 28, 28, 0.1)";
-        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[#b91c1c]" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>`;
-        container.setAttribute('data-completed', 'true');
-
-        // If it's not a warmup, this is where we'd eventually trigger the "New PR" logic
-        console.log(`Recorded ${exerciseName} attempt: ${weight} lbs`);
-        
-        // Optional: Add a small toast or vibration feedback here
     };
 </script>
 

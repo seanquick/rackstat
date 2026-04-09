@@ -6,71 +6,82 @@
     <title>The Coach's Office | RACKSTAT</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
-        <a href="roster-manager.html" 
-        class="p-8 rounded-2xl bg-white/5 border border-white/10 hover:border-red-500 hover:bg-white/10 hover:-translate-y-1 transition-all duration-300 group">
-            </a>
+    <style>
+        /* Card Background Fallback */
+        .office-card {
+            background: #1a1a1c;
+            border: 1px solid #2a2a2c;
+            transition: all 0.3s ease;
+        }
+        .office-card:hover {
+            border-color: var(--school-primary);
+            transform: translateY(-4px);
+            background: rgba(255, 255, 255, 0.05);
+        }
+    </style>
 </head>
-<body class="font-sans antialiased">
+<body class="font-sans antialiased bg-[#0a0a0b] text-white">
 
     <header class="p-6 flex justify-between items-center border-b border-gray-800">
-        <div class="flex items-center gap-3">
-            <img src="images/rackstat-logo.png" alt="Logo" class="h-10 w-auto">
-            <h1 class="text-xl font-black italic uppercase tracking-tighter">Coach's Office</h1>
+        <div class="flex items-center gap-4">
+            <img src="" class="school-logo-primary h-10 w-auto" alt="Logo" onerror="this.src='images/rackstat-logo.png'">
+            <div>
+                <h1 class="text-xl font-black italic uppercase tracking-tighter leading-none">Coach's Office</h1>
+                <p id="school-name-display" class="text-[10px] font-bold text-[var(--school-primary)] uppercase tracking-widest"></p>
+            </div>
         </div>
-        <button onclick="logout()" class="text-sm font-bold text-gray-400 hover:text-white transition">LOGOUT</button>
+        <button onclick="logout()" class="text-xs font-black text-gray-500 hover:text-[var(--school-primary)] transition tracking-widest">LOGOUT</button>
     </header>
 
     <main class="max-w-6xl mx-auto px-6 py-12">
         <div class="mb-12">
-            <h2 id="coach-greeting" class="text-4xl font-bold mb-2">Welcome, Coach</h2>
-            <p class="text-gray-400">Select a module below to manage your program.</p>
+            <h2 id="coach-greeting" class="text-4xl font-black uppercase italic tracking-tighter mb-2">Welcome, Coach</h2>
+            <p class="text-gray-400 font-medium">Select a module below to manage your program.</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             
             <a href="roster-manager.html" class="office-card p-8 rounded-2xl group">
                 <div class="flex items-center gap-4 mb-4">
-                    <span class="text-4xl">📋</span>
-                    <h3 class="text-2xl font-bold group-hover:text-red-500 transition">Roster Manager</h3>
+                    <span class="text-3xl">📋</span>
+                    <h3 class="text-2xl font-black uppercase italic group-hover:text-[var(--school-primary)] transition">Roster Manager</h3>
                 </div>
-                <p class="text-gray-400">Manage athlete profiles, edit metrics, and update recruiting card data.</p>
+                <p class="text-sm text-gray-500 font-medium">Manage athlete profiles, edit metrics, and update recruiting card data.</p>
             </a>
 
             <a href="training-center.html" class="office-card p-8 rounded-2xl group">
                 <div class="flex items-center gap-4 mb-4">
-                    <span class="text-4xl">🏋️‍♂️</span>
-                    <h3 class="text-2xl font-bold group-hover:text-red-500 transition">Training Center</h3>
+                    <span class="text-3xl">🏋️‍♂️</span>
+                    <h3 class="text-2xl font-black uppercase italic group-hover:text-[var(--school-primary)] transition">Training Center</h3>
                 </div>
-                <p class="text-gray-400">Create, edit, and publish daily workouts for your athletes to view.</p>
+                <p class="text-sm text-gray-500 font-medium">Create, edit, and publish daily workouts for your athletes to view.</p>
             </a>
 
-            <div onclick="location.href='coach-review.html'" class="cursor-pointer group bg-[#1a1a1c] border border-[#2a2a2c] p-6 rounded-2xl hover:border-[#b91c1c] transition-all">
+            <a href="coach-review.html" class="office-card p-8 rounded-2xl group">
                 <div class="flex justify-between items-start mb-4">
-                    <div class="p-3 bg-black rounded-xl border border-[#2a2a2c] group-hover:border-[#b91c1c]/50">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#b91c1c]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
+                    <div class="flex items-center gap-4">
+                        <span class="text-3xl">📈</span>
+                        <h3 class="text-2xl font-black uppercase italic group-hover:text-[var(--school-primary)] transition">Session Review</h3>
                     </div>
-                    <span class="text-[10px] font-black text-gray-600 uppercase tracking-widest">Live Feed</span>
+                    <span class="text-[10px] font-black text-[var(--school-primary)] animate-pulse uppercase tracking-widest">Live</span>
                 </div>
-                <h3 class="text-xl font-black text-white uppercase italic tracking-tighter mb-1">Session Review</h3>
-                <p class="text-xs text-gray-500 font-medium">Analyze athlete performance and track new PRs in real-time.</p>
-            </div>
+                <p class="text-sm text-gray-500 font-medium">Analyze athlete performance and track new PRs in real-time.</p>
+            </a>
 
             <a href="analytics-vault.html" class="office-card p-8 rounded-2xl group">
                 <div class="flex items-center gap-4 mb-4">
-                    <span class="text-4xl">📊</span>
-                    <h3 class="text-2xl font-bold group-hover:text-red-500 transition">Analytics Vault</h3>
+                    <span class="text-3xl">📊</span>
+                    <h3 class="text-2xl font-black uppercase italic group-hover:text-[var(--school-primary)] transition">Analytics Vault</h3>
                 </div>
-                <p class="text-gray-400">View team leaderboards, track progress over time, and export data to CSV.</p>
+                <p class="text-sm text-gray-500 font-medium">View team leaderboards, track progress over time, and export data.</p>
             </a>
 
             <a href="team-settings.html" class="office-card p-8 rounded-2xl group">
                 <div class="flex items-center gap-4 mb-4">
-                    <span class="text-4xl">⚙️</span>
-                    <h3 class="text-2xl font-bold group-hover:text-red-500 transition">Program Settings</h3>
+                    <span class="text-3xl">⚙️</span>
+                    <h3 class="text-2xl font-black uppercase italic group-hover:text-[var(--school-primary)] transition">Program Settings</h3>
                 </div>
-                <p class="text-gray-400">Toggle recruiting visibility, define core lifts, and manage grade rollovers.</p>
+                <p class="text-sm text-gray-500 font-medium">Toggle recruiting visibility, define core lifts, and manage branding.</p>
             </a>
 
         </div>
@@ -81,21 +92,30 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        
+        // --- IMPORT CENTRAL THEME ENGINE ---
+        import { applyTheme } from './theme.js';
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Security & Personalization
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 const userData = userDoc.data();
 
-                // Redirect if not a coach
+                // Security Check
                 if (!userData || userData.role !== 'coach') {
                     window.location.href = 'index.html';
                     return;
+                }
+
+                // --- APPLY THEME ---
+                if (userData.school_id) {
+                    await applyTheme(db, userData.school_id);
+                } else {
+                    document.body.classList.add('theme-loaded');
                 }
 
                 // Personalize Greeting

@@ -47,7 +47,7 @@
         </div>
     </header>
 
-    <form id="recruitingForm" class="max-w-3xl mx-auto">
+    <form id="recruitingForm" class="max-w-3xl mx-auto mt-8">
         
         <div class="form-section">
             <h2 class="section-header">01 Personal & Social Profile</h2>
@@ -145,7 +145,7 @@
                 <div>
                     <span class="sub-label">School Size</span>
                     <select id="prefSize">
-                        <option value="Small">Small (< 5k)</option>
+                        <option value="Small">Small (&lt; 5k)</option>
                         <option value="Medium">Medium (5-15k)</option>
                         <option value="Large">Large (15k+)</option>
                         <option value="None">No Preference</option>
@@ -260,180 +260,169 @@
         <button type="submit" class="btn-submit">Sync Scouting Profile</button>
     </form>
 
+    <script type="module" src="theme.js"></script>
+
     <script type="module">
-        import { firebaseConfig } from './firebase-config.js';
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    // 2. Firebase Imports & Config
+    import { firebaseConfig } from './firebase-config.js';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
+    // 3. Initialization
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
 
-        let currentUser = null;
+    let currentUser = null;
 
-        onAuthStateChanged(auth, async (user) => { 
-            if (user) {
-                currentUser = user;
+    // 4. Auth State & Data Loading
+    onAuthStateChanged(auth, async (user) => { 
+        if (user) {
+            currentUser = user;
+            
+            const [profileSnap, recruitingSnap] = await Promise.all([
+                getDoc(doc(db, "users", user.uid)),
+                getDoc(doc(db, "recruiting_profiles", user.uid))
+            ]);
+
+            if (profileSnap.exists()) {
+                const pData = profileSnap.data();
+                const nameField = document.getElementById('fullName');
+                if (nameField && !nameField.value) nameField.value = pData.displayName || "";
+            }
+
+            if (recruitingSnap.exists()) {
+                const d = recruitingSnap.data();
+                const safeSet = (id, val) => { if(document.getElementById(id)) document.getElementById(id).value = val || ""; };
                 
-                // 1. First, check the main 'users' collection for the Display Name
-                const profileSnap = await getDoc(doc(db, "users", user.uid));
-                if (profileSnap.exists()) {
-                    document.getElementById('fullName').value = profileSnap.data().displayName || "";
+                safeSet('fullName', d.fullName);
+                safeSet('jerseyNum', d.jerseyNum);
+                safeSet('playerPhone', d.playerPhone);
+                safeSet('playerEmail', d.playerEmail);
+                safeSet('twitter', d.twitter);
+                safeSet('instagram', d.instagram);
+                safeSet('tiktok', d.tiktok);
+                safeSet('parentNames', d.parentNames);
+                safeSet('parentContact', d.parentContact);
+                safeSet('wantsToPlay', d.wantsToPlay || "Yes-Definitely");
+                safeSet('whyPlay', d.whyPlay);
+                safeSet('seriousness', d.seriousness || "Very Serious");
+                safeSet('perceivedLevel', d.perceivedLevel || "D1");
+                safeSet('postCollegeGoals', d.postCollegeGoals);
+                safeSet('major', d.major);
+                safeSet('acadImportance', d.acadImportance || "Extremely");
+                safeSet('acadPrioritize', d.acadPrioritize || "Yes");
+                safeSet('gpa', d.gpa);
+                safeSet('coreGpa', d.coreGpa);
+                safeSet('act', d.act);
+                safeSet('sat', d.sat);
+                safeSet('ncaaReg', d.ncaaReg || "No");
+                safeSet('acadStrengths', d.acadStrengths);
+                safeSet('pref_d1', d.pref_d1 || "0");
+                safeSet('pref_d2', d.pref_d2 || "0");
+                safeSet('pref_d3', d.pref_d3 || "0");
+                safeSet('pref_naia', d.pref_naia || "0");
+                safeSet('pref_juco', d.pref_juco || "0");
+                safeSet('prefSize', d.prefSize || "None");
+                safeSet('prefLoc', d.prefLoc || "Anywhere");
+                safeSet('prefOther', d.prefOther);
+                safeSet('isStarter', d.isStarter || "No");
+                safeSet('highlightUrl', d.highlightUrl);
+                safeSet('honors', d.honors);
+                safeSet('trainFreq', d.weeklyExtraDays || "0-1");
+                safeSet('hasNutrition', d.hasNutritionPlan || "No");
+                safeSet('hasSleep', d.getsSleep || "No");
+
+                if (d.commitments && Array.isArray(d.commitments)) {
+                    const checkboxes = document.querySelectorAll('#commitmentChecks input');
+                    checkboxes.forEach(cb => {
+                        cb.checked = d.commitments.includes(cb.value);
+                    });
                 }
 
-                // 2. Then, check the 'recruiting_profiles' collection for the deep data
-                const recruitingSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+                safeSet('teammateType', d.teammateType);
+                safeSet('teammateDef', d.goodTeammateMeaning || d.teammateDef); 
+                safeSet('sacrifice', d.willingToSacrifice);
+            }
+        } else { 
+            // Theme.js might handle this, but keeping as safety
+            setTimeout(() => { if(!auth.currentUser) window.location.href='index.html'; }, 1500);
+        } 
+    });
 
-                if (recruitingSnap.exists()) {
-                    const d = recruitingSnap.data();
-                    
-                    // SECTION 01: PERSONAL & SOCIAL
-                    document.getElementById('fullName').value = d.fullName || document.getElementById('fullName').value;
-                    document.getElementById('jerseyNum').value = d.jerseyNum || "";
-                    document.getElementById('playerPhone').value = d.playerPhone || "";
-                    document.getElementById('playerEmail').value = d.playerEmail || "";
-                    document.getElementById('twitter').value = d.twitter || "";
-                    document.getElementById('instagram').value = d.instagram || "";
-                    document.getElementById('tiktok').value = d.tiktok || "";
-                    document.getElementById('parentNames').value = d.parentNames || "";
-                    document.getElementById('parentContact').value = d.parentContact || "";
+    // 5. Form Submission Logic
+    document.getElementById('recruitingForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!currentUser) return;
 
-                    // SECTION 02: ASPIRATIONS
-                    document.getElementById('wantsToPlay').value = d.wantsToPlay || "Yes-Definitely";
-                    document.getElementById('whyPlay').value = d.whyPlay || "";
-                    document.getElementById('seriousness').value = d.seriousness || "Very Serious";
-                    document.getElementById('perceivedLevel').value = d.perceivedLevel || "D1";
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerText = "SYNCING PROFILE...";
+        }
 
-                    // SECTION 03-05: ACADEMICS, GOALS & PREFERENCES
-                    document.getElementById('postCollegeGoals').value = d.postCollegeGoals || "";
-                    document.getElementById('major').value = d.major || "";
-                    document.getElementById('acadImportance').value = d.acadImportance || "Extremely";
-                    document.getElementById('acadPrioritize').value = d.acadPrioritize || "Yes";
-                    document.getElementById('gpa').value = d.gpa || "";
-                    document.getElementById('coreGpa').value = d.coreGpa || "";
-                    document.getElementById('act').value = d.act || "";
-                    document.getElementById('sat').value = d.sat || "";
-                    document.getElementById('ncaaReg').value = d.ncaaReg || "No";
-                    document.getElementById('acadStrengths').value = d.acadStrengths || "";
-                    
-                    // Preferences
-                    document.getElementById('pref_d1').value = d.pref_d1 || "0";
-                    document.getElementById('pref_d2').value = d.pref_d2 || "0";
-                    document.getElementById('pref_d3').value = d.pref_d3 || "0";
-                    document.getElementById('pref_naia').value = d.pref_naia || "0";
-                    document.getElementById('pref_juco').value = d.pref_juco || "0";
-                    document.getElementById('prefSize').value = d.prefSize || "None";
-                    document.getElementById('prefLoc').value = d.prefLoc || "Anywhere";
-                    document.getElementById('prefOther').value = d.prefOther || "";
+        const commitments = Array.from(document.querySelectorAll('#commitmentChecks input:checked')).map(cb => cb.value);
 
-                    // SECTION 06: TESTING & FILM
-                    document.getElementById('isStarter').value = d.isStarter || "No";
-                    document.getElementById('highlightUrl').value = d.highlightUrl || "";
-                    document.getElementById('honors').value = d.honors || "";
-                    
-                    // SECTION 07: TRAINING & COMMITMENT
-                    // Mapped to match Recruiting Card keys
-                    document.getElementById('trainFreq').value = d.weeklyExtraDays || "0-1";
-                    document.getElementById('hasNutrition').value = d.hasNutritionPlan || "No";
-                    document.getElementById('hasSleep').value = d.getsSleep || "No";
+        const profileData = {
+            fullName: document.getElementById('fullName').value,
+            jerseyNum: document.getElementById('jerseyNum').value,
+            playerPhone: document.getElementById('playerPhone').value, 
+            playerEmail: document.getElementById('playerEmail').value,
+            twitter: document.getElementById('twitter').value,        
+            instagram: document.getElementById('instagram').value,    
+            tiktok: document.getElementById('tiktok').value,          
+            parentNames: document.getElementById('parentNames').value,
+            parentContact: document.getElementById('parentContact').value,
+            wantsToPlay: document.getElementById('wantsToPlay').value,
+            whyPlay: document.getElementById('whyPlay').value,
+            seriousness: document.getElementById('seriousness').value,
+            perceivedLevel: document.getElementById('perceivedLevel').value,
+            postCollegeGoals: document.getElementById('postCollegeGoals').value,
+            major: document.getElementById('major').value,
+            acadImportance: document.getElementById('acadImportance').value,
+            acadPrioritize: document.getElementById('acadPrioritize').value,
+            gpa: document.getElementById('gpa').value,
+            coreGpa: document.getElementById('coreGpa').value,
+            act: document.getElementById('act').value, 
+            sat: document.getElementById('sat').value, 
+            ncaaReg: document.getElementById('ncaaReg').value,
+            acadStrengths: document.getElementById('acadStrengths').value,
+            pref_d1: document.getElementById('pref_d1').value,
+            pref_d2: document.getElementById('pref_d2').value,
+            pref_d3: document.getElementById('pref_d3').value,
+            pref_naia: document.getElementById('pref_naia').value,
+            pref_juco: document.getElementById('pref_juco').value,
+            prefSize: document.getElementById('prefSize').value,
+            prefLoc: document.getElementById('prefLoc').value,
+            prefOther: document.getElementById('prefOther').value,
+            isStarter: document.getElementById('isStarter').value,
+            highlightUrl: document.getElementById('highlightUrl').value,
+            honors: document.getElementById('honors').value,
+            weeklyExtraDays: document.getElementById('trainFreq').value,
+            hasNutritionPlan: document.getElementById('hasNutrition').value,
+            getsSleep: document.getElementById('hasSleep').value,
+            commitments: commitments,
+            liftYearRound: commitments.includes("Lift Year Round"), 
+            teammateType: document.getElementById('teammateType').value,
+            goodTeammateMeaning: document.getElementById('teammateDef').value, 
+            willingToSacrifice: document.getElementById('sacrifice').value,
+            teammateDef: document.getElementById('teammateDef').value, 
+            lastUpdated: new Date().toISOString()
+        };
 
-                    // Re-check the commitment boxes
-                    if (d.commitments && Array.isArray(d.commitments)) {
-                        const checkboxes = document.querySelectorAll('#commitmentChecks input');
-                        checkboxes.forEach(cb => {
-                            if (d.commitments.includes(cb.value)) cb.checked = true;
-                        });
-                    }
-
-                    // SECTION 08: CHARACTER & LEADERSHIP
-                    // Mapped to match Recruiting Card keys
-                    document.getElementById('teammateType').value = d.teammateType || "";
-                    document.getElementById('teammateDef').value = d.goodTeammateMeaning || d.teammateDef || ""; 
-                    document.getElementById('sacrifice').value = d.willingToSacrifice || "";
-                }
-            } else { 
-                // Small delay to prevent the "flash and boot" on slow connections
-                setTimeout(() => { 
-                    if(!auth.currentUser) window.location.href='index.html'; 
-                }, 2000);
-            } 
-        });
-
-        document.getElementById('recruitingForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!currentUser) return;
-
-            const commitments = Array.from(document.querySelectorAll('#commitmentChecks input:checked')).map(cb => cb.value);
-
-            const profileData = {
-                // 01 PERSONAL & SOCIAL
-                fullName: document.getElementById('fullName').value,
-                jerseyNum: document.getElementById('jerseyNum').value,
-                playerPhone: document.getElementById('playerPhone').value, 
-                playerEmail: document.getElementById('playerEmail').value,
-                twitter: document.getElementById('twitter').value,        
-                instagram: document.getElementById('instagram').value,    
-                tiktok: document.getElementById('tiktok').value,          
-                parentNames: document.getElementById('parentNames').value,
-                parentContact: document.getElementById('parentContact').value,
-
-                // 02 ASPIRATIONS
-                wantsToPlay: document.getElementById('wantsToPlay').value,
-                whyPlay: document.getElementById('whyPlay').value,
-                seriousness: document.getElementById('seriousness').value,
-                perceivedLevel: document.getElementById('perceivedLevel').value,
-
-                // 03-05 ACADEMICS, GOALS & PREFS
-                postCollegeGoals: document.getElementById('postCollegeGoals').value,
-                major: document.getElementById('major').value,
-                acadImportance: document.getElementById('acadImportance').value,
-                acadPrioritize: document.getElementById('acadPrioritize').value,
-                gpa: document.getElementById('gpa').value,
-                coreGpa: document.getElementById('coreGpa').value,
-                act: document.getElementById('act').value, 
-                sat: document.getElementById('sat').value, 
-                ncaaReg: document.getElementById('ncaaReg').value,
-                acadStrengths: document.getElementById('acadStrengths').value,
-                
-                pref_d1: document.getElementById('pref_d1').value,
-                pref_d2: document.getElementById('pref_d2').value,
-                pref_d3: document.getElementById('pref_d3').value,
-                pref_naia: document.getElementById('pref_naia').value,
-                pref_juco: document.getElementById('pref_juco').value,
-                prefSize: document.getElementById('prefSize').value,
-                prefLoc: document.getElementById('prefLoc').value,
-                prefOther: document.getElementById('prefOther').value,
-
-                // 06 TESTING & FILM
-                isStarter: document.getElementById('isStarter').value,
-                highlightUrl: document.getElementById('highlightUrl').value,
-                honors: document.getElementById('honors').value,
-                
-                // 07 TRAINING & COMMITMENT
-                // Naming these to perfectly match the recruiting card database keys
-                weeklyExtraDays: document.getElementById('trainFreq').value,
-                hasNutritionPlan: document.getElementById('hasNutrition').value,
-                getsSleep: document.getElementById('hasSleep').value,
-                commitments: commitments,
-                liftYearRound: commitments.includes("Lift Year Round"), // Auto-sets the boolean for the card!
-
-                // 08 CHARACTER & LEADERSHIP
-                teammateType: document.getElementById('teammateType').value,
-                goodTeammateMeaning: document.getElementById('teammateDef').value, 
-                willingToSacrifice: document.getElementById('sacrifice').value,
-                teammateDef: document.getElementById('teammateDef').value, // Saving twice just for backward compatibility
-                
-                // SYSTEM DATA
-                lastUpdated: new Date().toISOString()
-            };
-
-            try {
-                await setDoc(doc(db, "recruiting_profiles", currentUser.uid), profileData, { merge: true });
-                alert("SCOUTING PROFILE SYNCED!");
-                window.location.href = 'index.html';
-            } catch (err) { alert("Error: " + err.message); }
-        });
-        </script>
+        try {
+            await setDoc(doc(db, "recruiting_profiles", currentUser.uid), profileData, { merge: true });
+            alert("SCOUTING PROFILE SYNCED!");
+            window.location.href = 'index.html';
+        } catch (err) { 
+            alert("Error: " + err.message); 
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "SAVE & SYNC PROFILE";
+            }
+        }
+    });
+</script>
 </body>
 </html>

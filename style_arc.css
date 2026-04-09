@@ -1,0 +1,272 @@
+:root {
+    --rackstat-red: #b91c1c;
+    --rackstat-black: #0a0a0b;
+    --rackstat-gray: #1a1a1c;
+    --rackstat-border: #2a2a2c;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+body {
+    background-color: var(--rackstat-black);
+    color: white;
+    min-height: 100vh;
+}
+
+/* --- BRANDING HEADER --- */
+.brand-header {
+    background: linear-gradient(to bottom, #000, var(--rackstat-black));
+    padding: 40px 20px;
+    border-bottom: 2px solid var(--rackstat-border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+}
+
+.rackstat-logo {
+    height: 180px; 
+    width: auto;
+    filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.1));
+}
+
+/* --- SCHOOL IDENTITY SECTION --- */
+.school-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 40px; 
+    padding: 20px;
+    width: 100%;
+    flex-wrap: wrap;
+}
+
+.school-logo-primary, 
+.school-logo-secondary {
+    height: 140px;
+    width: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 0 15px rgba(185, 28, 28, 0.4));
+}
+
+.school-name {
+    font-size: 2.5rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    font-style: italic;
+    letter-spacing: 3px;
+    color: #ffffff;
+    text-align: center;
+    border-left: 4px solid var(--rackstat-red);
+    border-right: 4px solid var(--rackstat-red);
+    padding: 0 25px;
+    line-height: 1;
+}
+
+/* --- CONTAINERS & FORMS --- */
+.container {
+    max-width: 450px;
+    margin: 40px auto;
+    padding: 30px;
+    background: var(--rackstat-gray);
+    border: 1px solid var(--rackstat-border);
+    border-radius: 4px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label, .sub-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.form-group input, select {
+    width: 100%;
+    background: #000;
+    border: 1px solid var(--rackstat-border);
+    padding: 14px;
+    color: white;
+    font-size: 14px;
+    border-radius: 4px;
+    transition: border 0.3s ease;
+}
+
+.form-group input:focus, select:focus {
+    outline: none;
+    border-color: var(--rackstat-red);
+}
+
+/* --- BUTTONS --- */
+.btn-primary {
+    width: 100%;
+    background-color: var(--rackstat-red);
+    color: white;
+    padding: 16px;
+    border: none;
+    border-radius: 4px;
+    font-weight: 900;
+    text-transform: uppercase;
+    font-style: italic;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+    background-color: #991b1b;
+    transform: translateY(-2px);
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* --- TRAINING & COMMITMENT (SECTION 07) --- */
+
+#commitmentChecks {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 15px;
+    border-radius: 4px;
+    border: 1px solid var(--rackstat-border);
+    margin-top: 10px;
+}
+
+.check-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    color: #aaa;
+    transition: color 0.2s ease;
+}
+
+.check-item:hover {
+    color: var(--rackstat-red);
+}
+
+.check-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    appearance: none;
+    background: #000;
+    border: 1px solid var(--rackstat-border);
+    border-radius: 2px;
+    position: relative;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.check-item input[type="checkbox"]:checked {
+    background: var(--rackstat-red);
+    border-color: var(--rackstat-red);
+}
+
+.check-item input[type="checkbox"]:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 10px;
+}
+
+/* --- WORKOUT BUILDER DROPDOWN FIXES --- */
+
+.exercise-row {
+    position: relative;
+    overflow: visible !important;
+    z-index: 10;
+    margin-bottom: 20px;
+}
+
+[id^="name-container-"] {
+    position: relative;
+    z-index: 100 !important;
+}
+
+select {
+    position: relative;
+    z-index: 100;
+    cursor: pointer;
+    color-scheme: dark;
+}
+
+select option {
+    background-color: var(--rackstat-gray) !important;
+    color: white !important;
+    padding: 12px;
+}
+
+[id^="sets-container-"] {
+    position: relative;
+    z-index: 1;
+}
+
+.badge-red {
+    background-color: var(--rackstat-red);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 900;
+    text-transform: uppercase;
+    display: inline-block;
+    margin-right: 4px;
+}
+
+/* Special Style for Social Media Export */
+body.social-export {
+    background: #0a0a0a !important; /* Deep Black */
+}
+
+body.social-export #capture-area {
+    background: #111 !important; /* Slightly lighter card */
+    border: 1px solid #333 !important;
+    color: white !important;
+}
+
+body.social-export .stat-box {
+    background: rgba(255,255,255,0.05) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+}
+
+body.social-export span, 
+body.social-export p, 
+body.social-export h1 {
+    color: white !important;
+}
+
+/* Coach Office Component Styles */
+.office-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.office-card:hover {
+    border-color: #ef4444; 
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateY(-4px);
+}

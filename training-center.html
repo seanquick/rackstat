@@ -3,37 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Training Center | Coach Lobby</title>
+    <title>Training Center | RACKSTAT</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-black text-white font-sans antialiased min-h-screen pb-20">
+<body class="bg-[#0d1117] text-white font-sans antialiased min-h-screen pb-20">
 
-    <header class="p-6 flex justify-between items-center border-b border-gray-800">
-        <div class="flex items-center gap-4">
-            <a href="coach-lobby.html" class="text-gray-400 hover:text-white transition flex items-center gap-2 font-bold uppercase text-xs">
-                ← Back to Office
+    <header class="p-6 flex justify-between items-center border-b border-gray-800 bg-[#0d1117]/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="flex items-center gap-6">
+            <a href="coach-lobby.html" class="group flex items-center gap-2 text-xs font-black tracking-widest uppercase text-gray-500 hover:text-white transition-all">
+                <span class="group-hover:-translate-x-1 transition-transform">←</span> Office
             </a>
-            <h1 class="text-xl font-black italic uppercase tracking-tighter text-red-500">Training Center</h1>
+            <h1 class="text-2xl font-black italic uppercase tracking-tighter text-red-600">Training <span class="text-white">Center</span></h1>
         </div>
-        <button onclick="saveWorkout()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-black text-sm transition shadow-lg uppercase">
+        <button id="save-workout-btn" onclick="saveWorkout()" class="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-md font-black text-xs transition shadow-lg uppercase tracking-widest italic">
             Save Workout
         </button>
     </header>
 
     <main class="max-w-4xl mx-auto p-6 space-y-6">
-        <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 flex flex-wrap gap-6 items-end">
+        <div class="bg-gray-900/50 p-6 rounded-2xl border border-gray-800 flex flex-wrap gap-6 items-end shadow-2xl">
             <div class="flex-1 min-w-[200px]">
-                <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Date</label>
-                <input type="date" id="workout-date" class="w-full bg-black border border-gray-700 rounded px-4 py-2 text-white focus:outline-none focus:border-red-500">
+                <label class="block text-[10px] font-black text-gray-500 mb-2 uppercase tracking-widest">Training Date</label>
+                <input type="date" id="workout-date" class="w-full bg-black border border-gray-700 rounded-lg px-4 py-3 text-white font-bold focus:outline-none focus:border-red-600 transition-colors">
             </div>
             <div class="flex-[2] min-w-[200px]">
-                <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Workout Name</label>
-                <input type="text" id="workout-name" placeholder="e.g., Upper Body Power" class="w-full bg-black border border-gray-700 rounded px-4 py-2 text-white focus:outline-none focus:border-red-500">
+                <label class="block text-[10px] font-black text-gray-500 mb-2 uppercase tracking-widest">Workout Name</label>
+                <input type="text" id="workout-name" placeholder="e.g., UPPER BODY POWER" class="w-full bg-black border border-gray-700 rounded-lg px-4 py-3 text-white font-bold focus:outline-none focus:border-red-600 transition-colors placeholder:text-gray-700">
             </div>
-            <div class="flex items-center gap-3 bg-gray-800 px-4 py-2 rounded border border-gray-700 cursor-pointer" onclick="toggleMaxOut()">
-                <div class="text-sm font-bold uppercase">Max Out Mode</div>
-                <div id="max-out-indicator" class="w-10 h-5 bg-black rounded-full relative transition-colors">
-                    <div id="max-out-knob" class="w-4 h-4 bg-gray-500 rounded-full absolute top-0.5 left-0.5 transition-transform"></div>
+            <div class="flex items-center gap-4 bg-gray-800/50 px-5 py-3 rounded-lg border border-gray-700 cursor-pointer hover:bg-gray-800 transition-all" onclick="toggleMaxOut()">
+                <div class="text-[10px] font-black uppercase tracking-widest">Max Out Mode</div>
+                <div id="max-out-indicator" class="w-12 h-6 bg-gray-700 rounded-full relative transition-colors">
+                    <div id="max-out-knob" class="w-4 h-4 bg-white rounded-full absolute top-1 left-1 transition-transform"></div>
                 </div>
             </div>
         </div>
@@ -41,23 +42,29 @@
         <div id="exercises-container" class="space-y-4">
             </div>
 
-        <button id="add-exercise-btn" onclick="addExerciseBlock()" class="w-full py-4 border-2 border-dashed border-gray-800 text-gray-500 font-bold uppercase rounded-xl hover:border-gray-600 hover:text-white transition">
+        <button id="add-exercise-btn" onclick="addExerciseBlock()" class="w-full py-6 border-2 border-dashed border-gray-800 text-gray-600 font-black uppercase text-xs tracking-[0.3em] rounded-2xl hover:border-red-600/50 hover:text-white hover:bg-red-600/5 transition-all">
             + Add Exercise Block
         </button>
+
+        <section class="mt-20 pt-12 border-t border-gray-800">
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h2 class="text-xl font-black italic uppercase tracking-tighter text-gray-400">Workout Archive</h2>
+                    <p class="text-xs text-gray-600 font-bold uppercase tracking-widest">Manage previous training sessions</p>
+                </div>
+                <div class="relative w-64">
+                    <input type="text" id="history-search" onkeyup="filterHistory()" placeholder="SEARCH ARCHIVE..." 
+                        class="w-full bg-gray-900 border border-gray-800 rounded-lg px-4 py-2 text-[10px] font-black text-white focus:outline-none focus:border-red-600 transition-all">
+                </div>
+            </div>
+            
+            <div id="history-container" class="grid gap-3">
+                <p class="text-gray-700 italic text-sm font-bold uppercase tracking-widest">Initializing database...</p>
+            </div>
+        </section>
     </main>
 
-    <div class="mb-4">
-        <input type="text" id="history-search" onkeyup="filterHistory()" placeholder="Search by name or date (YYYY-MM-DD)..." 
-            class="w-full bg-black border border-gray-800 rounded-lg px-4 py-2 text-sm text-gray-400 focus:outline-none focus:border-red-500">
-    </div>
-    <div id="history-container" class="space-y-3"> ... </div>
-
-    <section class="max-w-4xl mx-auto p-6 mt-12 border-t border-gray-800">
-        <h2 class="text-xl font-black italic uppercase tracking-tighter text-gray-500 mb-6">Workout History</h2>
-        <div id="history-container" class="space-y-3">
-            <p class="text-gray-600 italic text-sm">Loading history...</p>
-        </div>
-    </section>
+    <script src="theme.js"></script>
 
     <script type="module">
         import { firebaseConfig } from './firebase-config.js';
@@ -69,65 +76,44 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        let coreLifts = ["Bench Press", "Squat", "Power Clean", "Deadlift", "Push Press"]; // Default fallback
+        let coreLifts = ["Bench Press", "Squat", "Power Clean", "Deadlift", "Push Press"];
         let supplementLibrary = []; 
         let exercises = [];
         let isMaxOutMode = false;
         let userSchoolId = null;
-        let editingWorkoutId = null; // Tracks if we are updating an existing workout
-
-        async function fetchTeamSettings(schoolId) {
-            try {
-                const settingsRef = doc(db, "school_settings", schoolId);
-                const settingsSnap = await getDoc(settingsRef);
-                
-                if (settingsSnap.exists()) {
-                    const data = settingsSnap.data();
-                    // If the coach has defined custom core lifts, use them
-                    if (data.trackedCoreLifts && data.trackedCoreLifts.length > 0) {
-                        coreLifts = data.trackedCoreLifts;
-                        console.log("Team Core Lifts loaded:", coreLifts);
-                    }
-                }
-            } catch (err) {
-                console.error("Error fetching team settings:", err);
-            }
-        }
-
-        async function fetchSupplements() {
-            try {
-                const snap = await getDocs(collection(db, "supplement_library"));
-                snap.forEach(doc => supplementLibrary.push(doc.data().name));
-            } catch (err) { console.error("Error fetching library", err); }
-        }
+        let editingWorkoutId = null;
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // 1. Get the user's school_id from their profile
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 if (userDoc.exists()) {
                     userSchoolId = userDoc.data().school_id;
-                    
-                    // 2. Fetch the custom Core Lifts for that school
-                    if (userSchoolId) {
-                        await fetchTeamSettings(userSchoolId);
-                    }
+                    if (userSchoolId) await fetchTeamSettings(userSchoolId);
                 }
-
-                // 3. Load the rest of the app
                 await fetchSupplements();
                 await loadHistory();
-                
-                // Only add the first block once settings are loaded
-                if (exercises.length === 0) {
-                    addExerciseBlock(); 
-                }
+                if (exercises.length === 0) addExerciseBlock(); 
             } else {
                 window.location.href = 'index.html';
             }
         });
 
-        // --- STATE MANAGERS ---
+        async function fetchTeamSettings(schoolId) {
+            try {
+                const settingsSnap = await getDoc(doc(db, "school_settings", schoolId));
+                if (settingsSnap.exists() && settingsSnap.data().trackedCoreLifts?.length > 0) {
+                    coreLifts = settingsSnap.data().trackedCoreLifts;
+                }
+            } catch (err) { console.error("Settings Error:", err); }
+        }
+
+        async function fetchSupplements() {
+            try {
+                const snap = await getDocs(collection(db, "supplement_library"));
+                supplementLibrary = snap.docs.map(doc => doc.data().name);
+            } catch (err) { console.error("Library Error", err); }
+        }
+
         window.toggleMaxOut = () => {
             isMaxOutMode = !isMaxOutMode;
             const bg = document.getElementById('max-out-indicator');
@@ -135,10 +121,9 @@
             const addBtn = document.getElementById('add-exercise-btn');
             
             if (isMaxOutMode) {
-                bg.classList.add('bg-red-600');
-                knob.classList.add('translate-x-5', 'bg-white');
-                addBtn.style.display = 'none';
-                
+                bg.classList.replace('bg-gray-700', 'bg-red-600');
+                knob.classList.add('translate-x-6');
+                addBtn?.classList.add('hidden');
                 exercises = coreLifts.map(lift => ({
                     id: Date.now() + Math.random(),
                     category: 'core',
@@ -147,9 +132,9 @@
                     sets: [{ reps: 5, pct: 50 }, { reps: 3, pct: 70 }, { reps: 1, pct: 85 }, { reps: 1, pct: 100 }, { reps: 1, pct: 105 }, { reps: 1, pct: 110 }]
                 }));
             } else {
-                bg.classList.remove('bg-red-600');
-                knob.classList.remove('translate-x-5', 'bg-white');
-                addBtn.style.display = 'block';
+                bg.classList.replace('bg-red-600', 'bg-gray-700');
+                knob.classList.remove('translate-x-6');
+                addBtn?.classList.remove('hidden');
                 exercises = [];
                 addExerciseBlock();
             }
@@ -162,8 +147,8 @@
                 category: 'core',
                 name: coreLifts[0],
                 isCircuit: false,
-                circuitExercises: [''], // Array for multiple exercises in a circuit
-                circuitConfig: { cycles: 3, work: 40, rest: 20 }, // Global rules for the circuit
+                circuitExercises: [''],
+                circuitConfig: { cycles: 3, work: 40, rest: 20 },
                 sets: [{ reps: '', pct: '' }]
             });
             renderExercises();
@@ -182,64 +167,46 @@
             }
         };
 
-        // --- CIRCUIT SPECIFIC LOGIC ---
         window.toggleCircuit = (id) => {
             const ex = exercises.find(e => e.id === id);
             if (ex) {
                 ex.isCircuit = !ex.isCircuit;
-                // Ensure arrays are reset when toggled
-                if (ex.isCircuit && ex.circuitExercises.length === 0) {
-                    ex.circuitExercises = [ex.name || '']; 
-                }
+                if (ex.isCircuit && ex.circuitExercises.length === 0) ex.circuitExercises = [ex.name || '']; 
                 renderExercises();
             }
         };
 
         window.addCircuitExercise = (blockId) => {
             const ex = exercises.find(e => e.id === blockId);
-            if (ex) {
-                ex.circuitExercises.push('');
-                renderExercises();
-            }
+            if (ex) { ex.circuitExercises.push(''); renderExercises(); }
         };
 
         window.updateCircuitExercise = (blockId, exIndex, value) => {
             const ex = exercises.find(e => e.id === blockId);
-            if (ex) {
-                ex.circuitExercises[exIndex] = value;
-            }
+            if (ex) ex.circuitExercises[exIndex] = value;
         };
 
         window.removeCircuitExercise = (blockId, exIndex) => {
             const ex = exercises.find(e => e.id === blockId);
-            if (ex) {
-                ex.circuitExercises.splice(exIndex, 1);
-                renderExercises();
-            }
+            if (ex) { ex.circuitExercises.splice(exIndex, 1); renderExercises(); }
         };
 
         window.updateCircuitConfig = (blockId, field, value) => {
             const ex = exercises.find(e => e.id === blockId);
-            if (ex) {
-                ex.circuitConfig[field] = value;
-            }
+            if (ex) ex.circuitConfig[field] = value;
         };
 
-        // --- SET SPECIFIC LOGIC ---
         window.addSet = (id) => {
             const ex = exercises.find(e => e.id === id);
             if (ex) {
-                if (ex.category === 'supplement') ex.sets.push({ reps: '' });
-                else ex.sets.push({ reps: '', pct: '' });
+                ex.sets.push(ex.category === 'supplement' ? { reps: '' } : { reps: '', pct: '' });
                 renderExercises();
             }
         };
         
         window.updateSet = (exId, setIndex, field, value) => {
             const ex = exercises.find(e => e.id === exId);
-            if (ex && ex.sets[setIndex]) {
-                ex.sets[setIndex][field] = value;
-            }
+            if (ex && ex.sets[setIndex]) ex.sets[setIndex][field] = value;
         };
 
         window.removeExercise = (id) => {
@@ -249,178 +216,124 @@
 
         window.removeSet = (exId, setIndex) => {
             const ex = exercises.find(e => e.id === exId);
-            if (ex) {
-                ex.sets.splice(setIndex, 1); // Removes that specific set from the array
-                renderExercises(); // Refreshes the display
-            }
+            if (ex) { ex.sets.splice(setIndex, 1); renderExercises(); }
         };
 
-        // --- RENDER FUNCTION ---
         function renderExercises() {
             const container = document.getElementById('exercises-container');
             container.innerHTML = '';
 
             exercises.forEach((ex, index) => {
                 const isCore = ex.category === 'core';
-                
-                let innerHtml = `
-                    <div class="bg-gray-900 border ${ex.isMaxOut ? 'border-red-600' : 'border-gray-800'} rounded-xl p-4">
-                        <div class="flex justify-between items-start mb-4">
-                            <div class="flex gap-4 items-center w-full">
-                                <span class="text-gray-600 font-black text-xl">0${index + 1}</span>
+                let blockHtml = `
+                    <div class="bg-gray-900/40 border ${ex.isMaxOut ? 'border-red-600' : 'border-white/10'} rounded-2xl p-6 mb-4 shadow-xl backdrop-blur-sm">
+                        <div class="flex justify-between items-center mb-6">
+                            <div class="flex gap-4 items-center flex-1">
+                                <span class="text-white/10 font-black text-3xl italic tracking-tighter">#0${index + 1}</span>
                 `;
 
                 if (ex.isMaxOut) {
-                    innerHtml += `<h2 class="text-xl font-black uppercase text-red-500">${ex.name} (MAX OUT)</h2></div></div>`;
-                    innerHtml += `<div class="text-xs text-gray-400 italic">3 Warm Up Sets, 3 Max Attempts auto-generated.</div></div>`;
-                    container.insertAdjacentHTML('beforeend', innerHtml);
+                    blockHtml += `
+                                <h2 class="text-xl font-black uppercase text-red-600 tracking-tight italic">${ex.name} <span class="text-[10px] bg-red-600 text-white px-3 py-1 ml-3 rounded-full not-italic">MAX TEST</span></h2>
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-gray-500 uppercase font-black tracking-widest border-t border-white/5 pt-4">Automatic Load Calculation Enabled</p>
+                    </div>`;
+                    container.insertAdjacentHTML('beforeend', blockHtml);
                     return; 
                 } 
-                
-                // TYPE SELECTOR
-                innerHtml += `
-                    <select onchange="updateExercise(${ex.id}, 'category', this.value)" class="bg-black border border-gray-700 text-xs font-bold uppercase rounded p-2 text-white">
-                        <option value="core" ${isCore ? 'selected' : ''}>Core</option>
-                        <option value="supplement" ${!isCore ? 'selected' : ''}>Supplement</option>
+
+                blockHtml += `
+                    <select onchange="updateExercise(${ex.id}, 'category', this.value)" class="bg-white/5 border border-white/10 text-[10px] font-black uppercase rounded px-3 py-1.5 text-white outline-none focus:border-red-600">
+                        <option value="core" ${isCore ? 'selected' : ''}>CORE LIFT</option>
+                        <option value="supplement" ${!isCore ? 'selected' : ''}>SUPPLEMENT</option>
                     </select>
                 `;
 
-                // CIRCUIT TOGGLE
                 if (!isCore) {
-                    innerHtml += `
-                        <div class="flex items-center gap-2 ml-2 sm:ml-4">
-                            <input type="checkbox" id="circ-${ex.id}" ${ex.isCircuit ? 'checked' : ''} onchange="toggleCircuit(${ex.id})">
-                            <label for="circ-${ex.id}" class="text-[10px] sm:text-xs font-bold text-gray-500 uppercase cursor-pointer">Circuit</label>
+                    blockHtml += `
+                        <div class="flex items-center gap-2 ml-4">
+                            <input type="checkbox" id="circ-${ex.id}" ${ex.isCircuit ? 'checked' : ''} onchange="toggleCircuit(${ex.id})" class="accent-red-600 w-4 h-4">
+                            <label for="circ-${ex.id}" class="text-[10px] font-black text-white/40 uppercase cursor-pointer">CIRCUIT</label>
                         </div>
                     `;
                 }
 
-                // EXERCISE NAME INPUT(S)
                 if (isCore) {
                     const options = coreLifts.map(l => `<option value="${l}" ${ex.name === l ? 'selected' : ''}>${l}</option>`).join('');
-                    innerHtml += `<select onchange="updateExercise(${ex.id}, 'name', this.value)" class="flex-1 bg-black border border-gray-700 rounded p-2 text-white font-bold uppercase text-sm">${options}</select></div>`;
+                    blockHtml += `<select onchange="updateExercise(${ex.id}, 'name', this.value)" class="flex-1 bg-transparent border-b-2 border-white/10 focus:border-red-600 outline-none text-white font-black uppercase text-lg px-2 transition-all">${options}</select>`;
                 } else if (!ex.isCircuit) {
-                    const datalistId = `list-${ex.id}`;
-                    const dlOptions = supplementLibrary.map(s => `<option value="${s}">`).join('');
-                    innerHtml += `
-                        <input type="text" list="${datalistId}" value="${ex.name}" onchange="updateExercise(${ex.id}, 'name', this.value)" placeholder="Enter Exercise Name" class="flex-1 bg-black border border-gray-700 rounded p-2 text-white font-bold uppercase text-sm">
-                        <datalist id="${datalistId}">${dlOptions}</datalist>
-                    </div>`;
-                } else {
-                    innerHtml += `<span class="flex-1 font-bold text-gray-400 uppercase italic text-sm">Circuit Builder</span></div>`;
-                }
-
-                // Delete Block Button
-                innerHtml += `<button onclick="removeExercise(${ex.id})" class="text-gray-600 hover:text-red-500 transition ml-2">✕</button></div>`;
-
-                // --- BUILDER AREA ---
-                if (ex.isCircuit && !isCore) {
-                    innerHtml += `<div class="bg-black border border-gray-800 p-4 rounded mb-4 space-y-3">
-                        <label class="text-xs font-bold text-gray-500 uppercase">Circuit Exercises</label>`;
-                    
-                    ex.circuitExercises.forEach((cEx, cIdx) => {
-                        const dlId = `circ-list-${ex.id}-${cIdx}`;
-                        const dlOptions = supplementLibrary.map(s => `<option value="${s}">`).join('');
-                        innerHtml += `
-                            <div class="flex gap-2 items-center">
-                                <span class="text-gray-600 text-xs font-bold">${cIdx + 1}.</span>
-                                <input type="text" list="${dlId}" value="${cEx}" onchange="updateCircuitExercise(${ex.id}, ${cIdx}, this.value)" placeholder="Exercise ${cIdx + 1}" class="flex-1 bg-gray-900 border border-gray-700 rounded p-2 text-white text-xs font-bold uppercase">
-                                <datalist id="${dlId}">${dlOptions}</datalist>
-                                ${cIdx > 0 ? `<button onclick="removeCircuitExercise(${ex.id}, ${cIdx})" class="text-red-500 hover:text-red-400 font-bold px-2">✕</button>` : `<div class="w-6"></div>`}
-                            </div>
-                        `;
-                    });
-
-                    innerHtml += `<button onclick="addCircuitExercise(${ex.id})" class="text-xs font-bold text-red-500 hover:text-red-400 uppercase mt-2">+ Add Exercise to Circuit</button></div>`;
-
-                    // CIRCUIT TIMERS (Responsive grid)
-                    innerHtml += `
-                        <div class="grid grid-cols-3 gap-2 bg-gray-800 p-3 rounded border border-gray-700">
-                            <div>
-                                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1 text-center">Cycles</label>
-                                <input type="number" value="${ex.circuitConfig.cycles}" onchange="updateCircuitConfig(${ex.id}, 'cycles', this.value)" class="w-full bg-black border border-gray-600 rounded py-1 text-sm text-center">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1 text-center">Work (s)</label>
-                                <input type="number" value="${ex.circuitConfig.work}" onchange="updateCircuitConfig(${ex.id}, 'work', this.value)" class="w-full bg-black border border-gray-600 rounded py-1 text-sm text-center">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1 text-center">Rest (s)</label>
-                                <input type="number" value="${ex.circuitConfig.rest}" onchange="updateCircuitConfig(${ex.id}, 'rest', this.value)" class="w-full bg-black border border-gray-600 rounded py-1 text-sm text-center">
-                            </div>
-                        </div>
+                    const dlId = `list-${ex.id}`;
+                    blockHtml += `
+                        <input type="text" list="${dlId}" value="${ex.name}" onchange="updateExercise(${ex.id}, 'name', this.value)" placeholder="EXERCISE NAME" class="flex-1 bg-transparent border-b-2 border-white/10 focus:border-red-600 outline-none text-white font-black uppercase text-lg px-2 transition-all">
+                        <datalist id="${dlId}">${supplementLibrary.map(s => `<option value="${s}">`).join('')}</datalist>
                     `;
                 } else {
-                    // STANDARD SETS BUILDER (Responsive Row/Col)
-                    innerHtml += `<div class="space-y-2 mb-4">`;
-                    ex.sets.forEach((set, sIndex) => {
-                        innerHtml += `
-                        <div class="flex flex-col sm:flex-row gap-2 sm:items-center bg-gray-800/30 sm:bg-transparent p-2 sm:p-0 rounded border border-gray-800 sm:border-0">
-                            <span class="text-[10px] sm:text-xs font-bold text-gray-500 w-12 uppercase">Set ${sIndex + 1}</span>
-                            <div class="flex gap-2 items-center flex-1">
-                                <input type="number" placeholder="Reps" value="${set.reps || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'reps', this.value)" class="flex-1 sm:w-20 bg-black border border-gray-700 rounded px-2 py-1 text-sm text-center">
-                        `;
-                        
-                        if (isCore) {
-                            innerHtml += `<input type="number" placeholder="% Max" value="${set.pct || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'pct', this.value)" class="flex-1 sm:w-20 bg-black border border-gray-700 rounded px-2 py-1 text-sm text-center">`;
-                        }
+                    blockHtml += `<span class="flex-1 font-black text-red-600 uppercase italic text-sm tracking-widest">CIRCUIT BUILDER</span>`;
+                }
 
-                        innerHtml += `
-                                <button onclick="removeSet(${ex.id}, ${sIndex})" class="text-red-500 hover:text-red-400 font-bold px-2 transition" title="Remove Set">✕</button>
+                blockHtml += `<button onclick="removeExercise(${ex.id})" class="text-white/20 hover:text-red-600 transition-colors px-3 font-bold text-xl">✕</button></div></div>`;
+
+                if (ex.isCircuit && !isCore) {
+                    blockHtml += `<div class="bg-black/40 border border-white/5 p-5 rounded-xl mb-4 space-y-4">`;
+                    ex.circuitExercises.forEach((cEx, cIdx) => {
+                        blockHtml += `
+                            <div class="flex gap-3 items-center">
+                                <span class="text-white/20 text-[10px] font-black italic">0${cIdx + 1}</span>
+                                <input type="text" value="${cEx}" onchange="updateCircuitExercise(${ex.id}, ${cIdx}, this.value)" placeholder="MOVEMENT" class="flex-1 bg-black border border-white/10 rounded-lg px-4 py-3 text-xs font-black text-white uppercase outline-none focus:border-red-600 transition-all">
+                                ${cIdx > 0 ? `<button onclick="removeCircuitExercise(${ex.id}, ${cIdx})" class="text-red-600 px-3 font-black text-lg">✕</button>` : `<div class="w-10"></div>`}
                             </div>
-                        </div>`;
+                        `;
                     });
-
-                    innerHtml += `</div>
-                    <button onclick="addSet(${ex.id})" class="text-xs font-bold bg-gray-800 text-gray-300 px-3 py-1 rounded hover:bg-gray-700 transition uppercase">+ Add Set</button>`;
+                    blockHtml += `
+                        <button onclick="addCircuitExercise(${ex.id})" class="text-[10px] font-black text-red-600 uppercase tracking-widest hover:text-white transition-colors py-2">+ ADD MOVEMENT</button>
+                        <div class="grid grid-cols-3 gap-4 pt-6 border-t border-white/5">
+                            <div class="text-center"><label class="text-[9px] font-black text-white/40 uppercase block mb-2">Cycles</label><input type="number" value="${ex.circuitConfig.cycles}" onchange="updateCircuitConfig(${ex.id}, 'cycles', this.value)" class="w-full bg-black border border-white/10 rounded-lg py-3 text-xs font-black text-center text-white outline-none focus:border-red-600"></div>
+                            <div class="text-center"><label class="text-[9px] font-black text-white/40 uppercase block mb-2">Work (s)</label><input type="number" value="${ex.circuitConfig.work}" onchange="updateCircuitConfig(${ex.id}, 'work', this.value)" class="w-full bg-black border border-white/10 rounded-lg py-3 text-xs font-black text-center text-white outline-none focus:border-red-600"></div>
+                            <div class="text-center"><label class="text-[9px] font-black text-white/40 uppercase block mb-2">Rest (s)</label><input type="number" value="${ex.circuitConfig.rest}" onchange="updateCircuitConfig(${ex.id}, 'rest', this.value)" class="w-full bg-black border border-white/10 rounded-lg py-3 text-xs font-black text-center text-white outline-none focus:border-red-600"></div>
+                        </div>
+                    </div>`;
+                } else {
+                    blockHtml += `<div class="space-y-4 mb-6">`;
+                    ex.sets.forEach((set, sIndex) => {
+                        blockHtml += `
+                            <div class="flex items-center gap-6 group">
+                                <span class="text-[10px] font-black text-white/20 uppercase w-16 tracking-tighter italic">Set ${sIndex + 1}</span>
+                                <div class="flex-1 grid grid-cols-2 gap-4 max-w-sm">
+                                    <input type="number" placeholder="REPS" value="${set.reps || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'reps', this.value)" class="w-full bg-black border border-white/10 rounded-lg py-3 text-sm font-black text-center text-white outline-none focus:border-red-600 transition-all">
+                                    ${isCore ? `<input type="number" placeholder="% MAX" value="${set.pct || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'pct', this.value)" class="w-full bg-black border border-white/10 rounded-lg py-3 text-sm font-black text-center text-red-600 outline-none focus:border-red-600 transition-all">` : '<div></div>'}
+                                </div>
+                                <button onclick="removeSet(${ex.id}, ${sIndex})" class="text-white/10 hover:text-red-600 transition-colors font-bold opacity-0 group-hover:opacity-100 px-2">✕</button>
+                            </div>`;
+                    });
+                    blockHtml += `
+                        </div>
+                        <button onclick="addSet(${ex.id})" class="text-[9px] font-black bg-white/5 text-white/60 px-6 py-2.5 rounded-md uppercase tracking-widest hover:bg-white hover:text-black transition-all">+ Add Rep Set</button>`;
                 }
                 
-                innerHtml += `</div>`;
-                container.insertAdjacentHTML('beforeend', innerHtml);
+                blockHtml += `</div>`;
+                container.insertAdjacentHTML('beforeend', blockHtml);
             });
         }
 
-        // --- SAVE TO DATABASE ---
         window.saveWorkout = async () => {
             const dateInput = document.getElementById('workout-date');
             const nameInput = document.getElementById('workout-name');
-            const saveBtn = document.querySelector('button[onclick="saveWorkout()"]');
+            const saveBtn = document.getElementById('save-workout-btn');
 
-            // 1. Reset validation styles
-            dateInput.classList.remove('border-red-500');
-            nameInput.classList.remove('border-red-500');
-
-            // 2. Validation Check
             if (!dateInput.value || !nameInput.value) {
-                if (!dateInput.value) dateInput.classList.add('border-red-500');
-                if (!nameInput.value) nameInput.classList.add('border-red-500');
-                alert("Please provide both a Date and a Workout Name.");
+                alert("SYTEM ERROR: Date and Name required for upload.");
                 return;
             }
 
-            // 3. UI Feedback (Loading State)
             const originalText = saveBtn.innerText;
-            saveBtn.innerText = "Saving...";
+            saveBtn.innerText = "UPLOADING...";
             saveBtn.disabled = true;
-            saveBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
             try {
-                // Save new supplement names to library
-                for (const ex of exercises) {
-                    if (ex.category === 'supplement') {
-                        const namesToSave = ex.isCircuit ? ex.circuitExercises : [ex.name];
-                        for (const n of namesToSave) {
-                            if (n && n.trim() !== '' && !supplementLibrary.includes(n)) {
-                                supplementLibrary.push(n);
-                                await setDoc(doc(db, "supplement_library", n.toLowerCase().replace(/\s/g, '')), { name: n });
-                            }
-                        }
-                    }
-                }
-
                 const workoutData = {
                     date: dateInput.value,
-                    name: nameInput.value,
+                    name: nameInput.value.toUpperCase(),
                     school_id: userSchoolId,
                     isMaxOutMode: isMaxOutMode,
                     exercises: exercises,
@@ -429,94 +342,78 @@
 
                 if (editingWorkoutId) {
                     await updateDoc(doc(db, "workouts", editingWorkoutId), workoutData);
-                    alert("Workout Updated Successfully!");
                 } else {
                     workoutData.createdAt = new Date();
                     await addDoc(collection(db, "workouts"), workoutData);
-                    alert("Workout Saved Successfully!");
                 }
 
-                editingWorkoutId = null;
+                alert("SYNC COMPLETE: Training data saved.");
                 window.location.reload();
-
             } catch (err) {
                 console.error(err);
-                alert("Error saving workout.");
-                // Reset button on error
                 saveBtn.innerText = originalText;
                 saveBtn.disabled = false;
-                saveBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             }
         };
 
-        // --- HISTORY & MANAGEMENT LOGIC ---
-
-        // Fetch and display all workouts
         async function loadHistory() {
             const container = document.getElementById('history-container');
-            if (!userSchoolId) return;
+            if (!userSchoolId || !container) return;
 
-            try {
-                // Only get workouts for THIS school
-                const q = query(collection(db, "workouts"), where("school_id", "==", userSchoolId));
-                const snap = await getDocs(q);
-                
-                container.innerHTML = '';
-                
-                if (snap.empty) {
-                    container.innerHTML = '<p class="text-gray-600 text-sm">No saved workouts found for your team.</p>';
-                    return;
-                }
-
-                const docs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-                                .sort((a, b) => new Date(b.date) - new Date(a.date));
-
-                docs.forEach(workout => {
-                    const item = document.createElement('div');
-                    item.className = "bg-gray-900 p-4 rounded-lg border border-gray-800 flex justify-between items-center group";
-                    item.innerHTML = `
-                        <div>
-                            <span class="text-red-500 font-bold text-xs uppercase">${workout.date}</span>
-                            <h3 class="font-black uppercase text-white">${workout.name}</h3>
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="duplicateWorkout('${workout.id}')" class="bg-gray-800 hover:bg-blue-600 text-white text-[10px] font-bold px-3 py-1 rounded uppercase transition">Duplicate</button>
-                            <button onclick="editWorkout('${workout.id}')" class="bg-gray-800 hover:bg-green-600 text-white text-[10px] font-bold px-3 py-1 rounded uppercase transition">Edit</button>
-                            <button onclick="deleteWorkout('${workout.id}')" class="bg-gray-800 hover:bg-red-600 text-white text-[10px] font-bold px-3 py-1 rounded uppercase transition">Delete</button>
-                        </div>
-                    `;
-                    container.appendChild(item);
-                });
-            } catch (err) {
-                console.error("Error loading history:", err);
+            const q = query(collection(db, "workouts"), where("school_id", "==", userSchoolId));
+            const snap = await getDocs(q);
+            
+            container.innerHTML = '';
+            if (snap.empty) {
+                container.innerHTML = '<p class="text-white/20 text-[10px] uppercase font-black tracking-widest p-10 border-2 border-dashed border-white/5 text-center rounded-2xl">Archive Empty</p>';
+                return;
             }
+
+            const docs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+                                 .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            docs.forEach(workout => {
+                const item = document.createElement('div');
+                item.className = "bg-gray-900/60 p-5 rounded-xl border border-white/5 flex flex-col sm:row justify-between items-start sm:items-center gap-6 hover:border-red-600/40 transition-all group";
+                item.innerHTML = `
+                    <div class="flex flex-col">
+                        <span class="text-red-600 font-black text-[10px] uppercase tracking-widest italic leading-none mb-1">${workout.date}</span>
+                        <h3 class="font-black uppercase text-white tracking-tighter text-lg">${workout.name}</h3>
+                    </div>
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <button onclick="duplicateWorkout('${workout.id}')" class="flex-1 bg-white/5 hover:bg-white hover:text-black text-white text-[10px] font-black px-4 py-2 rounded transition-all italic uppercase tracking-tighter">CLONE</button>
+                        <button onclick="editWorkout('${workout.id}')" class="flex-1 bg-white/5 hover:bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded transition-all italic uppercase tracking-tighter">EDIT</button>
+                        <button onclick="deleteWorkout('${workout.id}')" class="flex-1 bg-white/5 hover:bg-red-600 text-white text-[10px] font-black px-4 py-2 rounded transition-all italic uppercase tracking-tighter">DEL</button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
         }
 
-        // Delete a workout
-        window.deleteWorkout = async (id) => {
-            if (confirm("Are you sure you want to delete this workout?")) {
-                try {
-                    await deleteDoc(doc(db, "workouts", id));
-                    loadHistory();
-                } catch (err) { alert("Error deleting workout"); }
-            }
-        };
-
-        // Load workout back into the builder to Edit
         window.editWorkout = async (id) => {
             const snap = await getDoc(doc(db, "workouts", id));
             if (snap.exists()) {
                 const data = snap.data();
-                editingWorkoutId = id; // IMPORTANT: Set this so Save knows to update
-                
+                editingWorkoutId = id;
                 document.getElementById('workout-date').value = data.date;
                 document.getElementById('workout-name').value = data.name;
+                exercises = data.exercises;
+                isMaxOutMode = data.isMaxOutMode || false;
                 
-                // ... rest of your existing logic to load exercises and max out mode ...
-                
+                // Set UI state for toggle
+                const bg = document.getElementById('max-out-indicator');
+                const knob = document.getElementById('max-out-knob');
+                if (isMaxOutMode) {
+                    bg.classList.add('bg-red-600');
+                    knob.classList.add('translate-x-6');
+                } else {
+                    bg.classList.remove('bg-red-600');
+                    knob.classList.remove('translate-x-6');
+                }
+
+                renderExercises();
                 window.scrollTo({ top: 0, behavior: 'smooth' });
-                // Change button text to give UI feedback
-                document.querySelector('button[onclick="saveWorkout()"]').innerText = "Update Workout";
+                document.getElementById('save-workout-btn').innerText = "Update Archive";
             }
         };
 
@@ -524,52 +421,27 @@
             const snap = await getDoc(doc(db, "workouts", id));
             if (snap.exists()) {
                 const data = snap.data();
-                editingWorkoutId = null; // IMPORTANT: Clear this so it saves as NEW
-                
+                editingWorkoutId = null;
                 exercises = data.exercises;
                 document.getElementById('workout-date').value = '';
-                document.getElementById('workout-name').value = `${data.name} (Copy)`;
-                
+                document.getElementById('workout-name').value = `${data.name} CLONE`;
                 renderExercises();
                 window.scrollTo({ top: 0, behavior: 'smooth' });
+                document.getElementById('save-workout-btn').innerText = "Save Clone";
             }
         };
 
-        // Duplicate logic: Loads data but clears date/name for fresh input
-        window.duplicateWorkout = async (id) => {
-            const snap = await getDoc(doc(db, "workouts", id));
-            if (snap.exists()) {
-                const data = snap.data();
-                exercises = data.exercises;
-                
-                // Clear inputs so coach is forced to set new ones
-                document.getElementById('workout-date').value = '';
-                document.getElementById('workout-name').value = `${data.name} (Copy)`;
-                
-                renderExercises();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                alert("Workout copied! Please set a NEW DATE and NAME before saving.");
+        window.deleteWorkout = async (id) => {
+            if (confirm("DANGER: This training session will be permanently purged from the archive. Continue?")) {
+                await deleteDoc(doc(db, "workouts", id));
+                loadHistory();
             }
         };
-
-        // Initial load
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                await fetchSupplements();
-                await loadHistory(); // Load history on login
-                addExerciseBlock(); 
-            } else {
-                window.location.href = 'index.html';
-            }
-        });
 
         window.filterHistory = () => {
-            const searchTerm = document.getElementById('history-search').value.toLowerCase();
-            const items = document.querySelectorAll('#history-container > div');
-
-            items.forEach(item => {
-                const text = item.innerText.toLowerCase();
-                item.style.display = text.includes(searchTerm) ? 'flex' : 'none';
+            const term = document.getElementById('history-search').value.toLowerCase();
+            document.querySelectorAll('#history-container > div').forEach(item => {
+                item.style.display = item.innerText.toLowerCase().includes(term) ? 'flex' : 'none';
             });
         };
     </script>

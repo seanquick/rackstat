@@ -4,398 +4,260 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scouting Report | RACKSTAT</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-   <style>
-    /* --- APP VIEW (DARK MODE) --- */
-    body {
-        background-color: #0d1117; 
-        color: white;
-    }
     
-    /* Ensure the logo is always visible in the card but hidden if URL is empty */
-    /* Added !important to override any conflicting Tailwind or default browser behavior */
-    #disp-logo[src]:not([src=""]) {
-        display: block !important;
-    }
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="theme.js" defer></script>
 
-    /* --- PDF / PRINT VIEW --- */
-    @media print {
-        @page {
-            size: letter;
-            margin: 0; 
+    <style>
+        :root {
+            --rackstat-red: #b91c1c;
+            --rackstat-blue: #2563eb;
+            --rackstat-dark: #0d1117;
+            --rackstat-border: rgba(255, 255, 255, 0.1);
         }
 
         body {
-            background: white !important;
-            color: black !important;
-            overflow: hidden; 
-            -webkit-print-color-adjust: economy !important;
-            print-color-adjust: economy !important;
+            background-color: var(--rackstat-dark); 
+            color: white;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
 
-        #capture-area {
-            background: white !important; 
-            color: black !important;
-            box-shadow: none !important;
-            border: 1px solid #eee !important;
-            
-            /* The 0.75 scale ensures the layout fits perfectly on a standard 8.5x11 page */
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%) scale(0.75); 
-            transform-origin: top center;
-            width: 100%;
-            max-width: 800px;
-        }
-
-        /* Logic to keep the center logo centered in print */
-        .flex-1 { flex: 1 !important; }
-
-        /* Ensure the logo prints regardless of background graphics settings */
-        #disp-logo[src]:not([src=""]) {
-            display: block !important;
-            visibility: visible !important;
-        }
-
-        /* --- SOCIAL MEDIA EXPORT OVERRIDES --- */
-        body.social-export {
-            background-color: #0d1117 !important;
-        }
-
-        body.social-export #capture-area {
-            background-color: #0d1117 !important;
-            border: 1px solid #30363d !important;
-        }
-
-        body.social-export span, 
-        body.social-export p, 
-        body.social-export h1, 
-        body.social-export h2, 
-        body.social-export div:not(.label) {
-            color: white !important;
-        }
-
-        body.social-export .stat-box, 
-        body.social-export .bg-white\/5 {
-            background: rgba(255, 255, 255, 0.05) !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        }
-
-        body.social-export * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-        }
-
-        /* --- LAYOUT COMPRESSION FOR PRINT --- */
-        .space-y-12 { margin-top: 0.5rem !important; }
-        .space-y-8 { margin-top: 0.5rem !important; }
-        .mt-12 { margin-top: 0.75rem !important; }
-        .mt-6 { margin-top: 0.5rem !important; }
-        .p-8 { padding: 1rem !important; }
+        .label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--rackstat-red); }
+        .value { font-size: 1.125rem; font-weight: 900; font-style: italic; }
         
-        #character-section {
-            page-break-inside: avoid;
-            margin-top: 0.5rem !important;
+        .stat-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--rackstat-border);
+            border-radius: 0.75rem;
+            padding: 0.75rem;
+            transition: all 0.2s;
         }
 
-        /* Default Print Text Colors (Non-Social) */
-        span, p, h1, h2, h3, div {
-            color: black;
-            text-shadow: none !important;
+        /* Logo visibility logic */
+        #disp-logo:not([src]), #disp-logo[src=""] { display: none !important; }
+
+        /* --- PDF / PRINT VIEW --- */
+        @media print {
+            @page { size: letter; margin: 0; }
+            body { background: white !important; color: black !important; }
+            .no-print { display: none !important; }
+
+            #capture-area {
+                background: white !important; 
+                color: black !important;
+                box-shadow: none !important;
+                border: 1px solid #eee !important;
+                position: absolute;
+                top: 0;
+                left: 50%;
+                transform: translateX(-50%) scale(0.75); 
+                transform-origin: top center;
+                width: 100%;
+                max-width: 800px;
+            }
+
+            span, p, h1, h2, h3, div:not(.label) { color: black !important; }
+            .label { color: var(--rackstat-red) !important; }
+            .stat-box { background: #f9fafb !important; border-color: #e5e7eb !important; }
         }
 
-        .text-red-500, .label {
-            color: #b91c1c !important; 
-        }
-
-        .stat-box, .bg-white\/5 {
-            background: #f9fafb;
-            border: 1px solid #e5e7eb; 
-        }
-
-        /* Hide UI elements on print */
-        .no-print, button, .edit-mode, #save-profile-btn, #unlock-btn {
-            display: none !important;
-        }
-
-        .opacity-50 { opacity: 1 !important; margin-top: 0.5rem !important; }
-    }
-</style>
+        /* --- SOCIAL EXPORT MODE (Triggered via JS) --- */
+        body.social-export { background-color: var(--rackstat-dark) !important; }
+        body.social-export #capture-area { border: 2px solid var(--rackstat-red) !important; }
+    </style>
 </head>
-<body class="p-4">
+<body class="p-4 md:p-8">
 
-<div class="max-w-2xl mx-auto mb-6 flex justify-between no-print">
-    <button onclick="window.print()" class="bg-white text-black px-6 py-2 rounded-full font-bold uppercase text-xs">Print PDF</button>
+<div class="max-w-2xl mx-auto mb-6 flex justify-between items-center no-print">
+    <div class="flex gap-2">
+        <button id="back-button" onclick="history.back()" class="bg-gray-800 text-gray-400 hover:text-white px-4 py-2 rounded-full font-bold uppercase text-[10px] transition-all">
+            ← Back
+        </button>
+    </div>
     
-    <button onclick="window.exportSocial()" class="bg-white text-black px-6 py-2 rounded-full font-bold uppercase text-xs">SHARE TO SOCIAL</button>
-    
-    <button id="unlock-btn" onclick="toggleEditMode()" class="hidden bg-yellow-600 text-black font-black px-4 py-2 rounded uppercase text-[10px] mb-4 transition-all"> 🔓 Unlock Profile for Editing</button>
-    <button id="back-button" class="text-gray-400 hover:text-white transition flex items-center gap-2 font-bold uppercase text-xs">← Back
-</button>
-</a>
+    <div class="flex gap-2">
+        <button id="unlock-btn" onclick="toggleEditMode()" class="hidden bg-yellow-600 text-black font-black px-4 py-2 rounded-full uppercase text-[10px] transition-all">
+            🔓 Edit Report
+        </button>
+        <button onclick="window.print()" class="bg-white text-black px-4 py-2 rounded-full font-bold uppercase text-[10px] hover:bg-gray-200 transition-all">
+            Export PDF
+        </button>
+        <button onclick="window.exportSocial()" class="bg-red-600 text-white px-4 py-2 rounded-full font-bold uppercase text-[10px] hover:bg-red-700 transition-all">
+            Share
+        </button>
+    </div>
 </div>
 
-<div id="capture-area" class="max-w-2xl mx-auto card-container rounded-3xl p-8 shadow-2xl border-red-600/20">
+<div id="capture-area" class="max-w-2xl mx-auto bg-[#161b22] rounded-3xl p-8 shadow-2xl border border-white/5 relative overflow-hidden">
     
-    <div class="flex justify-between items-start mb-6 w-full">
+    <div class="flex justify-between items-start mb-8 w-full gap-4">
         <div class="flex-1 min-w-0">
             <h1 id="disp-name" class="text-4xl font-black italic uppercase leading-none view-mode">--</h1>
-            <input id="edit-name" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-2xl font-black p-1 rounded mb-2 w-full">
+            <input id="edit-name" type="text" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-2xl font-black p-2 rounded w-full outline-none">
 
-            <p id="disp-class" class="text-red-500 font-bold tracking-widest text-sm mt-1 view-mode">CLASS OF --</p>
-            
-            <div class="edit-mode hidden mb-4">
-                <label class="block text-[10px] uppercase text-gray-400">Grad Year</label>
-                <input id="edit-grad" type="number" class="bg-gray-900 border border-blue-500 text-red-500 text-sm p-1 w-24 rounded">
+            <p id="disp-class" class="text-red-500 font-bold tracking-widest text-sm mt-1 view-mode uppercase">CLASS OF --</p>
+            <div class="edit-mode hidden mt-2">
+                <label class="label text-gray-400">Graduation Year</label>
+                <input id="edit-grad" type="number" class="bg-black/40 border border-blue-500 text-red-500 text-sm p-1 w-24 rounded">
             </div>
 
-            <div id="disp-pos-container" class="mt-4">
+            <div id="disp-pos-container" class="mt-4 space-y-1">
                 <div class="flex gap-4 items-center">
-                    <span class="label text-[10px] text-red-500">Offense:</span>
+                    <span class="label text-red-500 w-12">OFF:</span>
                     <span id="disp-pos" class="text-white font-bold uppercase text-sm view-mode">--</span>
-                    <span id="disp-pos2" class="text-gray-400 font-bold uppercase text-sm view-mode"></span>
+                    <span id="disp-pos2" class="text-gray-500 font-bold uppercase text-sm view-mode"></span>
                     
                     <div class="edit-mode hidden flex gap-2">
-                        <input id="edit-off-prim" type="text" placeholder="Prim Off" class="bg-gray-900 border border-blue-500 text-white text-xs p-1 w-20 rounded">
-                        <input id="edit-off-sec" type="text" placeholder="Sec Off" class="bg-gray-900 border border-blue-500 text-white text-xs p-1 w-20 rounded">
+                        <input id="edit-off-prim" type="text" placeholder="Primary" class="bg-black/40 border border-blue-500 text-white text-xs p-1 w-20 rounded">
+                        <input id="edit-off-sec" type="text" placeholder="Secondary" class="bg-black/40 border border-blue-500 text-white text-xs p-1 w-20 rounded">
                     </div>
                 </div>
 
-                <div class="flex gap-4 items-center mt-1">
-                    <span class="label text-[10px] text-blue-500">Defense:</span>
+                <div class="flex gap-4 items-center">
+                    <span class="label text-blue-500 w-12">DEF:</span>
                     <span id="disp-def-pos" class="text-white font-bold uppercase text-sm view-mode">--</span>
-                    <span id="disp-def-pos2" class="text-gray-400 font-bold uppercase text-sm view-mode"></span>
+                    <span id="disp-def-pos2" class="text-gray-500 font-bold uppercase text-sm view-mode"></span>
                     
                     <div class="edit-mode hidden flex gap-2">
-                        <input id="edit-def-prim" type="text" placeholder="Prim Def" class="bg-gray-900 border border-blue-500 text-white text-xs p-1 w-20 rounded">
-                        <input id="edit-def-sec" type="text" placeholder="Sec Def" class="bg-gray-900 border border-blue-500 text-white text-xs p-1 w-20 rounded">
+                        <input id="edit-def-prim" type="text" placeholder="Primary" class="bg-black/40 border border-blue-500 text-white text-xs p-1 w-20 rounded">
+                        <input id="edit-def-sec" type="text" placeholder="Secondary" class="bg-black/40 border border-blue-500 text-white text-xs p-1 w-20 rounded">
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="flex-1 flex flex-col items-center justify-center px-4 min-w-[120px]">
-            <img id="disp-logo" src="" class="h-20 w-20 object-contain view-mode mb-2" alt="School Logo" style="display: none;">
-            
+        <div class="flex flex-col items-center justify-center min-w-[100px]">
+            <img id="disp-logo" src="" class="h-16 w-16 object-contain view-mode" alt="Logo">
             <div class="edit-mode hidden w-full">
-                <label class="block text-[10px] uppercase text-gray-400 text-center mb-1">School Logo URL</label>
-                <input id="edit-logo" type="text" placeholder="images/logo.png" class="w-full bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-[10px]">
+                <label class="block text-[8px] uppercase text-gray-500 text-center mb-1">Logo URL</label>
+                <input id="edit-logo" type="text" placeholder="images/school.png" class="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-white text-[9px]">
             </div>
         </div>
 
-        <div class="flex-1 text-right min-w-0">
-            <div id="disp-number" class="text-6xl font-black text-white/20 italic leading-none">#--</div>
-            <div class="mt-2 text-xs font-bold">
-                <span id="disp-height">--</span> | <span id="disp-weight">--</span>
+        <div class="text-right min-w-[80px]">
+            <div id="disp-number" class="text-5xl font-black text-white/10 italic leading-none">#--</div>
+            <div class="mt-2 text-xs font-bold uppercase tracking-tighter">
+                <span id="disp-height">--</span> / <span id="disp-weight">--</span> LBS
             </div>
             
-            <div class="edit-mode hidden grid grid-cols-1 gap-2 mt-2">
-                <div>
-                    <label class="block text-[10px] uppercase text-gray-400">Ht/Wt</label>
-                    <div class="flex gap-1 justify-end">
-                        <input id="edit-height" type="text" placeholder="6'2" class="w-12 bg-white/10 border border-white/20 rounded px-1 py-1 text-white text-xs">
-                        <input id="edit-weight" type="text" placeholder="215" class="w-12 bg-white/10 border border-white/20 rounded px-1 py-1 text-white text-xs">
-                    </div>
+            <div class="edit-mode hidden mt-2 flex flex-col items-end gap-1">
+                <input id="edit-number" type="text" placeholder="#" class="w-12 bg-black/40 border border-blue-500 rounded px-1 py-1 text-white text-xs text-right">
+                <div class="flex gap-1">
+                    <input id="edit-height" type="text" placeholder="6'2" class="w-12 bg-black/40 border border-blue-500 rounded px-1 py-1 text-white text-xs text-center">
+                    <input id="edit-weight" type="text" placeholder="215" class="w-12 bg-black/40 border border-blue-500 rounded px-1 py-1 text-white text-xs text-center">
                 </div>
             </div>
         </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div class="space-y-8">
+        <div class="space-y-6">
             <div>
-                <h3 class="label mb-4 text-red-500 text-sm">Verified Metrics</h3>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="stat-box p-3">
+                <h3 class="label mb-4">Verified Strength & Speed</h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="stat-box">
                         <span class="label">Bench Press</span>
                         <div id="stat-bench" class="value view-mode">--</div>
-                        <input id="edit-bench" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
-                    </div>
-                    <div class="stat-box p-3">
-                        <span class="label">Squat</span>
-                        <div id="stat-squat" class="value view-mode">--</div>
-                        <input id="edit-squat" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
-                    </div>
-                    <div class="stat-box p-3">
-                        <span class="label">Clean</span>
-                        <div id="stat-clean" class="value view-mode">--</div>
-                        <input id="edit-clean" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
-                    </div>
-                    <div class="stat-box p-3">
-                        <span class="label">Deadlift</span>
-                        <div id="stat-deadlift" class="value view-mode">--</div>
-                        <input id="edit-deadlift" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
+                        <input id="edit-bench" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
                     </div>
                     <div class="stat-box">
-                        <div class="label">Push Press</div>
-                        <div id="stat-push-press" class="view-mode">--</div>
-                        <input id="edit-push-press" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
+                        <span class="label">Squat</span>
+                        <div id="stat-squat" class="value view-mode">--</div>
+                        <input id="edit-squat" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
                     </div>
-                    <div class="stat-box p-3">
+                    <div class="stat-box">
+                        <span class="label">Clean</span>
+                        <div id="stat-clean" class="value view-mode">--</div>
+                        <input id="edit-clean" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
+                    </div>
+                    <div class="stat-box">
                         <span class="label">40 Yard</span>
                         <div id="stat-forty" class="value view-mode">--</div>
-                        <input id="edit-forty" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
+                        <input id="edit-forty" type="text" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
                     </div>
                 </div>
             </div>
 
             <div>
-                <h3 class="label mb-4 text-red-500 text-sm">Academic Profile</h3>
-                <div class="space-y-2">
-                    <div class="flex justify-between border-b border-white/10 pb-1 items-center">
-                        <span class="label">Current GPA</span>
-                        <span id="disp-gpa" class="font-bold italic view-mode">--</span>
-                        <input id="edit-gpa" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-right p-1 w-16 rounded">
+                <h3 class="label mb-4">Academic Profile</h3>
+                <div class="stat-box space-y-2">
+                    <div class="flex justify-between items-center border-b border-white/5 pb-1">
+                        <span class="text-[10px] uppercase font-bold text-gray-400">Core GPA</span>
+                        <span id="disp-core-gpa" class="font-black italic view-mode">--</span>
+                        <input id="edit-core-gpa" type="text" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-right p-1 w-16 rounded text-xs">
                     </div>
-                    <div class="flex justify-between border-b border-white/10 pb-1 items-center">
-                        <span class="label">Core GPA</span>
-                        <span id="disp-core-gpa" class="font-bold italic view-mode">--</span>
-                        <input id="edit-core-gpa" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-right p-1 w-16 rounded">
-                    </div>
-                    <div class="flex justify-between border-b border-white/10 pb-1 items-center">
-                        <span class="label">ACT Score</span>
-                        <span id="disp-act" class="font-bold italic view-mode">--</span>
-                        <input id="edit-act" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-right p-1 w-16 rounded">
-                    </div>
-                    <div class="flex justify-between border-b border-white/10 pb-1 items-center">
-                        <span class="label">SAT Score</span>
-                        <span id="disp-sat" class="font-bold italic view-mode">--</span>
-                        <input id="edit-sat" type="number" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-right p-1 w-16 rounded">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] uppercase font-bold text-gray-400">ACT / SAT</span>
+                        <span class="font-black italic view-mode"><span id="disp-act">--</span> / <span id="disp-sat">--</span></span>
+                        <div class="edit-mode hidden flex gap-1">
+                            <input id="edit-act" type="number" placeholder="ACT" class="bg-black/40 border border-blue-500 text-white text-right p-1 w-12 rounded text-xs">
+                            <input id="edit-sat" type="number" placeholder="SAT" class="bg-black/40 border border-blue-500 text-white text-right p-1 w-12 rounded text-xs">
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="space-y-8">
+        <div class="space-y-6">
             <div>
-                <h3 class="label mb-4 text-red-500 text-sm">Contact & Links</h3>
-                <div class="space-y-4">
-                    <a id="link-twitter" href="#" target="_blank" class="flex items-center gap-3 group transition-opacity hover:opacity-80">
-                        <div class="h-8 w-8 bg-blue-600 rounded flex items-center justify-center font-black">X</div>
+                <h3 class="label mb-4">Digital Scouting</h3>
+                <div class="space-y-3">
+                    <a id="link-twitter" href="#" target="_blank" class="stat-box flex items-center gap-3 hover:border-blue-500/50 transition-all">
+                        <div class="h-6 w-6 bg-white text-black rounded flex items-center justify-center font-black text-[10px]">X</div>
                         <div class="flex-grow">
-                            <span class="label block">Twitter</span>
-                            <span id="disp-twitter" class="text-xs font-bold italic view-mode">@--</span>
-                            <input id="edit-twitter" type="text" placeholder="@handle" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
+                            <span id="disp-twitter" class="text-xs font-bold italic">@--</span>
+                            <input id="edit-twitter" type="text" placeholder="@handle" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-xs p-1 w-full rounded">
                         </div>
                     </a>
 
-                    <a id="link-instagram" href="#" target="_blank" class="flex items-center gap-3 group transition-opacity hover:opacity-80">
-                        <div class="h-8 w-8 bg-gradient-to-tr from-yellow-500 to-purple-600 rounded flex items-center justify-center font-black italic">IG</div>
-                        <div class="flex-grow">
-                            <span class="label block">Instagram</span>
-                            <span id="disp-instagram" class="text-xs font-bold italic view-mode">@--</span>
-                            <input id="edit-instagram" type="text" placeholder="@handle" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
-                        </div>
-                    </a>
-
-                    <a id="link-tiktok" href="#" target="_blank" class="flex items-center gap-3 group transition-opacity hover:opacity-80">
-                        <div class="h-8 w-8 bg-black border border-white/20 rounded flex items-center justify-center font-black italic text-[8px]">TikTok</div>
-                        <div class="flex-grow">
-                            <span class="label block">TikTok</span>
-                            <span id="disp-tiktok" class="text-xs font-bold italic view-mode">@--</span>
-                            <input id="edit-tiktok" type="text" placeholder="@handle" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
-                        </div>
-                    </a>
-                    
                     <div class="view-mode">
-                        <a id="link-hudl" href="#" target="_blank" class="block">
-                            <button class="bg-red-600 hover:bg-red-700 w-full py-2 rounded font-black italic uppercase text-xs">View Hudl / Film</button>
+                        <a id="link-hudl" href="#" target="_blank">
+                            <button class="bg-red-600 hover:bg-red-700 w-full py-2.5 rounded-xl font-black italic uppercase text-xs transition-all">View Highlight Film</button>
                         </a>
                     </div>
                     <div class="edit-mode hidden">
-                        <span class="label block mb-1">Highlight URL (Hudl/YouTube)</span>
-                        <input id="edit-hudl" type="text" placeholder="https://..." class="bg-gray-900 border border-blue-500 text-white text-xs p-2 w-full rounded">
+                        <label class="label text-[8px] text-gray-500">Hudl/Highlight URL</label>
+                        <input id="edit-hudl" type="text" placeholder="https://hudl.com/..." class="bg-black/40 border border-blue-500 text-white text-xs p-2 w-full rounded">
                     </div>
                 </div>
+            </div>
 
-                <div class="mt-6 p-3 bg-white/5 rounded-lg border border-white/10">
-                    <span class="label block mb-1">Parental Contact</span>
-                    <p id="disp-parents" class="text-xs font-bold text-white view-mode">--</p>
-                    <input id="edit-parents" type="text" placeholder="Names" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded mb-1">
-                    
-                    <p id="disp-parent-contact" class="text-[10px] text-gray-400 view-mode">--</p>
-                    <input id="edit-parent-contact" type="text" placeholder="Phone/Email" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-[10px] p-1 w-full rounded">
+            <div class="stat-box bg-red-600/5 border-red-600/20">
+                <span class="label">Parental Contact</span>
+                <p id="disp-parents" class="text-xs font-bold text-white view-mode mt-1">--</p>
+                <input id="edit-parents" type="text" placeholder="Guardian Names" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-xs p-1 w-full rounded mt-1">
+                
+                <p id="disp-parent-contact" class="text-[10px] text-gray-500 view-mode">--</p>
+                <input id="edit-parent-contact" type="text" placeholder="Phone/Email" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-[10px] p-1 w-full rounded mt-1">
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-8 pt-8 border-t border-white/5">
+        <h3 class="label mb-4">Character & Leadership Profile</h3>
+        <div class="bg-white/[0.02] p-6 rounded-2xl border border-white/5 italic text-sm text-gray-400 space-y-4">
+            <div class="grid grid-cols-1 gap-6">
+                <div>
+                    <p class="label not-italic mb-1 opacity-40">Teammate Definition:</p>
+                    <p id="disp-teammate-type" class="leading-relaxed view-mode">--</p>
+                    <textarea id="edit-team-type" class="edit-mode hidden bg-black/40 border border-blue-500 text-white w-full p-3 rounded h-24 text-xs mt-2 outline-none"></textarea>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="mt-12 space-y-12 border-t border-white/10 pt-8">
-        <div>
-            <h3 class="label mb-4 text-red-500 text-sm">Training & Commitment</h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="stat-box p-3">
-                    <span class="label">Extra Training</span>
-                    <div id="disp-extra-days" class="text-sm font-bold uppercase italic view-mode">--</div>
-                    <input id="edit-extra-days" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
-                </div>
-                <div class="stat-box p-3">
-                    <span class="label">Nutrition Plan</span>
-                    <div id="disp-nutrition" class="text-sm font-bold uppercase italic view-mode">--</div>
-                    <input id="edit-nutrition" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
-                </div>
-                <div class="stat-box p-3">
-                    <span class="label">7-8+ Hrs Sleep</span>
-                    <div id="disp-sleep" class="text-sm font-bold uppercase italic view-mode">--</div>
-                    <input id="edit-sleep" type="text" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
-                </div>
-                <div class="stat-box p-3">
-                    <span class="label">Year-Round Lift</span>
-                    <div id="disp-lift" class="text-sm font-bold uppercase italic view-mode">--</div>
-                    <select id="edit-lift" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white text-xs p-1 w-full rounded">
-                        <option value="true">YES</option>
-                        <option value="false">NO</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <div>
-            <h3 class="label mb-4 text-red-500 text-sm uppercase">Character & Leadership</h3>
-            <div class="bg-white/5 p-8 rounded-3xl border border-white/10 italic text-sm text-gray-300 space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div>
-                        <p class="label not-italic mb-2 text-white/40">Teammate Type:</p>
-                        <p id="disp-teammate-type" class="leading-relaxed view-mode">--</p>
-                        <textarea id="edit-team-type" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white w-full p-2 rounded h-20 text-xs mt-2"></textarea>
-                    </div>
-                    <div>
-                        <p class="label not-italic mb-2 text-white/40">Sacrifices for the team:</p>
-                        <p id="disp-sacrifice" class="leading-relaxed view-mode">--</p>
-                        <textarea id="edit-sacrifice" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white w-full p-2 rounded h-20 text-xs mt-2"></textarea>
-                    </div>
-                </div>
-                <div class="pt-4 border-t border-white/5">
-                    <p class="label not-italic mb-2 text-white/40">What it means to be a good teammate:</p>
-                    <p id="disp-teammate-mean" class="leading-relaxed view-mode">--</p>
-                    <textarea id="edit-team-mean" class="edit-mode hidden bg-gray-900 border border-blue-500 text-white w-full p-2 rounded h-24 text-xs mt-2"></textarea>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="mt-12 pt-6 border-t border-white/10 flex justify-between items-center opacity-50">
-        <span class="text-[8px] font-black uppercase tracking-widest">Powered by RACKSTAT Elite Recruiting</span>
-        <img src="images/rackstat-logo.png" class="h-4 w-auto">
+    <div class="mt-12 pt-6 border-t border-white/5 flex justify-between items-center opacity-30">
+        <span class="text-[8px] font-black uppercase tracking-widest">RACKSTAT ELITE RECRUITING SYSTEM</span>
+        <img src="images/rackstat-logo.png" class="h-4 w-auto grayscale">
     </div>
 
     <button id="save-profile-btn" onclick="saveAthleteProfile()" 
             class="hidden fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-500 text-white font-black px-10 py-4 rounded-full shadow-2xl uppercase italic tracking-tighter transition-all z-50">
-        Save Changes
+        Save Profile
     </button>
 </div>
 
 <script type="module">
-    // 1. ATTACH TO WINDOW SO THE BUTTON CAN SEE IT
-    window.exportSocial = () => {
-        document.body.classList.add('social-export');
-        window.print();
-        setTimeout(() => {
-            document.body.classList.remove('social-export');
-        }, 500);
-    };
-
     import { firebaseConfig } from './firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -405,7 +267,7 @@
     const db = getFirestore(app);
     const auth = getAuth(app);
 
-    // Global Helpers
+    // --- HELPERS ---
     const safeSet = (id, text) => {
         const el = document.getElementById(id);
         if (el) el.innerText = text || "--";
@@ -423,6 +285,16 @@
         return `${feet}'${remainingInches}"`;
     };
 
+    // 1. SOCIAL EXPORT FUNCTIONALITY
+    window.exportSocial = () => {
+        document.body.classList.add('social-export');
+        window.print();
+        setTimeout(() => {
+            document.body.classList.remove('social-export');
+        }, 500);
+    };
+
+    // --- MAIN RENDER LOGIC ---
     onAuthStateChanged(auth, async (user) => {
         const urlParams = new URLSearchParams(window.location.search);
         const athleteId = urlParams.get('uid');
@@ -440,8 +312,7 @@
                     const d = recSnap.data();
                     const mx = maxesSnap.exists() ? maxesSnap.data() : {};
 
-                    // --- 1. SMART BACK BUTTON LOGIC ---
-                    // We fetch the current viewer's role from the 'users' collection
+                    // --- NAVIGATION & PERMISSIONS ---
                     const userSnap = await getDoc(doc(db, "users", user.uid));
                     const userData = userSnap.data();
                     const backBtn = document.getElementById('back-button');
@@ -449,50 +320,50 @@
                     if (backBtn && userData) {
                         if (userData.role === 'coach') {
                             backBtn.innerText = "← BACK TO OFFICE";
-                            backBtn.onclick = () => location.href = 'coach-lobby.html';
+                            backBtn.onclick = () => window.location.href = 'coach-lobby.html';
+                            document.getElementById('unlock-btn')?.classList.remove('hidden');
                         } else {
                             backBtn.innerText = "← BACK TO RACK";
-                            backBtn.onclick = () => location.href = 'rack.html';
+                            backBtn.onclick = () => window.location.href = 'rack.html';
                         }
                     }
 
-                    // --- 2. LOGO LOGIC ---
+                    // --- IDENTITY & UI ---
                     const logoEl = document.getElementById('disp-logo');
                     if (d.logo_primary && logoEl) {
                         logoEl.src = d.logo_primary;
-                        logoEl.classList.remove('hidden');
-                        logoEl.style.display = 'block';
-                    } else if (logoEl) {
-                        logoEl.classList.add('hidden');
                     }
 
-                    // --- 3. DISPLAY MAPPING (Card View) ---
                     safeSet('disp-name', d.fullName);
-                    safeSet('disp-class', d.gradYear ? "CLASS OF " + d.gradYear : "--");
-                    safeSet('disp-number', d.jerseyNum ? "#" + d.jerseyNum : "#--");
+                    safeSet('disp-class', d.gradYear ? `CLASS OF ${d.gradYear}` : "--");
+                    safeSet('disp-number', d.jerseyNum ? `#${d.jerseyNum}` : "#--");
                     safeSet('disp-height', formatHeight(d.height));
-                    safeSet('disp-weight', d.weight ? d.weight + " lbs" : "--");
+                    safeSet('disp-weight', d.weight); 
                     
+                    // Positions
                     safeSet('disp-pos', d.offPrimary);
                     const pos2 = document.getElementById('disp-pos2');
-                    if (pos2) pos2.innerText = d.offSecondary ? "/ " + d.offSecondary : "";
+                    if (pos2) pos2.innerText = d.offSecondary ? `/ ${d.offSecondary}` : "";
                     
                     safeSet('disp-def-pos', d.defPrimary);
                     const defPos2 = document.getElementById('disp-def-pos2');
-                    if (defPos2) defPos2.innerText = d.defSecondary ? "/ " + d.defSecondary : "";
+                    if (defPos2) defPos2.innerText = d.defSecondary ? `/ ${d.defSecondary}` : "";
 
+                    // --- STATS ---
                     safeSet('stat-bench', mx.bench_press || d.bench);
                     safeSet('stat-squat', mx.squat || d.squat);
                     safeSet('stat-clean', mx.clean || d.clean);
                     safeSet('stat-deadlift', mx.deadlift || d.deadlift);
-                    safeSet('stat-push-press', mx.push_press || d.push_press);
-                    safeSet('stat-forty', d.forty ? d.forty + "s" : "--");
+                    safeSet('stat-push-press', mx.push_press || d.push_press); // Fixed ID hyphen
+                    safeSet('stat-forty', d.forty ? `${d.forty}s` : "--");
+
+                    // Academics
                     safeSet('disp-gpa', d.gpa);
                     safeSet('disp-core-gpa', d.coreGpa);
                     safeSet('disp-act', d.act);
                     safeSet('disp-sat', d.sat);
 
-                    // Socials
+                    // --- SOCIAL LINKS ---
                     const formatLink = (linkId, dispId, handle, platform = '') => {
                         const linkEl = document.getElementById(linkId);
                         const dispEl = document.getElementById(dispId);
@@ -507,19 +378,15 @@
                     formatLink('link-instagram', 'disp-instagram', d.instagram, 'instagram');
                     formatLink('link-tiktok', 'disp-tiktok', d.tiktok, 'tiktok');
 
+                    // Bio
                     safeSet('disp-parents', d.parentNames);
                     safeSet('disp-parent-contact', d.parentContact);
-                    safeSet('disp-extra-days', d.weeklyExtraDays);
-                    safeSet('disp-nutrition', d.hasNutritionPlan);
-                    safeSet('disp-sleep', d.getsSleep);
-                    safeSet('disp-lift', d.liftYearRound ? "YES" : "NO");
                     safeSet('disp-teammate-type', d.teammateType);
-                    safeSet('disp-teammate-mean', d.goodTeammateMeaning);
-                    safeSet('disp-sacrifice', d.willingToSacrifice);
 
-                    // --- 4. PRE-FILL EDIT INPUTS ---
+                    // --- PRE-FILL EDITORS ---
                     setVal('edit-name', d.fullName);
                     setVal('edit-grad', d.gradYear);
+                    setVal('edit-number', d.jerseyNum);
                     setVal('edit-height', d.height);
                     setVal('edit-weight', d.weight);
                     setVal('edit-off-prim', d.offPrimary);
@@ -530,7 +397,7 @@
                     setVal('edit-squat', d.squat);
                     setVal('edit-clean', d.clean);
                     setVal('edit-deadlift', d.deadlift);
-                    setVal('edit-push_press', d.push_press);
+                    setVal('edit-push-press', d.push_press); // Fixed ID hyphen
                     setVal('edit-forty', d.forty);
                     setVal('edit-gpa', d.gpa);
                     setVal('edit-core-gpa', d.coreGpa);
@@ -538,35 +405,21 @@
                     setVal('edit-sat', d.sat);
                     setVal('edit-parents', d.parentNames);
                     setVal('edit-parent-contact', d.parentContact);
-                    setVal('edit-extra-days', d.weeklyExtraDays);
-                    setVal('edit-nutrition', d.hasNutritionPlan);
-                    setVal('edit-sleep', d.getsSleep);
-                    setVal('edit-lift', d.liftYearRound ? "true" : "false");
                     setVal('edit-team-type', d.teammateType);
-                    setVal('edit-team-mean', d.goodTeammateMeaning);
-                    setVal('edit-sacrifice', d.willingToSacrifice);
                     setVal('edit-twitter', d.twitter);
-                    setVal('edit-instagram', d.instagram);
-                    setVal('edit-tiktok', d.tiktok);
                     setVal('edit-logo', d.logo_primary);
                     setVal('edit-hudl', d.hudlLink || d.highlightUrl);
 
-                    // --- 5. COACH-SPECIFIC PERMISSIONS & AUTO-EDIT ---
-                    // (Already handled in the smart back button check above, but keeping unlock logic)
-                    if (userData?.role === 'coach') {
-                        const unlockBtn = document.getElementById('unlock-btn');
-                        if (unlockBtn) unlockBtn.classList.remove('hidden');
-
-                        if (isEditMode && typeof toggleEditMode === "function") {
-                            toggleEditMode();
-                        }
+                    // Auto-unlock if coming from coach edit link
+                    if (isEditMode && userData?.role === 'coach') {
+                        window.toggleEditMode();
                     }
                 }
             } catch (err) { 
                 console.error("Render Error:", err); 
             }
         } else { 
-            location.href = 'index.html'; 
+            window.location.href = 'index.html'; 
         }
     });
 
@@ -574,6 +427,7 @@
         document.querySelectorAll('.view-mode').forEach(el => el.classList.add('hidden'));
         document.querySelectorAll('.edit-mode').forEach(el => el.classList.remove('hidden'));
         document.getElementById('save-profile-btn')?.classList.remove('hidden');
+        
         const btn = document.getElementById('unlock-btn');
         if (btn) {
             btn.innerText = "⚠️ EDITING ACTIVE";
@@ -582,12 +436,15 @@
     };
 
     window.saveAthleteProfile = async () => {
-        const playerUID = new URLSearchParams(window.location.search).get('uid');
-        if (!playerUID) return alert("No athlete selected.");
+        const urlParams = new URLSearchParams(window.location.search);
+        const playerUID = urlParams.get('uid') || auth.currentUser?.uid;
+        
+        if (!playerUID) return alert("No athlete profile context found.");
 
         const updatedData = {
             fullName: document.getElementById('edit-name')?.value || "",
             gradYear: document.getElementById('edit-grad')?.value || "",
+            jerseyNum: document.getElementById('edit-number')?.value || "",
             logo_primary: document.getElementById('edit-logo')?.value || "",
             offPrimary: document.getElementById('edit-off-prim')?.value || "",
             offSecondary: document.getElementById('edit-off-sec')?.value || "",
@@ -597,7 +454,7 @@
             squat: document.getElementById('edit-squat')?.value || "",
             clean: document.getElementById('edit-clean')?.value || "",
             deadlift: document.getElementById('edit-deadlift')?.value || "",
-            push_press: document.getElementById('edit-push_press')?.value || "",
+            push_press: document.getElementById('edit-push-press')?.value || "", // Fixed ID hyphen
             forty: document.getElementById('edit-forty')?.value || "",
             gpa: document.getElementById('edit-gpa')?.value || "",
             coreGpa: document.getElementById('edit-core-gpa')?.value || "",
@@ -607,36 +464,19 @@
             weight: document.getElementById('edit-weight')?.value || "",
             parentNames: document.getElementById('edit-parents')?.value || "",
             parentContact: document.getElementById('edit-parent-contact')?.value || "",
-            weeklyExtraDays: document.getElementById('edit-extra-days')?.value || "",
-            hasNutritionPlan: document.getElementById('edit-nutrition')?.value || "",
-            getsSleep: document.getElementById('edit-sleep')?.value || "",
-            liftYearRound: document.getElementById('edit-lift')?.value === "true",
             teammateType: document.getElementById('edit-team-type')?.value || "",
-            willingToSacrifice: document.getElementById('edit-sacrifice')?.value || "",
-            goodTeammateMeaning: document.getElementById('edit-team-mean')?.value || "",
             twitter: document.getElementById('edit-twitter')?.value || "",
-            instagram: document.getElementById('edit-instagram')?.value || "",
-            tiktok: document.getElementById('edit-tiktok')?.value || "",
-            hudlLink: document.getElementById('edit-hudl')?.value || ""
+            hudlLink: document.getElementById('edit-hudl')?.value || "",
+            lastModified: Date.now()
         };
 
         try {
             await updateDoc(doc(db, "recruiting_profiles", playerUID), updatedData);
-            alert("Profile Updated Successfully!");
+            alert("Report Updated Successfully!");
             location.reload();
         } catch (error) {
             console.error("Save error:", error);
-            alert("Failed to save changes.");
-        }
-    };
-    
-    window.handleBackNavigation = () => {
-        // If they came specifically from the roster manager, send them back there
-        if (document.referrer.includes('roster-manager.html')) {
-            window.location.href = 'roster-manager.html';
-        } else {
-            // Otherwise, always default to the Lobby
-            window.location.href = 'coach-lobby.html';
+            alert("Failed to save changes: " + error.message);
         }
     };
 </script>
