@@ -99,9 +99,12 @@
 
             // 1. Fetch school settings
             const schoolSnap = await getDoc(doc(db, "schools", schoolId));
-            console.log("School Formula Type:", school.preferences?.formula_type);
             if (!schoolSnap.exists()) return;
             const school = schoolSnap.data();
+
+            // DIAGNOSTIC LOG (Moved after initialization)
+            const formulaSetting = (school.preferences?.formula_type || "").toLowerCase().replace("_", " ");
+            console.log("School Formula Type Found:", formulaSetting);
             
             const schoolTag = document.getElementById('school-tag');
             if (schoolTag) schoolTag.innerText = `${school.name} Weightroom`.toUpperCase();
@@ -122,8 +125,7 @@
 
             const formulaEl = document.getElementById('formula-display');
             if (formulaEl) {
-                const formula = school.preferences?.formula_type?.toLowerCase();
-                    if (formula === "power_index" || formula === "power index") {
+                if (formulaSetting === "power index") {
                     formulaEl.innerText = "INDEX: TOTAL LIFTED - (BW CAP * 4)";
                 } else {
                     formulaEl.innerText = "RANKING: RAW TOTAL LBS";
@@ -134,26 +136,20 @@
 
            // 4. Process Athlete Data
             for (const d of pSnap.docs) {
-                // Fetch the maxes sub-collection for this specific athlete
                 const latestMaxSnap = await getDoc(doc(db, "recruiting_profiles", d.id, "maxes", "latest"));
                 
-                // Only proceed if the athlete actually has lift data
                 if (latestMaxSnap.exists()) {
                     const m = latestMaxSnap.data();
-                    const athleteData = d.data(); // Get the main profile data
+                    const athleteData = d.data(); 
                     
-                    // Sum the core lifts from the maxes record (m)
                     const totalLifts = scoringLifts.reduce((acc, lift) => acc + (Number(m[lift]) || 0), 0);
-
-                    // --- FIXED BW DETECTION ---
-                    // We pull bodyWeight from the parent profile 'athleteData' since it's missing in 'm'
                     const athleteBW = Number(athleteData.bodyWeight || athleteData.weight || m.bodyWeight || 0);
                     
                     let displayScore = totalLifts;
                     let bwFactor = 0;
 
-                    if (school.preferences?.formula_type === "power_index") {
-                        // Formula logic: total weight lifted - (body weight capped at 200 * 4)
+                    // Robust Check for Power Index
+                    if (formulaSetting === "power index") {
                         const bwCap = Math.min(athleteBW, 200); 
                         bwFactor = bwCap * 4;
                         displayScore = totalLifts - bwFactor;
@@ -177,7 +173,6 @@
             }
 
             // 5. Render Club Groups
-            // Sort by displayScore (Power Index) so rankings are accurate
             scores.sort((a, b) => b.displayScore - a.displayScore);
 
             grid.innerHTML = '';
