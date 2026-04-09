@@ -112,7 +112,12 @@
         } else { window.location.href = 'index.html'; }
     });
 
+   // --- GLOBAL STATE ---
+    let currentSchoolId = null;
+    let isCoachMode = false;
+
     window.loadBoard = async function(schoolId) {
+        currentSchoolId = schoolId; // Store the ID so the toggle can refresh the board
         const grid = document.getElementById('player-club-grid');
         const recordBody = document.getElementById('record-rows');
         if (!grid || !recordBody) return; 
@@ -147,7 +152,7 @@
                 squat: { val: 0, name: "-" },
                 clean: { val: 0, name: "-" },
                 deadlift: { val: 0, name: "-" },
-                dash: { val: 99.9, name: "-" } // Higher is worse for dash
+                dash: { val: 99.9, name: "-" }
             };
         });
 
@@ -165,7 +170,6 @@
                 const currentWC = getWeightClass(athleteBW);
                 const fullName = `${athleteData.firstName} ${athleteData.lastName}`;
 
-                // Automatic Record Logic
                 const checkMax = (liftKey, dbKey) => {
                     const val = Number(m[dbKey] || athleteData[dbKey] || 0);
                     if (val > classRecords[currentWC][liftKey].val) {
@@ -184,9 +188,8 @@
                 checkMax('squat', 'squat');
                 checkMax('clean', 'clean');
                 checkMax('deadlift', 'deadlift');
-                checkMin('dash', 'forty'); // Assuming forty or dash field
+                checkMin('dash', 'forty'); 
 
-                // Power Index Calc
                 let displayScore = totalLifts;
                 if (formulaSetting === "power index") {
                     displayScore = totalLifts - (Math.min(athleteBW, 200) * 4);
@@ -199,14 +202,16 @@
         // 5. Render Records Table
         recordBody.innerHTML = '';
         weightClasses.forEach(wc => {
-            // Apply Manual Overrides if they exist
             const finalData = { ...classRecords[wc], ...(manualRecords[wc] || {}) };
             
             const row = `
                 <tr>
                     <td class="bg-gray-900/50 font-black text-red-500">${wc}</td>
                     ${['bench', 'squat', 'clean', 'deadlift', 'dash'].map(lift => `
-                        <td contenteditable="${isCoachMode}" class="record-cell" data-wc="${wc}" data-lift="${lift}">
+                        <td contenteditable="${isCoachMode}" 
+                            class="record-cell ${isCoachMode ? 'bg-red-500/5 outline outline-1 outline-red-500/20' : ''}" 
+                            data-wc="${wc}" 
+                            data-lift="${lift}">
                             <span class="record-name">${finalData[lift].name}</span>
                             <span class="record-value">${finalData[lift].val}${lift === 'dash' ? 's' : ''}</span>
                         </td>
@@ -216,7 +221,21 @@
             recordBody.innerHTML += row;
         });
 
-        // 6. Render Clubs (Existing logic)
+        // --- ADDED: Auto-Save Listener ---
+        if (isCoachMode) {
+            document.querySelectorAll('.record-cell').forEach(cell => {
+                cell.addEventListener('blur', async (e) => {
+                    const wc = e.target.getAttribute('data-wc');
+                    const lift = e.target.getAttribute('data-lift');
+                    const newName = e.target.querySelector('.record-name').innerText;
+                    const newVal = e.target.querySelector('.record-value').innerText.replace('s', '');
+
+                    await saveManualRecord(wc, lift, newVal, newName);
+                });
+            });
+        }
+
+        // 6. Render Clubs
         scores.sort((a, b) => b.displayScore - a.displayScore);
         grid.innerHTML = '';
         const start = school.club_start || 1000;
@@ -239,6 +258,31 @@
             }
         }
     };
+
+    // --- HELPER: Save to Firestore ---
+    async function saveManualRecord(wc, lift, val, name) {
+        if (!currentSchoolId) return;
+        const recordRef = doc(db, "schools", currentSchoolId, "settings", "manual_records");
+        try {
+            await setDoc(recordRef, {
+                [wc]: {
+                    [lift]: { val: val, name: name }
+                }
+            }, { merge: true });
+            console.log("Record saved successfully.");
+        } catch (err) {
+            console.error("Save failed:", err);
+        }
+    }
+
+    // --- HELPER: Toggle Button ---
+    document.getElementById('coach-edit-btn').addEventListener('click', (e) => {
+        isCoachMode = !isCoachMode;
+        e.target.innerText = `Coach Mode: ${isCoachMode ? 'ON' : 'OFF'}`;
+        e.target.classList.toggle('text-red-500', isCoachMode);
+        e.target.classList.toggle('border-red-500', isCoachMode);
+        if (currentSchoolId) window.loadBoard(currentSchoolId);
+    });
 
     // Coach Manual Update Logic
     document.getElementById('coach-edit-btn').addEventListener('click', (e) => {
