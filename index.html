@@ -77,116 +77,58 @@
             Sign Out / Switch User
         </button>
     </div>
+
+    <div class="mt-12 text-center space-x-4">
+        <button id="open-privacy" class="text-[9px] text-gray-600 uppercase tracking-[0.2em] hover:text-white transition-colors">Privacy Policy & SB29</button>
+        <span class="text-gray-800">|</span>
+        <button id="open-terms" class="text-[9px] text-gray-600 uppercase tracking-[0.2em] hover:text-white transition-colors">Terms & Conditions</button>
+    </div>
 </div>
 
-<div id="privacy-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-black/90">
+<div id="privacy-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-black/95">
     <div class="bg-zinc-900 w-full max-w-2xl max-h-[80vh] rounded-2xl border border-zinc-800 flex flex-col">
         <div class="p-6 border-b border-zinc-800 flex justify-between items-center">
             <h3 class="text-xl font-black italic uppercase tracking-tight">Privacy Policy</h3>
-            <button id="close-privacy" class="text-gray-500 hover:text-white text-2xl">&times;</button>
+            <button class="close-p text-gray-500 hover:text-white text-2xl">&times;</button>
         </div>
         <div class="p-6 overflow-y-auto text-sm leading-relaxed text-gray-300 space-y-6">
             <p class="font-bold text-white">Effective Date: April 2026</p>
-            
-            <section>
-                <h4 class="text-white font-bold uppercase mb-2 text-xs tracking-widest">1. Purpose of This App</h4>
-                <p>Designed to support student-athletes by tracking strength performance, nutritional info, and athletic development for use by coaches and authorized personnel.</p>
-            </section>
-
-            <section>
-                <h4 class="text-white font-bold uppercase mb-2 text-xs tracking-widest">2. Information We Collect</h4>
-                <ul class="list-disc pl-5 space-y-1">
-                    <li>Personal: Name, School, Grade, Team.</li>
-                    <li>Athletic: Max lifts, workout history, progress metrics.</li>
-                    <li>Nutrition: Daily food intake and macronutrients.</li>
-                    <li>Optional: Voluntary recruiting data.</li>
-                </ul>
-            </section>
-
-            <section>
-                <h4 class="text-white font-bold uppercase mb-2 text-xs tracking-widest">3. Data Usage & Protection</h4>
-                <p>Data is used strictly for development and wellness. We <span class="text-red-500 font-bold">DO NOT</span> sell data, use it for advertising, or share with third parties for commercial use.</p>
-            </section>
-
-            <section>
-                <h4 class="text-white font-bold uppercase mb-2 text-xs tracking-widest">4. Compliance (Ohio Senate Bill 29)</h4>
-                <p>Student data remains property of the school/student. Parents/guardians may request access, corrections, or deletion of data subject to school policies.</p>
-            </section>
-
-            <section>
-                <h4 class="text-white font-bold uppercase mb-2 text-xs tracking-widest">5. Contact Information</h4>
-                <p>Sean Diefenderfer: seandief@gmail.com: 614-949-6195</p>
-            </section>
-
+            <p>This application is designed to support student-athletes in accordance with Ohio Senate Bill 29. We collect name, school affiliation, athletic metrics, and nutritional data strictly for performance development.</p>
+            <p><strong>We do NOT sell student data or use it for advertising.</strong> Access is limited to authorized coaches and the student-athlete.</p>
             <div class="p-4 bg-zinc-950 rounded-lg border border-zinc-800 italic text-xs">
-                <strong>Disclaimer:</strong> This application is for educational/athletic purposes and is not a substitute for professional medical or nutritional advice.
+                <strong>Disclaimer:</strong> Not a substitute for professional medical or nutritional advice.
             </div>
         </div>
         <div class="p-4 border-t border-zinc-800 text-center">
-            <button id="close-privacy-btn" class="px-8 py-2 bg-white text-black font-black uppercase text-xs rounded-full hover:bg-gray-200">Close</button>
+            <button class="close-p px-8 py-2 bg-white text-black font-black uppercase text-xs rounded-full">Close</button>
         </div>
     </div>
 </div>
 
-<div class="mt-8 text-center">
-    <button id="open-privacy" class="text-[9px] text-gray-600 uppercase tracking-[0.2em] hover:text-white transition-colors">Privacy Policy & SB29 Compliance</button>
-</div>
-
-<div id="terms-modal" class="fixed inset-0 z-[101] hidden flex items-center justify-center p-4 bg-black/90">
+<div id="terms-modal" class="fixed inset-0 z-[101] hidden flex items-center justify-center p-4 bg-black/95">
     <div class="bg-zinc-900 w-full max-w-2xl max-h-[80vh] rounded-2xl border border-zinc-800 flex flex-col">
         <div class="p-6 border-b border-zinc-800 flex justify-between items-center">
             <h3 class="text-xl font-black italic uppercase tracking-tight text-white">Terms & Conditions</h3>
-            <button id="close-terms" class="text-gray-500 hover:text-white text-2xl">&times;</button>
+            <button class="close-t text-gray-500 hover:text-white text-2xl">&times;</button>
         </div>
         <div class="p-6 overflow-y-auto text-sm leading-relaxed text-gray-300 space-y-6">
             <p class="font-bold text-white">Effective Date: April 9, 2026</p>
-            
-            <section>
-                <h4 class="text-white font-bold uppercase mb-2 text-xs tracking-widest">1. Assumption of Risk</h4>
-                <p>Participation in athletics and strength training involves inherent risks. By using this App, you acknowledge that you voluntarily participate and assume full responsibility for any injuries that may occur.</p>
-            </section>
-
-            <section>
-                <h4 class="text-white font-bold uppercase mb-2 text-xs tracking-widest">2. Medical Disclaimer</h4>
-                <p>This App does <span class="text-red-500 font-bold">NOT</span> provide medical advice. It is not a substitute for professional healthcare guidance. Consult a professional before beginning any new program.</p>
-            </section>
-
-            <section>
-                <h4 class="text-white font-bold uppercase mb-2 text-xs tracking-widest">3. User Responsibility</h4>
-                <p>You agree to provide accurate data and maintain the confidentiality of your login credentials. Harassment or entering false data may result in immediate account termination.</p>
-            </section>
-
-            <section>
-                <h4 class="text-white font-bold uppercase mb-2 text-xs tracking-widest">4. Limitation of Liability</h4>
-                <p>The school, coaches, and administrators are not liable for injuries sustained during training or health issues related to nutrition tracking.</p>
-            </section>
-
-            <section>
-                <h4 class="text-white font-bold uppercase mb-2 text-xs tracking-widest">5. Consent</h4>
-                <p>If you are under 18, a parent or guardian must review these terms. Continued use of the App constitutes acceptance of these terms.</p>
-            </section>
+            <p><strong>Assumption of Risk:</strong> Participation in athletics involves inherent risks. By using this App, you assume full responsibility for any injuries that may occur.</p>
+            <p><strong>Acceptable Use:</strong> Users agree not to enter false data or use the App to harass others. Violation may result in account termination.</p>
         </div>
         <div class="p-4 border-t border-zinc-800 text-center">
-            <button id="close-terms-btn" class="px-8 py-2 bg-white text-black font-black uppercase text-xs rounded-full hover:bg-gray-200">Close</button>
+            <button class="close-t px-8 py-2 bg-white text-black font-black uppercase text-xs rounded-full">Close</button>
         </div>
     </div>
 </div>
 
-<div class="mt-8 text-center space-x-4">
-    <button id="open-privacy" class="text-[9px] text-gray-600 uppercase tracking-[0.2em] hover:text-white transition-colors">Privacy Policy</button>
-    <span class="text-gray-800">|</span>
-    <button id="open-terms" class="text-[9px] text-gray-600 uppercase tracking-[0.2em] hover:text-white transition-colors">Terms & Conditions</button>
-</div>
-
 <script type="module">
-    // --- 1. TOP LEVEL IMPORTS (The fix) ---
     import { firebaseConfig } from './firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { applyTheme } from './theme.js';
 
-    // --- 2. INITIALIZATION ---
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
@@ -195,7 +137,29 @@
     const mainMenu = document.getElementById('main-menu');
     const branding = document.getElementById('school-branding');
 
-    // --- 3. FUNCTIONS ---
+    // --- MODAL LOGIC ---
+    const pModal = document.getElementById('privacy-modal');
+    const tModal = document.getElementById('terms-modal');
+
+    document.getElementById('open-privacy').onclick = () => {
+        pModal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    };
+    document.getElementById('open-terms').onclick = () => {
+        tModal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    };
+
+    document.querySelectorAll('.close-p').forEach(el => el.onclick = () => {
+        pModal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+    });
+    document.querySelectorAll('.close-t').forEach(el => el.onclick = () => {
+        tModal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+    });
+
+    // --- AUTH ACTIONS ---
     const handleLogin = async () => {
         const email = document.getElementById('email').value.trim();
         const pass = document.getElementById('password').value;
@@ -203,7 +167,6 @@
         
         try { 
             await signInWithEmailAndPassword(auth, email, pass);
-            // Observer below handles UI update
         } catch (e) { 
             alert("Login failed: " + e.message); 
         }
@@ -212,61 +175,15 @@
     const handleLogout = async () => {
         try {
             await signOut(auth);
-            window.location.reload();
         } catch (error) {
             console.error("Logout Error:", error);
         }
     };
 
-    // --- PRIVACY MODAL LOGIC ---
-    const privacyModal = document.getElementById('privacy-modal');
-    const openPrivacy = document.getElementById('open-privacy');
-    const closePrivacyX = document.getElementById('close-privacy');
-    const closePrivacyBtn = document.getElementById('close-privacy-btn');
-
-    const togglePrivacy = (show) => {
-        if (show) {
-            privacyModal.classList.remove('hidden');
-            document.body.style.overflow = 'hidden'; // Prevent scrolling background
-        } else {
-            privacyModal.classList.add('hidden');
-            document.body.style.overflow = 'auto';
-        }
-    };
-
-    openPrivacy.addEventListener('click', () => togglePrivacy(true));
-    closePrivacyX.addEventListener('click', () => togglePrivacy(false));
-    closePrivacyBtn.addEventListener('click', () => togglePrivacy(false));
-
-    // Close if they click outside the box
-    privacyModal.addEventListener('click', (e) => {
-        if (e.target === privacyModal) togglePrivacy(false);
-    });
-
-    // --- TERMS MODAL LOGIC ---
-    const termsModal = document.getElementById('terms-modal');
-    const openTerms = document.getElementById('open-terms');
-    const closeTermsX = document.getElementById('close-terms');
-    const closeTermsBtn = document.getElementById('close-terms-btn');
-
-    const toggleTerms = (show) => {
-        termsModal.classList.toggle('hidden', !show);
-        document.body.style.overflow = show ? 'hidden' : 'auto';
-    };
-
-    openTerms.addEventListener('click', () => toggleTerms(true));
-    closeTermsX.addEventListener('click', () => toggleTerms(false));
-    closeTermsBtn.addEventListener('click', () => toggleTerms(false));
-
-    termsModal.addEventListener('click', (e) => {
-        if (e.target === termsModal) toggleTerms(false);
-    });
-
-    // Attach to window for the buttons to see them, or use addEventListener (preferred)
     document.getElementById('login-btn').addEventListener('click', handleLogin);
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
 
-    // --- 4. AUTH STATE OBSERVER ---
+    // --- AUTH OBSERVER ---
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             try {
@@ -279,7 +196,6 @@
                         return; 
                     }
 
-                    // Apply Theme and Feature Toggles
                     const schoolId = userData.schoolId || userData.school_id;
                     const schoolData = await applyTheme(db, schoolId);
 
@@ -288,22 +204,19 @@
                         if (schoolData.hasRecruitingCard === false && recruitingBtn) {
                             recruitingBtn.classList.add('hidden');
                         }
-                        branding.classList.remove('opacity-0');
                     }
 
-                    // Show Menu
                     document.getElementById('welcome-msg').innerText = `Welcome, ${userData.fullName || 'Athlete'}`;
                     authSection.classList.add('hidden');
                     mainMenu.classList.remove('hidden');
                 }
             } catch (err) {
-                console.error("Data Retrieval Error:", err);
+                console.error("Auth Observer Error:", err);
             }
         } else {
-            // Logged out
             authSection.classList.remove('hidden');
             mainMenu.classList.add('hidden');
-            branding.classList.add('opacity-0');
+            branding.classList.remove('theme-loaded');
         }
     });
 </script>
