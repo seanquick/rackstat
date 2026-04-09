@@ -114,18 +114,6 @@
             // 2. Fetch Athletes
             const q = query(collection(db, "recruiting_profiles"), where("school_id", "==", schoolId));
             const pSnap = await getDocs(q);
-            // Inside the for (const d of pSnap.docs) loop:
-            const m = latestMaxSnap.data();
-
-            // FIX: Pull bodyWeight from the parent profile 'd', not the maxes 'm'
-            const athleteBW = Number(d.data().bodyWeight || 0); 
-
-            let displayScore = totalLifts;
-            if (school.preferences?.formula_type === "power_index") {
-                const bwCap = Math.min(athleteBW, 200); 
-                const bwFactor = bwCap * 4;
-                displayScore = totalLifts - bwFactor;
-            }
 
             // 3. Update Count & Formula Display
             const countEl = document.getElementById('athlete-count');
@@ -144,10 +132,10 @@
 
            // 4. Process Athlete Data
             for (const d of pSnap.docs) {
-                // 1. Fetch the maxes sub-collection for this specific athlete
+                // Fetch the maxes sub-collection for this specific athlete
                 const latestMaxSnap = await getDoc(doc(db, "recruiting_profiles", d.id, "maxes", "latest"));
                 
-                // 2. Only proceed if the athlete actually has lift data
+                // Only proceed if the athlete actually has lift data
                 if (latestMaxSnap.exists()) {
                     const m = latestMaxSnap.data();
                     const athleteData = d.data(); // Get the main profile data
