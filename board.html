@@ -114,8 +114,7 @@
 
    // --- GLOBAL STATE ---
     let currentSchoolId = null;
-    let isCoachMode = false;
-
+    
     window.loadBoard = async function(schoolId) {
         currentSchoolId = schoolId; // Store the ID so the toggle can refresh the board
         const grid = document.getElementById('player-club-grid');
