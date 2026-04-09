@@ -102,7 +102,7 @@
             if (!schoolSnap.exists()) return;
             const school = schoolSnap.data();
 
-            // FIXED: Look at root for formula_type, not preferences
+            // Check root for formula_type
             const formulaSetting = (school.formula_type || "").toLowerCase().replace("_", " ");
             console.log("School Formula Type Found:", formulaSetting);
             
@@ -112,10 +112,9 @@
             const schoolLogo = document.getElementById('school-logo');
             if (schoolLogo && school.logo_url) schoolLogo.src = school.logo_url;
 
-            // FIXED: Handling your comma-separated string in the array
+            // Handling comma-separated string in the array from your DB
             let scoringLifts = ["bench", "squat", "clean", "deadlift"];
             if (school.scoring_lifts && school.scoring_lifts.length > 0) {
-                // This splits "bench, clean, deadlift, squat" into individual items
                 scoringLifts = school.scoring_lifts[0].split(',').map(s => s.trim());
             }
 
@@ -158,13 +157,11 @@
                         displayScore = totalLifts - bwFactor;
                     }
 
-                    // --- CONSOLE DEBUGGER ---
+                    // Console debugger for verify
                     console.log(`--- DEBUG: ${athleteData.firstName} ${athleteData.lastName} ---`);
-                    console.log(`Scoring Lifts:`, scoringLifts);
                     console.log(`Total Lifted: ${totalLifts}`);
-                    console.log(`Body Weight used: ${athleteBW}`);
                     console.log(`BW Factor: ${bwFactor}`);
-                    console.log(`Calculated Index: ${displayScore}`);
+                    console.log(`Calculated Index (Primary): ${displayScore}`);
 
                     scores.push({ 
                         id: d.id,
@@ -177,6 +174,7 @@
             }
 
             // 5. Render Club Groups
+            // Always sort by displayScore (the calculated index)
             scores.sort((a, b) => b.displayScore - a.displayScore);
 
             grid.innerHTML = '';
@@ -185,7 +183,8 @@
             const end = school.club_end || 50; 
             
             for(let level = start; level >= end; level -= 50) {
-                const qualifiers = scores.filter(s => !s.placed && s.total >= level);
+                // FIXED: Filter based on displayScore (Index) instead of total lifts
+                const qualifiers = scores.filter(s => !s.placed && s.displayScore >= level);
                 qualifiers.forEach(s => s.placed = true);
                 
                 if(qualifiers.length > 0) {
@@ -203,11 +202,10 @@
                                     <div class="flex flex-col">
                                         <span class="text-white font-bold uppercase tracking-tight group-hover:text-red-500 transition-colors">${q.name}</span>
                                         <div class="flex items-center gap-2">
-                                            <span class="text-[8px] text-gray-500 font-black uppercase italic">Index: ${q.displayScore}</span>
                                             <button onclick="location.href='recruiting-card.html?id=${q.id}'" class="text-[8px] text-blue-500 hover:text-blue-300 font-bold uppercase transition-colors">View Card →</button>
                                         </div>
                                     </div>
-                                    <span class="text-white font-black italic text-lg">${q.total}</span>
+                                    <span class="text-white font-black italic text-lg">${q.displayScore}</span>
                                 </div>`).join('')}
                         </div>`;
                 }
