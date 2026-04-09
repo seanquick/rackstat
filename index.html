@@ -7,14 +7,12 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root { --school-primary: #dc2626; } /* Default Red fallback */
+        :root { --school-primary: #dc2626; } 
         .btn-primary-dynamic {
             background-color: var(--school-primary);
             border-bottom: 4px solid rgba(0,0,0,0.3);
         }
         .btn-primary-dynamic:hover { filter: brightness(1.1); }
-        
-        /* Smooth Fade for Branding */
         #school-branding { transition: opacity 0.7s ease-in-out; }
     </style>
 </head>
@@ -41,7 +39,7 @@
 
     <div id="auth-section" class="hidden">
         <h2 class="text-center font-black uppercase tracking-widest text-xs mb-8 text-gray-500">Athlete Login</h2>
-        <div id="login-form" class="space-y-4">
+        <div class="space-y-4">
             <div class="form-group bg-[#111] p-4 rounded-xl border border-gray-800 transition-all focus-within:border-[var(--school-primary)]">
                 <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Email Address</label>
                 <input type="email" id="email" placeholder="athlete@school.edu" class="w-full bg-transparent text-white outline-none">
@@ -54,7 +52,6 @@
                 Login to Rackstat
             </button>
         </div>
-        
         <div class="mt-10 text-center">
             <p class="text-gray-600 text-[10px] font-black uppercase tracking-widest">
                 New Athlete? <a href="signup.html" class="text-white hover:underline">Create Account</a>
@@ -64,26 +61,24 @@
 
     <div id="main-menu" class="hidden space-y-4">
         <h2 id="welcome-msg" class="text-2xl font-black italic uppercase text-center mb-8 text-white tracking-tight"></h2>
-        
         <div class="grid grid-cols-1 gap-4">
-            <button onclick="location.href='board.html'" class="btn-primary-dynamic py-6 rounded-2xl transition-transform active:scale-95">
-                <span class="text-2xl font-black italic">THE BOARD</span>
+            <button onclick="location.href='board.html'" class="btn-primary-dynamic py-6 rounded-2xl">
+                <span class="text-2xl font-black italic uppercase">THE BOARD</span>
             </button>
-            <button onclick="location.href='athlete-workout.html'" class="bg-zinc-800 border-b-4 border-zinc-950 py-6 rounded-2xl transition-transform active:scale-95">
-                <span class="text-2xl font-black italic">THE RACK</span>
+            <button onclick="location.href='athlete-workout.html'" class="bg-zinc-800 border-b-4 border-zinc-950 py-6 rounded-2xl">
+                <span class="text-2xl font-black italic uppercase">THE RACK</span>
             </button>
-            <button id="btn-kitchen" onclick="location.href='kitchen.html'" class="bg-emerald-700 border-b-4 border-emerald-900 py-6 rounded-2xl transition-transform active:scale-95">
-                <span class="text-2xl font-black italic">THE KITCHEN</span>
+            <button id="btn-kitchen" onclick="location.href='kitchen.html'" class="bg-emerald-700 border-b-4 border-emerald-900 py-6 rounded-2xl">
+                <span class="text-2xl font-black italic uppercase">THE KITCHEN</span>
             </button>
-            <button id="btn-recruiting-card" onclick="location.href='next-level.html'" class="btn-primary-dynamic py-6 rounded-2xl transition-transform active:scale-95">
-                <span class="text-xl font-black italic leading-none uppercase">Next Level<br><span class="text-[10px] tracking-[0.4em] opacity-80 font-sans font-bold">RECRUITING</span></span>
+            <button id="btn-recruiting-card" onclick="location.href='next-level.html'" class="btn-primary-dynamic py-6 rounded-2xl">
+                <span class="text-xl font-black italic uppercase leading-none">Next Level<br><span class="text-[10px] tracking-[0.4em] opacity-80 font-sans font-bold">RECRUITING</span></span>
             </button>
-            <button onclick="location.href='profile.html'" class="bg-blue-700 border-b-4 border-blue-900 py-6 rounded-2xl transition-transform active:scale-95">
-                <span class="text-2xl font-black italic text-white">MY PROFILE</span>
+            <button onclick="location.href='profile.html'" class="bg-blue-700 border-b-4 border-blue-900 py-6 rounded-2xl">
+                <span class="text-2xl font-black italic text-white uppercase">MY PROFILE</span>
             </button>
         </div>
-
-        <button id="logout-btn" class="w-full mt-12 text-[10px] font-black uppercase text-gray-600 hover:text-white tracking-[0.3em] transition-colors">
+        <button id="logout-btn" class="w-full mt-12 text-[10px] font-black uppercase text-gray-600 hover:text-white tracking-[0.3em]">
             Sign Out / Switch User
         </button>
     </div>
@@ -105,11 +100,11 @@
     const mainMenu = document.getElementById('main-menu');
     const branding = document.getElementById('school-branding');
 
+    // UI REVEAL FUNCTIONS
     const showAuthUI = () => {
         loader.classList.add('hidden');
         authSection.classList.remove('hidden');
         mainMenu.classList.add('hidden');
-        branding.classList.add('opacity-0');
     };
 
     const showMenuUI = (name) => {
@@ -119,34 +114,34 @@
         document.getElementById('welcome-msg').innerText = `Welcome, ${name || 'Athlete'}`;
     };
 
-    // Global Login Handler
+    // SAFETY TIMEOUT: If nothing happens in 4 seconds, show login
+    const safetyTimer = setTimeout(() => {
+        if (loader.classList.contains('hidden')) return;
+        console.warn("Auth took too long. Forcing Login UI.");
+        showAuthUI();
+    }, 4000);
+
+    // HANDLERS
     window.handleLogin = async () => {
         const email = document.getElementById('email').value.trim();
         const pass = document.getElementById('password').value;
-        if(!email || !pass) return alert("Please enter credentials.");
-        
         try { 
             await signInWithEmailAndPassword(auth, email, pass);
-            // onAuthStateChanged handles UI switch automatically
-        } catch (e) { 
-            alert("Login failed: " + e.message); 
-        }
+        } catch (e) { alert("Login failed: " + e.message); }
     };
 
-    // Global Logout Handler
     window.handleLogout = async () => {
-        try {
-            await signOut(auth);
-            window.location.reload();
-        } catch (error) { console.error("Logout Error:", error); }
+        try { await signOut(auth); window.location.reload(); } 
+        catch (error) { console.error(error); }
     };
 
-    // Event Listeners for Modules
     document.getElementById('login-btn').addEventListener('click', window.handleLogin);
     document.getElementById('logout-btn').addEventListener('click', window.handleLogout);
 
-    // Main Auth Observer
+    // AUTH OBSERVER
     onAuthStateChanged(auth, async (user) => {
+        clearTimeout(safetyTimer); // Cancel safety timer once Firebase responds
+
         if (!user) {
             showAuthUI();
             return;
@@ -154,43 +149,36 @@
 
         try {
             const userSnap = await getDoc(doc(db, "users", user.uid));
-            
             if (userSnap.exists()) {
                 const userData = userSnap.data();
 
-                // 1. Handle Role Redirects immediately
                 if (userData.role === 'coach') {
                     window.location.href = 'coach-lobby.html';
-                    return; 
+                    return;
                 }
 
-                // 2. Show the Menu NOW so the screen isn't black while theme loads
+                // STEP 1: Show UI immediately
                 showMenuUI(userData.fullName);
 
-                // 3. Load Branding in the background
+                // STEP 2: Load Theme (if it fails, page stays visible)
                 try {
                     const schoolId = userData.schoolId || userData.school_id;
                     if (schoolId) {
                         const schoolData = await applyTheme(db, schoolId);
                         if (schoolData) {
-                            const recruitingBtn = document.getElementById('btn-recruiting-card');
-                            if (schoolData.hasRecruitingCard === false && recruitingBtn) {
-                                recruitingBtn.classList.add('hidden');
+                            if (schoolData.hasRecruitingCard === false) {
+                                document.getElementById('btn-recruiting-card')?.classList.add('hidden');
                             }
                             branding.classList.remove('opacity-0');
                         }
                     }
-                } catch (themeErr) {
-                    console.warn("Theme load failed, keeping default styles:", themeErr);
-                }
-
+                } catch (tErr) { console.warn("Theme delay:", tErr); }
             } else {
-                console.warn("User logged in but no Firestore document found.");
                 showAuthUI();
             }
         } catch (err) {
-            console.error("Critical Auth Logic Error:", err);
-            showAuthUI(); 
+            console.error("Critical Auth Error:", err);
+            showAuthUI();
         }
     });
 </script>
