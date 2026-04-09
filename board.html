@@ -8,13 +8,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #000000; color: white; }
-        .club-card { 
-            background: #111827; 
-            border-radius: 8px; 
-            padding: 1rem; 
-            margin-bottom: 1rem; 
-            border: 1px solid #1f2937;
-        }
+        .club-card { background: #111827; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; border: 1px solid #1f2937; }
+        .record-table { width: 100%; border-collapse: collapse; font-size: 10px; background: #111827; border: 1px solid #1f2937; }
+        .record-table th { background: #1f2937; color: #ef4444; text-transform: uppercase; padding: 8px; border: 1px solid #374151; font-weight: 900; }
+        .record-table td { border: 1px solid #374151; padding: 6px; text-align: center; }
+        .record-name { color: #9ca3af; font-weight: bold; display: block; font-size: 8px; }
+        .record-value { color: white; font-weight: 900; font-style: italic; font-size: 11px; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -22,195 +21,234 @@
 
 <header class="bg-black border-b-2 border-red-700 p-4">
     <div class="flex justify-between items-center max-w-4xl mx-auto">
-        <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1 rounded text-gray-300 hover:text-white transition-colors">
-            ← Lobby
-        </button>
-        
+        <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1 rounded text-gray-300 hover:text-white transition-colors">← Lobby</button>
         <div class="flex items-center gap-4">
             <img id="school-logo" src="images/panther-logo1.png" alt="School Logo" class="h-10 w-auto" onerror="this.src='images/rackstat-logo.png'">
-            
             <div class="h-10 w-[1px] bg-gray-700"></div>
-            
             <div class="flex flex-col items-center">
-                <span id="school-tag" class="text-sm font-black italic uppercase tracking-widest text-white leading-tight text-center">
-                    FAIRBANKS
-                </span>
-                <span id="athlete-count" class="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">
-                    Updating...
-                </span>
-                <span id="formula-display" class="mt-1 text-[7px] font-black text-red-500 bg-red-500/10 border border-red-900/30 px-2 py-0.5 rounded italic tracking-widest uppercase text-center">
-                    Syncing Formula...
-                </span>
+                <span id="school-tag" class="text-sm font-black italic uppercase tracking-widest text-white leading-tight text-center">FAIRBANKS</span>
+                <span id="athlete-count" class="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">Updating...</span>
+                <span id="formula-display" class="mt-1 text-[7px] font-black text-red-500 bg-red-500/10 border border-red-900/30 px-2 py-0.5 rounded italic tracking-widest uppercase text-center">Syncing...</span>
             </div>
-            
             <div class="h-10 w-[1px] bg-gray-700"></div>
-            
             <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-10 w-auto">
         </div>
-
         <div class="w-[60px]"></div> 
     </div>
 </header>
 
-    <div class="max-w-md mx-auto px-4 py-6">
-        <div id="player-club-grid">
-            <p class="text-center text-xs animate-pulse text-red-600 font-black uppercase py-20">Analyzing Lifts...</p>
-        </div>
+<main class="max-w-4xl mx-auto px-4 py-6">
+    <h2 class="text-red-600 font-black italic text-xs uppercase mb-4 tracking-tighter">Lifting Clubs</h2>
+    <div id="player-club-grid">
+        <p class="text-center text-xs animate-pulse text-red-600 font-black uppercase py-10">Syncing Lifts...</p>
     </div>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-red-900/30 px-6 py-4 flex justify-between items-center z-50">
-        <button onclick="location.href='board.html'" class="text-red-600 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Board</span></button>
-        <button onclick="location.href='rack.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">The Rack</span></button>
-        <button onclick="location.href='kitchen.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Kitchen</span></button>
-        <button onclick="location.href='profile.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
-    </nav>
+    <div class="mt-10">
+        <div class="flex justify-between items-end mb-4">
+            <h2 class="text-red-600 font-black italic text-xs uppercase tracking-tighter">Weight Class Records</h2>
+            <button id="coach-edit-btn" class="text-[8px] bg-gray-900 border border-gray-700 px-2 py-1 rounded text-gray-500 font-bold uppercase hover:text-white transition-all">Coach Mode: OFF</button>
+        </div>
+        <div class="overflow-x-auto no-scrollbar rounded-lg border border-gray-800 shadow-2xl">
+            <table class="record-table" id="weight-class-table">
+                <thead>
+                    <tr>
+                        <th>WT</th>
+                        <th>BENCH</th>
+                        <th>SQUAT</th>
+                        <th>CLEANS</th>
+                        <th>DEADLIFT</th>
+                        <th>40 YD DASH</th>
+                    </tr>
+                </thead>
+                <tbody id="record-rows">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+</main>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+<nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-red-900/30 px-6 py-4 flex justify-between items-center z-50">
+    <button onclick="location.href='board.html'" class="text-red-600 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Board</span></button>
+    <button onclick="location.href='rack.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">The Rack</span></button>
+    <button onclick="location.href='kitchen.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Kitchen</span></button>
+    <button onclick="location.href='profile.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
+</nav>
 
-        const firebaseConfig = { 
-            apiKey: "AIzaSyBOQFeokKaNQKwaUhXMCA0oEm4W9G0qafE", 
-            authDomain: "rackstat-production.firebaseapp.com", 
-            projectId: "rackstat-production",
-            storageBucket: "rackstat-production.firebasestorage.app",
-            messagingSenderId: "345003825117",
-            appId: "1:345003825117:web:2ad86b1902dfdebe0c8834"
-        };
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const firebaseConfig = { 
+        apiKey: "AIzaSyBOQFeokKaNQKwaUhXMCA0oEm4W9G0qafE", 
+        authDomain: "rackstat-production.firebaseapp.com", 
+        projectId: "rackstat-production",
+        storageBucket: "rackstat-production.firebasestorage.app",
+        messagingSenderId: "345003825117",
+        appId: "1:345003825117:web:2ad86b1902dfdebe0c8834"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    let isCoachMode = false;
+
+    // Weight Class Definitions
+    const weightClasses = [125, 135, 145, 155, 165, 175, 185, 195, 210, 225, 250, "UNLIMITED"];
+    
+    const getWeightClass = (bw) => {
+        if (!bw || bw > 250) return "UNLIMITED";
+        return weightClasses.find(c => c !== "UNLIMITED" && bw <= c) || "UNLIMITED";
+    };
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const userSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+            if (userSnap.exists()) {
+                const userData = userSnap.data();
+                loadBoard(userData.school_id);
+            }
+        } else { window.location.href = 'index.html'; }
+    });
+
+    window.loadBoard = async function(schoolId) {
+        const grid = document.getElementById('player-club-grid');
+        const recordBody = document.getElementById('record-rows');
+        if (!grid || !recordBody) return; 
+
+        // 1. Fetch School & Manual Overrides
+        const schoolSnap = await getDoc(doc(db, "schools", schoolId));
+        const manualSnap = await getDoc(doc(db, "schools", schoolId, "settings", "manual_records"));
+        const manualRecords = manualSnap.exists() ? manualSnap.data() : {};
         
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
+        if (!schoolSnap.exists()) return;
+        const school = schoolSnap.data();
+        const formulaSetting = (school.formula_type || "power_index").toLowerCase().replace("_", " ");
+        
+        document.getElementById('school-tag').innerText = `${school.name} Weightroom`.toUpperCase();
+        if (school.logo_url) document.getElementById('school-logo').src = school.logo_url;
 
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                const userSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
-                if (userSnap.exists()) {
-                    const userData = userSnap.data();
-                    loadBoard(userData.school_id);
-                }
-            } else { window.location.href = 'index.html'; }
+        let scoringLifts = ["bench", "squat", "clean", "deadlift"];
+        if (school.scoring_lifts && school.scoring_lifts.length > 0) {
+            scoringLifts = school.scoring_lifts[0].split(',').map(s => s.trim());
+        }
+
+        // 2. Fetch Athletes
+        const q = query(collection(db, "recruiting_profiles"), where("school_id", "==", schoolId));
+        const pSnap = await getDocs(q);
+        document.getElementById('athlete-count').innerText = `${pSnap.size} Athletes Logged`;
+
+        // 3. Prepare Record Data
+        let classRecords = {};
+        weightClasses.forEach(wc => {
+            classRecords[wc] = {
+                bench: { val: 0, name: "-" },
+                squat: { val: 0, name: "-" },
+                clean: { val: 0, name: "-" },
+                deadlift: { val: 0, name: "-" },
+                dash: { val: 99.9, name: "-" } // Higher is worse for dash
+            };
         });
 
-        window.loadBoard = async function(schoolId) {
-            const grid = document.getElementById('player-club-grid');
-            if (!grid) return; 
+        let scores = [];
 
-            // 1. Fetch school settings
-            const schoolSnap = await getDoc(doc(db, "schools", schoolId));
-            if (!schoolSnap.exists()) return;
-            const school = schoolSnap.data();
-
-            // Check root for formula_type
-            const formulaSetting = (school.formula_type || "").toLowerCase().replace("_", " ");
-            console.log("School Formula Type Found:", formulaSetting);
+        // 4. Process Athlete Data & Track Records
+        for (const d of pSnap.docs) {
+            const athleteData = d.data();
+            const latestMaxSnap = await getDoc(doc(db, "recruiting_profiles", d.id, "maxes", "latest"));
             
-            const schoolTag = document.getElementById('school-tag');
-            if (schoolTag) schoolTag.innerText = `${school.name} Weightroom`.toUpperCase();
-            
-            const schoolLogo = document.getElementById('school-logo');
-            if (schoolLogo && school.logo_url) schoolLogo.src = school.logo_url;
+            if (latestMaxSnap.exists()) {
+                const m = latestMaxSnap.data();
+                const totalLifts = scoringLifts.reduce((acc, lift) => acc + (Number(m[lift]) || 0), 0);
+                const athleteBW = Number(athleteData.bodyWeight || athleteData.weight || m.bodyWeight || 0);
+                const currentWC = getWeightClass(athleteBW);
+                const fullName = `${athleteData.firstName} ${athleteData.lastName}`;
 
-            // Handling comma-separated string in the array from your DB
-            let scoringLifts = ["bench", "squat", "clean", "deadlift"];
-            if (school.scoring_lifts && school.scoring_lifts.length > 0) {
-                scoringLifts = school.scoring_lifts[0].split(',').map(s => s.trim());
-            }
-
-            // 2. Fetch Athletes
-            const q = query(collection(db, "recruiting_profiles"), where("school_id", "==", schoolId));
-            const pSnap = await getDocs(q);
-
-            // 3. Update Count & Formula Display
-            const countEl = document.getElementById('athlete-count');
-            if (countEl) countEl.innerText = `${pSnap.size} Athletes Logged`;
-
-            const formulaEl = document.getElementById('formula-display');
-            if (formulaEl) {
-                if (formulaSetting === "power index") {
-                    formulaEl.innerText = "INDEX: TOTAL LIFTED - (BW CAP * 4)";
-                } else {
-                    formulaEl.innerText = "RANKING: RAW TOTAL LBS";
-                }
-            }
-            
-            let scores = [];
-
-           // 4. Process Athlete Data
-            for (const d of pSnap.docs) {
-                const latestMaxSnap = await getDoc(doc(db, "recruiting_profiles", d.id, "maxes", "latest"));
-                
-                if (latestMaxSnap.exists()) {
-                    const m = latestMaxSnap.data();
-                    const athleteData = d.data(); 
-                    
-                    const totalLifts = scoringLifts.reduce((acc, lift) => acc + (Number(m[lift]) || 0), 0);
-                    const athleteBW = Number(athleteData.bodyWeight || athleteData.weight || m.bodyWeight || 0);
-                    
-                    let displayScore = totalLifts;
-                    let bwFactor = 0;
-
-                    if (formulaSetting === "power index") {
-                        const bwCap = Math.min(athleteBW, 200); 
-                        bwFactor = bwCap * 4;
-                        displayScore = totalLifts - bwFactor;
+                // Automatic Record Logic
+                const checkMax = (liftKey, dbKey) => {
+                    const val = Number(m[dbKey] || athleteData[dbKey] || 0);
+                    if (val > classRecords[currentWC][liftKey].val) {
+                        classRecords[currentWC][liftKey] = { val, name: fullName };
                     }
+                };
 
-                    // Console debugger for verify
-                    console.log(`--- DEBUG: ${athleteData.firstName} ${athleteData.lastName} ---`);
-                    console.log(`Total Lifted: ${totalLifts}`);
-                    console.log(`BW Factor: ${bwFactor}`);
-                    console.log(`Calculated Index (Primary): ${displayScore}`);
+                const checkMin = (liftKey, dbKey) => {
+                    const val = parseFloat(m[dbKey] || athleteData[dbKey] || 99.9);
+                    if (val > 0 && val < classRecords[currentWC][liftKey].val) {
+                        classRecords[currentWC][liftKey] = { val, name: fullName };
+                    }
+                };
 
-                    scores.push({ 
-                        id: d.id,
-                        name: `${athleteData.firstName} ${athleteData.lastName}`, 
-                        total: totalLifts, 
-                        displayScore: Math.round(displayScore),
-                        placed: false 
-                    });
+                checkMax('bench', 'bench');
+                checkMax('squat', 'squat');
+                checkMax('clean', 'clean');
+                checkMax('deadlift', 'deadlift');
+                checkMin('dash', 'forty'); // Assuming forty or dash field
+
+                // Power Index Calc
+                let displayScore = totalLifts;
+                if (formulaSetting === "power index") {
+                    displayScore = totalLifts - (Math.min(athleteBW, 200) * 4);
                 }
-            }
 
-            // 5. Render Club Groups
-            // Always sort by displayScore (the calculated index)
-            scores.sort((a, b) => b.displayScore - a.displayScore);
-
-            grid.innerHTML = '';
-
-            const start = school.club_start || 1000;
-            const end = school.club_end || 50; 
-            
-            for(let level = start; level >= end; level -= 50) {
-                // FIXED: Filter based on displayScore (Index) instead of total lifts
-                const qualifiers = scores.filter(s => !s.placed && s.displayScore >= level);
-                qualifiers.forEach(s => s.placed = true);
-                
-                if(qualifiers.length > 0) {
-                    grid.innerHTML += `
-                        <div class="club-card border-l-4 mb-4" style="border-color: ${school.colors?.primary || '#b91c1c'}">
-                            <div class="flex justify-between items-end border-b border-gray-800 mb-3 pb-1">
-                                <p class="font-black italic text-lg uppercase" style="color: ${school.colors?.primary || '#b91c1c'}">${level} LB CLUB</p>
-                                <div class="text-right">
-                                    <p class="text-[7px] text-gray-600 font-bold uppercase tracking-widest">RANKING BASIS:</p>
-                                    <p class="text-[8px] text-white font-black uppercase italic">${scoringLifts.join(' + ').toUpperCase()}</p>
-                                </div>
-                            </div>
-                            ${qualifiers.map(q => `
-                                <div class="flex justify-between items-center py-2 border-b border-white/5 last:border-0 group">
-                                    <div class="flex flex-col">
-                                        <span class="text-white font-bold uppercase tracking-tight group-hover:text-red-500 transition-colors">${q.name}</span>
-                                        <div class="flex items-center gap-2">
-                                            <button onclick="location.href='recruiting-card.html?id=${q.id}'" class="text-[8px] text-blue-500 hover:text-blue-300 font-bold uppercase transition-colors">View Card →</button>
-                                        </div>
-                                    </div>
-                                    <span class="text-white font-black italic text-lg">${q.displayScore}</span>
-                                </div>`).join('')}
-                        </div>`;
-                }
+                scores.push({ id: d.id, name: fullName, displayScore: Math.round(displayScore), total: totalLifts, placed: false });
             }
         }
-    </script>
+
+        // 5. Render Records Table
+        recordBody.innerHTML = '';
+        weightClasses.forEach(wc => {
+            // Apply Manual Overrides if they exist
+            const finalData = { ...classRecords[wc], ...(manualRecords[wc] || {}) };
+            
+            const row = `
+                <tr>
+                    <td class="bg-gray-900/50 font-black text-red-500">${wc}</td>
+                    ${['bench', 'squat', 'clean', 'deadlift', 'dash'].map(lift => `
+                        <td contenteditable="${isCoachMode}" class="record-cell" data-wc="${wc}" data-lift="${lift}">
+                            <span class="record-name">${finalData[lift].name}</span>
+                            <span class="record-value">${finalData[lift].val}${lift === 'dash' ? 's' : ''}</span>
+                        </td>
+                    `).join('')}
+                </tr>
+            `;
+            recordBody.innerHTML += row;
+        });
+
+        // 6. Render Clubs (Existing logic)
+        scores.sort((a, b) => b.displayScore - a.displayScore);
+        grid.innerHTML = '';
+        const start = school.club_start || 1000;
+        for(let level = start; level >= 50; level -= 50) {
+            const qualifiers = scores.filter(s => !s.placed && s.displayScore >= level);
+            qualifiers.forEach(s => s.placed = true);
+            if(qualifiers.length > 0) {
+                grid.innerHTML += `
+                    <div class="club-card border-l-4 mb-4" style="border-color: ${school.colors?.primary || '#b91c1c'}">
+                        <div class="flex justify-between items-end border-b border-gray-800 mb-3 pb-1">
+                            <p class="font-black italic text-lg uppercase" style="color: ${school.colors?.primary || '#b91c1c'}">${level} LB CLUB</p>
+                            <p class="text-[8px] text-white font-black uppercase italic">${scoringLifts.join(' + ').toUpperCase()}</p>
+                        </div>
+                        ${qualifiers.map(q => `
+                            <div class="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
+                                <span class="text-white font-bold uppercase tracking-tight">${q.name}</span>
+                                <span class="text-white font-black italic text-lg">${q.displayScore}</span>
+                            </div>`).join('')}
+                    </div>`;
+            }
+        }
+    };
+
+    // Coach Manual Update Logic
+    document.getElementById('coach-edit-btn').addEventListener('click', (e) => {
+        isCoachMode = !isCoachMode;
+        e.target.innerText = `Coach Mode: ${isCoachMode ? 'ON' : 'OFF'}`;
+        e.target.classList.toggle('text-red-500');
+        e.target.classList.toggle('border-red-500');
+        // Refresh board to enable contenteditable
+        auth.currentUser && loadBoard(auth.currentUser.uid); // Trigger reload
+    });
+</script>
 </body>
 </html>
