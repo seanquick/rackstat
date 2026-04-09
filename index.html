@@ -3,145 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RACKSTAT | Athlete Lobby</title>
-    <link rel="stylesheet" href="style.css">
+    <title>DIAGNOSTIC MODE | RACKSTAT</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* 1. DEFAULT THEME (Before Login) */
-        :root { 
-            --school-primary: #dc2626; /* Default Rackstat Red */
-        } 
-        
-        .btn-primary-dynamic {
-            background-color: var(--school-primary);
-            border-bottom: 4px solid rgba(0,0,0,0.3);
+        html, body {
+            background-color: #1a1a1a !important;
+            color: white !important;
+            margin: 0;
+            padding: 0;
+            display: block !important;
+            height: 100%;
         }
-        
-        /* Ensure the login form is readable against black */
-        input::placeholder { color: #4b5563; }
+        #emergency-check {
+            background: yellow;
+            color: black;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            display: block !important;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 9999;
+        }
     </style>
 </head>
-<body class="bg-black text-white font-sans antialiased">
+<body>
 
-<header class="brand-header flex flex-col items-center py-10 space-y-6">
-    <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-20 w-auto transition-transform duration-500 hover:scale-105">
+    <div id="emergency-check">INITIALIZING...</div>
 
-    <div id="school-branding" class="flex items-center justify-center gap-6 transition-opacity duration-700">
-        <img id="logo-primary" src="" class="h-14 w-auto object-contain" style="display:none">
-        <div class="flex items-center">
-            <div id="bar-left" class="h-8 w-[2px] bg-[var(--school-primary)] hidden"></div>
-            <h2 id="school-name-display" class="text-2xl font-black italic uppercase tracking-tighter text-white px-5">
-                ATHLETE PORTAL
-            </h2>
-            <div id="bar-right" class="h-8 w-[2px] bg-[var(--school-primary)] hidden"></div>
-        </div>
-        <img id="logo-secondary" src="" class="h-14 w-auto object-contain" style="display:none">
-    </div>
-</header>
-
-<div class="container mx-auto max-w-md px-6 pb-20">
-    <div id="auth-section">
-        <h2 class="text-center font-black uppercase tracking-widest text-xs mb-8 text-gray-500">Credentials Required</h2>
-        <div class="space-y-4">
-            <div class="form-group bg-[#111] p-4 rounded-xl border border-gray-800 focus-within:border-[var(--school-primary)]">
-                <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Email</label>
-                <input type="email" id="email" placeholder="athlete@school.edu" class="w-full bg-transparent text-white outline-none">
+    <div class="container mx-auto max-w-md px-6 py-24 text-center">
+        <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-20 mx-auto mb-10">
+        
+        <div id="auth-section" style="display: block !important;">
+            <h1 class="text-2xl font-bold mb-6 italic uppercase">Athlete Login</h1>
+            <div class="space-y-4 text-left">
+                <div class="bg-zinc-900 p-4 rounded border border-zinc-800">
+                    <label class="text-[10px] font-black uppercase text-gray-500">Email</label>
+                    <input type="email" id="email" placeholder="athlete@school.edu" class="w-full bg-transparent outline-none">
+                </div>
+                <div class="bg-zinc-900 p-4 rounded border border-zinc-800">
+                    <label class="text-[10px] font-black uppercase text-gray-500">Password</label>
+                    <input type="password" id="password" placeholder="••••••••" class="w-full bg-transparent outline-none">
+                </div>
+                <button id="login-btn" class="w-full bg-red-600 p-4 rounded font-black uppercase tracking-widest hover:bg-red-700 transition-colors">
+                    Login to Rackstat
+                </button>
             </div>
-            <div class="form-group bg-[#111] p-4 rounded-xl border border-gray-800 focus-within:border-[var(--school-primary)]">
-                <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Password</label>
-                <input type="password" id="password" placeholder="••••••••" class="w-full bg-transparent text-white outline-none">
-            </div>
-            <button type="button" id="login-btn" class="w-full bg-[var(--school-primary)] hover:brightness-110 text-white font-black py-4 rounded-xl uppercase tracking-widest shadow-lg">
-                Login to Rackstat
-            </button>
         </div>
-        <div class="mt-10 text-center">
-            <p class="text-gray-600 text-[10px] font-black uppercase tracking-widest">
-                New Athlete? <a href="signup.html" class="text-white hover:underline">Create Account</a>
-            </p>
-        </div>
-    </div>
 
-    <div id="main-menu" class="hidden space-y-4">
-        <h2 id="welcome-msg" class="text-2xl font-black italic uppercase text-center mb-8 text-white tracking-tight"></h2>
-        <div class="grid grid-cols-1 gap-4">
-            <button onclick="location.href='board.html'" class="btn-primary-dynamic py-6 rounded-2xl">
-                <span class="text-2xl font-black italic uppercase">THE BOARD</span>
-            </button>
-            <button onclick="location.href='athlete-workout.html'" class="bg-zinc-800 border-b-4 border-zinc-950 py-6 rounded-2xl">
-                <span class="text-2xl font-black italic uppercase">THE RACK</span>
-            </button>
-            <button id="btn-recruiting-card" onclick="location.href='next-level.html'" class="btn-primary-dynamic py-6 rounded-2xl">
-                <span class="text-xl font-black italic uppercase">NEXT LEVEL</span>
-            </button>
+        <div id="main-menu" class="hidden">
+            <h1 id="welcome-msg" class="text-2xl font-bold italic uppercase"></h1>
+            <p class="mt-4 text-gray-400">Successfully Logged In</p>
         </div>
-        <button id="logout-btn" class="w-full mt-12 text-[10px] font-black uppercase text-gray-600">Sign Out</button>
     </div>
-</div>
 
 <script type="module">
+    // 1. IMPORTS MUST BE AT THE VERY TOP
     import { firebaseConfig } from './firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { applyTheme } from './theme.js';
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-
-    const authSection = document.getElementById('auth-section');
-    const mainMenu = document.getElementById('main-menu');
-
-    // UI Toggle
-    const showAuth = () => {
-        authSection.classList.remove('hidden');
-        mainMenu.classList.add('hidden');
+    const status = (msg) => {
+        const el = document.getElementById('emergency-check');
+        if (el) el.innerText = msg;
+        console.log(msg);
     };
 
-    const showMenu = (name) => {
-        authSection.classList.add('hidden');
-        mainMenu.classList.remove('hidden');
-        document.getElementById('welcome-msg').innerText = `Welcome, ${name}`;
-        // Show design bars once theme is ready
-        document.getElementById('bar-left').classList.remove('hidden');
-        document.getElementById('bar-right').classList.remove('hidden');
-    };
+    // 2. ONLY LOGIC GOES INSIDE THE TRY BLOCK
+    try {
+        status("Connecting to Firebase...");
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        status("Firebase Ready. Checking session...");
 
-    // Handlers
-    document.getElementById('login-btn').addEventListener('click', async () => {
-        const email = document.getElementById('email').value.trim();
-        const pass = document.getElementById('password').value;
-        try { 
-            await signInWithEmailAndPassword(auth, email, pass);
-        } catch (e) { alert("Error: " + e.message); }
-    });
-
-    document.getElementById('logout-btn').addEventListener('click', () => signOut(auth).then(() => location.reload()));
-
-    // Auth State
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            const userSnap = await getDoc(doc(db, "users", user.uid));
-            if (userSnap.exists()) {
-                const userData = userSnap.data();
-                if (userData.role === 'coach') {
-                    window.location.href = 'coach-lobby.html';
-                    return;
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                status("User detected: " + user.email);
+                const snap = await getDoc(doc(db, "users", user.uid));
+                if (snap.exists()) {
+                    document.getElementById('auth-section').style.setProperty('display', 'none', 'important');
+                    document.getElementById('main-menu').classList.remove('hidden');
+                    document.getElementById('welcome-msg').innerText = "Welcome, " + snap.data().fullName;
+                    status("Lobby Active");
+                } else {
+                    status("User logged in, but no profile found in Firestore.");
                 }
-                
-                showMenu(userData.fullName || 'Athlete');
-
-                // Load School Theme
-                try {
-                    const sId = userData.schoolId || userData.school_id;
-                    await applyTheme(db, sId);
-                } catch (err) { console.warn("Theme load failed."); }
+            } else {
+                status("No active session. Please login.");
             }
-        } else {
-            showAuth();
-        }
-    });
+        });
+
+        document.getElementById('login-btn').onclick = async () => {
+            const e = document.getElementById('email').value;
+            const p = document.getElementById('password').value;
+            status("Attempting login...");
+            try { 
+                await signInWithEmailAndPassword(auth, e, p); 
+            } catch(err) { 
+                status("Login Error: " + err.message);
+                alert(err.message); 
+            }
+        };
+
+    } catch (e) {
+        status("CRITICAL ERROR: " + e.message);
+        console.error(e);
+    }
 </script>
 </body>
 </html>
