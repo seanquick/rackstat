@@ -142,39 +142,43 @@
             
             let scores = [];
 
-            // 4. Process Athlete Data
+           // 4. Process Athlete Data
             for (const d of pSnap.docs) {
+                // 1. Fetch the maxes sub-collection for this specific athlete
                 const latestMaxSnap = await getDoc(doc(db, "recruiting_profiles", d.id, "maxes", "latest"));
                 
-                if(latestMaxSnap.exists()) {
+                // 2. Only proceed if the athlete actually has lift data
+                if (latestMaxSnap.exists()) {
                     const m = latestMaxSnap.data();
+                    const athleteData = d.data(); // Get the main profile data
                     
-                    // Sum the core lifts
+                    // Sum the core lifts from the maxes record (m)
                     const totalLifts = scoringLifts.reduce((acc, lift) => acc + (Number(m[lift]) || 0), 0);
 
-                    // --- IMPROVED BW DETECTION ---
-                    // We check every possible variation of the weight field name
-                    const athleteBW = Number(m.weight || m.bodyWeight || m.bodyweight || 0);
+                    // --- FIXED BW DETECTION ---
+                    // We pull bodyWeight from the parent profile 'athleteData' since it's missing in 'm'
+                    const athleteBW = Number(athleteData.bodyWeight || athleteData.weight || m.bodyWeight || 0);
                     
                     let displayScore = totalLifts;
                     let bwFactor = 0;
 
                     if (school.preferences?.formula_type === "power_index") {
+                        // Formula logic: total weight lifted - (body weight capped at 200 * 4)
                         const bwCap = Math.min(athleteBW, 200); 
                         bwFactor = bwCap * 4;
                         displayScore = totalLifts - bwFactor;
                     }
 
-                    // --- CONSOLE DEBUGGER (Check your browser console for these!) ---
-                    console.log(`--- DEBUG: ${d.data().firstName} ---`);
-                    console.log(`Raw DB Object:`, m); // This shows exactly what keys exist in the doc
-                    console.log(`Detected BW: ${athleteBW}`);
+                    // --- CONSOLE DEBUGGER ---
+                    console.log(`--- DEBUG: ${athleteData.firstName} ${athleteData.lastName} ---`);
+                    console.log(`Total Lifted: ${totalLifts}`);
+                    console.log(`Body Weight used: ${athleteBW}`);
                     console.log(`BW Factor: ${bwFactor}`);
-                    console.log(`Final Index: ${displayScore}`);
+                    console.log(`Calculated Index: ${displayScore}`);
 
                     scores.push({ 
                         id: d.id,
-                        name: `${d.data().firstName} ${d.data().lastName}`, 
+                        name: `${athleteData.firstName} ${athleteData.lastName}`, 
                         total: totalLifts, 
                         displayScore: Math.round(displayScore),
                         placed: false 
@@ -183,8 +187,9 @@
             }
 
             // 5. Render Club Groups
-            // Sort by displayScore (Index) if Power Index is on, otherwise by Raw Total
+            // Sort by displayScore (Power Index) so rankings are accurate
             scores.sort((a, b) => b.displayScore - a.displayScore);
+
             grid.innerHTML = '';
 
             const start = school.preferences?.club_start || 1000;
