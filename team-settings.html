@@ -12,7 +12,7 @@
     <header class="p-6 flex justify-between items-center border-b border-gray-800">
         <div class="flex items-center gap-4">
             <a href="coach-lobby.html" class="text-gray-400 hover:text-white transition">← Back to Office</a>
-            <h1 class="text-xl font-black italic uppercase tracking-tighter text-red-500">Program Settings</h1>
+            <h1 id="program-title" class="text-xl font-black italic uppercase tracking-tighter text-red-500">Program Settings</h1>
         </div>
         <div class="flex gap-3">
             <span id="player-count" class="bg-gray-800 px-3 py-2 rounded text-xs font-bold self-center uppercase">0 Athletes</span>
@@ -45,7 +45,7 @@
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Ranking Formula</label>
                     <select id="formula-type" class="w-full p-3 rounded-lg bg-[#0d1117] text-white border border-gray-700 outline-none">
                         <option value="straight_calculation">Straight Total (Core Lifts)</option>
-                        <option value="power_index">Fairbanks Power Index</option>
+                        <option value="power_index">Power Index</option>
                     </select>
                 </div>
                 <div>
@@ -131,7 +131,7 @@
         import { firebaseConfig } from './firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -141,22 +141,47 @@
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                const userDoc = await getDoc(doc(db, "users", user.uid));
-                if (userDoc.exists() && userDoc.data().role === 'coach') {
-                    schoolID = userDoc.data().school_id; 
-                    loadSettings();
-                    fetchPlayerCount();
-                } else { window.location.href = 'index.html'; }
-            } else { window.location.href = 'index.html'; }
+                try {
+                    const userDoc = await getDoc(doc(db, "users", user.uid));
+                    if (userDoc.exists() && userDoc.data().role === 'coach') {
+                        schoolID = userDoc.data().school_id || userDoc.data().schoolId; 
+                        
+                        if (schoolID) {
+                            loadSettings();
+                            fetchPlayerCount();
+                        } else {
+                            console.error("Coach has no assigned school_id.");
+                            alert("Account Error: No school associated with your profile.");
+                        }
+                    } else { 
+                        window.location.href = 'index.html'; 
+                    }
+                } catch (err) {
+                    console.error("Auth initialization error:", err);
+                }
+            } else { 
+                window.location.href = 'index.html'; 
+            }
         });
 
         async function fetchPlayerCount() {
-            const q = await getDocs(collection(db, "recruiting_profiles"));
-            const count = q.docs.filter(d => d.data().school_id === schoolID).length;
-            document.getElementById('player-count').innerText = `${count} Athletes`;
+            if (!schoolID) return;
+            try {
+                // Sandboxed Query: Only count athletes for THIS school
+                const q = query(
+                    collection(db, "recruiting_profiles"), 
+                    where("school_id", "==", schoolID),
+                    where("role", "==", "player")
+                );
+                const snapshot = await getDocs(q);
+                document.getElementById('player-count').innerText = `${snapshot.size} Athletes`;
+            } catch (err) {
+                console.error("Error fetching player count:", err);
+            }
         }
 
         async function loadSettings() {
+            if (!schoolID) return; // Guard against undefined to prevent path errors
             try {
                 const schoolRef = doc(db, "schools", schoolID);
                 const snap = await getDoc(schoolRef);
@@ -164,6 +189,11 @@
                 if (snap.exists()) {
                     const data = snap.data();
                     
+                    // Update Title
+                    if (data.name) {
+                        document.getElementById('program-title').innerText = `${data.name} Settings`;
+                    }
+
                     // Branding
                     document.getElementById('primary-color').value = data.colors?.primary || '#ff0000';
                     document.getElementById('secondary-color').value = data.colors?.secondary || '#000000';
@@ -184,6 +214,8 @@
                         cb.checked = activeLifts.includes(cb.value);
                     });
 
+                    // Clear and re-render custom lifts to avoid duplicates on reload
+                    const container = document.getElementById('core-lifts-container');
                     customLifts.forEach(lift => renderNewLiftCheckbox(lift, activeLifts.includes(lift)));
                 }
             } catch (err) {
@@ -201,6 +233,11 @@
 
         function renderNewLiftCheckbox(name, checked) {
             const container = document.getElementById('core-lifts-container');
+            
+            // Check if it already exists to prevent UI duplicates
+            const existing = Array.from(container.querySelectorAll('.lift-checkbox')).find(cb => cb.value === name);
+            if (existing) return;
+
             const label = document.createElement('label');
             label.className = "flex items-center space-x-3 cursor-pointer group";
             label.innerHTML = `
@@ -241,7 +278,7 @@
                 alert("All settings updated successfully!");
             } catch (err) {
                 console.error("Save Error:", err);
-                alert("Error: " + err.message);
+                alert("Permission Denied: You cannot modify these settings.");
             } finally {
                 btn.innerText = originalText;
                 btn.disabled = false;
@@ -249,23 +286,41 @@
         };
 
         window.bulkAdvanceGrades = async () => {
-            if (!confirm("Are you sure? This will increment the graduation year for EVERY athlete. This cannot be undone easily.")) return;
+            if (!schoolID) return;
+            if (!confirm("Are you sure? This will increment the graduation year for EVERY athlete in YOUR school. This cannot be undone easily.")) return;
+            
             try {
-                const q = await getDocs(collection(db, "recruiting_profiles"));
+                // SANDBOXED FETCH: Only get athletes for this coach's school
+                const q = query(
+                    collection(db, "recruiting_profiles"), 
+                    where("school_id", "==", schoolID),
+                    where("role", "==", "player")
+                );
+                
+                const snapshot = await getDocs(q);
                 const batch = writeBatch(db);
-                q.forEach((athleteDoc) => {
-                    if (athleteDoc.data().school_id === schoolID) {
-                        const currentGrad = parseInt(athleteDoc.data().gradYear);
-                        if (!isNaN(currentGrad)) {
-                            batch.update(doc(db, "recruiting_profiles", athleteDoc.id), { gradYear: (currentGrad + 1).toString() });
-                        }
+                let count = 0;
+
+                snapshot.forEach((athleteDoc) => {
+                    const data = athleteDoc.data();
+                    const currentGrad = parseInt(data.gradYear);
+                    if (!isNaN(currentGrad)) {
+                        batch.update(athleteDoc.ref, { gradYear: (currentGrad + 1).toString() });
+                        count++;
                     }
                 });
-                await batch.commit();
-                alert("Roster advanced successfully!");
+
+                if (count > 0) {
+                    await batch.commit();
+                    alert(`Roster advanced! ${count} athletes updated.`);
+                    fetchPlayerCount();
+                } else {
+                    alert("No athletes found with valid graduation years.");
+                }
+
             } catch (err) {
-                console.error(err);
-                alert("Failed to update roster.");
+                console.error("Bulk advance error:", err);
+                alert("Permission Denied: You do not have authority to bulk update these records.");
             }
         };
     </script>
