@@ -167,11 +167,10 @@
         async function fetchPlayerCount() {
             if (!schoolID) return;
             try {
-                // Sandboxed Query: Only count athletes for THIS school
+                // Simplified query to avoid complex index requirements
                 const q = query(
                     collection(db, "recruiting_profiles"), 
-                    where("school_id", "==", schoolID),
-                    where("role", "==", "player")
+                    where("school_id", "==", schoolID)
                 );
                 const snapshot = await getDocs(q);
                 document.getElementById('player-count').innerText = `${snapshot.size} Athletes`;
