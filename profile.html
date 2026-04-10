@@ -87,7 +87,7 @@
             </button>
             
             <div class="flex items-center gap-5">
-                <img id="school-logo" src="images/panther-logo1.png" alt="School" class="h-10 w-auto">
+                <img id="school-logo" src="images/rackstat-logo.png" alt="School Logo" class="h-10 w-auto" onerror="this.src='images/rackstat-logo.png'">
                 <div class="h-6 w-[1px] bg-gray-800"></div>
                 <span class="text-sm font-black italic uppercase tracking-[0.15em] text-white">FAIRBANKS</span>
                 <div class="h-6 w-[1px] bg-gray-800"></div>
@@ -243,61 +243,75 @@
         
         let currentGoals = [];
 
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                const profileRef = doc(db, "recruiting_profiles", user.uid);
-                const maxesRef = doc(db, "recruiting_profiles", user.uid, "maxes", "latest");
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const profileRef = doc(db, "recruiting_profiles", user.uid);
+            const maxesRef = doc(db, "recruiting_profiles", user.uid, "maxes", "latest");
+            
+            const [snap, maxSnap] = await Promise.all([getDoc(profileRef), getDoc(maxesRef)]);
+
+            if(snap.exists()) {
+                const data = snap.data();
+                const maxData = maxSnap.exists() ? maxSnap.data() : {};
+                const combinedData = { ...data, ...maxData };
+
+                // Determine the school ID (handling both naming conventions)
+                const schoolID = data.school_id || data.schoolId;
+
+                // --- THEME ENGINE START ---
+                if (schoolID) {
+                    await applyTheme(schoolID);
+                }
+                // --- THEME ENGINE END ---
+
+                // Utility to safely set values
+                const safeSet = (id, val) => { const el = document.getElementById(id); if(el) el.value = val || ""; };
                 
-                const [snap, maxSnap] = await Promise.all([getDoc(profileRef), getDoc(maxesRef)]);
+                safeSet('full-name', data.fullName);
+                safeSet('off-primary', data.offPrimary);
+                safeSet('off-secondary', data.offSecondary);
+                safeSet('def-primary', data.defPrimary);
+                safeSet('def-secondary', data.defSecondary);
+                safeSet('height', data.height);
+                safeSet('weight', combinedData.body_weight || combinedData.bodyWeight || data.weight || '');
+                safeSet('gpa', data.gpa);
+                safeSet('sat', data.sat);
+                safeSet('act', data.act);
+                safeSet('character-statement', data.statement);
+                safeSet('hudl-link', data.hudlLink);
+                safeSet('twitter-link', data.twitterLink);
+                safeSet('youtube-link', data.youtubeLink);
+                safeSet('other-link', data.otherLink);
+                
+                // Branding and Lifts logic
+                if(schoolID) {
+                    const schoolSnap = await getDoc(doc(db, "schools", schoolID));
+                    if(schoolSnap.exists()){
+                        const sData = schoolSnap.data();
+                        const viewCardBtn = document.getElementById('btn-view-card');
+                        
+                        // Hide recruiting card button if disabled for this school
+                        if (viewCardBtn && sData.hasRecruitingCard === false) {
+                            viewCardBtn.classList.add('hidden');
+                        }
 
-                if(snap.exists()) {
-                    const data = snap.data();
-                    const maxData = maxSnap.exists() ? maxSnap.data() : {};
-                    const combinedData = { ...data, ...maxData };
-
-                    // Utility to safely set values
-                    const safeSet = (id, val) => { const el = document.getElementById(id); if(el) el.value = val || ""; };
-                    
-                    safeSet('full-name', data.fullName);
-                    safeSet('off-primary', data.offPrimary);
-                    safeSet('off-secondary', data.offSecondary);
-                    safeSet('def-primary', data.defPrimary);
-                    safeSet('def-secondary', data.defSecondary);
-                    safeSet('height', data.height);
-                    safeSet('weight', combinedData.body_weight || combinedData.bodyWeight || data.weight || '');
-                    safeSet('gpa', data.gpa);
-                    safeSet('sat', data.sat);
-                    safeSet('act', data.act);
-                    safeSet('character-statement', data.statement);
-                    safeSet('hudl-link', data.hudlLink);
-                    safeSet('twitter-link', data.twitterLink);
-                    safeSet('youtube-link', data.youtubeLink);
-                    safeSet('other-link', data.otherLink);
-                    
-                    // School Branding logic
-                    if(data.schoolId) {
-                        const schoolSnap = await getDoc(doc(db, "schools", data.schoolId));
-                        if(schoolSnap.exists()){
-                            const sData = schoolSnap.data();
-                            const viewCardBtn = document.getElementById('btn-view-card');
-                            if (viewCardBtn && sData.hasRecruitingCard === false) viewCardBtn.classList.add('hidden');
-
-                            const select = document.getElementById('goal-category');
-                            if(select) {
-                                const lifts = sData.trackedLifts || ['bench', 'squat', 'clean'];
-                                select.innerHTML = lifts.map(l => `<option value="${l}">${l.replace('_', ' ').toUpperCase()}</option>`).join('');
-                            }
+                        // Dynamically set lift categories from school preferences
+                        const select = document.getElementById('goal-category');
+                        if(select) {
+                            const lifts = sData.trackedLifts || ['bench', 'squat', 'clean'];
+                            select.innerHTML = lifts.map(l => `<option value="${l}">${l.replace('_', ' ').toUpperCase()}</option>`).join('');
                         }
                     }
-
-                    currentGoals = data.goals || [];
-                    renderGoals(user.uid, currentGoals);
-                    syncGoalDisplay(combinedData); 
                 }
-            } else { 
-                window.location.href = 'index.html'; 
+
+                currentGoals = data.goals || [];
+                renderGoals(user.uid, currentGoals);
+                syncGoalDisplay(combinedData); 
             }
-        });
+        } else { 
+            window.location.href = 'index.html'; 
+        }
+    });
 
         async function renderGoals(uid, goals) {
             const container = document.getElementById('goals-container');

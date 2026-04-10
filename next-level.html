@@ -29,7 +29,7 @@
             </div>
 
             <div class="flex items-center gap-6">
-                <img id="school-logo" src="images/panther-logo1.png" alt="School" class="h-10 w-auto">
+                <img id="school-logo" src="images/rackstat-logo.png" alt="School Logo" class="h-10 w-auto" onerror="this.src='images/rackstat-logo.png'">
                 
                 <div class="flex flex-col items-center text-center">
                     <h1 class="text-2xl md:text-3xl font-black italic uppercase leading-none">
@@ -276,78 +276,93 @@
 
     let currentUser = null;
 
-    // 4. Auth State & Data Loading
+   // 4. Auth State & Data Loading
     onAuthStateChanged(auth, async (user) => { 
         if (user) {
             currentUser = user;
             
-            const [profileSnap, recruitingSnap] = await Promise.all([
-                getDoc(doc(db, "users", user.uid)),
-                getDoc(doc(db, "recruiting_profiles", user.uid))
-            ]);
+            try {
+                const [profileSnap, recruitingSnap] = await Promise.all([
+                    getDoc(doc(db, "users", user.uid)),
+                    getDoc(doc(db, "recruiting_profiles", user.uid))
+                ]);
 
-            if (profileSnap.exists()) {
-                const pData = profileSnap.data();
-                const nameField = document.getElementById('fullName');
-                if (nameField && !nameField.value) nameField.value = pData.displayName || "";
-            }
+                // --- THEME ENGINE START ---
+                // Pull school_id from whichever record has it
+                let schoolID = null;
+                if (recruitingSnap.exists()) schoolID = recruitingSnap.data().school_id;
+                if (!schoolID && profileSnap.exists()) schoolID = profileSnap.data().school_id;
 
-            if (recruitingSnap.exists()) {
-                const d = recruitingSnap.data();
-                const safeSet = (id, val) => { if(document.getElementById(id)) document.getElementById(id).value = val || ""; };
-                
-                safeSet('fullName', d.fullName);
-                safeSet('jerseyNum', d.jerseyNum);
-                safeSet('playerPhone', d.playerPhone);
-                safeSet('playerEmail', d.playerEmail);
-                safeSet('twitter', d.twitter);
-                safeSet('instagram', d.instagram);
-                safeSet('tiktok', d.tiktok);
-                safeSet('parentNames', d.parentNames);
-                safeSet('parentContact', d.parentContact);
-                safeSet('wantsToPlay', d.wantsToPlay || "Yes-Definitely");
-                safeSet('whyPlay', d.whyPlay);
-                safeSet('seriousness', d.seriousness || "Very Serious");
-                safeSet('perceivedLevel', d.perceivedLevel || "D1");
-                safeSet('postCollegeGoals', d.postCollegeGoals);
-                safeSet('major', d.major);
-                safeSet('acadImportance', d.acadImportance || "Extremely");
-                safeSet('acadPrioritize', d.acadPrioritize || "Yes");
-                safeSet('gpa', d.gpa);
-                safeSet('coreGpa', d.coreGpa);
-                safeSet('act', d.act);
-                safeSet('sat', d.sat);
-                safeSet('ncaaReg', d.ncaaReg || "No");
-                safeSet('acadStrengths', d.acadStrengths);
-                safeSet('pref_d1', d.pref_d1 || "0");
-                safeSet('pref_d2', d.pref_d2 || "0");
-                safeSet('pref_d3', d.pref_d3 || "0");
-                safeSet('pref_naia', d.pref_naia || "0");
-                safeSet('pref_juco', d.pref_juco || "0");
-                safeSet('prefSize', d.prefSize || "None");
-                safeSet('prefLoc', d.prefLoc || "Anywhere");
-                safeSet('prefOther', d.prefOther);
-                safeSet('isStarter', d.isStarter || "No");
-                safeSet('highlightUrl', d.highlightUrl);
-                safeSet('honors', d.honors);
-                safeSet('trainFreq', d.weeklyExtraDays || "0-1");
-                safeSet('hasNutrition', d.hasNutritionPlan || "No");
-                safeSet('hasSleep', d.getsSleep || "No");
+                if (schoolID) {
+                    await applyTheme(schoolID);
+                }
+                // --- THEME ENGINE END ---
 
-                if (d.commitments && Array.isArray(d.commitments)) {
-                    const checkboxes = document.querySelectorAll('#commitmentChecks input');
-                    checkboxes.forEach(cb => {
-                        cb.checked = d.commitments.includes(cb.value);
-                    });
+                if (profileSnap.exists()) {
+                    const pData = profileSnap.data();
+                    const nameField = document.getElementById('fullName');
+                    if (nameField && !nameField.value) nameField.value = pData.displayName || "";
                 }
 
-                safeSet('teammateType', d.teammateType);
-                safeSet('teammateDef', d.goodTeammateMeaning || d.teammateDef); 
-                safeSet('sacrifice', d.willingToSacrifice);
+                if (recruitingSnap.exists()) {
+                    const d = recruitingSnap.data();
+                    const safeSet = (id, val) => { if(document.getElementById(id)) document.getElementById(id).value = val || ""; };
+                    
+                    // Set all your form fields...
+                    safeSet('fullName', d.fullName);
+                    safeSet('jerseyNum', d.jerseyNum);
+                    safeSet('playerPhone', d.playerPhone);
+                    safeSet('playerEmail', d.playerEmail);
+                    safeSet('twitter', d.twitter);
+                    safeSet('instagram', d.instagram);
+                    safeSet('tiktok', d.tiktok);
+                    safeSet('parentNames', d.parentNames);
+                    safeSet('parentContact', d.parentContact);
+                    safeSet('wantsToPlay', d.wantsToPlay || "Yes-Definitely");
+                    safeSet('whyPlay', d.whyPlay);
+                    safeSet('seriousness', d.seriousness || "Very Serious");
+                    safeSet('perceivedLevel', d.perceivedLevel || "D1");
+                    safeSet('postCollegeGoals', d.postCollegeGoals);
+                    safeSet('major', d.major);
+                    safeSet('acadImportance', d.acadImportance || "Extremely");
+                    safeSet('acadPrioritize', d.acadPrioritize || "Yes");
+                    safeSet('gpa', d.gpa);
+                    safeSet('coreGpa', d.coreGpa);
+                    safeSet('act', d.act);
+                    safeSet('sat', d.sat);
+                    safeSet('ncaaReg', d.ncaaReg || "No");
+                    safeSet('acadStrengths', d.acadStrengths);
+                    safeSet('pref_d1', d.pref_d1 || "0");
+                    safeSet('pref_d2', d.pref_d2 || "0");
+                    safeSet('pref_d3', d.pref_d3 || "0");
+                    safeSet('pref_naia', d.pref_naia || "0");
+                    safeSet('pref_juco', d.pref_juco || "0");
+                    safeSet('prefSize', d.prefSize || "None");
+                    safeSet('prefLoc', d.prefLoc || "Anywhere");
+                    safeSet('prefOther', d.prefOther);
+                    safeSet('isStarter', d.isStarter || "No");
+                    safeSet('highlightUrl', d.highlightUrl);
+                    safeSet('honors', d.honors);
+                    safeSet('trainFreq', d.weeklyExtraDays || "0-1");
+                    safeSet('hasNutrition', d.hasNutritionPlan || "No");
+                    safeSet('hasSleep', d.getsSleep || "No");
+
+                    if (d.commitments && Array.isArray(d.commitments)) {
+                        const checkboxes = document.querySelectorAll('#commitmentChecks input');
+                        checkboxes.forEach(cb => {
+                            cb.checked = d.commitments.includes(cb.value);
+                        });
+                    }
+
+                    safeSet('teammateType', d.teammateType);
+                    safeSet('teammateDef', d.goodTeammateMeaning || d.teammateDef); 
+                    safeSet('sacrifice', d.willingToSacrifice);
+                }
+            } catch (err) {
+                console.error("Error loading Next Level profile:", err);
             }
         } else { 
-            // Theme.js might handle this, but keeping as safety
-            setTimeout(() => { if(!auth.currentUser) window.location.href='index.html'; }, 1500);
+            window.location.href = 'index.html'; 
         } 
     });
 

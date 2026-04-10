@@ -23,7 +23,7 @@
     <div class="flex justify-between items-center max-w-4xl mx-auto">
         <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1 rounded text-gray-300 hover:text-white transition-colors">← Lobby</button>
         <div class="flex items-center gap-4">
-            <img id="school-logo" src="images/panther-logo1.png" alt="School Logo" class="h-10 w-auto" onerror="this.src='images/rackstat-logo.png'">
+            <img id="school-logo" src="images/rackstat-logo.png" alt="School Logo" class="h-10 w-auto" onerror="this.src='images/rackstat-logo.png'">
             <div class="h-10 w-[1px] bg-gray-700"></div>
             <div class="flex flex-col items-center">
                 <span id="school-tag" class="text-sm font-black italic uppercase tracking-widest text-white leading-tight text-center">LOADING...</span>
@@ -121,25 +121,41 @@
         }
     }
 
-    // Initialize Auth and Data
+// Initialize Auth and Data
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            let userSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
-            if (!userSnap.exists()) {
-                userSnap = await getDoc(doc(db, "users", user.uid));
-            }
+            try {
+                // Try to find the user in recruiting_profiles first, then master users
+                let userSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+                if (!userSnap.exists()) {
+                    userSnap = await getDoc(doc(db, "users", user.uid));
+                }
 
-            if (userSnap.exists()) {
-                currentSchoolId = userSnap.data().school_id;
-                // Apply theme first
-                applyTheme(currentSchoolId);
-                loadBoard(currentSchoolId);
+                if (userSnap.exists()) {
+                    const userData = userSnap.data();
+                    // Fallback check for school_id vs schoolId
+                    currentSchoolId = userData.school_id || userData.schoolId;
+
+                    if (currentSchoolId) {
+                        // AWAIT the theme so the logo swaps BEFORE the data loads
+                        await applyTheme(currentSchoolId);
+                        
+                        // Now load the school-specific board data
+                        loadBoard(currentSchoolId);
+                    } else {
+                        console.error("User found, but no school_id associated with account.");
+                    }
+                } else {
+                    console.error("User profile not found in any collection.");
+                }
+            } catch (err) {
+                console.error("Error initializing Board:", err);
             }
         } else { 
             window.location.href = 'index.html'; 
         }
     });
-
+    
     window.loadBoard = async function(schoolId) {
         if (!schoolId) return;
         const grid = document.getElementById('player-club-grid');

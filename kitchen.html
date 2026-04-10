@@ -25,7 +25,7 @@
         <div class="flex justify-between items-center max-w-5xl mx-auto">
             <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1.5 rounded text-gray-400 hover:text-white transition-all">← Lobby</button>
             <div class="flex items-center gap-5">
-                <img id="school-logo" src="images/panther-logo1.png" alt="School" class="h-8 w-auto">
+                <img id="school-logo" src="images/rackstat-logo.png" alt="School Logo" class="h-10 w-auto" onerror="this.src='images/rackstat-logo.png'">
                 <span class="text-xs font-black italic uppercase tracking-widest text-white">THE KITCHEN</span>
                 <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-8 w-auto">
             </div>
@@ -279,21 +279,22 @@
     // Set default date to today on load
     document.getElementById('entry-date').valueAsDate = new Date();
 
-    // 4. Auth & Theme Integration
+  // 4. Auth & Theme Integration
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            // INTEGRATION: Trigger theme.js if it exists
-            if (window.initAppTheme) {
-                window.initAppTheme(); 
-            } else {
-                // Fallback: show branding container if theme.js isn't loaded yet
-                document.getElementById('school-branding')?.classList.remove('opacity-0');
-            }
-
-            // A. MASTER DATA LISTENER (Syncs Height/Weight)
-            onSnapshot(doc(db, "users", user.uid), (userDoc) => {
+            // A. MASTER DATA LISTENER (Syncs Height/Weight/Branding)
+            onSnapshot(doc(db, "users", user.uid), async (userDoc) => {
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
+                    
+                    // --- THEME ENGINE START ---
+                    const schoolID = userData.school_id || userData.schoolId;
+                    if (schoolID) {
+                        await applyTheme(schoolID);
+                        document.getElementById('school-branding')?.classList.remove('opacity-0');
+                    }
+                    // --- THEME ENGINE END ---
+
                     if (userData.weight) {
                         const wDisplay = document.getElementById('last-weight-display');
                         const wInput = document.getElementById('quick-weight');
@@ -313,10 +314,15 @@
                 }
             });
 
-            // B. RECRUITING PROFILE LISTENER (Goals)
-            onSnapshot(doc(db, "recruiting_profiles", user.uid), (snap) => {
+            // B. RECRUITING PROFILE LISTENER (Goals & Backup Branding)
+            onSnapshot(doc(db, "recruiting_profiles", user.uid), async (snap) => {
                 if (snap.exists()) {
                     const data = snap.data();
+                    
+                    // Fallback theme trigger if the user doc listener didn't fire yet
+                    const schoolID = data.school_id || data.schoolId;
+                    if (schoolID) await applyTheme(schoolID);
+
                     calGoal = data.dailyCalorieGoal || 2500;
                     proGoal = data.dailyProteinGoal || 150;
                     waterGoal = data.dailyWaterGoal || 16;
