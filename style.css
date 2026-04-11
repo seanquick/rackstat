@@ -54,7 +54,7 @@ body {
 
 /* 3. Specific tweak for RackStat logo (to match school logo visual weight) */
 .header-logo-container img:not(#school-logo) {
-    transform: scale(1.45); 
+    transform: scale(1.60); 
     filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.05));
 }
 
