@@ -23,10 +23,16 @@ export async function applyTheme(db, schoolID) {
 
             // 2. Update all logo instances
             if (data.logo_url) {
-                // This now looks for our new ID (#school-logo) AND the old classes just in case
-                const logos = document.querySelectorAll('#school-logo, .school-logo-primary, .school-logo-secondary');
+                const logos = document.querySelectorAll('#school-logo, #school-logo-alt, .school-logo-primary, .school-logo-secondary');
                 logos.forEach(img => {
-                    img.src = data.logo_url;
+                    // Check if it's a full URL or just a filename
+                    const finalPath = data.logo_url.startsWith('http') || data.logo_url.startsWith('images/') 
+                        ? data.logo_url 
+                        : `images/${data.logo_url}`;
+                        
+                    img.src = finalPath;
+                    // Make sure it's visible if it was previously hidden by an error
+                    img.style.display = 'block'; 
                 });
             }
 
