@@ -32,7 +32,7 @@ body {
    2. BOARD HEADER (Small, Centered Layout)
    ========================================================================== */
 
-/* 1. The box that holds the logos */
+/* The box that holds the logos */
 .header-logo-container {
     width: 60px;
     height: 60px;
@@ -40,22 +40,25 @@ body {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    overflow: hidden;
+    /* IMPORTANT: overflow is visible so the scale transformation works */
+    overflow: visible; 
 }
 
-/* 2. General settings for all header images */
+/* General settings for all header images */
 .header-logo-container img {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
     display: block;
-    transition: transform 0.2s ease; /* Smooths out any dynamic changes */
+    transition: transform 0.2s ease;
 }
 
-/* 3. Specific tweak for RackStat logo (to match school logo visual weight) */
+/* Specific tweak for RackStat logo to match school logo visual weight */
+/* Target the img that DOES NOT have the id school-logo */
 .header-logo-container img:not(#school-logo) {
-    transform: scale(1.60); 
-    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.05));
+    transform: scale(1.5); 
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.1));
+    image-rendering: -webkit-optimize-contrast;
 }
 
 /* ==========================================================================
@@ -191,10 +194,4 @@ body {
 ::-webkit-scrollbar-thumb {
     background: var(--school-primary);
     border-radius: 10px;
-}
-
-/* Target the RackStat logo in the header to match visual weight */
-.header-logo-container img:not(#school-logo) {
-    transform: scale(1.35); /* Adjust this number (1.2 to 1.4) until it looks perfect */
-    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.05)); /* Optional: subtle glow to match school logo feel */
 }
