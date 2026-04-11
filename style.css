@@ -93,6 +93,7 @@ body {
 .school-logo-large {
     height: 140px;
     width: auto;
+    max-width: 250px;
     object-fit: contain;
     filter: drop-shadow(0 0 15px var(--school-primary));
 }

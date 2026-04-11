@@ -17,17 +17,21 @@
 </head>
 <body class="bg-black text-white font-sans antialiased">
 
-<header class="brand-header flex flex-col items-center py-10 space-y-6">
-    <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-20 w-auto transition-transform duration-500 hover:scale-105">
+<header class="brand-header flex flex-col items-center py-10 space-y-8">
+    <img src="images/rackstat-logo.png" alt="RACKSTAT" class="rackstat-logo-large transition-transform duration-500 hover:scale-105">
 
-    <div id="school-branding" class="flex items-center justify-center gap-6 transition-opacity duration-700">
-        <img src="" class="school-logo-primary h-14 w-auto object-contain" alt="Team Logo" onerror="this.style.display='none'">
+    <div id="school-branding" class="school-section-large opacity-0 transition-opacity duration-700">
+        <img id="school-logo" src="" class="school-logo-large" alt="School Logo" onerror="this.style.display='none'">
+        
         <div class="flex items-center">
-            <div class="h-8 w-[2px] bg-[var(--school-primary)]"></div>
-            <h2 id="school-name-display" class="school-name text-2xl font-black italic uppercase tracking-tighter text-white px-5"></h2>
-            <div class="h-8 w-[2px] bg-[var(--school-primary)]"></div>
+            <div class="h-10 w-[3px] bg-[var(--school-primary)]"></div>
+            <h2 id="school-tag" class="school-name text-3xl font-black italic uppercase tracking-tighter text-white px-6">
+                LOADING...
+            </h2>
+            <div class="h-10 w-[3px] bg-[var(--school-primary)]"></div>
         </div>
-        <img src="" class="school-logo-secondary h-14 w-auto object-contain" alt="Alt Logo" onerror="this.style.display='none'">
+
+        <img id="school-logo-alt" src="" class="school-logo-secondary school-logo-large" alt="Alt Logo" onerror="this.style.display='none'">
     </div>
 </header>
 
