@@ -32,22 +32,30 @@ body {
    2. BOARD HEADER (Small, Centered Layout)
    ========================================================================== */
 
-/* The specialized containers for the Board logos */
+/* 1. The box that holds the logos */
 .header-logo-container {
-    width: 60px;   /* Fixed box size */
-    height: 60px;  /* Fixed box size */
+    width: 60px;
+    height: 60px;
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0; /* Prevents squishing on small screens */
+    flex-shrink: 0;
     overflow: hidden;
 }
 
+/* 2. General settings for all header images */
 .header-logo-container img {
     max-width: 100%;
     max-height: 100%;
-    object-fit: contain; /* Keeps aspect ratio perfect */
+    object-fit: contain;
     display: block;
+    transition: transform 0.2s ease; /* Smooths out any dynamic changes */
+}
+
+/* 3. Specific tweak for RackStat logo (to match school logo visual weight) */
+.header-logo-container img:not(#school-logo) {
+    transform: scale(1.35); 
+    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.05));
 }
 
 /* ==========================================================================
@@ -183,4 +191,10 @@ body {
 ::-webkit-scrollbar-thumb {
     background: var(--school-primary);
     border-radius: 10px;
+}
+
+/* Target the RackStat logo in the header to match visual weight */
+.header-logo-container img:not(#school-logo) {
+    transform: scale(1.35); /* Adjust this number (1.2 to 1.4) until it looks perfect */
+    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.05)); /* Optional: subtle glow to match school logo feel */
 }
