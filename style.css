@@ -56,7 +56,7 @@ body {
 /* Specific tweak for RackStat logo to match school logo visual weight */
 /* Target the img that DOES NOT have the id school-logo */
 .header-logo-container img:not(#school-logo) {
-    transform: scale(1.6); 
+    transform: scale(1.75); 
     filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.1));
     image-rendering: -webkit-optimize-contrast;
 }
