@@ -305,11 +305,13 @@
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
                     
-                    // --- THEME ENGINE START ---
                     const schoolID = userData.school_id || userData.schoolId;
                     if (schoolID) {
-                        await applyTheme(schoolID);
-                        document.getElementById('school-branding')?.classList.remove('opacity-0');
+                        // CHANGE: Added 'db' so the function has access to Firestore
+                        await applyTheme(db, schoolID); 
+                        
+                        // CHANGE: Ensure the school-tag is visible if it was hidden
+                        document.getElementById('school-tag')?.classList.remove('opacity-0');
                     }
                     // --- THEME ENGINE END ---
 
@@ -339,7 +341,7 @@
                     
                     // Fallback theme trigger if the user doc listener didn't fire yet
                     const schoolID = data.school_id || data.schoolId;
-                    if (schoolID) await applyTheme(schoolID);
+                    if (schoolID) await applyTheme(db, schoolID); // Added 'db' here too
 
                     calGoal = data.dailyCalorieGoal || 2500;
                     proGoal = data.dailyProteinGoal || 150;
