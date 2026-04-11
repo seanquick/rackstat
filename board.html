@@ -176,12 +176,23 @@
         if (!grid || !recordBody) return; 
 
         // 1. Fetch Data
-        const [schoolSnap, manualSnap] = await Promise.all([
-            getDoc(doc(db, "schools", schoolId)),
-            getDoc(doc(db, "schools", schoolId, "settings", "manual_records"))
-        ]);
+        let schoolSnap, manualSnap;
+        try {
+            // We fetch both, but manual_records is the one likely to trigger a permission error
+            [schoolSnap, manualSnap] = await Promise.all([
+                getDoc(doc(db, "schools", schoolId)),
+                getDoc(doc(db, "schools", schoolId, "settings", "manual_records"))
+            ]);
+        } catch (err) {
+            console.error("Fetch error:", err);
+            // If it fails (permissions), we still need schoolSnap to build the board
+            schoolSnap = await getDoc(doc(db, "schools", schoolId));
+            // Create a fake "empty" manualSnap so manualSnap.exists() returns false
+            manualSnap = { exists: () => false };
+        }
 
-        if (!schoolSnap.exists()) return;
+        if (!schoolSnap || !schoolSnap.exists()) return;
+        
         const school = schoolSnap.data();
         const manualRecords = manualSnap.exists() ? manualSnap.data() : {};
         const formulaSetting = (school.formula_type || "power_index").toLowerCase().replace("_", " ");
