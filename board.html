@@ -20,20 +20,20 @@
 <body class="pb-24">
 
 <header class="bg-black border-b-2 border-red-700 p-4">
-    <div class="flex justify-between items-center max-w-4xl mx-auto">
-        <div class="w-20"> <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1 rounded text-gray-300 hover:text-white transition-colors">← Lobby</button>
+    <div class="flex justify-between items-center max-w-6xl mx-auto">
+        
+        <div class="w-1/4 flex justify-start">
+            <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1 rounded text-gray-300 hover:text-white transition-colors">← Lobby</button>
         </div>
 
-        <div class="flex items-center gap-4">
-            <div class="flex items-center justify-center w-16 h-16 overflow-hidden">
-                <img id="school-logo" src="images/rackstat-logo.png" alt="School Logo" 
-                     class="max-w-full max-h-full object-contain" 
-                     onerror="this.src='images/rackstat-logo.png'">
+        <div class="flex items-center gap-4 justify-center">
+            <div class="w-16 h-16 flex items-center justify-center overflow-hidden flex-shrink-0">
+                <img id="school-logo" src="images/rackstat-logo.png" alt="Logo" class="max-w-full max-h-full object-contain">
             </div>
 
             <div class="h-10 w-[1px] bg-gray-700"></div>
 
-            <div class="flex flex-col items-center min-w-[120px]">
+            <div class="flex flex-col items-center">
                 <span id="school-tag" class="text-sm font-black italic uppercase tracking-widest text-white leading-tight text-center">LOADING...</span>
                 <span id="athlete-count" class="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">Updating...</span>
                 <span id="formula-display" class="mt-1 text-[7px] font-black text-red-500 bg-red-500/10 border border-red-900/30 px-2 py-0.5 rounded italic tracking-widest uppercase text-center">Syncing...</span>
@@ -41,12 +41,12 @@
 
             <div class="h-10 w-[1px] bg-gray-700"></div>
 
-            <div class="flex items-center justify-center w-16 h-16 overflow-hidden">
-                <img src="images/rackstat-logo.png" alt="RACKSTAT" class="max-w-full max-h-full object-contain">
+            <div class="w-16 h-16 flex items-center justify-center overflow-hidden flex-shrink-0">
+                <img src="images/rackstat-logo.png" alt="RS" class="max-w-full max-h-full object-contain">
             </div>
         </div>
 
-        <div class="w-20"></div> 
+        <div class="w-1/4"></div> 
     </div>
 </header>
 
