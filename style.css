@@ -1,42 +1,59 @@
+/* ==========================================================================
+   1. CORE VARIABLES & RESET
+   ========================================================================== */
 :root {
-    /* DEFAULT THEME (Fairbanks Red) */
-    /* These will be overwritten dynamically by theme.js */
+    /* Dynamic Theme Defaults (Overwritten by JS) */
     --school-primary: #b91c1c;
     --school-secondary: #0a0a0b;
     
-    /* SYSTEM COLORS */
-    --rackstat-black: #0a0a0b;
-    --rackstat-gray: #1a1a1c;
-    --rackstat-border: #2a2a2c;
+    /* RackStat System Palette */
+    --rackstat-black: #000000;
+    --rackstat-gray-dark: #0a0a0b;
+    --rackstat-gray-med: #111827;
+    --rackstat-gray-light: #1f2937;
+    --rackstat-border: #374151;
 }
 
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-/* --- THEME LOAD LOGIC --- */
 body {
     background-color: var(--rackstat-black);
     color: white;
     min-height: 100vh;
-    /* CHANGE: Remove opacity: 0; we want the login form visible immediately */
-    opacity: 1; 
+    line-height: 1.5;
 }
 
-/* CHANGE: Apply the hidden state to branding instead of the whole body */
-#school-branding {
-    opacity: 0;
-    transition: opacity 0.5s ease-in-out;
+/* ==========================================================================
+   2. BOARD HEADER (Small, Centered Layout)
+   ========================================================================== */
+
+/* The specialized containers for the Board logos */
+.header-logo-container {
+    width: 60px;   /* Fixed box size */
+    height: 60px;  /* Fixed box size */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0; /* Prevents squishing on small screens */
+    overflow: hidden;
 }
 
-#school-branding.theme-loaded {
-    opacity: 1;
+.header-logo-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain; /* Keeps aspect ratio perfect */
+    display: block;
 }
 
-/* --- BRANDING HEADER --- */
+/* ==========================================================================
+   3. BRANDING / LOGIN PAGES (Large Branding)
+   ========================================================================== */
+
 .brand-header {
     background: linear-gradient(to bottom, var(--school-secondary), var(--rackstat-black));
     padding: 40px 20px;
@@ -47,138 +64,123 @@ body {
     gap: 30px;
 }
 
-.rackstat-logo {
-    height: 180px; 
+.rackstat-logo-large {
+    height: 120px; 
     width: auto;
     filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.1));
 }
 
-/* --- SCHOOL IDENTITY SECTION --- */
-.school-section {
+.school-section-large {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 40px; 
-    padding: 20px;
     width: 100%;
     flex-wrap: wrap;
 }
 
-.school-logo-primary, 
-.school-logo-secondary {
+.school-logo-large {
     height: 140px;
     width: auto;
     object-fit: contain;
     filter: drop-shadow(0 0 15px var(--school-primary));
-    opacity: 1; /* Increased opacity for branded look */
 }
 
-.school-name {
-    font-size: 2.5rem;
-    font-weight: 900;
+/* ==========================================================================
+   4. DATA TABLES (Weight Class Records)
+   ========================================================================== */
+
+.record-table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    font-size: 10px; 
+    background: var(--rackstat-gray-med); 
+    border: 1px solid var(--rackstat-gray-light); 
+}
+
+.record-table th { 
+    background: var(--rackstat-gray-light); 
+    color: var(--school-primary); 
+    text-transform: uppercase; 
+    padding: 8px; 
+    border: 1px solid var(--rackstat-border); 
+    font-weight: 900; 
+}
+
+.record-table td { 
+    border: 1px solid var(--rackstat-border); 
+    padding: 6px; 
+    text-align: center; 
+}
+
+.record-name { 
+    color: #9ca3af; 
+    font-weight: bold; 
+    display: block; 
+    font-size: 8px; 
     text-transform: uppercase;
-    font-style: italic;
-    letter-spacing: 3px;
-    color: #ffffff;
-    text-align: center;
-    border-left: 4px solid var(--school-primary);
-    border-right: 4px solid var(--school-primary);
-    padding: 0 25px;
-    line-height: 1;
 }
 
-/* --- CONTAINERS & FORMS --- */
-.container {
-    max-width: 450px;
-    margin: 40px auto;
-    padding: 30px;
-    background: var(--rackstat-gray);
-    border: 1px solid var(--rackstat-border);
-    border-radius: 4px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+.record-value { 
+    color: white; 
+    font-weight: 900; 
+    font-style: italic; 
+    font-size: 11px; 
 }
 
-.form-group input:focus, select:focus {
-    outline: none;
-    border-color: var(--school-primary);
+/* ==========================================================================
+   5. CARDS & UI COMPONENTS
+   ========================================================================== */
+
+.club-card { 
+    background: var(--rackstat-gray-med); 
+    border-radius: 8px; 
+    padding: 1rem; 
+    margin-bottom: 1rem; 
+    border: 1px solid var(--rackstat-gray-light); 
+    transition: transform 0.2s ease;
 }
 
-/* --- BUTTONS --- */
+.club-card:hover {
+    transform: scale(1.01);
+}
+
 .btn-primary {
-    width: 100%;
     background-color: var(--school-primary);
     color: white;
-    padding: 16px;
+    padding: 12px 24px;
     border: none;
     border-radius: 4px;
     font-weight: 900;
     text-transform: uppercase;
     font-style: italic;
-    letter-spacing: 2px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: filter 0.2s ease;
 }
 
 .btn-primary:hover {
     filter: brightness(1.2);
-    transform: translateY(-2px);
 }
 
-/* --- CHECKBOXES & BADGES --- */
-.check-item:hover {
-    color: var(--school-primary);
+/* ==========================================================================
+   6. UTILITIES
+   ========================================================================== */
+
+.no-scrollbar::-webkit-scrollbar { 
+    display: none; 
 }
 
-.check-item input[type="checkbox"]:checked {
-    background: var(--school-primary);
-    border-color: var(--school-primary);
-}
-
-.badge-red {
-    background-color: var(--school-primary);
-    color: white;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 9px;
-    font-weight: 900;
-    text-transform: uppercase;
-    display: inline-block;
-    margin-right: 4px;
-}
-
-/* --- OFFICE CARDS --- */
-.office-card:hover {
-    border-color: var(--school-primary); 
-    background: rgba(255, 255, 255, 0.05);
-    transform: translateY(-4px);
-}
-
-/* --- DYNAMIC UTILITIES --- */
-/* Use these for inline text or backgrounds in your HTML */
 .dynamic-text { color: var(--school-primary) !important; }
 .dynamic-bg { background-color: var(--school-primary) !important; }
 .dynamic-border { border-color: var(--school-primary) !important; }
 
-/* Scrollbar styling to match the theme */
 ::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
 }
 ::-webkit-scrollbar-track {
     background: var(--rackstat-black);
 }
 ::-webkit-scrollbar-thumb {
     background: var(--school-primary);
-    border-radius: 4px;
-}
-
-#school-logo {
-    display: block;
-    /* Prevents the logo from pushing other elements around */
-    max-width: 150px; 
-    max-height: 100px;
-    /* Centers it within its own parent container */
-    margin-left: auto;
-    margin-right: auto;
-    /* Ensures it doesn't stretch or distort */
-    object-fit: contain; 
+    border-radius: 10px;
 }
