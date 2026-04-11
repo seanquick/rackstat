@@ -8,8 +8,6 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <script src="theme.js" defer></script>
-
     <style>
         :root {
             --rackstat-black: #0a0a0a;
@@ -101,7 +99,7 @@
 
             <div class="h-10 w-[1px] bg-gray-700"></div>
 
-            <div class="flex flex-col items-center text-center min-w-[160px]">
+            <div class="flex flex-col items-center text-center min-w-[180px]">
                 <span id="school-tag" class="text-sm md:text-base font-black italic uppercase tracking-widest text-white leading-tight">
                     LOADING...
                 </span>
@@ -123,327 +121,328 @@
     </div>
 </header>
 
-    <div class="max-w-md mx-auto px-4 py-6 space-y-6">
+<div class="max-w-md mx-auto px-4 py-6 space-y-6">
 
-        <section class="profile-card border-l-4 border-green-600">
-            <h2 class="text-green-500 font-black uppercase italic mb-4 flex justify-between items-center">
-                Club Goal Tracker
-                <span id="last-updated-date" class="text-[10px] text-gray-400 not-italic uppercase font-bold"></span>
-            </h2>
+    <section class="profile-card border-l-4 border-green-600">
+        <h2 class="text-green-500 font-black uppercase italic mb-4 flex justify-between items-center">
+            Club Goal Tracker
+            <span id="last-updated-date" class="text-[10px] text-gray-400 not-italic uppercase font-bold"></span>
+        </h2>
 
-            <div class="space-y-4">
-                <select id="goal-selector">
-                    <option value="0">Select Target Weight Club...</option>
-                    <option value="100">100 Club</option>
-                    <option value="200">200 Club</option>
-                    <option value="300">300 Club</option>
-                    <option value="300">400 Club</option>
-                    <option value="300">500 Club</option>
-                    <option value="300">600 Club</option>
-                    <option value="300">700 Club</option>
-                    <option value="300">800 Club</option>
-                </select>
-
-                <div class="relative w-full bg-gray-900 h-4 rounded-full overflow-hidden border border-gray-800">
-                    <div id="goal-progress-bar" class="bg-green-600 h-full transition-all duration-1000" style="width: 0%"></div>
-                </div>
-
-                <p id="goal-message" class="text-[9px] text-center text-gray-400 font-bold uppercase italic tracking-wider">
-                    Update stats in the RACK to see progress
-                </p>
-
-                <button id="save-goal-btn" class="w-full mt-2 bg-gray-800 hover:bg-green-700 text-white text-[9px] font-black p-2 rounded-lg transition-all uppercase italic">
-                    Set Target Club
-                </button>
-            </div>
-        </section>
-
-        <section class="profile-card">
-            <h2 class="text-red-600 font-black uppercase italic mb-6">Recruiting Essentials</h2>
-            
-            <div class="mb-6">
-                <label>Athlete Full Name</label>
-                <input id="full-name" type="text" placeholder="First & Last Name" 
-                       class="!bg-transparent !border-0 !border-b-2 !border-gray-800 !rounded-none !px-0 py-2 focus:!border-red-600 font-black uppercase italic text-lg transition-all">
-            </div>
-
-            <div class="grid grid-cols-2 gap-6 mb-6">
-                <div>
-                    <label>Height</label>
-                    <input id="height" placeholder="6'2" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0">
-                </div>
-                <div>
-                    <label>Weight (LBS)</label>
-                    <input id="weight" type="number" placeholder="215" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0">
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-6 mb-6">
-                <div>
-                    <label class="!text-red-900/50">Offense (Prim / Sec)</label>
-                    <div class="flex gap-2">
-                        <input id="off-primary" placeholder="QB" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0 text-sm font-bold uppercase">
-                        <input id="off-secondary" placeholder="WR" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0 text-sm font-bold uppercase">
-                    </div>
-                </div>
-                <div>
-                    <label class="!text-red-900/50">Defense (Prim / Sec)</label>
-                    <div class="flex gap-2">
-                        <input id="def-primary" placeholder="LB" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0 text-sm font-bold uppercase">
-                        <input id="def-secondary" placeholder="S" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0 text-sm font-bold uppercase">
-                    </div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-6 mb-6">
-                <div>
-                    <label>GPA</label>
-                    <input id="gpa" type="number" step="0.01" placeholder="4.0" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0">
-                </div>
-                <div>
-                    <label>SAT</label>
-                    <input id="sat" type="number" placeholder="Total" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0">
-                </div>
-                <div>
-                    <label>ACT</label>
-                    <input id="act" type="number" placeholder="Comp" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0">
-                </div>
-            </div>
-
-            <div>
-                <label>Character Statement / Quote</label>
-                <textarea id="character-statement" rows="3" placeholder="I am a leader in the weightroom..." 
-                          class="bg-black/40 border border-gray-800 rounded p-3 mt-2 text-sm italic focus:border-red-600 outline-none text-gray-300"></textarea>
-            </div>
-        </section>
-
-        <section class="profile-card">
-            <h2 class="text-blue-500 font-black uppercase italic mb-4">Film & Socials</h2>
-            <div class="space-y-3">
-                <div><label>Hudl Link</label><input id="hudl-link" placeholder="hudl.com/video/..."></div>
-                <div><label>Twitter / X Handle</label><input id="twitter-link" placeholder="@Username"></div>
-                <div><label>YouTube Highlight</label><input id="youtube-link" placeholder="youtube.com/watch?v=..."></div>
-                <div><label>Other (Linktree/Instagram)</label><input id="other-link" placeholder="https://..."></div>
-            </div>
-        </section>
-
-        <div id="goals-container" class="space-y-4"></div>
-
-        <div class="space-y-3">
-            <button id="save-btn" class="btn-primary w-full shadow-lg shadow-red-900/20">
-                Save Profile
-            </button>
-
-            <button id="btn-view-card" class="w-full py-4 font-black italic uppercase bg-gray-900 border border-gray-700 rounded-lg hover:bg-gray-800 transition-all text-gray-300">
-                View My Recruiting Card →
-            </button>
-        </div>
-    </div>
-
-    <div id="goal-modal" class="fixed inset-0 bg-black/95 backdrop-blur-md hidden flex items-center justify-center p-6 z-50">
-        <div class="bg-[#111] border border-red-700 p-8 rounded-2xl w-full max-w-sm shadow-2xl">
-            <h3 class="font-black italic uppercase text-white mb-6">New Goal</h3>
-            <label>Category</label>
-            <select id="goal-category" class="mb-4">
-                <option value="bodyWeight">Body Weight</option>
+        <div class="space-y-4">
+            <select id="goal-selector">
+                <option value="0">Select Target Weight Club...</option>
+                <option value="100">100 Club</option>
+                <option value="200">200 Club</option>
+                <option value="300">300 Club</option>
+                <option value="400">400 Club</option>
+                <option value="500">500 Club</option>
+                <option value="600">600 Club</option>
+                <option value="700">700 Club</option>
+                <option value="800">800 Club</option>
             </select>
-            <label>Target Weight (LBS)</label>
-            <input id="goal-target" type="number" class="mb-6">
-            <div class="flex gap-2">
-                <button id="close-modal-btn" class="flex-1 bg-gray-800 py-3 rounded-lg font-bold text-[10px] uppercase">Cancel</button>
-                <button id="confirm-goal-btn" class="flex-1 bg-red-700 py-3 rounded-lg font-bold text-[10px] uppercase">Set Goal</button>
+
+            <div class="relative w-full bg-gray-900 h-4 rounded-full overflow-hidden border border-gray-800">
+                <div id="goal-progress-bar" class="bg-green-600 h-full transition-all duration-1000" style="width: 0%"></div>
+            </div>
+
+            <p id="goal-message" class="text-[9px] text-center text-gray-400 font-bold uppercase italic tracking-wider">
+                Update stats in the RACK to see progress
+            </p>
+
+            <button id="save-goal-btn" class="w-full mt-2 bg-gray-800 hover:bg-green-700 text-white text-[9px] font-black p-2 rounded-lg transition-all uppercase italic">
+                Set Target Club
+            </button>
+        </div>
+    </section>
+
+    <section class="profile-card">
+        <h2 class="text-red-600 font-black uppercase italic mb-6">Recruiting Essentials</h2>
+        
+        <div class="mb-6">
+            <label>Athlete Full Name</label>
+            <input id="full-name" type="text" placeholder="First & Last Name" 
+                   class="!bg-transparent !border-0 !border-b-2 !border-gray-800 !rounded-none !px-0 py-2 focus:!border-red-600 font-black uppercase italic text-lg transition-all">
+        </div>
+
+        <div class="grid grid-cols-2 gap-6 mb-6">
+            <div>
+                <label>Height</label>
+                <input id="height" placeholder="6'2" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0">
+            </div>
+            <div>
+                <label>Weight (LBS)</label>
+                <input id="weight" type="number" placeholder="215" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0">
             </div>
         </div>
+
+        <div class="grid grid-cols-2 gap-6 mb-6">
+            <div>
+                <label class="!text-red-900/50">Offense (Prim / Sec)</label>
+                <div class="flex gap-2">
+                    <input id="off-primary" placeholder="QB" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0 text-sm font-bold uppercase">
+                    <input id="off-secondary" placeholder="WR" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0 text-sm font-bold uppercase">
+                </div>
+            </div>
+            <div>
+                <label class="!text-red-900/50">Defense (Prim / Sec)</label>
+                <div class="flex gap-2">
+                    <input id="def-primary" placeholder="LB" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0 text-sm font-bold uppercase">
+                    <input id="def-secondary" placeholder="S" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0 text-sm font-bold uppercase">
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-6 mb-6">
+            <div>
+                <label>GPA</label>
+                <input id="gpa" type="number" step="0.01" placeholder="4.0" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0">
+            </div>
+            <div>
+                <label>SAT</label>
+                <input id="sat" type="number" placeholder="Total" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0">
+            </div>
+            <div>
+                <label>ACT</label>
+                <input id="act" type="number" placeholder="Comp" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0">
+            </div>
+        </div>
+
+        <div>
+            <label>Character Statement / Quote</label>
+            <textarea id="character-statement" rows="3" placeholder="I am a leader in the weightroom..." 
+                      class="bg-black/40 border border-gray-800 rounded p-3 mt-2 text-sm italic focus:border-red-600 outline-none text-gray-300"></textarea>
+        </div>
+    </section>
+
+    <section class="profile-card">
+        <h2 class="text-blue-500 font-black uppercase italic mb-4">Film & Socials</h2>
+        <div class="space-y-3">
+            <div><label>Hudl Link</label><input id="hudl-link" placeholder="hudl.com/video/..."></div>
+            <div><label>Twitter / X Handle</label><input id="twitter-link" placeholder="@Username"></div>
+            <div><label>YouTube Highlight</label><input id="youtube-link" placeholder="youtube.com/watch?v=..."></div>
+            <div><label>Other (Linktree/Instagram)</label><input id="other-link" placeholder="https://..."></div>
+        </div>
+    </section>
+
+    <div id="goals-container" class="space-y-4"></div>
+
+    <div class="space-y-3">
+        <button id="save-btn" class="btn-primary w-full shadow-lg shadow-red-900/20">
+            Save Profile
+        </button>
+
+        <button id="btn-view-card" class="w-full py-4 font-black italic uppercase bg-gray-900 border border-gray-700 rounded-lg hover:bg-gray-800 transition-all text-gray-300">
+            View My Recruiting Card →
+        </button>
     </div>
+</div>
 
-    <script type="module">
-        import { firebaseConfig } from './firebase-config.js';
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { applyTheme } from './theme.js';
+<div id="goal-modal" class="fixed inset-0 bg-black/95 backdrop-blur-md hidden flex items-center justify-center p-6 z-50">
+    <div class="bg-[#111] border border-red-700 p-8 rounded-2xl w-full max-w-sm shadow-2xl">
+        <h3 class="font-black italic uppercase text-white mb-6">New Goal</h3>
+        <label>Category</label>
+        <select id="goal-category" class="mb-4">
+            <option value="bodyWeight">Body Weight</option>
+        </select>
+        <label>Target Weight (LBS)</label>
+        <input id="goal-target" type="number" class="mb-6">
+        <div class="flex gap-2">
+            <button id="close-modal-btn" class="flex-1 bg-gray-800 py-3 rounded-lg font-bold text-[10px] uppercase">Cancel</button>
+            <button id="confirm-goal-btn" class="flex-1 bg-red-700 py-3 rounded-lg font-bold text-[10px] uppercase">Set Goal</button>
+        </div>
+    </div>
+</div>
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-        
-        let currentGoals = [];
+<script type="module">
+    import { firebaseConfig } from './firebase-config.js';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { applyTheme } from './theme.js';
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    
+    let currentGoals = [];
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             const profileRef = doc(db, "recruiting_profiles", user.uid);
             const maxesRef = doc(db, "recruiting_profiles", user.uid, "maxes", "latest");
             
-            const [snap, maxSnap] = await Promise.all([getDoc(profileRef), getDoc(maxesRef)]);
+            try {
+                const [snap, maxSnap] = await Promise.all([getDoc(profileRef), getDoc(maxesRef)]);
 
-            if(snap.exists()) {
-                const data = snap.data();
-                const maxData = maxSnap.exists() ? maxSnap.data() : {};
-                const combinedData = { ...data, ...maxData };
+                if(snap.exists()) {
+                    const data = snap.data();
+                    const maxData = maxSnap.exists() ? maxSnap.data() : {};
+                    const combinedData = { ...data, ...maxData };
 
-                // Determine the school ID (handling both naming conventions)
-                const schoolID = data.school_id || data.schoolId;
-
-                // --- THEME ENGINE START ---
-                if (schoolID) {
-                    // CHANGE: Added 'db' as the first argument
-                    await applyTheme(db, schoolID);
-                }
-                // --- THEME ENGINE END ---
-
-                // Utility to safely set values
-                const safeSet = (id, val) => { const el = document.getElementById(id); if(el) el.value = val || ""; };
-                
-                safeSet('full-name', data.fullName);
-                safeSet('off-primary', data.offPrimary);
-                safeSet('off-secondary', data.offSecondary);
-                safeSet('def-primary', data.defPrimary);
-                safeSet('def-secondary', data.defSecondary);
-                safeSet('height', data.height);
-                safeSet('weight', combinedData.body_weight || combinedData.bodyWeight || data.weight || '');
-                safeSet('gpa', data.gpa);
-                safeSet('sat', data.sat);
-                safeSet('act', data.act);
-                safeSet('character-statement', data.statement);
-                safeSet('hudl-link', data.hudlLink);
-                safeSet('twitter-link', data.twitterLink);
-                safeSet('youtube-link', data.youtubeLink);
-                safeSet('other-link', data.otherLink);
-                
-                // Branding and Lifts logic
-                if(schoolID) {
-                    const schoolSnap = await getDoc(doc(db, "schools", schoolID));
-                    if(schoolSnap.exists()){
-                        const sData = schoolSnap.data();
-                        const viewCardBtn = document.getElementById('btn-view-card');
+                    // 1. Theme Engine Logic
+                    const schoolID = data.school_id || data.schoolId;
+                    if (schoolID) {
+                        await applyTheme(db, schoolID);
                         
-                        // Hide recruiting card button if disabled for this school
-                        if (viewCardBtn && sData.hasRecruitingCard === false) {
-                            viewCardBtn.classList.add('hidden');
+                        // Fetch additional school preferences for recruiting visibility
+                        const schoolSnap = await getDoc(doc(db, "schools", schoolID));
+                        if(schoolSnap.exists()){
+                            const sData = schoolSnap.data();
+                            const viewCardBtn = document.getElementById('btn-view-card');
+                            if (viewCardBtn && sData.hasRecruitingCard === false) {
+                                viewCardBtn.classList.add('hidden');
+                            }
+                            
+                            // Set custom lift categories
+                            const select = document.getElementById('goal-category');
+                            if(select) {
+                                const lifts = sData.trackedLifts || ['bench', 'squat', 'clean'];
+                                select.innerHTML = lifts.map(l => `<option value="${l}">${l.replace('_', ' ').toUpperCase()}</option>`).join('');
+                            }
                         }
-
-                        // Dynamically set lift categories from school preferences
-                        const select = document.getElementById('goal-category');
-                        if(select) {
-                            const lifts = sData.trackedLifts || ['bench', 'squat', 'clean'];
-                            select.innerHTML = lifts.map(l => `<option value="${l}">${l.replace('_', ' ').toUpperCase()}</option>`).join('');
-                        }
+                    } else {
+                        const tag = document.getElementById('school-tag');
+                        if (tag) tag.innerText = "NO SCHOOL LINKED";
                     }
-                }
 
-                currentGoals = data.goals || [];
-                renderGoals(user.uid, currentGoals);
-                syncGoalDisplay(combinedData); 
+                    // 2. Map Form Fields
+                    const safeSet = (id, val) => { const el = document.getElementById(id); if(el) el.value = val || ""; };
+                    
+                    safeSet('full-name', data.fullName);
+                    safeSet('off-primary', data.offPrimary);
+                    safeSet('off-secondary', data.offSecondary);
+                    safeSet('def-primary', data.defPrimary);
+                    safeSet('def-secondary', data.defSecondary);
+                    safeSet('height', data.height);
+                    safeSet('weight', combinedData.body_weight || combinedData.bodyWeight || data.weight || '');
+                    safeSet('gpa', data.gpa);
+                    safeSet('sat', data.sat);
+                    safeSet('act', data.act);
+                    safeSet('character-statement', data.statement);
+                    safeSet('hudl-link', data.hudlLink);
+                    safeSet('twitter-link', data.twitterLink);
+                    safeSet('youtube-link', data.youtubeLink);
+                    safeSet('other-link', data.otherLink);
+
+                    currentGoals = data.goals || [];
+                    renderGoals(user.uid, currentGoals);
+                    syncGoalDisplay(combinedData); 
+                }
+            } catch (err) {
+                console.error("Error loading profile:", err);
             }
         } else { 
             window.location.href = 'index.html'; 
         }
     });
 
-        async function renderGoals(uid, goals) {
-            const container = document.getElementById('goals-container');
-            if (!container || !goals) return;
-            
-            const latestMaxRef = doc(db, "recruiting_profiles", uid, "maxes", "latest");
-            const maxSnap = await getDoc(latestMaxRef);
-            const stats = maxSnap.exists() ? maxSnap.data() : {};
-
-            container.innerHTML = goals.map((goal, index) => {
-                const currentVal = Number(stats[goal.type.toLowerCase().trim().replace(/\s+/g, '_')] || 0);
-                const progress = goal.target > 0 ? Math.min((currentVal / goal.target) * 100, 100) : 0;
-                
-                return `
-                    <div class="animate-fade-in profile-card mb-4 relative group">
-                        <button onclick="window.removeGoal(${index})" class="absolute top-4 right-4 text-[9px] text-red-900 opacity-0 group-hover:opacity-100 transition-opacity font-bold uppercase">Remove</button>
-                        <div class="flex justify-between items-end mb-1">
-                            <div>
-                                <p class="text-[10px] font-black text-gray-500 uppercase">${goal.type}</p>
-                                <p class="text-lg font-black italic uppercase">${goal.target} LBS</p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-[9px] font-bold text-gray-400">Current: ${currentVal}</p>
-                                <p class="text-xs font-black ${progress >= 100 ? 'text-green-500' : 'text-red-600'}">${Math.round(progress)}%</p>
-                            </div>
-                        </div>
-                        <div class="goal-progress"><div class="progress-fill" style="width: ${progress}%"></div></div>
-                    </div>`;
-            }).join('');
-        }
-
-        // --- Event Listeners and Global Window Assignments ---
+    async function renderGoals(uid, goals) {
+        const container = document.getElementById('goals-container');
+        if (!container || !goals) return;
         
-        window.saveProfile = async () => {
-            const user = auth.currentUser;
-            const btn = document.getElementById('save-btn');
-            if (!user) return;
+        const latestMaxRef = doc(db, "recruiting_profiles", uid, "maxes", "latest");
+        const maxSnap = await getDoc(latestMaxRef);
+        const stats = maxSnap.exists() ? maxSnap.data() : {};
 
-            btn.disabled = true;
-            btn.innerText = "UPDATING...";
+        container.innerHTML = goals.map((goal, index) => {
+            const currentVal = Number(stats[goal.type.toLowerCase().trim().replace(/\s+/g, '_')] || 0);
+            const progress = goal.target > 0 ? Math.min((currentVal / goal.target) * 100, 100) : 0;
             
-            try {
-                await updateDoc(doc(db, "recruiting_profiles", user.uid), {
-                    fullName: document.getElementById('full-name').value,
-                    offPrimary: document.getElementById('off-primary').value,
-                    offSecondary: document.getElementById('off-secondary').value,
-                    defPrimary: document.getElementById('def-primary').value,
-                    defSecondary: document.getElementById('def-secondary').value,
-                    height: document.getElementById('height').value,
-                    weight: Number(document.getElementById('weight').value),
-                    gpa: Number(document.getElementById('gpa').value),
-                    sat: document.getElementById('sat').value,
-                    act: document.getElementById('act').value,
-                    statement: document.getElementById('character-statement').value,
-                    hudlLink: document.getElementById('hudl-link').value,
-                    twitterLink: document.getElementById('twitter-link').value,
-                    youtubeLink: document.getElementById('youtube-link').value,
-                    otherLink: document.getElementById('other-link').value,
-                    lastUpdated: new Date().toISOString()
-                });
-                btn.innerText = "PROFILE SAVED!";
-            } catch (e) { btn.innerText = "ERROR SAVING"; }
-            setTimeout(() => { btn.disabled = false; btn.innerText = "SAVE PROFILE"; }, 2000);
-        };
+            return `
+                <div class="animate-fade-in profile-card mb-4 relative group">
+                    <button onclick="window.removeGoal(${index})" class="absolute top-4 right-4 text-[9px] text-red-900 opacity-0 group-hover:opacity-100 transition-opacity font-bold uppercase">Remove</button>
+                    <div class="flex justify-between items-end mb-1">
+                        <div>
+                            <p class="text-[10px] font-black text-gray-500 uppercase">${goal.type}</p>
+                            <p class="text-lg font-black italic uppercase">${goal.target} LBS</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[9px] font-bold text-gray-400">Current: ${currentVal}</p>
+                            <p class="text-xs font-black ${progress >= 100 ? 'text-green-500' : 'text-red-600'}">${Math.round(progress)}%</p>
+                        </div>
+                    </div>
+                    <div class="goal-progress"><div class="progress-fill" style="width: ${progress}%"></div></div>
+                </div>`;
+        }).join('');
+    }
 
-        window.saveGoal = async () => {
-            const user = auth.currentUser;
-            const targetClub = Number(document.getElementById('goal-selector').value);
-            const btn = document.getElementById('save-goal-btn');
-            if (!user || targetClub === 0) return;
+    // --- Action Functions ---
+    window.saveProfile = async () => {
+        const user = auth.currentUser;
+        const btn = document.getElementById('save-btn');
+        if (!user) return;
 
-            btn.innerText = "SAVING...";
-            try {
-                const profileRef = doc(db, "recruiting_profiles", user.uid);
-                await updateDoc(profileRef, { clubGoal: targetClub });
-                const snap = await getDoc(profileRef);
-                syncGoalDisplay(snap.data());
-                btn.innerText = "TARGET UPDATED!";
-            } catch (e) { btn.innerText = "ERROR"; }
-            setTimeout(() => { btn.innerText = "SET TARGET CLUB"; }, 2000);
-        };
-
-        function syncGoalDisplay(pData) {
-            const currentScore = pData.boardScore || 0; 
-            const targetGoal = pData.clubGoal || 0;
-            const progressBar = document.getElementById('goal-progress-bar');
-            const goalMsg = document.getElementById('goal-message');
-            if (targetGoal > 0 && progressBar) {
-                const percent = Math.min((currentScore / targetGoal) * 100, 100);
-                progressBar.style.width = `${percent}%`;
-                goalMsg.innerText = percent >= 100 ? `🔥 ${targetGoal} CLUB ACHIEVED` : `${Math.round(targetGoal - currentScore)} POINTS TO ${targetGoal} CLUB`;
-            }
+        btn.disabled = true;
+        btn.innerText = "UPDATING...";
+        
+        try {
+            await updateDoc(doc(db, "recruiting_profiles", user.uid), {
+                fullName: document.getElementById('full-name').value,
+                offPrimary: document.getElementById('off-primary').value,
+                offSecondary: document.getElementById('off-secondary').value,
+                defPrimary: document.getElementById('def-primary').value,
+                defSecondary: document.getElementById('def-secondary').value,
+                height: document.getElementById('height').value,
+                weight: Number(document.getElementById('weight').value),
+                gpa: Number(document.getElementById('gpa').value),
+                sat: document.getElementById('sat').value,
+                act: document.getElementById('act').value,
+                statement: document.getElementById('character-statement').value,
+                hudlLink: document.getElementById('hudl-link').value,
+                twitterLink: document.getElementById('twitter-link').value,
+                youtubeLink: document.getElementById('youtube-link').value,
+                otherLink: document.getElementById('other-link').value,
+                lastUpdated: new Date().toISOString()
+            });
+            btn.innerText = "PROFILE SAVED!";
+        } catch (e) { 
+            console.error(e);
+            btn.innerText = "ERROR SAVING"; 
         }
+        setTimeout(() => { btn.disabled = false; btn.innerText = "SAVE PROFILE"; }, 2000);
+    };
 
-        window.removeGoal = async (index) => {
-            if(!confirm("Remove this goal?")) return;
-            currentGoals.splice(index, 1);
-            await updateDoc(doc(db, "recruiting_profiles", auth.currentUser.uid), { goals: currentGoals });
-            renderGoals(auth.currentUser.uid, currentGoals);
-        };
+    window.saveGoal = async () => {
+        const user = auth.currentUser;
+        const targetClub = Number(document.getElementById('goal-selector').value);
+        const btn = document.getElementById('save-goal-btn');
+        if (!user || targetClub === 0) return;
 
-        // Attach listeners to DOM
-        document.getElementById('save-btn').onclick = window.saveProfile;
-        document.getElementById('save-goal-btn').onclick = window.saveGoal;
-        document.getElementById('btn-view-card').onclick = () => { if(auth.currentUser) window.location.href = `recruiting-card.html?uid=${auth.currentUser.uid}`; };
-    </script>
+        btn.innerText = "SAVING...";
+        try {
+            const profileRef = doc(db, "recruiting_profiles", user.uid);
+            await updateDoc(profileRef, { clubGoal: targetClub });
+            const snap = await getDoc(profileRef);
+            syncGoalDisplay(snap.data());
+            btn.innerText = "TARGET UPDATED!";
+        } catch (e) { btn.innerText = "ERROR"; }
+        setTimeout(() => { btn.innerText = "SET TARGET CLUB"; }, 2000);
+    };
+
+    function syncGoalDisplay(pData) {
+        const currentScore = pData.boardScore || 0; 
+        const targetGoal = pData.clubGoal || 0;
+        const progressBar = document.getElementById('goal-progress-bar');
+        const goalMsg = document.getElementById('goal-message');
+        if (targetGoal > 0 && progressBar) {
+            const percent = Math.min((currentScore / targetGoal) * 100, 100);
+            progressBar.style.width = `${percent}%`;
+            goalMsg.innerText = percent >= 100 ? `🔥 ${targetGoal} CLUB ACHIEVED` : `${Math.round(targetGoal - currentScore)} POINTS TO ${targetGoal} CLUB`;
+        }
+    }
+
+    window.removeGoal = async (index) => {
+        if(!confirm("Remove this goal?")) return;
+        currentGoals.splice(index, 1);
+        await updateDoc(doc(db, "recruiting_profiles", auth.currentUser.uid), { goals: currentGoals });
+        renderGoals(auth.currentUser.uid, currentGoals);
+    };
+
+    // Attach listeners
+    document.getElementById('save-btn').onclick = window.saveProfile;
+    document.getElementById('save-goal-btn').onclick = window.saveGoal;
+    document.getElementById('btn-view-card').onclick = () => { if(auth.currentUser) window.location.href = `recruiting-card.html?uid=${auth.currentUser.uid}`; };
+</script>
 </body>
 </html>
