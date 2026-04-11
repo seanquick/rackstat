@@ -170,3 +170,15 @@ body {
     background: var(--school-primary);
     border-radius: 4px;
 }
+
+#school-logo {
+    display: block;
+    /* Prevents the logo from pushing other elements around */
+    max-width: 150px; 
+    max-height: 100px;
+    /* Centers it within its own parent container */
+    margin-left: auto;
+    margin-right: auto;
+    /* Ensures it doesn't stretch or distort */
+    object-fit: contain; 
+}
