@@ -321,33 +321,45 @@
     window.saveProfile = async () => {
         const user = auth.currentUser;
         if (!user) return;
-        const btn = document.getElementById('save-btn');
-        btn.innerText = "UPDATING...";
         
+        const btn = document.getElementById('save-btn');
+        const originalText = btn.innerText;
+        btn.innerText = "UPDATING...";
+
+        // Helper to safely get value or return default
+        const getVal = (id, isNumber = false) => {
+            const el = document.getElementById(id);
+            if (!el) return isNumber ? 0 : "";
+            return isNumber ? Number(el.value) : el.value;
+        };
+
         try {
-            await updateDoc(doc(db, "recruiting_profiles", user.uid), {
-                fullName: document.getElementById('full-name').value,
-                height: document.getElementById('height').value,
-                weight: Number(document.getElementById('weight').value),
-                offPrimary: document.getElementById('off-primary').value,
-                offSecondary: document.getElementById('off-secondary').value,
-                defPrimary: document.getElementById('def-primary').value,
-                defSecondary: document.getElementById('def-secondary').value,
-                gpa: Number(document.getElementById('gpa').value),
-                sat: document.getElementById('sat').value,
-                act: document.getElementById('act').value,
-                statement: document.getElementById('character-statement').value,
-                hudlLink: document.getElementById('hudl-link').value,
-                twitterLink: document.getElementById('twitter-link').value,
-                youtubeLink: document.getElementById('youtube-link').value,
-                otherLink: document.getElementById('other-link').value,
+            // Use setDoc with merge: true so it creates the doc if it's missing
+            await setDoc(doc(db, "recruiting_profiles", user.uid), {
+                fullName: getVal('full-name'),
+                height: getVal('height'),
+                weight: getVal('weight', true),
+                offPrimary: getVal('off-primary'),
+                offSecondary: getVal('off-secondary'),
+                defPrimary: getVal('def-primary'),
+                defSecondary: getVal('def-secondary'),
+                gpa: getVal('gpa', true),
+                sat: getVal('sat'),
+                act: getVal('act'),
+                statement: getVal('character-statement'),
+                hudlLink: getVal('hudl-link'),
+                twitterLink: getVal('twitter-link'),
+                youtubeLink: getVal('youtube-link'),
+                otherLink: getVal('other-link'),
                 lastUpdated: new Date().toISOString()
-            });
+            }, { merge: true });
+
             btn.innerText = "PROFILE SAVED!";
         } catch (e) { 
-            console.error(e);
+            console.error("Save Error:", e);
             btn.innerText = "ERROR SAVING";
         }
+        
         setTimeout(() => { btn.innerText = "SAVE PROFILE"; }, 2000);
     };
 
