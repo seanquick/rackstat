@@ -224,7 +224,7 @@
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            console.log("Auth State Changed: User Logged In", user.uid);
+            console.log("✅ Auth Success:", user.uid);
             const profileRef = doc(db, "recruiting_profiles", user.uid);
             
             try {
@@ -232,25 +232,20 @@
 
                 if(snap.exists()) {
                     const data = snap.data();
-                    console.log("Profile Data Loaded:", data);
-
-                    // --- THEME ENGINE START ---
-                    const schoolID = data.school_id || data.schoolId;
-                    console.log("Extracted School ID:", schoolID);
+                    
+                    // --- THEME LOGIC FIX ---
+                    // 1. Prioritize 'school_id', then 'schoolId'. 
+                    // 2. HARDCODE TEST: If you want to force test London Red Raiders, 
+                    //    change the line below to: let schoolID = data.school_id || "london_high";
+                    let schoolID = data.school_id || data.schoolId;
 
                     if (schoolID) {
-                        try {
-                            // applyTheme updates the 'school-logo' img and 'school-name' span
-                            await applyTheme(db, schoolID);
-                            console.log("Theme applied successfully for:", schoolID);
-                        } catch (themeErr) {
-                            console.error("Theme Error:", themeErr);
-                        }
+                        console.log("🏫 School ID Found:", schoolID);
+                        await applyTheme(db, schoolID);
                     } else {
-                        console.warn("No School ID found in profile. Using fallback.");
+                        console.warn("⚠️ No School ID in Firestore. Check your 'recruiting_profiles' collection.");
                         document.getElementById('school-name').innerText = "INDEPENDENT ATHLETE";
                     }
-                    // --- THEME ENGINE END ---
 
                     // Map Form Fields
                     const safeSet = (id, val) => { 
@@ -259,33 +254,33 @@
                     };
                     
                     safeSet('full-name', data.fullName);
+                    safeSet('height', data.height);
+                    safeSet('weight', data.weight);
                     safeSet('off-primary', data.offPrimary);
                     safeSet('off-secondary', data.offSecondary);
                     safeSet('def-primary', data.defPrimary);
                     safeSet('def-secondary', data.defSecondary);
-                    safeSet('height', data.height);
-                    safeSet('weight', data.weight);
                     safeSet('gpa', data.gpa);
                     safeSet('sat', data.sat);
                     safeSet('act', data.act);
                     safeSet('character-statement', data.statement);
+                    safeSet('hudl-link', data.hudlLink);
+                    safeSet('twitter-link', data.twitterLink);
+                    safeSet('youtube-link', data.youtubeLink);
+                    safeSet('other-link', data.otherLink);
 
-                    // Handle Goals and Progress
                     currentGoals = data.goals || [];
                     renderGoals(user.uid, currentGoals);
                     syncGoalDisplay(data); 
-                } else {
-                    console.error("No profile document found for UID:", user.uid);
                 }
             } catch (err) {
-                console.error("Firestore loading error:", err);
+                console.error("❌ Firestore Error:", err);
             }
         } else { 
             window.location.href = 'index.html'; 
         }
     });
 
-    // Keeping your logic for rendering goals and saving profile
     async function renderGoals(uid, goals) {
         const container = document.getElementById('goals-container');
         if (!container || !goals) return;
@@ -305,10 +300,27 @@
         try {
             await updateDoc(doc(db, "recruiting_profiles", user.uid), {
                 fullName: document.getElementById('full-name').value,
+                height: document.getElementById('height').value,
+                weight: Number(document.getElementById('weight').value),
+                offPrimary: document.getElementById('off-primary').value,
+                offSecondary: document.getElementById('off-secondary').value,
+                defPrimary: document.getElementById('def-primary').value,
+                defSecondary: document.getElementById('def-secondary').value,
+                gpa: Number(document.getElementById('gpa').value),
+                sat: document.getElementById('sat').value,
+                act: document.getElementById('act').value,
+                statement: document.getElementById('character-statement').value,
+                hudlLink: document.getElementById('hudl-link').value,
+                twitterLink: document.getElementById('twitter-link').value,
+                youtubeLink: document.getElementById('youtube-link').value,
+                otherLink: document.getElementById('other-link').value,
                 lastUpdated: new Date().toISOString()
             });
             btn.innerText = "PROFILE SAVED!";
-        } catch (e) { console.error(e); }
+        } catch (e) { 
+            console.error(e);
+            btn.innerText = "ERROR SAVING";
+        }
         setTimeout(() => { btn.innerText = "SAVE PROFILE"; }, 2000);
     };
 
