@@ -870,17 +870,22 @@
 
     window.deleteAthlete = async (athleteId, athleteName) => {
         // 1. Initial Confirmation
-        const confirmed = confirm(`DANGER: You are about to PERMANENTLY delete ${athleteName}.\n\nThis action cannot be undone. Proceed?`);
+        const confirmed = confirm(`DANGER: You are about to PERMANENTLY delete ${athleteName}.\n\nThis will remove their profile and account. Proceed?`);
         if (!confirmed) return;
 
         try {
-            // 2. Sandbox Pre-Flight Check
-            // We fetch the document first to ensure it belongs to this coach's school
-            const athleteRef = doc(db, "recruiting_profiles", athleteId);
-            const athleteSnap = await getDoc(athleteRef);
+            // 2. Fetch the profile to check school ownership
+            const profileRef = doc(db, "recruiting_profiles", athleteId);
+            const userRef = doc(db, "users", athleteId); // Reference to the core user account
+            
+            const athleteSnap = await getDoc(profileRef);
 
             if (!athleteSnap.exists()) {
-                alert("Error: Athlete record not found.");
+                // If the recruiting profile doesn't exist, we should still try to delete the user doc
+                // so they disappear from the roster.
+                await deleteDoc(userRef);
+                alert("Athlete removed from roster.");
+                location.reload();
                 return;
             }
 
@@ -888,18 +893,20 @@
 
             // 3. Security Validation
             if (athleteData.school_id !== window.currentSchoolId) {
-                console.error("SECURITY ALERT: Attempted unauthorized deletion of athlete from another school.");
-                alert("PERMISSION DENIED: You do not have authority to delete athletes from other schools.");
+                console.error("SECURITY ALERT: Unauthorized deletion attempt.");
+                alert("PERMISSION DENIED: You do not have authority over this athlete.");
                 return;
             }
 
-            // 4. Execute Deletion
-            await deleteDoc(athleteRef);
+            // 4. Execute Atomic Deletion (Delete both documents at once)
+            const batch = writeBatch(db);
+            batch.delete(profileRef);
+            batch.delete(userRef);
+            await batch.commit();
             
             // 5. Success Feedback
-            alert(`${athleteName.toUpperCase()} has been removed from the roster.`);
+            alert(`${athleteName.toUpperCase()} has been fully removed.`);
             
-            // Refresh the roster using the global school ID
             if (window.currentSchoolId) {
                 loadRoster(window.currentSchoolId);
             } else {
@@ -908,10 +915,9 @@
 
         } catch (error) {
             console.error("Deletion Error:", error);
-            alert("CRITICAL ERROR: Could not complete deletion. You may lack the necessary permissions.");
+            alert("CRITICAL ERROR: Could not complete deletion.");
         }
     };
-
         // --- MISSING FUNCTION: Generates the Set/Rep/Percent inputs ---
         function generateSetInputs(id) {
             const setCount = parseInt(document.getElementById(`sets-${id}`).value) || 1;
