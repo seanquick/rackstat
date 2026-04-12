@@ -7,6 +7,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
     <style>
+        :root {
+            --school-primary: #b91c1c; /* Fallback */
+        }
         /* Card Background Fallback */
         .office-card {
             background: #1a1a1c;
@@ -22,15 +25,20 @@
 </head>
 <body class="font-sans antialiased bg-[#0a0a0b] text-white">
 
-    <header class="p-6 flex justify-between items-center border-b border-gray-800">
+    <header class="p-6 flex justify-between items-center border-b border-gray-800 sticky top-0 bg-[#0a0a0b] z-50">
         <div class="flex items-center gap-4">
-            <img src="" class="school-logo-primary h-15 w-auto" alt="Logo" onerror="this.src='images/rackstat-logo.png'">
+            <img id="school-logo" src="images/rackstat-logo.png" class="school-logo-primary h-12 w-auto object-contain" alt="Logo" onerror="this.src='images/rackstat-logo.png'">
+            
+            <div class="h-10 w-[1px] bg-gray-800 mx-2"></div>
+
             <div>
                 <h1 class="text-xl font-black italic uppercase tracking-tighter leading-none">Coach's Office</h1>
-                <p id="school-name-display" class="text-[10px] font-bold text-[var(--school-primary)] uppercase tracking-widest"></p>
+                <p id="school-name" class="text-[10px] font-black text-[var(--school-primary)] uppercase tracking-widest mt-1">
+                    LOADING...
+                </p>
             </div>
         </div>
-        <button onclick="logout()" class="text-xs font-black text-gray-500 hover:text-[var(--school-primary)] transition tracking-widest">LOGOUT</button>
+        <button onclick="logout()" class="text-xs font-black text-gray-500 hover:text-[var(--school-primary)] transition tracking-widest uppercase">Logout</button>
     </header>
 
     <main class="max-w-6xl mx-auto px-6 py-12">
@@ -102,25 +110,46 @@
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                const userDoc = await getDoc(doc(db, "users", user.uid));
-                const userData = userDoc.data();
+                console.log("✅ Coach Auth Success:", user.uid);
+                
+                try {
+                    const userDoc = await getDoc(doc(db, "users", user.uid));
+                    if (!userDoc.exists()) {
+                        window.location.href = 'index.html';
+                        return;
+                    }
 
-                // Security Check
-                if (!userData || userData.role !== 'coach') {
-                    window.location.href = 'index.html';
-                    return;
-                }
+                    const userData = userDoc.data();
 
-                // --- APPLY THEME ---
-                if (userData.school_id) {
-                    await applyTheme(db, userData.school_id);
-                } else {
-                    document.body.classList.add('theme-loaded');
-                }
+                    // Security Check
+                    if (userData.role !== 'coach') {
+                        console.warn("🚫 Access Denied: User is not a coach.");
+                        window.location.href = 'index.html';
+                        return;
+                    }
 
-                // Personalize Greeting
-                if (userData.lastName) {
-                    document.getElementById('coach-greeting').innerText = `Welcome, Coach ${userData.lastName}`;
+                    // --- APPLY THEME ---
+                    // Using the same field names we verified for athletes
+                    const schoolID = userData.school_id || userData.schoolId;
+
+                    if (schoolID) {
+                        console.log("🏫 Loading Coach Branding for:", schoolID);
+                        // Using a small timeout to ensure DOM is ready
+                        setTimeout(async () => {
+                            await applyTheme(db, schoolID);
+                        }, 50);
+                    } else {
+                        console.warn("⚠️ No School ID found for this coach.");
+                        const nameEl = document.getElementById('school-name');
+                        if (nameEl) nameEl.innerText = "INDEPENDENT COACH";
+                    }
+
+                    // Personalize Greeting
+                    if (userData.lastName) {
+                        document.getElementById('coach-greeting').innerText = `Welcome, Coach ${userData.lastName}`;
+                    }
+                } catch (err) {
+                    console.error("❌ Error loading coach profile:", err);
                 }
             } else {
                 window.location.href = 'index.html';
