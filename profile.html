@@ -225,75 +225,63 @@
  onAuthStateChanged(auth, async (user) => {
     if (user) {
         console.log("✅ Auth Success:", user.uid);
+        
+        // References for both collections
+        const userRef = doc(db, "users", user.uid);
         const profileRef = doc(db, "recruiting_profiles", user.uid);
         
         try {
-            const snap = await getDoc(profileRef);
-
-            if (snap.exists()) {
-                const data = snap.data();
-                
-                // --- THEME & LOGO LOGIC ---
-                // Checks every possible variation of the field name
-                let schoolID = data.school_id || data.schoolId || data.SchoolID;
+            // 1. FIRST: Get core user data for the school branding
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+                const userData = userSnap.data();
+                const schoolID = userData.school_id || userData.schoolId;
 
                 if (schoolID) {
-                    console.log("🏫 Found School ID:", schoolID);
-                    // Small timeout ensures the DOM header is ready
-                    setTimeout(async () => {
-                        try {
-                            await applyTheme(db, schoolID);
-                            console.log("🎨 applyTheme executed for:", schoolID);
-                        } catch (themeErr) {
-                            console.error("❌ applyTheme failed:", themeErr);
-                        }
-                    }, 50);
-                } else {
-                    console.warn("⚠️ No School ID found in this user's profile document.");
-                    const nameEl = document.getElementById('school-name');
-                    if (nameEl) nameEl.innerText = "INDEPENDENT ATHLETE";
+                    console.log("🏫 Branding found in 'users':", schoolID);
+                    await applyTheme(db, schoolID);
                 }
+            } else {
+                console.warn("⚠️ No account found in 'users' collection.");
+                document.getElementById('school-name').innerText = "RACKSTAT ATHLETE";
+            }
 
-                // --- FORM MAPPING ---
+            // 2. SECOND: Get recruitment data for the form fields
+            const profileSnap = await getDoc(profileRef);
+            if (profileSnap.exists()) {
+                const profileData = profileSnap.data();
+                console.log("📄 Recruiting Profile Data Found");
+
+                // Map Form Fields
                 const safeSet = (id, val) => { 
                     const el = document.getElementById(id); 
                     if (el) el.value = val || ""; 
                 };
                 
-                safeSet('full-name', data.fullName);
-                safeSet('height', data.height);
-                safeSet('weight', data.weight);
-                safeSet('off-primary', data.offPrimary);
-                safeSet('off-secondary', data.offSecondary);
-                safeSet('def-primary', data.defPrimary);
-                safeSet('def-secondary', data.defSecondary);
-                safeSet('gpa', data.gpa);
-                safeSet('sat', data.sat);
-                safeSet('act', data.act);
-                safeSet('character-statement', data.statement);
-                safeSet('hudl-link', data.hudlLink);
-                safeSet('twitter-link', data.twitterLink);
-                safeSet('youtube-link', data.youtubeLink);
-                safeSet('other-link', data.otherLink);
+                safeSet('full-name', profileData.fullName);
+                safeSet('height', profileData.height);
+                safeSet('weight', profileData.weight);
+                safeSet('off-primary', profileData.offPrimary);
+                safeSet('off-secondary', profileData.offSecondary);
+                safeSet('def-primary', profileData.defPrimary);
+                safeSet('def-secondary', profileData.defSecondary);
+                safeSet('gpa', profileData.gpa);
+                safeSet('sat', profileData.sat);
+                safeSet('act', profileData.act);
+                safeSet('character-statement', profileData.statement);
+                safeSet('hudl-link', profileData.hudlLink);
+                safeSet('twitter-link', profileData.twitterLink);
+                safeSet('youtube-link', profileData.youtubeLink);
+                safeSet('other-link', profileData.otherLink);
 
-                // --- GOALS & UI ---
-                currentGoals = data.goals || [];
-                if (typeof renderGoals === "function") {
-                    renderGoals(user.uid, currentGoals);
-                }
-                if (typeof syncGoalDisplay === "function") {
-                    syncGoalDisplay(data);
-                }
+                // Handle Goals
+                currentGoals = profileData.goals || [];
+                if (typeof renderGoals === "function") renderGoals(user.uid, currentGoals);
+                if (typeof syncGoalDisplay === "function") syncGoalDisplay(profileData);
             } else {
-                // IMPORTANT: This handles the error you saw in your console
-                console.error("❌ No profile found in 'recruiting_profiles' for this UID.");
-                
-                // Reset UI so it doesn't stay on "LOADING..."
-                const nameEl = document.getElementById('school-name');
-                if (nameEl) nameEl.innerText = "RACKSTAT ATHLETE";
-                
-                // Optional: You could create a default profile here if needed
+                console.log("ℹ️ Athlete has not started a recruiting profile yet.");
             }
+
         } catch (err) {
             console.error("❌ Firestore Fetch Error:", err);
         }
