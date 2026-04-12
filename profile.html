@@ -222,7 +222,7 @@
     
     let currentGoals = [];
 
-   onAuthStateChanged(auth, async (user) => {
+ onAuthStateChanged(auth, async (user) => {
     if (user) {
         console.log("✅ Auth Success:", user.uid);
         const profileRef = doc(db, "recruiting_profiles", user.uid);
@@ -233,15 +233,12 @@
             if (snap.exists()) {
                 const data = snap.data();
                 
-                // --- THEME & LOGO DEBUGGING ---
-                console.log("🔍 Full Firestore Data:", data); // Check console to see exact field names
-                
-                // 1. Try every possible variation of the field name
+                // --- THEME & LOGO LOGIC ---
+                // Checks every possible variation of the field name
                 let schoolID = data.school_id || data.schoolId || data.SchoolID;
 
                 if (schoolID) {
                     console.log("🏫 Found School ID:", schoolID);
-                    
                     // Small timeout ensures the DOM header is ready
                     setTimeout(async () => {
                         try {
@@ -288,7 +285,14 @@
                     syncGoalDisplay(data);
                 }
             } else {
+                // IMPORTANT: This handles the error you saw in your console
                 console.error("❌ No profile found in 'recruiting_profiles' for this UID.");
+                
+                // Reset UI so it doesn't stay on "LOADING..."
+                const nameEl = document.getElementById('school-name');
+                if (nameEl) nameEl.innerText = "RACKSTAT ATHLETE";
+                
+                // Optional: You could create a default profile here if needed
             }
         } catch (err) {
             console.error("❌ Firestore Fetch Error:", err);
