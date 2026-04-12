@@ -43,6 +43,11 @@
                 <input type="email" id="reg-email" placeholder="personal@email.com" class="w-full bg-zinc-900 p-3 rounded border border-zinc-800 text-white outline-none focus:border-red-600">
             </div>
 
+            <div id="grad-year-group" class="form-group">
+                <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Graduation Year</label>
+                <input type="number" id="reg-grad-year" placeholder="e.g. 2027" class="w-full bg-zinc-900 p-3 rounded border border-zinc-800 text-white outline-none focus:border-red-600">
+            </div>
+
             <div class="form-group">
                 <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Create Password</label>
                 <input type="password" id="reg-pass" placeholder="••••••••" class="w-full bg-zinc-900 p-3 rounded border border-zinc-800 text-white outline-none focus:border-red-600">
@@ -141,17 +146,20 @@
             const cBtn = document.getElementById('btn-coach');
             const title = document.getElementById('reg-title');
             const codeLabel = document.getElementById('code-label');
+            const gradGroup = document.getElementById('grad-year-group'); // New
 
             if (role === 'coach') {
                 cBtn.className = "flex-1 py-2 text-[10px] font-black uppercase rounded bg-white text-black transition-all";
                 pBtn.className = "flex-1 py-2 text-[10px] font-black uppercase text-gray-500 transition-all";
                 title.innerText = "Coach Registration";
                 codeLabel.innerText = "Coach Access Code";
+                gradGroup.classList.add('hidden');
             } else {
                 pBtn.className = "flex-1 py-2 text-[10px] font-black uppercase rounded bg-red-700 text-white transition-all";
                 cBtn.className = "flex-1 py-2 text-[10px] font-black uppercase text-gray-500 transition-all";
                 title.innerText = "Athlete Registration";
                 codeLabel.innerText = "Athlete Registration Code";
+                gradGroup.classList.remove('hidden');
             }
         };
 
@@ -162,8 +170,10 @@
             const email = document.getElementById('reg-email').value.trim();
             const pass = document.getElementById('reg-pass').value;
             const inputCode = document.getElementById('school-code').value.trim();
+            const gradYear = document.getElementById('reg-grad-year').value.trim(); // New
 
             if (!fullName || !email || !pass || !inputCode) return alert("All fields required.");
+            if (currentRole === 'player' && !gradYear) return alert("Please enter your graduation year.");
             if (!isAgreed) return alert("You must accept the Terms and Privacy Policy to register.");
             
             const signupBtn = document.getElementById('signup-btn');
@@ -191,6 +201,7 @@
                     email: email,
                     role: currentRole,
                     schoolId: schoolDoc.id,
+                    gradYear: currentRole === 'player' ? gradYear : null, // Save gradYear if player
                     createdAt: Date.now()
                 });
 
