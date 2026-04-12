@@ -106,55 +106,122 @@
         let isMaxOutMode = false;
         let userSchoolId = null;
         let editingWorkoutId = null;
+        let coachSchoolId = null;
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
+                // 1. Get the user's profile to find their school
                 const userDoc = await getDoc(doc(db, "users", user.uid));
+                
                 if (userDoc.exists()) {
-                    const data = userDoc.data();
-                    // DATA FIX: Check both schoolId naming variants
-                    userSchoolId = data.schoolId || data.school_id; 
-                    if (userSchoolId) await fetchTeamSettings(userSchoolId);
+                    const userData = userDoc.data();
+                    // 2. Assign the school ID to the global variable
+                    coachSchoolId = userData.schoolId || userData.school_id;
+                    
+                    // 3. Now it is safe to fetch settings
+                    fetchTeamSettings();
                 }
-                await fetchSupplements();
-                await loadHistory();
-                if (exercises.length === 0) addExerciseBlock(); 
             } else {
                 window.location.href = 'index.html';
             }
         });
 
-        async function fetchTeamSettings() {
+ async function fetchTeamSettings() {
     try {
         // Ensure we have the coach's school ID before fetching
         if (!coachSchoolId) {
-            console.error("No school ID found for this coach.");
+            console.warn("fetchTeamSettings called before coachSchoolId was set.");
             return;
         }
 
-        // Specifically fetch the settings for LONDON
+        // Specifically fetch the settings for the logged-in coach's school
         const settingsDoc = await getDoc(doc(db, "school_settings", coachSchoolId));
 
         if (settingsDoc.exists()) {
             const settings = settingsDoc.data();
-            console.log("Applying theme data for:", settings.name);
+            console.log("Applying team settings for:", settings.schoolName || coachSchoolId);
             
-            // This is the critical part: Filter the dropdown options
-            // based on what is stored in the 'activeLifts' array for London
+            // 1. Filter the dropdown options based on the school's activeLifts
             const activeLifts = settings.activeLifts || [];
-            updateCoreLiftDropdown(activeLifts);
+            if (activeLifts.length > 0) {
+                updateCoreLiftDropdown(activeLifts);
+            } else {
+                // Fallback if the array exists but is empty
+                updateCoreLiftDropdown(["BENCH", "SQUAT", "CLEAN"]);
+            }
             
-            // Apply other branding (Logo, Colors)
+            // 2. Apply branding (Logo, School Name in Header, Colors)
             applyTheme(settings);
+
         } else {
-            console.warn("No custom settings found for this school. Using defaults.");
-            // Optional: Provide default lifts if no settings exist
+            console.warn("No custom settings doc found for ID:", coachSchoolId);
+            // Default fallback for new schools
             updateCoreLiftDropdown(["BENCH", "SQUAT", "CLEAN", "DEADLIFT", "PUSH PRESS"]);
         }
     } catch (error) {
         console.error("Settings Error:", error);
     }
 }
+
+        /**
+         * Updates all core lift dropdowns in the UI to only show 
+         * the lifts enabled for this specific school.
+         */
+        function updateCoreLiftDropdown(lifts) {
+            // Select all dropdowns with the class 'core-lift-select'
+            const dropdowns = document.querySelectorAll('.core-lift-select');
+            
+            if (dropdowns.length === 0) return;
+
+            dropdowns.forEach(select => {
+                // Save the current selection if one exists
+                const currentVal = select.value;
+                select.innerHTML = ''; // Clear existing options
+                
+                // Add a default placeholder
+                const placeholder = document.createElement('option');
+                placeholder.value = "";
+                placeholder.textContent = "-- Select Lift --";
+                placeholder.disabled = true;
+                placeholder.selected = !currentVal;
+                select.appendChild(placeholder);
+
+                // Add the school-specific active lifts
+                lifts.forEach(lift => {
+                    const option = document.createElement('option');
+                    // Formats: "BENCH" -> "bench", "PUSH PRESS" -> "push_press"
+                    option.value = lift.toLowerCase().replace(/\s+/g, '_');
+                    option.textContent = lift.toUpperCase();
+                    select.appendChild(option);
+                });
+
+                // Restore value if the previously selected lift is still in the active list
+                if (currentVal) {
+                    select.value = currentVal;
+                }
+            });
+        }
+
+        /**
+         * Updates UI elements (Logo, Header Text) based on school settings
+         */
+        function applyTheme(settings) {
+            // Update Header School Name
+            const schoolNameDisplay = document.getElementById('header-school-name');
+            if (schoolNameDisplay) {
+                schoolNameDisplay.textContent = settings.schoolName || "RACKSTAT ATHLETICS";
+            }
+
+            // Update Header Logo
+            const logoDisplay = document.getElementById('header-logo');
+            if (logoDisplay && settings.logoUrl) {
+                logoDisplay.src = settings.logoUrl;
+                logoDisplay.classList.remove('hidden');
+            }
+            
+            // You can add logic here to update CSS variables for school colors
+            // document.documentElement.style.setProperty('--primary-color', settings.primaryColor);
+        }
 
         // Helper function to rebuild the dropdown list dynamically
         function updateCoreLiftDropdown(lifts) {
