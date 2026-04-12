@@ -226,38 +226,48 @@
     if (user) {
         console.log("✅ Auth Success:", user.uid);
         
-        // References for both collections
-        const userRef = doc(db, "users", user.uid);
-        const profileRef = doc(db, "recruiting_profiles", user.uid);
+        // --- TARGETING LOGIC ---
+        // Get the 'id' from the URL (e.g., profile.html?id=123)
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetUID = urlParams.get('id') || user.uid; 
+        
+        console.log("🎯 Targeting UID:", targetUID);
+
+        // References for the TARGETED athlete
+        const userRef = doc(db, "users", targetUID);
+        const profileRef = doc(db, "recruiting_profiles", targetUID);
         
         try {
-            // 1. FIRST: Get core user data for the school branding
+            // 1. FIRST: Get core user data for the target athlete's school branding
             const userSnap = await getDoc(userRef);
             if (userSnap.exists()) {
                 const userData = userSnap.data();
                 const schoolID = userData.school_id || userData.schoolId;
 
                 if (schoolID) {
-                    console.log("🏫 Branding found in 'users':", schoolID);
+                    console.log(`🏫 Branding for ${targetUID} found:`, schoolID);
                     await applyTheme(db, schoolID);
                 }
             } else {
-                console.warn("⚠️ No account found in 'users' collection.");
-                document.getElementById('school-name').innerText = "RACKSTAT ATHLETE";
+                console.warn("⚠️ Targeted user not found in 'users' collection.");
+                if (document.getElementById('school-name')) {
+                    document.getElementById('school-name').innerText = "RACKSTAT ATHLETE";
+                }
             }
 
-            // 2. SECOND: Get recruitment data for the form fields
+            // 2. SECOND: Get recruitment data for the targeted athlete
             const profileSnap = await getDoc(profileRef);
+            
+            // Map Form Fields helper
+            const safeSet = (id, val) => { 
+                const el = document.getElementById(id); 
+                if (el) el.value = val || ""; 
+            };
+
             if (profileSnap.exists()) {
                 const profileData = profileSnap.data();
-                console.log("📄 Recruiting Profile Data Found");
+                console.log("📄 Recruiting Profile Data Found for target");
 
-                // Map Form Fields
-                const safeSet = (id, val) => { 
-                    const el = document.getElementById(id); 
-                    if (el) el.value = val || ""; 
-                };
-                
                 safeSet('full-name', profileData.fullName);
                 safeSet('height', profileData.height);
                 safeSet('weight', profileData.weight);
@@ -274,12 +284,20 @@
                 safeSet('youtube-link', profileData.youtubeLink);
                 safeSet('other-link', profileData.otherLink);
 
-                // Handle Goals
+                // Handle Goals - passing targetUID to ensure goals save to the correct person
                 currentGoals = profileData.goals || [];
-                if (typeof renderGoals === "function") renderGoals(user.uid, currentGoals);
+                if (typeof renderGoals === "function") renderGoals(targetUID, currentGoals);
                 if (typeof syncGoalDisplay === "function") syncGoalDisplay(profileData);
             } else {
-                console.log("ℹ️ Athlete has not started a recruiting profile yet.");
+                console.log("ℹ️ This athlete has not started a recruiting profile yet.");
+                // Clear the fields so a coach doesn't see their own info accidentally
+                const fields = [
+                    'full-name', 'height', 'weight', 'off-primary', 'off-secondary', 
+                    'def-primary', 'def-secondary', 'gpa', 'sat', 'act', 
+                    'character-statement', 'hudl-link', 'twitter-link', 
+                    'youtube-link', 'other-link'
+                ];
+                fields.forEach(f => safeSet(f, ""));
             }
 
         } catch (err) {

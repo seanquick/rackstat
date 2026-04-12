@@ -12,7 +12,7 @@
     <style>
         /* Custom Overrides for Tabulator to match RACKSTAT RED */
         .tabulator { border: none !important; background-color: transparent !important; }
-        .tabulator-header { background-color: #111827 !important; border-bottom: 2px solid #ef4444 !important; }
+        .tabulator-header { background-color: #111827 !important; border-bottom: 2px solid var(--school-primary, #ef4444) !important; }
         .tabulator-row { background-color: #0d1117 !important; border-bottom: 1px solid #1f2937 !important; }
         .tabulator-row:hover { background-color: #1f2937 !important; }
         .tabulator-col-title { font-weight: 900 !important; letter-spacing: -0.025em !important; color: #9ca3af !important; }
@@ -20,12 +20,19 @@
 </head>
 <body class="bg-[#0d1117] text-white font-sans antialiased selection:bg-red-500/30">
 
-    <header class="p-6 flex justify-between items-center border-b border-gray-800 bg-[#0d1117]/80 backdrop-blur-md sticky top-0 z-50">
+    <header class="p-4 flex justify-between items-center border-b border-gray-800 bg-[#0d1117]/80 backdrop-blur-md sticky top-0 z-50">
         <div class="flex items-center gap-6">
-            <a href="coach-lobby.html" class="group flex items-center gap-2 text-xs font-black tracking-widest uppercase text-gray-500 hover:text-white transition-all">
+            <a href="coach-lobby.html" class="group flex items-center gap-2 text-[10px] font-black tracking-widest uppercase text-gray-500 hover:text-white transition-all">
                 <span class="group-hover:-translate-x-1 transition-transform">←</span> Office
             </a>
-            <h1 class="text-2xl font-black italic uppercase tracking-tighter text-red-600">Roster <span class="text-white">Manager</span></h1>
+            
+            <div class="flex items-center gap-4 border-l border-gray-800 pl-6">
+                <img id="school-logo" src="images/rackstat-logo.png" class="h-10 w-auto object-contain" alt="Logo" onerror="this.src='images/rackstat-logo.png'">
+                <div>
+                    <h1 class="text-lg font-black italic uppercase tracking-tighter leading-none text-white">Roster <span class="text-red-600">Manager</span></h1>
+                    <p id="school-name" class="text-[9px] font-black text-gray-500 uppercase tracking-widest mt-1">LOADING...</p>
+                </div>
+            </div>
         </div>
         <div class="flex gap-3">
             <span id="player-count" class="bg-red-600/10 border border-red-600/20 text-red-500 px-4 py-2 rounded-full text-[10px] font-black tracking-widest uppercase">0 ATHLETES ON FILE</span>
@@ -52,13 +59,12 @@
         </div>
     </main>
 
-    <script src="theme.js"></script>
-
     <script type="module">
         import { firebaseConfig } from './firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, deleteDoc, updateDoc, query, where, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { applyTheme } from './theme.js';
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -115,7 +121,8 @@
                     cellClick: function(e, cell) {
                         const rowData = cell.getRow().getData();
                         if (e.target.classList.contains('edit-btn')) {
-                            window.location.href = `recruiting-card.html?uid=${rowData.id}&edit=true`;
+                            // POINTING TO PROFILE.HTML WITH ID PARAMETER
+                            window.location.href = `profile.html?id=${rowData.id}`;
                         }
                         if (e.target.classList.contains('delete-btn')) {
                             handleDelete(rowData);
@@ -125,17 +132,27 @@
             ]
         });
 
-        async function loadRoster() {
+        async function loadRoster(schoolID) {
             try {
-                const snap = await getDocs(collection(db, "recruiting_profiles"));
-                const data = snap.docs.map(doc => ({ 
-                    id: doc.id, 
-                    ...doc.data(),
-                    nextLevelComplete: doc.data().nextLevelComplete || false 
+                // 1. Fetch athletes from 'users' collection who share the same schoolID
+                const q = query(collection(db, "users"), where("school_id", "==", schoolID), where("role", "==", "athlete"));
+                const userSnap = await getDocs(q);
+                
+                // 2. Map basic data and fetch their recruiting profiles
+                const athleteData = await Promise.all(userSnap.docs.map(async (userDoc) => {
+                    const profileDoc = await getDoc(doc(db, "recruiting_profiles", userDoc.id));
+                    const profileData = profileDoc.exists() ? profileDoc.data() : {};
+                    
+                    return {
+                        id: userDoc.id,
+                        fullName: userDoc.data().fullName || userDoc.data().firstName + " " + userDoc.data().lastName,
+                        gradYear: userDoc.data().gradYear || "N/A",
+                        ...profileData // Mix in recruiting specific data (positions, etc)
+                    };
                 }));
-                table.setData(data);
-                const countEl = document.getElementById('player-count');
-                if (countEl) countEl.innerText = `${data.length} ATHLETES ON FILE`;
+
+                table.setData(athleteData);
+                document.getElementById('player-count').innerText = `${athleteData.length} ATHLETES ON FILE`;
             } catch (err) {
                 console.error("Roster Load Error:", err);
             }
@@ -160,9 +177,21 @@
             searchInput.addEventListener("input", (e) => table.setFilter("fullName", "like", e.target.value));
         }
 
-        onAuthStateChanged(auth, (user) => {
-            if (user) loadRoster();
-            else window.location.href = 'index.html';
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const coachSnap = await getDoc(doc(db, "users", user.uid));
+                if (coachSnap.exists()) {
+                    const coachData = coachSnap.data();
+                    const sID = coachData.school_id || coachData.schoolId;
+                    
+                    if (sID) {
+                        await applyTheme(db, sID);
+                        loadRoster(sID);
+                    }
+                }
+            } else {
+                window.location.href = 'index.html';
+            }
         });
     </script>
 </body>
