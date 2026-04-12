@@ -868,45 +868,55 @@
         }
     };
 
-    window.deleteAthlete = async (athleteId, athleteName) => {
-        // 1. Initial Confirmation
-        const confirmed = confirm(`DANGER: You are about to PERMANENTLY delete ${athleteName}.\n\nThis will remove their profile and account. Proceed?`);
-        if (!confirmed) return;
+  window.deleteAthlete = async (athleteId, athleteName) => {
+        // 1. Name Verification Prompt
+        const typedName = prompt(`To confirm deletion, type the athlete's name (${athleteName.toUpperCase()}):`);
+        
+        if (typedName === null) return; // They hit cancel
+
+        if (typedName.trim().toLowerCase() !== athleteName.trim().toLowerCase()) {
+            alert("ERROR: Name mismatch. Deletion aborted.");
+            return;
+        }
+
+        // 2. Final Danger Confirmation
+        const finalConfirmed = confirm("LAST WARNING: This will permanently wipe all stats and the account. Proceed?");
+        if (!finalConfirmed) return;
 
         try {
-            // 2. Fetch the profile to check school ownership
+            console.log("Attempting deletion for UID:", athleteId);
+
+            // References
             const profileRef = doc(db, "recruiting_profiles", athleteId);
-            const userRef = doc(db, "users", athleteId); // Reference to the core user account
+            const userRef = doc(db, "users", athleteId);
             
+            // 3. Check if profile exists for security validation
             const athleteSnap = await getDoc(profileRef);
 
             if (!athleteSnap.exists()) {
-                // If the recruiting profile doesn't exist, we should still try to delete the user doc
-                // so they disappear from the roster.
+                console.warn("Recruiting profile missing, attempting to clean up user doc only.");
+                // If profile is missing, just try to delete the user doc so they leave the roster
                 await deleteDoc(userRef);
-                alert("Athlete removed from roster.");
-                location.reload();
-                return;
+            } else {
+                const athleteData = athleteSnap.data();
+
+                // 4. Security Validation
+                if (athleteData.school_id !== window.currentSchoolId && athleteData.schoolId !== window.currentSchoolId) {
+                    alert("PERMISSION DENIED: This athlete belongs to another school.");
+                    return;
+                }
+
+                // 5. Atomic Batch Deletion
+                const batch = writeBatch(db);
+                batch.delete(profileRef);
+                batch.delete(userRef);
+                await batch.commit();
             }
-
-            const athleteData = athleteSnap.data();
-
-            // 3. Security Validation
-            if (athleteData.school_id !== window.currentSchoolId) {
-                console.error("SECURITY ALERT: Unauthorized deletion attempt.");
-                alert("PERMISSION DENIED: You do not have authority over this athlete.");
-                return;
-            }
-
-            // 4. Execute Atomic Deletion (Delete both documents at once)
-            const batch = writeBatch(db);
-            batch.delete(profileRef);
-            batch.delete(userRef);
-            await batch.commit();
             
-            // 5. Success Feedback
-            alert(`${athleteName.toUpperCase()} has been fully removed.`);
+            // 6. Success Feedback
+            alert(`SUCCESS: ${athleteName.toUpperCase()} has been removed.`);
             
+            // Refresh
             if (window.currentSchoolId) {
                 loadRoster(window.currentSchoolId);
             } else {
@@ -914,8 +924,9 @@
             }
 
         } catch (error) {
-            console.error("Deletion Error:", error);
-            alert("CRITICAL ERROR: Could not complete deletion.");
+            // This will now tell you EXACTLY what went wrong (e.g., "writeBatch is not defined")
+            console.error("Deletion Error Details:", error);
+            alert(`CRITICAL ERROR: ${error.message}`);
         }
     };
         // --- MISSING FUNCTION: Generates the Set/Rep/Percent inputs ---
