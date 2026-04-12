@@ -104,21 +104,6 @@
             </div>
         </section>
 
-        <section class="bg-gray-900 border border-gray-700 p-8 rounded-xl">
-            <h2 class="text-2xl font-black text-white uppercase mb-2 italic">Roster Maintenance</h2>
-            <p class="text-gray-400 text-sm mb-6">Use this at the end of the season to advance all athletes to the next grade level.</p>
-            
-            <div class="bg-red-900/20 border border-red-900/50 p-4 rounded-lg flex justify-between items-center">
-                <div>
-                    <p class="text-red-500 font-bold uppercase text-xs">Danger Zone</p>
-                    <p class="text-gray-300 text-sm">Advance all athletes' Graduation Years by 1 year.</p>
-                </div>
-                <button onclick="bulkAdvanceGrades()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-black text-xs transition uppercase">
-                    Advance All Grades
-                </button>
-            </div>
-        </section>
-
         <div class="fixed bottom-0 left-0 right-0 p-6 bg-[#0d1117]/90 backdrop-blur-md border-t border-gray-800 flex justify-center z-50">
             <button onclick="saveAllSettings()" id="master-save-btn" class="bg-red-600 hover:bg-red-700 text-white px-16 py-4 rounded-full font-black uppercase tracking-widest transition-all shadow-lg hover:scale-105 active:scale-95">
                 Save All Changes
@@ -283,45 +268,7 @@
                 btn.disabled = false;
             }
         };
-
-        window.bulkAdvanceGrades = async () => {
-            if (!schoolID) return;
-            if (!confirm("Are you sure? This will increment the graduation year for EVERY athlete in YOUR school. This cannot be undone easily.")) return;
-            
-            try {
-                // SANDBOXED FETCH: Only get athletes for this coach's school
-                const q = query(
-                    collection(db, "recruiting_profiles"), 
-                    where("school_id", "==", schoolID),
-                    where("role", "==", "player")
-                );
-                
-                const snapshot = await getDocs(q);
-                const batch = writeBatch(db);
-                let count = 0;
-
-                snapshot.forEach((athleteDoc) => {
-                    const data = athleteDoc.data();
-                    const currentGrad = parseInt(data.gradYear);
-                    if (!isNaN(currentGrad)) {
-                        batch.update(athleteDoc.ref, { gradYear: (currentGrad + 1).toString() });
-                        count++;
-                    }
-                });
-
-                if (count > 0) {
-                    await batch.commit();
-                    alert(`Roster advanced! ${count} athletes updated.`);
-                    fetchPlayerCount();
-                } else {
-                    alert("No athletes found with valid graduation years.");
-                }
-
-            } catch (err) {
-                console.error("Bulk advance error:", err);
-                alert("Permission Denied: You do not have authority to bulk update these records.");
-            }
-        };
+        
     </script>
 </body>
 </html>
