@@ -6,6 +6,31 @@
     <title>Training Center | RACKSTAT</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* UI FIX: Contrast for Dropdown Menus */
+        select option {
+            background-color: #111827; /* Matches Tailwind gray-900 */
+            color: white;
+        }
+
+        /* UI FIX: Visibility for Delete (X) Buttons */
+        .remove-btn {
+            color: rgba(255, 255, 255, 0.3);
+            transition: all 0.2s ease;
+            opacity: 1 !important; /* Ensure it's not hidden */
+        }
+        
+        .remove-btn:hover {
+            color: #ef4444 !important; /* Bright red on hover */
+            transform: scale(1.2);
+        }
+
+        /* Fix for number input appearance in dark mode */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            filter: invert(1);
+        }
+    </style>
 </head>
 <body class="bg-[#0d1117] text-white font-sans antialiased min-h-screen pb-20">
 
@@ -39,8 +64,7 @@
             </div>
         </div>
 
-        <div id="exercises-container" class="space-y-4">
-            </div>
+        <div id="exercises-container" class="space-y-4"></div>
 
         <button id="add-exercise-btn" onclick="addExerciseBlock()" class="w-full py-6 border-2 border-dashed border-gray-800 text-gray-600 font-black uppercase text-xs tracking-[0.3em] rounded-2xl hover:border-red-600/50 hover:text-white hover:bg-red-600/5 transition-all">
             + Add Exercise Block
@@ -64,12 +88,12 @@
         </section>
     </main>
 
-    <script src="theme.js"></script>
+    <script type="module" src="theme.js"></script>
 
     <script type="module">
         import { firebaseConfig } from './firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc, getDoc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc, getDoc, updateDoc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const app = initializeApp(firebaseConfig);
@@ -87,7 +111,9 @@
             if (user) {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 if (userDoc.exists()) {
-                    userSchoolId = userDoc.data().school_id;
+                    const data = userDoc.data();
+                    // DATA FIX: Check both schoolId naming variants
+                    userSchoolId = data.schoolId || data.school_id; 
                     if (userSchoolId) await fetchTeamSettings(userSchoolId);
                 }
                 await fetchSupplements();
@@ -272,7 +298,7 @@
                     blockHtml += `<span class="flex-1 font-black text-red-600 uppercase italic text-sm tracking-widest">CIRCUIT BUILDER</span>`;
                 }
 
-                blockHtml += `<button onclick="removeExercise(${ex.id})" class="text-white/20 hover:text-red-600 transition-colors px-3 font-bold text-xl">✕</button></div></div>`;
+                blockHtml += `<button onclick="removeExercise(${ex.id})" class="remove-btn px-3 font-bold text-xl">✕</button></div></div>`;
 
                 if (ex.isCircuit && !isCore) {
                     blockHtml += `<div class="bg-black/40 border border-white/5 p-5 rounded-xl mb-4 space-y-4">`;
@@ -281,7 +307,7 @@
                             <div class="flex gap-3 items-center">
                                 <span class="text-white/20 text-[10px] font-black italic">0${cIdx + 1}</span>
                                 <input type="text" value="${cEx}" onchange="updateCircuitExercise(${ex.id}, ${cIdx}, this.value)" placeholder="MOVEMENT" class="flex-1 bg-black border border-white/10 rounded-lg px-4 py-3 text-xs font-black text-white uppercase outline-none focus:border-red-600 transition-all">
-                                ${cIdx > 0 ? `<button onclick="removeCircuitExercise(${ex.id}, ${cIdx})" class="text-red-600 px-3 font-black text-lg">✕</button>` : `<div class="w-10"></div>`}
+                                ${cIdx > 0 ? `<button onclick="removeCircuitExercise(${ex.id}, ${cIdx})" class="remove-btn px-3 font-black text-lg">✕</button>` : `<div class="w-10"></div>`}
                             </div>
                         `;
                     });
@@ -303,7 +329,7 @@
                                     <input type="number" placeholder="REPS" value="${set.reps || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'reps', this.value)" class="w-full bg-black border border-white/10 rounded-lg py-3 text-sm font-black text-center text-white outline-none focus:border-red-600 transition-all">
                                     ${isCore ? `<input type="number" placeholder="% MAX" value="${set.pct || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'pct', this.value)" class="w-full bg-black border border-white/10 rounded-lg py-3 text-sm font-black text-center text-red-600 outline-none focus:border-red-600 transition-all">` : '<div></div>'}
                                 </div>
-                                <button onclick="removeSet(${ex.id}, ${sIndex})" class="text-white/10 hover:text-red-600 transition-colors font-bold opacity-0 group-hover:opacity-100 px-2">✕</button>
+                                <button onclick="removeSet(${ex.id}, ${sIndex})" class="remove-btn font-bold px-2">✕</button>
                             </div>`;
                     });
                     blockHtml += `
@@ -321,8 +347,14 @@
             const nameInput = document.getElementById('workout-name');
             const saveBtn = document.getElementById('save-workout-btn');
 
+            // DATA FIX: Ensure school ID is present before saving
+            if (!userSchoolId) {
+                alert("CRITICAL ERROR: School Profile not loaded. Try refreshing.");
+                return;
+            }
+
             if (!dateInput.value || !nameInput.value) {
-                alert("SYTEM ERROR: Date and Name required for upload.");
+                alert("SYSTEM ERROR: Date and Name required for upload.");
                 return;
             }
 
@@ -334,23 +366,24 @@
                 const workoutData = {
                     date: dateInput.value,
                     name: nameInput.value.toUpperCase(),
-                    school_id: userSchoolId,
+                    school_id: userSchoolId, // Matches standard rules
                     isMaxOutMode: isMaxOutMode,
                     exercises: exercises,
-                    updatedAt: new Date()
+                    updatedAt: serverTimestamp()
                 };
 
                 if (editingWorkoutId) {
                     await updateDoc(doc(db, "workouts", editingWorkoutId), workoutData);
                 } else {
-                    workoutData.createdAt = new Date();
+                    workoutData.createdAt = serverTimestamp();
                     await addDoc(collection(db, "workouts"), workoutData);
                 }
 
                 alert("SYNC COMPLETE: Training data saved.");
                 window.location.reload();
             } catch (err) {
-                console.error(err);
+                console.error("Save Error:", err);
+                alert("SAVE FAILED: Check console for permissions details.");
                 saveBtn.innerText = originalText;
                 saveBtn.disabled = false;
             }
@@ -374,7 +407,7 @@
 
             docs.forEach(workout => {
                 const item = document.createElement('div');
-                item.className = "bg-gray-900/60 p-5 rounded-xl border border-white/5 flex flex-col sm:row justify-between items-start sm:items-center gap-6 hover:border-red-600/40 transition-all group";
+                item.className = "bg-gray-900/60 p-5 rounded-xl border border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 hover:border-red-600/40 transition-all group";
                 item.innerHTML = `
                     <div class="flex flex-col">
                         <span class="text-red-600 font-black text-[10px] uppercase tracking-widest italic leading-none mb-1">${workout.date}</span>
@@ -400,14 +433,13 @@
                 exercises = data.exercises;
                 isMaxOutMode = data.isMaxOutMode || false;
                 
-                // Set UI state for toggle
                 const bg = document.getElementById('max-out-indicator');
                 const knob = document.getElementById('max-out-knob');
                 if (isMaxOutMode) {
-                    bg.classList.add('bg-red-600');
+                    bg.classList.replace('bg-gray-700', 'bg-red-600');
                     knob.classList.add('translate-x-6');
                 } else {
-                    bg.classList.remove('bg-red-600');
+                    bg.classList.replace('bg-red-600', 'bg-gray-700');
                     knob.classList.remove('translate-x-6');
                 }
 
