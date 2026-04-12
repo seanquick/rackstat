@@ -17,40 +17,48 @@ export async function applyTheme(db, schoolID) {
             const colors = data.colors || {};
             const root = document.documentElement;
 
-            // 1. Update CSS Variables for colors
-            root.style.setProperty('--school-primary', colors.primary || '#b91c1c');
+            console.log("🎨 Applying theme data:", data);
+
+            // 1. Update CSS Variables
+            // We update --rackstat-red because that's what your profile.html uses for buttons/borders
+            const primaryColor = colors.primary || '#b91c1c';
+            root.style.setProperty('--school-primary', primaryColor);
+            root.style.setProperty('--rackstat-red', primaryColor); 
+            
             root.style.setProperty('--school-secondary', colors.secondary || '#0a0a0b');
 
             // 2. Update all logo instances
             if (data.logo_url) {
+                // Expanded selector to catch your #school-logo ID
                 const logos = document.querySelectorAll('#school-logo, #school-logo-alt, .school-logo-primary, .school-logo-secondary');
+                
                 logos.forEach(img => {
-                    // Check if it's a full URL or just a filename
                     const finalPath = data.logo_url.startsWith('http') || data.logo_url.startsWith('images/') 
                         ? data.logo_url 
                         : `images/${data.logo_url}`;
                         
+                    console.log("🖼️ Setting logo path to:", finalPath);
                     img.src = finalPath;
-                    // Make sure it's visible if it was previously hidden by an error
                     img.style.display = 'block'; 
                 });
             }
 
-            // 3. Update school name/tags
+            // 3. Update school name
             if (data.name) {
-                // This now looks for our new tag (#school-tag) AND the old name class
-                const nameElements = document.querySelectorAll('#school-tag, .school-name');
+                // FIX: Added #school-name to the selector to match your profile.html header
+                const nameElements = document.querySelectorAll('#school-name, #school-tag, .school-name');
                 nameElements.forEach(el => {
                     el.innerText = data.name.toUpperCase();
                 });
             }
             
-            console.log(`Theme applied: ${data.name || schoolID}`);
+            console.log(`✅ Theme successfully applied: ${data.name || schoolID}`);
+        } else {
+            console.error(`❌ School document "${schoolID}" not found in 'schools' collection.`);
         }
     } catch (error) {
-        console.error("Error applying theme:", error);
+        console.error("❌ Error in theme engine:", error);
     } finally {
-        // Reveal branding if using the fade-in utility
         const branding = document.getElementById('school-branding');
         if (branding) branding.classList.add('theme-loaded');
     }
