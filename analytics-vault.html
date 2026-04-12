@@ -25,7 +25,7 @@
     <main class="max-w-7xl mx-auto px-6 py-12">
         <div class="mb-8">
             <h2 class="text-3xl font-bold">Team Performance Data</h2>
-            <p class="text-gray-400">View weight room maxes and individual meal entries.</p>
+            <p class="text-gray-400">View weight room maxes and individual meal entries for your school.</p>
         </div>
 
         <div class="flex gap-2">
@@ -48,13 +48,14 @@
         import { firebaseConfig } from './firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, getDocs, doc, getDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, getDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
         let currentTab = 'rack';
+        let coachSchoolId = null;
 
         // --- Helper: Safe Date Formatting ---
         const formatFirebaseDate = (timestamp) => {
@@ -66,10 +67,10 @@
         // --- Column Definitions ---
         const rackColumns = [
             {title: "Athlete", field: "name", widthGrow: 2, headerFilter: "input"},
-            {title: "Lift Date", field: "dateGroup", width: 150, headerFilter: "input"}, // Filter by "October 2026"
+            {title: "Lift Date", field: "dateGroup", width: 150, headerFilter: "input"},
             {title: "Body Weight", field: "bodyWeight"},
-            {title: "Off.", field: "offPos", width: 80, headerFilter: "input"}, // Filter by "QB", "WR", etc.
-            {title: "Def.", field: "defPos", width: 80, headerFilter: "input"}, // Filter by "LB", "DB", etc.
+            {title: "Off.", field: "offPos", width: 80, headerFilter: "input"},
+            {title: "Def.", field: "defPos", width: 80, headerFilter: "input"},
             {
                 title: "Grad", 
                 field: "grad", 
@@ -78,7 +79,6 @@
                 headerFilter: "list", 
                 headerFilterParams: {valuesLookup: "data", clearable: true}
             },
-            
             {title: "Bench", field: "bench", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--"},
             {title: "Squat", field: "squat", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--"},
             {title: "Clean", field: "clean", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--"},
@@ -89,13 +89,13 @@
         const kitchenColumns = [
             {title: "Athlete", field: "name", widthGrow: 2, headerFilter: "input"},
             {title: "Date", field: "dateGroup", width: 150},
-            {title: "Body Weight", field: "bodyWeight"}, // Added missing comma
+            {title: "Body Weight", field: "bodyWeight"},
             {title: "Grad", field: "grad", width: 80},
             {
                 title: "Meal", 
                 field: "mealType", 
                 width: 120, 
-                headerFilter: "list", // Modernized from 'select'
+                headerFilter: "list",
                 headerFilterParams: {
                     values: ["Breakfast", "Lunch", "Dinner", "Snack/Shake"],
                     clearable: true
@@ -119,6 +119,14 @@
             if (user) {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 if (userDoc.exists() && userDoc.data().role === 'coach') {
+                    // Capture the coach's school ID to filter data
+                    const userData = userDoc.data();
+                    coachSchoolId = userData.schoolId || userData.school_id;
+                    
+                    if (!coachSchoolId) {
+                        console.error("Coach has no assigned school ID.");
+                        return;
+                    }
                     loadData('rack');
                 } else { window.location.href = 'index.html'; }
             } else { window.location.href = 'index.html'; }
@@ -142,11 +150,18 @@
         };
 
         async function loadData(type) {
+            if (!coachSchoolId) return;
             table.clearData();
             const tableData = [];
             
             try {
-                const athletesSnap = await getDocs(collection(db, "recruiting_profiles"));
+                // ADDED FILTER: Only fetch athletes belonging to the coach's school
+                const athletesQuery = query(
+                    collection(db, "recruiting_profiles"), 
+                    where("schoolId", "==", coachSchoolId)
+                );
+                
+                const athletesSnap = await getDocs(athletesQuery);
                 
                 const dataPromises = athletesSnap.docs.map(async (athleteDoc) => {
                     const d = athleteDoc.data();
@@ -156,23 +171,22 @@
                     subSnap.forEach((subDoc) => {
                         const s = subDoc.data();
                         
-                        // Base fields common to both table structures
                         const row = {
                             name: d.fullName || "Unnamed",
                             grad: d.gradYear || "--",
                             offPos: d.offPrimary || "--",
                             defPos: d.defPrimary || "--",
-                            bodyWeight: s.bodyWeight || s.body_weight || "--", // Supports both camelCase and snake_case
+                            bodyWeight: s.bodyWeight || s.body_weight || "--",
                             dateGroup: formatFirebaseDate(s.timestamp)
                         };
 
                         if (type === 'rack') {
                             Object.assign(row, {
-                            bench: s.bench_press || s.benchMax || s.bench || 0, 
-                            squat: s.squat || 0,
-                            clean: s.clean || 0,
-                            deadlift: s.deadlift || 0,
-                            pushPress: s.push_press || s.pushPress || 0
+                                bench: s.bench_press || s.benchMax || s.bench || 0, 
+                                squat: s.squat || 0,
+                                clean: s.clean || 0,
+                                deadlift: s.deadlift || 0,
+                                pushPress: s.push_press || s.pushPress || 0
                             });
                         } else {
                             Object.assign(row, {
@@ -188,17 +202,14 @@
                 });
 
                 await Promise.all(dataPromises);
+                
+                table.setData(tableData).then(() => {
+                    table.refreshFilter(); 
+                });
                         
-                        // setData returns a promise; we use .then to trigger a filter refresh
-                        table.setData(tableData).then(() => {
-                            // This ensures the Grad Year and Meal Type dropdowns 
-                            // actually show the years/meals found in your data.
-                            table.refreshFilter(); 
-                        });
-                        
-                    } catch (err) {
-                        console.error("Data Load Error:", err);
-                    }
+            } catch (err) {
+                console.error("Data Load Error:", err);
+            }
         }
 
         window.downloadCSV = () => {
