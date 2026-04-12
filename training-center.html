@@ -124,13 +124,55 @@
             }
         });
 
-        async function fetchTeamSettings(schoolId) {
-            try {
-                const settingsSnap = await getDoc(doc(db, "school_settings", schoolId));
-                if (settingsSnap.exists() && settingsSnap.data().trackedCoreLifts?.length > 0) {
-                    coreLifts = settingsSnap.data().trackedCoreLifts;
-                }
-            } catch (err) { console.error("Settings Error:", err); }
+        async function fetchTeamSettings() {
+    try {
+        // Ensure we have the coach's school ID before fetching
+        if (!coachSchoolId) {
+            console.error("No school ID found for this coach.");
+            return;
+        }
+
+        // Specifically fetch the settings for LONDON
+        const settingsDoc = await getDoc(doc(db, "school_settings", coachSchoolId));
+
+        if (settingsDoc.exists()) {
+            const settings = settingsDoc.data();
+            console.log("Applying theme data for:", settings.name);
+            
+            // This is the critical part: Filter the dropdown options
+            // based on what is stored in the 'activeLifts' array for London
+            const activeLifts = settings.activeLifts || [];
+            updateCoreLiftDropdown(activeLifts);
+            
+            // Apply other branding (Logo, Colors)
+            applyTheme(settings);
+        } else {
+            console.warn("No custom settings found for this school. Using defaults.");
+            // Optional: Provide default lifts if no settings exist
+            updateCoreLiftDropdown(["BENCH", "SQUAT", "CLEAN", "DEADLIFT", "PUSH PRESS"]);
+        }
+    } catch (error) {
+        console.error("Settings Error:", error);
+    }
+}
+
+        // Helper function to rebuild the dropdown list dynamically
+        function updateCoreLiftDropdown(lifts) {
+            // Select your dropdown elements (adjust the selector to match your HTML)
+            const dropdowns = document.querySelectorAll('.core-lift-select');
+            
+            dropdowns.forEach(select => {
+                // Clear existing options
+                select.innerHTML = '';
+                
+                // Add only the active lifts selected in London's settings
+                lifts.forEach(lift => {
+                    const option = document.createElement('option');
+                    option.value = lift.toLowerCase().replace(" ", "_");
+                    option.textContent = lift.toUpperCase();
+                    select.appendChild(option);
+                });
+            });
         }
 
         async function fetchSupplements() {
