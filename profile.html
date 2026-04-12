@@ -74,6 +74,18 @@
         }
         .btn-primary:hover { background: #dc2626; transform: scale(1.01); }
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* School Logo sizing for header */
+        #school-logo {
+            height: 40px;
+            width: auto;
+            object-fit: contain;
+        }
+        .rackstat-logo-large {
+            height: 32px;
+            width: auto;
+            object-fit: contain;
+        }
     </style>
 </head>
 <body class="pb-24">
@@ -92,7 +104,6 @@
                 <img id="school-logo" 
                      src="images/rackstat-logo.png" 
                      alt="School Logo" 
-                     class="school-logo-large" 
                      onerror="this.src='images/rackstat-logo.png'">
             </div>
 
@@ -266,88 +277,80 @@
     
     let currentGoals = [];
 
-   onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        const profileRef = doc(db, "recruiting_profiles", user.uid);
-        const maxesRef = doc(db, "recruiting_profiles", user.uid, "maxes", "latest");
-        
-        try {
-            const [snap, maxSnap] = await Promise.all([getDoc(profileRef), getDoc(maxesRef)]);
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const profileRef = doc(db, "recruiting_profiles", user.uid);
+            const maxesRef = doc(db, "recruiting_profiles", user.uid, "maxes", "latest");
+            
+            try {
+                const [snap, maxSnap] = await Promise.all([getDoc(profileRef), getDoc(maxesRef)]);
 
-            if(snap.exists()) {
-                const data = snap.data();
-                const maxData = maxSnap.exists() ? maxSnap.data() : {};
-                const combinedData = { ...data, ...maxData };
+                if(snap.exists()) {
+                    const data = snap.data();
+                    const maxData = maxSnap.exists() ? maxSnap.data() : {};
+                    const combinedData = { ...data, ...maxData };
 
-                // 1. Theme Engine Logic
-                const schoolID = data.school_id || data.schoolId;
-                
-                // Debug log to confirm Firestore is providing the ID
-                console.log("Found School ID:", schoolID);
-
-                if (schoolID) {
-                    // applyTheme updates id="school-name" and id="school-logo"
-                    await applyTheme(db, schoolID);
+                    // 1. Theme Engine Logic
+                    const schoolID = data.school_id || data.schoolId;
                     
-                    // Fetch additional school preferences for recruiting visibility
-                    const schoolSnap = await getDoc(doc(db, "schools", schoolID));
-                    if(schoolSnap.exists()){
-                        const sData = schoolSnap.data();
-                        const viewCardBtn = document.getElementById('btn-view-card');
+                    if (schoolID) {
+                        // This updates id="school-name" and id="school-logo" automatically
+                        await applyTheme(db, schoolID);
                         
-                        // Hide view card button if school has disabled recruiting cards
-                        if (viewCardBtn && sData.hasRecruitingCard === false) {
-                            viewCardBtn.classList.add('hidden');
+                        const schoolSnap = await getDoc(doc(db, "schools", schoolID));
+                        if(schoolSnap.exists()){
+                            const sData = schoolSnap.data();
+                            const viewCardBtn = document.getElementById('btn-view-card');
+                            
+                            if (viewCardBtn && sData.hasRecruitingCard === false) {
+                                viewCardBtn.classList.add('hidden');
+                            }
+                            
+                            const select = document.getElementById('goal-category');
+                            if(select) {
+                                const lifts = sData.trackedLifts || ['bench', 'squat', 'clean'];
+                                select.innerHTML = lifts.map(l => `<option value="${l}">${l.replace('_', ' ').toUpperCase()}</option>`).join('');
+                            }
                         }
-                        
-                        // Set custom lift categories for the goal modal
-                        const select = document.getElementById('goal-category');
-                        if(select) {
-                            const lifts = sData.trackedLifts || ['bench', 'squat', 'clean'];
-                            select.innerHTML = lifts.map(l => `<option value="${l}">${l.replace('_', ' ').toUpperCase()}</option>`).join('');
-                        }
+                    } else {
+                        const nameDisplay = document.getElementById('school-name');
+                        if (nameDisplay) nameDisplay.innerText = "INDEPENDENT ATHLETE";
                     }
-                } else {
-                    // Fallback if no school is linked to this athlete
-                    const nameDisplay = document.getElementById('school-name');
-                    if (nameDisplay) nameDisplay.innerText = "INDEPENDENT ATHLETE";
+
+                    // 2. Map Form Fields
+                    const safeSet = (id, val) => { 
+                        const el = document.getElementById(id); 
+                        if(el) el.value = val || ""; 
+                    };
+                    
+                    safeSet('full-name', data.fullName);
+                    safeSet('off-primary', data.offPrimary);
+                    safeSet('off-secondary', data.offSecondary);
+                    safeSet('def-primary', data.defPrimary);
+                    safeSet('def-secondary', data.defSecondary);
+                    safeSet('height', data.height);
+                    safeSet('weight', combinedData.body_weight || combinedData.bodyWeight || data.weight || '');
+                    safeSet('gpa', data.gpa);
+                    safeSet('sat', data.sat);
+                    safeSet('act', data.act);
+                    safeSet('character-statement', data.statement);
+                    safeSet('hudl-link', data.hudlLink);
+                    safeSet('twitter-link', data.twitterLink);
+                    safeSet('youtube-link', data.youtubeLink);
+                    safeSet('other-link', data.otherLink);
+
+                    // 3. Render Goals and Progress
+                    currentGoals = data.goals || [];
+                    renderGoals(user.uid, currentGoals);
+                    syncGoalDisplay(combinedData); 
                 }
-
-                // 2. Map Form Fields
-                const safeSet = (id, val) => { 
-                    const el = document.getElementById(id); 
-                    if(el) el.value = val || ""; 
-                };
-                
-                safeSet('full-name', data.fullName);
-                safeSet('off-primary', data.offPrimary);
-                safeSet('off-secondary', data.offSecondary);
-                safeSet('def-primary', data.defPrimary);
-                safeSet('def-secondary', data.defSecondary);
-                safeSet('height', data.height);
-                safeSet('weight', combinedData.body_weight || combinedData.bodyWeight || data.weight || '');
-                safeSet('gpa', data.gpa);
-                safeSet('sat', data.sat);
-                safeSet('act', data.act);
-                safeSet('character-statement', data.statement);
-                safeSet('hudl-link', data.hudlLink);
-                safeSet('twitter-link', data.twitterLink);
-                safeSet('youtube-link', data.youtubeLink);
-                safeSet('other-link', data.otherLink);
-
-                // 3. Render Goals and Progress
-                currentGoals = data.goals || [];
-                renderGoals(user.uid, currentGoals);
-                syncGoalDisplay(combinedData); 
+            } catch (err) {
+                console.error("Error loading profile:", err);
             }
-        } catch (err) {
-            console.error("Error loading profile:", err);
+        } else { 
+            window.location.href = 'index.html'; 
         }
-    } else { 
-        // Redirect to login/lobby if not authenticated
-        window.location.href = 'index.html'; 
-    }
-});
+    });
 
     async function renderGoals(uid, goals) {
         const container = document.getElementById('goals-container');
