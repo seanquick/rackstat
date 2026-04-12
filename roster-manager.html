@@ -134,27 +134,51 @@
 
         async function loadRoster(schoolID) {
             try {
-                // 1. Fetch athletes from 'users' collection who share the same schoolID
-                const q = query(collection(db, "users"), where("school_id", "==", schoolID), where("role", "==", "athlete"));
-                const userSnap = await getDocs(q);
+                console.log("🚀 Fetching roster for schoolID:", schoolID);
+
+                // 1. Fetch from 'users' where schoolId matches and role is 'player'
+                // Matching your Firestore screenshot: schoolId (no underscore) and role: player
+                const q = query(
+                    collection(db, "users"), 
+                    where("schoolId", "==", schoolID), 
+                    where("role", "==", "player")
+                );
                 
+                const userSnap = await getDocs(q);
+                console.log(`📊 Found ${userSnap.size} matching users in Firestore`);
+
                 // 2. Map basic data and fetch their recruiting profiles
                 const athleteData = await Promise.all(userSnap.docs.map(async (userDoc) => {
+                    const userData = userDoc.data();
                     const profileDoc = await getDoc(doc(db, "recruiting_profiles", userDoc.id));
                     const profileData = profileDoc.exists() ? profileDoc.data() : {};
                     
+                    // Build the name: Use fullName field if it exists, otherwise combine first and last
+                    const calculatedName = userData.fullName || 
+                                        ((userData.firstName || "") + " " + (userData.lastName || "")).trim() || 
+                                        "Unnamed Player";
+
                     return {
                         id: userDoc.id,
-                        fullName: userDoc.data().fullName || userDoc.data().firstName + " " + userDoc.data().lastName,
-                        gradYear: userDoc.data().gradYear || "N/A",
-                        ...profileData // Mix in recruiting specific data (positions, etc)
+                        fullName: calculatedName,
+                        gradYear: userData.gradYear || "N/A",
+                        offPrimary: profileData.offPrimary || userData.offPrimary || "-",
+                        defPrimary: profileData.defPrimary || userData.defPrimary || "-",
+                        nextLevelComplete: profileData.nextLevelComplete || false,
+                        ...profileData // Spread remaining profile data
                     };
                 }));
 
+                // 3. Update the Tabulator table
                 table.setData(athleteData);
-                document.getElementById('player-count').innerText = `${athleteData.length} ATHLETES ON FILE`;
+                
+                const countEl = document.getElementById('player-count');
+                if (countEl) {
+                    countEl.innerText = `${athleteData.length} ATHLETES ON FILE`;
+                }
+
             } catch (err) {
-                console.error("Roster Load Error:", err);
+                console.error("❌ Roster Load Error:", err);
             }
         }
 
