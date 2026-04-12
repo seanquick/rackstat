@@ -100,85 +100,64 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        let coreLifts = ["Bench Press", "Squat", "Power Clean", "Deadlift", "Push Press"];
+        // GLOBAL STATE
+        let coreLifts = ["BENCH", "SQUAT", "CLEAN"]; // Default fallback
         let supplementLibrary = []; 
         let exercises = [];
         let isMaxOutMode = false;
-        let userSchoolId = null;
+        let userSchoolId = null; // Used for saving/history
         let editingWorkoutId = null;
-        let coachSchoolId = null;
+        let coachSchoolId = null; // Used for settings/theme
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // 1. Get the user's profile to find their school
                 const userDoc = await getDoc(doc(db, "users", user.uid));
-                
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
-                    // 2. Assign the school ID to the global variable
+                    // Sync both IDs to ensure history and settings both work
                     coachSchoolId = userData.schoolId || userData.school_id;
+                    userSchoolId = coachSchoolId; 
                     
-                    // 3. Now it is safe to fetch settings
-                    fetchTeamSettings();
+                    await fetchSupplements();
+                    await fetchTeamSettings();
+                    loadHistory();
                 }
             } else {
                 window.location.href = 'index.html';
             }
         });
 
- async function fetchTeamSettings() {
-    try {
-        // Ensure we have the coach's school ID before fetching
-        if (!coachSchoolId) {
-            console.warn("fetchTeamSettings called before coachSchoolId was set.");
-            return;
-        }
+        async function fetchTeamSettings() {
+            try {
+                if (!coachSchoolId) return;
 
-        // Specifically fetch the settings for the logged-in coach's school
-        const settingsDoc = await getDoc(doc(db, "school_settings", coachSchoolId));
+                const settingsDoc = await getDoc(doc(db, "school_settings", coachSchoolId));
 
-        if (settingsDoc.exists()) {
-            const settings = settingsDoc.data();
-            console.log("Applying team settings for:", settings.schoolName || coachSchoolId);
-            
-            // 1. Filter the dropdown options based on the school's activeLifts
-            const activeLifts = settings.activeLifts || [];
-            if (activeLifts.length > 0) {
-                updateCoreLiftDropdown(activeLifts);
-            } else {
-                // Fallback if the array exists but is empty
-                updateCoreLiftDropdown(["BENCH", "SQUAT", "CLEAN"]);
+                if (settingsDoc.exists()) {
+                    const settings = settingsDoc.data();
+                    
+                    // 1. Update the global lift array with school-specific lifts
+                    if (settings.activeLifts && settings.activeLifts.length > 0) {
+                        coreLifts = settings.activeLifts;
+                    }
+                    
+                    // 2. Apply UI branding
+                    applyTheme(settings);
+                    
+                    // 3. Update existing UI dropdowns
+                    updateCoreLiftDropdown(coreLifts);
+                }
+            } catch (error) {
+                console.error("Settings Error:", error);
             }
-            
-            // 2. Apply branding (Logo, School Name in Header, Colors)
-            applyTheme(settings);
-
-        } else {
-            console.warn("No custom settings doc found for ID:", coachSchoolId);
-            // Default fallback for new schools
-            updateCoreLiftDropdown(["BENCH", "SQUAT", "CLEAN", "DEADLIFT", "PUSH PRESS"]);
         }
-    } catch (error) {
-        console.error("Settings Error:", error);
-    }
-}
 
-        /**
-         * Updates all core lift dropdowns in the UI to only show 
-         * the lifts enabled for this specific school.
-         */
         function updateCoreLiftDropdown(lifts) {
-            // Select all dropdowns with the class 'core-lift-select'
             const dropdowns = document.querySelectorAll('.core-lift-select');
-            
-            if (dropdowns.length === 0) return;
-
             dropdowns.forEach(select => {
-                // Save the current selection if one exists
                 const currentVal = select.value;
-                select.innerHTML = ''; // Clear existing options
+                select.innerHTML = '';
                 
-                // Add a default placeholder
                 const placeholder = document.createElement('option');
                 placeholder.value = "";
                 placeholder.textContent = "-- Select Lift --";
@@ -186,60 +165,27 @@
                 placeholder.selected = !currentVal;
                 select.appendChild(placeholder);
 
-                // Add the school-specific active lifts
                 lifts.forEach(lift => {
                     const option = document.createElement('option');
-                    // Formats: "BENCH" -> "bench", "PUSH PRESS" -> "push_press"
-                    option.value = lift.toLowerCase().replace(/\s+/g, '_');
+                    option.value = lift; // Keep original case for logic
                     option.textContent = lift.toUpperCase();
                     select.appendChild(option);
                 });
 
-                // Restore value if the previously selected lift is still in the active list
-                if (currentVal) {
-                    select.value = currentVal;
-                }
+                if (currentVal) select.value = currentVal;
             });
         }
 
-        /**
-         * Updates UI elements (Logo, Header Text) based on school settings
-         */
         function applyTheme(settings) {
-            // Update Header School Name
             const schoolNameDisplay = document.getElementById('header-school-name');
             if (schoolNameDisplay) {
                 schoolNameDisplay.textContent = settings.schoolName || "RACKSTAT ATHLETICS";
             }
-
-            // Update Header Logo
             const logoDisplay = document.getElementById('header-logo');
             if (logoDisplay && settings.logoUrl) {
                 logoDisplay.src = settings.logoUrl;
                 logoDisplay.classList.remove('hidden');
             }
-            
-            // You can add logic here to update CSS variables for school colors
-            // document.documentElement.style.setProperty('--primary-color', settings.primaryColor);
-        }
-
-        // Helper function to rebuild the dropdown list dynamically
-        function updateCoreLiftDropdown(lifts) {
-            // Select your dropdown elements (adjust the selector to match your HTML)
-            const dropdowns = document.querySelectorAll('.core-lift-select');
-            
-            dropdowns.forEach(select => {
-                // Clear existing options
-                select.innerHTML = '';
-                
-                // Add only the active lifts selected in London's settings
-                lifts.forEach(lift => {
-                    const option = document.createElement('option');
-                    option.value = lift.toLowerCase().replace(" ", "_");
-                    option.textContent = lift.toUpperCase();
-                    select.appendChild(option);
-                });
-            });
         }
 
         async function fetchSupplements() {
@@ -259,6 +205,7 @@
                 bg.classList.replace('bg-gray-700', 'bg-red-600');
                 knob.classList.add('translate-x-6');
                 addBtn?.classList.add('hidden');
+                // Now uses the updated coreLifts array
                 exercises = coreLifts.map(lift => ({
                     id: Date.now() + Math.random(),
                     category: 'core',
@@ -338,7 +285,7 @@
                 renderExercises();
             }
         };
-        
+
         window.updateSet = (exId, setIndex, field, value) => {
             const ex = exercises.find(e => e.id === exId);
             if (ex && ex.sets[setIndex]) ex.sets[setIndex][field] = value;
@@ -395,8 +342,9 @@
                 }
 
                 if (isCore) {
+                    // UPDATED: Dynamically uses the current coreLifts array
                     const options = coreLifts.map(l => `<option value="${l}" ${ex.name === l ? 'selected' : ''}>${l}</option>`).join('');
-                    blockHtml += `<select onchange="updateExercise(${ex.id}, 'name', this.value)" class="flex-1 bg-transparent border-b-2 border-white/10 focus:border-red-600 outline-none text-white font-black uppercase text-lg px-2 transition-all">${options}</select>`;
+                    blockHtml += `<select onchange="updateExercise(${ex.id}, 'name', this.value)" class="core-lift-select flex-1 bg-transparent border-b-2 border-white/10 focus:border-red-600 outline-none text-white font-black uppercase text-lg px-2 transition-all">${options}</select>`;
                 } else if (!ex.isCircuit) {
                     const dlId = `list-${ex.id}`;
                     blockHtml += `
@@ -456,7 +404,6 @@
             const nameInput = document.getElementById('workout-name');
             const saveBtn = document.getElementById('save-workout-btn');
 
-            // DATA FIX: Ensure school ID is present before saving
             if (!userSchoolId) {
                 alert("CRITICAL ERROR: School Profile not loaded. Try refreshing.");
                 return;
@@ -475,7 +422,7 @@
                 const workoutData = {
                     date: dateInput.value,
                     name: nameInput.value.toUpperCase(),
-                    school_id: userSchoolId, // Matches standard rules
+                    school_id: userSchoolId,
                     isMaxOutMode: isMaxOutMode,
                     exercises: exercises,
                     updatedAt: serverTimestamp()
@@ -512,7 +459,7 @@
             }
 
             const docs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-                                 .sort((a, b) => new Date(b.date) - new Date(a.date));
+                                .sort((a, b) => new Date(b.date) - new Date(a.date));
 
             docs.forEach(workout => {
                 const item = document.createElement('div');
