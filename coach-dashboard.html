@@ -788,8 +788,13 @@
                         </td>
                         <td class="p-4 flex gap-4 text-[10px] font-black">
                             ${editButton}
-                            <button onclick="deleteAthlete('${uid}', '${p.firstName} ${p.lastName}')" 
-                                    class="text-red-900 hover:text-red-500 transition-colors uppercase">Del</button>
+                            <button 
+                                data-id="${uid}" 
+                                data-name="${p.firstName} ${p.lastName}"
+                                onclick="window.executeDelete(this)" 
+                                class="text-red-900 hover:text-red-500 transition-colors uppercase">
+                                Del
+                            </button>
                         </td>
                     </tr>
                 `;
@@ -868,14 +873,27 @@
         }
     };
 
-  window.deleteAthlete = async (athleteId, athleteName) => {
-        // 1. Name Verification Prompt
-        const typedName = prompt(`To confirm deletion, type the athlete's name (${athleteName.toUpperCase()}):`);
-        
-        if (typedName === null) return; // They hit cancel
+    window.deleteAthlete = async (buttonOrId, athleteName) => {
+        let athleteId = '';
+        let finalName = athleteName;
 
-        if (typedName.trim().toLowerCase() !== athleteName.trim().toLowerCase()) {
-            alert("ERROR: Name mismatch. Deletion aborted.");
+        // Detect if we passed 'this' (the button) or just raw strings
+        if (typeof buttonOrId === 'object' && buttonOrId.getAttribute) {
+            athleteId = buttonOrId.getAttribute('data-id');
+            finalName = buttonOrId.getAttribute('data-name');
+        } else {
+            athleteId = buttonOrId;
+        }
+
+        console.log("Delete triggered for:", finalName, athleteId);
+
+        // 1. Name Verification Prompt
+        const typedName = prompt(`To confirm deletion, type the athlete's name (${finalName.toUpperCase()}):`);
+        
+        if (typedName === null) return; // User hit cancel
+
+        if (typedName.trim().toLowerCase() !== finalName.trim().toLowerCase()) {
+            alert(`ERROR: "${typedName}" does not match "${finalName}". Deletion aborted.`);
             return;
         }
 
@@ -895,13 +913,14 @@
 
             if (!athleteSnap.exists()) {
                 console.warn("Recruiting profile missing, attempting to clean up user doc only.");
-                // If profile is missing, just try to delete the user doc so they leave the roster
+                // If profile is missing, try to delete the user doc so they leave the roster
                 await deleteDoc(userRef);
             } else {
                 const athleteData = athleteSnap.data();
 
                 // 4. Security Validation
-                if (athleteData.school_id !== window.currentSchoolId && athleteData.schoolId !== window.currentSchoolId) {
+                const schoolID = athleteData.school_id || athleteData.schoolId;
+                if (schoolID !== window.currentSchoolId) {
                     alert("PERMISSION DENIED: This athlete belongs to another school.");
                     return;
                 }
@@ -914,21 +933,21 @@
             }
             
             // 6. Success Feedback
-            alert(`SUCCESS: ${athleteName.toUpperCase()} has been removed.`);
+            alert(`SUCCESS: ${finalName.toUpperCase()} has been removed.`);
             
             // Refresh
-            if (window.currentSchoolId) {
+            if (typeof loadRoster === "function" && window.currentSchoolId) {
                 loadRoster(window.currentSchoolId);
             } else {
                 location.reload();
             }
 
         } catch (error) {
-            // This will now tell you EXACTLY what went wrong (e.g., "writeBatch is not defined")
             console.error("Deletion Error Details:", error);
             alert(`CRITICAL ERROR: ${error.message}`);
         }
     };
+
         // --- MISSING FUNCTION: Generates the Set/Rep/Percent inputs ---
         function generateSetInputs(id) {
             const setCount = parseInt(document.getElementById(`sets-${id}`).value) || 1;
