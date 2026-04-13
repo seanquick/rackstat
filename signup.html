@@ -116,7 +116,7 @@
     <script type="module">
         import { firebaseConfig } from './firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, collection, query, where, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const app = initializeApp(firebaseConfig);
@@ -125,18 +125,20 @@
 
         let currentRole = 'player';
 
-        // --- MODAL LOGIC ---
+        // --- FIXED MODAL LOGIC ---
         const pModal = document.getElementById('privacy-modal');
         const tModal = document.getElementById('terms-modal');
 
         document.getElementById('open-privacy').onclick = () => pModal.classList.remove('hidden');
         document.getElementById('open-terms').onclick = () => tModal.classList.remove('hidden');
         
-        document.querySelectorAll('.close-modal').forEach(btn => {
-            btn.onclick = () => {
-                pModal.classList.add('hidden');
-                tModal.classList.add('hidden');
-            }
+        // Target specifically the classes in your HTML
+        document.querySelectorAll('.close-p').forEach(btn => {
+            btn.onclick = () => pModal.classList.add('hidden');
+        });
+
+        document.querySelectorAll('.close-t').forEach(btn => {
+            btn.onclick = () => tModal.classList.add('hidden');
         });
 
         // --- ROLE SELECTION ---
@@ -146,7 +148,7 @@
             const cBtn = document.getElementById('btn-coach');
             const title = document.getElementById('reg-title');
             const codeLabel = document.getElementById('code-label');
-            const gradGroup = document.getElementById('grad-year-group'); // New
+            const gradGroup = document.getElementById('grad-year-group');
 
             if (role === 'coach') {
                 cBtn.className = "flex-1 py-2 text-[10px] font-black uppercase rounded bg-white text-black transition-all";
@@ -170,7 +172,7 @@
             const email = document.getElementById('reg-email').value.trim();
             const pass = document.getElementById('reg-pass').value;
             const inputCode = document.getElementById('school-code').value.trim();
-            const gradYear = document.getElementById('reg-grad-year').value.trim(); // New
+            const gradYear = document.getElementById('reg-grad-year').value.trim();
 
             if (!fullName || !email || !pass || !inputCode) return alert("All fields required.");
             if (currentRole === 'player' && !gradYear) return alert("Please enter your graduation year.");
@@ -196,19 +198,40 @@
                 const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
                 const user = userCredential.user;
 
-                await setDoc(doc(db, "users", user.uid), {
+                // Use a batch to create both user and profile documents simultaneously
+                const batch = writeBatch(db);
+
+                // 1. Create User Document
+                const userRef = doc(db, "users", user.uid);
+                batch.set(userRef, {
                     fullName: fullName,
                     email: email,
                     role: currentRole,
                     schoolId: schoolDoc.id,
-                    gradYear: currentRole === 'player' ? gradYear : null, // Save gradYear if player
+                    gradYear: currentRole === 'player' ? gradYear : null,
                     createdAt: Date.now()
                 });
+
+                // 2. Create Initial Recruiting Profile (Essential for permission safety)
+                if (currentRole === 'player') {
+                    const profileRef = doc(db, "recruiting_profiles", user.uid);
+                    batch.set(profileRef, {
+                        fullName: fullName,
+                        schoolId: schoolDoc.id,
+                        gradYear: gradYear,
+                        nextLevelComplete: false,
+                        offPrimary: "-",
+                        defPrimary: "-"
+                    });
+                }
+
+                await batch.commit();
 
                 alert(`Welcome, ${fullName}!`);
                 window.location.href = 'index.html';
 
             } catch (e) {
+                console.error("Signup Error:", e);
                 alert(e.message);
                 signupBtn.innerText = "Create My Profile";
                 signupBtn.disabled = false;
