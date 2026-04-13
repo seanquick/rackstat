@@ -791,8 +791,8 @@
                             <button 
                                 data-id="${uid}" 
                                 data-name="${p.firstName} ${p.lastName}"
-                                onclick="window.executeDelete(this)" 
-                                class="text-red-900 hover:text-red-500 transition-colors uppercase">
+                                onclick="window.deleteAthlete(this)" 
+                                class="text-red-900 hover:text-red-500 uppercase">
                                 Del
                             </button>
                         </td>
@@ -874,68 +874,75 @@
     };
 
     window.deleteAthlete = async (buttonOrId, athleteName) => {
-        let athleteId = '';
-        let finalName = athleteName;
+        // START DEBUG: If you don't see this in the console, the button itself is broken.
+        console.log("Delete function initiated. Arguments:", { buttonOrId, athleteName });
 
-        // Detect if we passed 'this' (the button) or just raw strings
-        if (typeof buttonOrId === 'object' && buttonOrId.getAttribute) {
+        let athleteId = '';
+        let finalName = '';
+
+        // 1. DATA EXTRACTION
+        // This handles both the old way (strings) and the new way (data-attributes)
+        if (typeof buttonOrId === 'object' && buttonOrId !== null) {
             athleteId = buttonOrId.getAttribute('data-id');
             finalName = buttonOrId.getAttribute('data-name');
         } else {
             athleteId = buttonOrId;
+            finalName = athleteName;
         }
 
-        console.log("Delete triggered for:", finalName, athleteId);
-
-        // 1. Name Verification Prompt
-        const typedName = prompt(`To confirm deletion, type the athlete's name (${finalName.toUpperCase()}):`);
-        
-        if (typedName === null) return; // User hit cancel
-
-        if (typedName.trim().toLowerCase() !== finalName.trim().toLowerCase()) {
-            alert(`ERROR: "${typedName}" does not match "${finalName}". Deletion aborted.`);
+        // Safety check: if data extraction failed, stop here
+        if (!athleteId || !finalName) {
+            console.error("Delete Error: Missing ID or Name", { athleteId, finalName });
+            alert("CRITICAL ERROR: Could not retrieve athlete data from the roster.");
             return;
         }
 
-        // 2. Final Danger Confirmation
+        // 2. NAME VERIFICATION PROMPT
+        const typedName = prompt(`To confirm deletion, type the athlete's name (${finalName.toUpperCase()}):`);
+        
+        if (typedName === null) {
+            console.log("Deletion cancelled by user (clicked Cancel).");
+            return;
+        }
+
+        // 3. THE MISSPELL CHECK
+        if (typedName.trim().toLowerCase() !== finalName.trim().toLowerCase()) {
+            console.warn("Deletion aborted: Name mismatch.", { typed: typedName, expected: finalName });
+            alert(`ERROR: "${typedName}" does not match "${finalName}". Deletion unsuccessful.`);
+            return;
+        }
+
+        // 4. FINAL DANGER CONFIRMATION
         const finalConfirmed = confirm("LAST WARNING: This will permanently wipe all stats and the account. Proceed?");
         if (!finalConfirmed) return;
 
         try {
-            console.log("Attempting deletion for UID:", athleteId);
-
-            // References
             const profileRef = doc(db, "recruiting_profiles", athleteId);
             const userRef = doc(db, "users", athleteId);
             
-            // 3. Check if profile exists for security validation
             const athleteSnap = await getDoc(profileRef);
 
             if (!athleteSnap.exists()) {
-                console.warn("Recruiting profile missing, attempting to clean up user doc only.");
-                // If profile is missing, try to delete the user doc so they leave the roster
+                console.warn("Profile document missing. Cleaning up user record only.");
                 await deleteDoc(userRef);
             } else {
                 const athleteData = athleteSnap.data();
 
-                // 4. Security Validation
+                // Security Validation
                 const schoolID = athleteData.school_id || athleteData.schoolId;
                 if (schoolID !== window.currentSchoolId) {
                     alert("PERMISSION DENIED: This athlete belongs to another school.");
                     return;
                 }
 
-                // 5. Atomic Batch Deletion
                 const batch = writeBatch(db);
                 batch.delete(profileRef);
                 batch.delete(userRef);
                 await batch.commit();
             }
             
-            // 6. Success Feedback
             alert(`SUCCESS: ${finalName.toUpperCase()} has been removed.`);
             
-            // Refresh
             if (typeof loadRoster === "function" && window.currentSchoolId) {
                 loadRoster(window.currentSchoolId);
             } else {
@@ -943,7 +950,7 @@
             }
 
         } catch (error) {
-            console.error("Deletion Error Details:", error);
+            console.error("Firebase Deletion Error:", error);
             alert(`CRITICAL ERROR: ${error.message}`);
         }
     };
