@@ -209,6 +209,13 @@
     </div>
 </div>
 
+    <nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-red-900/30 px-6 py-4 flex justify-between items-center z-50">
+        <button onclick="location.href='board.html'" class="text-red-600 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Board</span></button>
+        <button onclick="location.href='rack.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">The Rack</span></button>
+        <button onclick="location.href='kitchen.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Kitchen</span></button>
+        <button onclick="location.href='profile.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
+    </nav>
+
 <script type="module">
     import { firebaseConfig } from './firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
