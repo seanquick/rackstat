@@ -115,31 +115,38 @@
         return weightClasses.find(c => c !== "UNLIMITED" && bw <= c) || "UNLIMITED";
     };
 
-    // --- NEW: THEME ENGINE ---
+    // --- THEME ENGINE ---
     async function applyTheme(schoolID) {
-        const schoolSnap = await getDoc(doc(db, "schools", schoolID));
-        if (schoolSnap.exists()) {
-            const data = schoolSnap.data();
-            const colors = data.colors || {};
-            const root = document.documentElement;
+        try {
+            const schoolSnap = await getDoc(doc(db, "schools", schoolID));
+            if (schoolSnap.exists()) {
+                const data = schoolSnap.data();
+                const colors = data.colors || {};
+                const root = document.documentElement;
 
-            // Update CSS variables globally
-            root.style.setProperty('--school-primary', colors.primary || '#b91c1c');
-            root.style.setProperty('--school-secondary', colors.secondary || '#0a0a0b');
+                // Update CSS variables
+                root.style.setProperty('--school-primary', colors.primary || '#b91c1c');
+                root.style.setProperty('--school-secondary', colors.secondary || '#0a0a0b');
 
-            // Update Logos if found
-            if (data.logo_url) {
-                const schoolLogoEl = document.getElementById('school-logo');
-                if (schoolLogoEl) schoolLogoEl.src = data.logo_url;
+                // Update Logos - Check for both possible element IDs
+                const schoolLogoEl = document.getElementById('school-logo') || document.querySelector('.school-logo');
+                if (schoolLogoEl && data.logo_url) {
+                    schoolLogoEl.src = data.logo_url;
+                }
+                
+                // Trigger a class to show the theme is loaded
+                document.body.classList.add('theme-loaded');
+                return data;
             }
+        } catch (err) {
+            console.error("Theme Load Error:", err);
         }
     }
 
-// Initialize Auth and Data
+    // --- AUTH OBSERVER ---
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             try {
-                // Try to find the user in recruiting_profiles first, then master users
                 let userSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
                 if (!userSnap.exists()) {
                     userSnap = await getDoc(doc(db, "users", user.uid));
@@ -147,48 +154,39 @@
 
                 if (userSnap.exists()) {
                     const userData = userSnap.data();
-                    // Fallback check for school_id vs schoolId
                     currentSchoolId = userData.school_id || userData.schoolId;
 
                     if (currentSchoolId) {
-                        // AWAIT the theme so the logo swaps BEFORE the data loads
                         await applyTheme(currentSchoolId);
-                        
-                        // Now load the school-specific board data
-                        loadBoard(currentSchoolId);
-                    } else {
-                        console.error("User found, but no school_id associated with account.");
+                        window.loadBoard(currentSchoolId);
                     }
-                } else {
-                    console.error("User profile not found in any collection.");
                 }
             } catch (err) {
-                console.error("Error initializing Board:", err);
+                console.error("Board Init Error:", err);
             }
         } else { 
             window.location.href = 'index.html'; 
         }
     });
 
+    // --- BOARD LOADING ENGINE ---
     window.loadBoard = async function(schoolId) {
         if (!schoolId) return;
         const grid = document.getElementById('player-club-grid');
         const recordBody = document.getElementById('record-rows');
-        if (!grid || !recordBody) return; 
+        const schoolTag = document.getElementById('school-tag');
+        const formulaDisplay = document.getElementById('formula-display');
+        const athleteCountDisplay = document.getElementById('athlete-count');
 
-        // 1. Fetch Data
+        // 1. Fetch Data Safely
         let schoolSnap, manualSnap;
         try {
-            // We fetch both, but manual_records is the one likely to trigger a permission error
             [schoolSnap, manualSnap] = await Promise.all([
                 getDoc(doc(db, "schools", schoolId)),
                 getDoc(doc(db, "schools", schoolId, "settings", "manual_records"))
             ]);
         } catch (err) {
-            console.error("Fetch error:", err);
-            // If it fails (permissions), we still need schoolSnap to build the board
-            schoolSnap = await getDoc(doc(db, "schools", schoolId));
-            // Create a fake "empty" manualSnap so manualSnap.exists() returns false
+            console.warn("Manual records missing or restricted.");
             manualSnap = { exists: () => false };
         }
 
@@ -198,9 +196,9 @@
         const manualRecords = manualSnap.exists() ? manualSnap.data() : {};
         const formulaSetting = (school.formula_type || "power_index").toLowerCase().replace("_", " ");
         
-        // UI Headers
-        document.getElementById('school-tag').innerText = `${school.name} Weightroom`.toUpperCase();
-        document.getElementById('formula-display').innerText = formulaSetting.toUpperCase();
+        // Update UI Text if elements exist
+        if (schoolTag) schoolTag.innerText = `${school.name} Weightroom`.toUpperCase();
+        if (formulaDisplay) formulaDisplay.innerText = formulaSetting.toUpperCase();
 
         let scoringLifts = (school.scoring_lifts && school.scoring_lifts[0]) 
             ? school.scoring_lifts[0].split(',').map(s => s.trim()) 
@@ -209,7 +207,7 @@
         // 2. Process Athletes
         const q = query(collection(db, "recruiting_profiles"), where("school_id", "==", schoolId));
         const pSnap = await getDocs(q);
-        document.getElementById('athlete-count').innerText = `${pSnap.size} Athletes Logged`;
+        if (athleteCountDisplay) athleteCountDisplay.innerText = `${pSnap.size} Athletes Logged`;
 
         let classRecords = {};
         weightClasses.forEach(wc => {
@@ -259,73 +257,74 @@
             }
         }
 
-        // 3. Render Records
-        recordBody.innerHTML = '';
-        weightClasses.forEach(wc => {
-            const getLiftData = (lift) => {
-                return (manualRecords[wc] && manualRecords[wc][lift]) 
-                    ? manualRecords[wc][lift] 
-                    : classRecords[wc][lift];
-            };
+        // 3. Render Records Table
+        if (recordBody) {
+            recordBody.innerHTML = '';
+            weightClasses.forEach(wc => {
+                const getLiftData = (lift) => {
+                    return (manualRecords[wc] && manualRecords[wc][lift]) 
+                        ? manualRecords[wc][lift] 
+                        : classRecords[wc][lift];
+                };
 
-            const row = `
-                <tr>
-                    <td class="bg-gray-900/50 font-black text-[var(--school-primary)]">${wc}</td>
-                    ${['bench', 'squat', 'clean', 'deadlift', 'dash'].map(lift => {
-                        const data = getLiftData(lift);
-                        return `
-                            <td contenteditable="${isCoachMode}" 
-                                class="record-cell ${isCoachMode ? 'bg-[var(--school-primary)]/10 outline outline-1 outline-[var(--school-primary)]/30' : ''}" 
-                                data-wc="${wc}" 
-                                data-lift="${lift}">
-                                <span class="record-name">${data.name || '-'}</span>
-                                <span class="record-value">${data.val || 0}${lift === 'dash' ? 's' : ''}</span>
-                            </td>
-                        `;
-                    }).join('')}
-                </tr>
-            `;
-            recordBody.innerHTML += row;
-        });
-
-        // Add Auto-Save Listeners
-        if (isCoachMode) {
-            document.querySelectorAll('.record-cell').forEach(cell => {
-                cell.addEventListener('blur', async (e) => {
-                    const rawText = e.target.innerText;
-                    const parts = rawText.split('\n').map(p => p.trim()).filter(p => p !== "");
-                    const newName = parts[0] || "-";
-                    let newVal = parts[1] || "0";
-                    newVal = newVal.replace('s', '').trim();
-
-                    const wc = e.target.getAttribute('data-wc');
-                    const lift = e.target.getAttribute('data-lift');
-
-                    await saveManualRecord(wc, lift, newVal, newName);
-                });
+                const row = `
+                    <tr>
+                        <td class="bg-gray-900/50 font-black text-[var(--school-primary)]">${wc}</td>
+                        ${['bench', 'squat', 'clean', 'deadlift', 'dash'].map(lift => {
+                            const data = getLiftData(lift);
+                            return `
+                                <td contenteditable="${isCoachMode}" 
+                                    class="record-cell ${isCoachMode ? 'bg-[var(--school-primary)]/10 outline outline-1 outline-[var(--school-primary)]/30' : ''}" 
+                                    data-wc="${wc}" 
+                                    data-lift="${lift}">
+                                    <span class="record-name">${data.name || '-'}</span>
+                                    <span class="record-value">${data.val || 0}${lift === 'dash' ? 's' : ''}</span>
+                                </td>
+                            `;
+                        }).join('')}
+                    </tr>
+                `;
+                recordBody.innerHTML += row;
             });
+
+            // Re-attach auto-save listeners if in coach mode
+            if (isCoachMode) {
+                document.querySelectorAll('.record-cell').forEach(cell => {
+                    cell.addEventListener('blur', async (e) => {
+                        const rawText = e.target.innerText;
+                        const parts = rawText.split('\n').map(p => p.trim()).filter(p => p !== "");
+                        const newName = parts[0] || "-";
+                        let newVal = (parts[1] || "0").replace('s', '').trim();
+                        const wc = e.target.getAttribute('data-wc');
+                        const lift = e.target.getAttribute('data-lift');
+                        await saveManualRecord(wc, lift, newVal, newName);
+                    });
+                });
+            }
         }
 
-        // 4. Render Clubs
-        scores.sort((a, b) => b.displayScore - a.displayScore);
-        grid.innerHTML = '';
-        const start = school.club_start || 1000;
-        for(let level = start; level >= 50; level -= 50) {
-            const qualifiers = scores.filter(s => !s.placed && s.displayScore >= level);
-            qualifiers.forEach(s => s.placed = true);
-            if(qualifiers.length > 0) {
-                grid.innerHTML += `
-                    <div class="club-card border-l-4 mb-4" style="border-color: var(--school-primary)">
-                        <div class="flex justify-between items-end border-b border-gray-800 mb-3 pb-1">
-                            <p class="font-black italic text-lg uppercase" style="color: var(--school-primary)">${level} LB CLUB</p>
-                            <p class="text-[8px] text-white font-black uppercase italic">${scoringLifts.join(' + ').toUpperCase()}</p>
-                        </div>
-                        ${qualifiers.map(q => `
-                            <div class="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
-                                <span class="text-white font-bold uppercase tracking-tight">${q.name}</span>
-                                <span class="text-white font-black italic text-lg">${q.displayScore}</span>
-                            </div>`).join('')}
-                    </div>`;
+        // 4. Render 1000/500 LB Clubs
+        if (grid) {
+            scores.sort((a, b) => b.displayScore - a.displayScore);
+            grid.innerHTML = '';
+            const start = school.club_start || 1000;
+            for(let level = start; level >= 50; level -= 50) {
+                const qualifiers = scores.filter(s => !s.placed && s.displayScore >= level);
+                qualifiers.forEach(s => s.placed = true);
+                if(qualifiers.length > 0) {
+                    grid.innerHTML += `
+                        <div class="club-card border-l-4 mb-4" style="border-color: var(--school-primary)">
+                            <div class="flex justify-between items-end border-b border-gray-800 mb-3 pb-1">
+                                <p class="font-black italic text-lg uppercase" style="color: var(--school-primary)">${level} LB CLUB</p>
+                                <p class="text-[8px] text-white font-black uppercase italic">${scoringLifts.join(' + ').toUpperCase()}</p>
+                            </div>
+                            ${qualifiers.map(q => `
+                                <div class="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
+                                    <span class="text-white font-bold uppercase tracking-tight">${q.name}</span>
+                                    <span class="text-white font-black italic text-lg">${q.displayScore}</span>
+                                </div>`).join('')}
+                        </div>`;
+                }
             }
         }
     };
@@ -335,30 +334,29 @@
         const recordRef = doc(db, "schools", currentSchoolId, "settings", "manual_records");
         try {
             await setDoc(recordRef, { 
-                [wc]: { 
-                    [lift]: { val: val, name: name } 
-                } 
+                [wc]: { [lift]: { val: val, name: name } } 
             }, { merge: true });
         } catch (err) { 
-            console.error("FIREBASE ERROR:", err); 
-            alert("Permission Denied: Your account does not have permission to edit this school's records.");
+            alert("Permission Denied: Coaches only.");
         }
     }
 
-    // Single Toggle Listener
-    document.getElementById('coach-edit-btn').addEventListener('click', (e) => {
-        isCoachMode = !isCoachMode;
-        e.target.innerText = `Coach Mode: ${isCoachMode ? 'ON' : 'OFF'}`;
-        // Using dynamic classes for visual state
-        if (isCoachMode) {
-            e.target.style.color = 'var(--school-primary)';
-            e.target.style.borderColor = 'var(--school-primary)';
-        } else {
-            e.target.style.color = '';
-            e.target.style.borderColor = '';
-        }
-        if (currentSchoolId) window.loadBoard(currentSchoolId);
-    });
+    // --- BUTTON LISTENERS ---
+    const coachBtn = document.getElementById('coach-edit-btn');
+    if (coachBtn) {
+        coachBtn.addEventListener('click', (e) => {
+            isCoachMode = !isCoachMode;
+            e.target.innerText = `Coach Mode: ${isCoachMode ? 'ON' : 'OFF'}`;
+            if (isCoachMode) {
+                e.target.style.color = 'var(--school-primary)';
+                e.target.style.borderColor = 'var(--school-primary)';
+            } else {
+                e.target.style.color = '';
+                e.target.style.borderColor = '';
+            }
+            if (currentSchoolId) window.loadBoard(currentSchoolId);
+        });
+    }
 </script>
 </body>
 </html>
