@@ -75,7 +75,6 @@
         .btn-primary:hover { background: #dc2626; transform: scale(1.01); }
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* Specific Logo Sizing to match your screenshots */
         #school-logo {
             max-height: 40px;
             width: auto;
@@ -91,7 +90,6 @@
 <body class="pb-24">
 <header class="bg-black border-b-2 border-red-700 p-4 sticky top-0 z-50">
     <div class="flex justify-between items-center max-w-6xl mx-auto">
-        
         <div class="w-1/4 flex justify-start">
             <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1.5 rounded text-gray-400 hover:text-white transition-all">
                 ← Lobby
@@ -100,32 +98,18 @@
 
         <div class="flex items-center gap-6 justify-center flex-1">
             <div class="header-logo-container">
-                <img id="school-logo" 
-                     src="images/rackstat-logo.png" 
-                     alt="School Logo" 
-                     onerror="this.src='images/rackstat-logo.png'">
+                <img id="school-logo" src="images/rackstat-logo.png" alt="School Logo" onerror="this.src='images/rackstat-logo.png'">
             </div>
-
             <div class="h-10 w-[1px] bg-gray-700"></div>
-
             <div class="flex flex-col items-center text-center min-w-[180px]">
-                <span id="school-name" class="text-sm md:text-base font-black italic uppercase tracking-widest text-white leading-tight">
-                    LOADING...
-                </span>
-                <span class="text-[10px] md:text-[11px] font-black italic uppercase tracking-[0.2em] text-red-600 mt-1">
-                    ATHLETE PROFILE
-                </span>
+                <span id="school-name" class="text-sm md:text-base font-black italic uppercase tracking-widest text-white leading-tight">LOADING...</span>
+                <span class="text-[10px] md:text-[11px] font-black italic uppercase tracking-[0.2em] text-red-600 mt-1">ATHLETE PROFILE</span>
             </div>
-
             <div class="h-10 w-[1px] bg-gray-700"></div>
-
             <div class="header-logo-container">
-                <img src="images/rackstat-logo.png" 
-                     alt="RACKSTAT" 
-                     class="rackstat-logo-header">
+                <img src="images/rackstat-logo.png" alt="RACKSTAT" class="rackstat-logo-header">
             </div>
         </div>
-
         <div class="w-1/4"></div> 
     </div>
 </header>
@@ -164,8 +148,7 @@
         <h2 class="text-red-600 font-black uppercase italic mb-6">Recruiting Essentials</h2>
         <div class="mb-6">
             <label>Athlete Full Name</label>
-            <input id="full-name" type="text" placeholder="First & Last Name" 
-                   class="!bg-transparent !border-0 !border-b-2 !border-gray-800 !rounded-none !px-0 py-2 focus:!border-red-600 font-black uppercase italic text-lg transition-all">
+            <input id="full-name" type="text" placeholder="First & Last Name" class="!bg-transparent !border-0 !border-b-2 !border-gray-800 !rounded-none !px-0 py-2 focus:!border-red-600 font-black uppercase italic text-lg transition-all">
         </div>
         <div class="grid grid-cols-2 gap-6 mb-6">
             <div><label>Height</label><input id="height" placeholder="6'2" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0"></div>
@@ -194,8 +177,7 @@
         </div>
         <div>
             <label>Character Statement / Quote</label>
-            <textarea id="character-statement" rows="3" placeholder="I am a leader in the weightroom..." 
-                      class="bg-black/40 border border-gray-800 rounded p-3 mt-2 text-sm italic focus:border-red-600 outline-none text-gray-300"></textarea>
+            <textarea id="character-statement" rows="3" placeholder="I am a leader in the weightroom..." class="bg-black/40 border border-gray-800 rounded p-3 mt-2 text-sm italic focus:border-red-600 outline-none text-gray-300"></textarea>
         </div>
     </section>
 
@@ -209,12 +191,12 @@
     </div>
 </div>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-red-900/30 px-6 py-4 flex justify-between items-center z-50">
-        <button onclick="location.href='board.html'" class="text-red-600 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Board</span></button>
-        <button onclick="location.href='rack.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">The Rack</span></button>
-        <button onclick="location.href='kitchen.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Kitchen</span></button>
-        <button onclick="location.href='profile.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
-    </nav>
+<nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-red-900/30 px-6 py-4 flex justify-between items-center z-50">
+    <button onclick="location.href='board.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Board</span></button>
+    <button onclick="location.href='rack.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">The Rack</span></button>
+    <button onclick="location.href='kitchen.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Kitchen</span></button>
+    <button onclick="location.href='profile.html'" class="text-red-600 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
+</nav>
 
 <script type="module">
     import { firebaseConfig } from './firebase-config.js';
@@ -229,91 +211,86 @@
     
     let currentGoals = [];
 
- onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        console.log("✅ Auth Success:", user.uid);
-        
-        // --- TARGETING LOGIC ---
-        // Get the 'id' from the URL (e.g., profile.html?id=123)
-        const urlParams = new URLSearchParams(window.location.search);
-        const targetUID = urlParams.get('id') || user.uid; 
-        
-        console.log("🎯 Targeting UID:", targetUID);
-
-        // References for the TARGETED athlete
-        const userRef = doc(db, "users", targetUID);
-        const profileRef = doc(db, "recruiting_profiles", targetUID);
-        
-        try {
-            // 1. FIRST: Get core user data for the target athlete's school branding
-            const userSnap = await getDoc(userRef);
-            if (userSnap.exists()) {
-                const userData = userSnap.data();
-                const schoolID = userData.school_id || userData.schoolId;
-
-                if (schoolID) {
-                    console.log(`🏫 Branding for ${targetUID} found:`, schoolID);
-                    await applyTheme(db, schoolID);
-                }
-            } else {
-                console.warn("⚠️ Targeted user not found in 'users' collection.");
-                if (document.getElementById('school-name')) {
-                    document.getElementById('school-name').innerText = "RACKSTAT ATHLETE";
-                }
-            }
-
-            // 2. SECOND: Get recruitment data for the targeted athlete
-            const profileSnap = await getDoc(profileRef);
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetUID = urlParams.get('id') || user.uid; 
             
-            // Map Form Fields helper
-            const safeSet = (id, val) => { 
-                const el = document.getElementById(id); 
-                if (el) el.value = val || ""; 
-            };
+            const userRef = doc(db, "users", targetUID);
+            const profileRef = doc(db, "recruiting_profiles", targetUID);
+            
+            try {
+                const userSnap = await getDoc(userRef);
+                if (userSnap.exists()) {
+                    const userData = userSnap.data();
+                    const schoolID = userData.school_id || userData.schoolId;
+                    if (schoolID) await applyTheme(db, schoolID);
+                }
 
-            if (profileSnap.exists()) {
-                const profileData = profileSnap.data();
-                console.log("📄 Recruiting Profile Data Found for target");
+                const profileSnap = await getDoc(profileRef);
+                const safeSet = (id, val) => { 
+                    const el = document.getElementById(id); 
+                    if (el) el.value = val || ""; 
+                };
 
-                safeSet('full-name', profileData.fullName);
-                safeSet('height', profileData.height);
-                safeSet('weight', profileData.weight);
-                safeSet('off-primary', profileData.offPrimary);
-                safeSet('off-secondary', profileData.offSecondary);
-                safeSet('def-primary', profileData.defPrimary);
-                safeSet('def-secondary', profileData.defSecondary);
-                safeSet('gpa', profileData.gpa);
-                safeSet('sat', profileData.sat);
-                safeSet('act', profileData.act);
-                safeSet('character-statement', profileData.statement);
-                safeSet('hudl-link', profileData.hudlLink);
-                safeSet('twitter-link', profileData.twitterLink);
-                safeSet('youtube-link', profileData.youtubeLink);
-                safeSet('other-link', profileData.otherLink);
+                if (profileSnap.exists()) {
+                    const profileData = profileSnap.data();
+                    safeSet('full-name', profileData.fullName);
+                    safeSet('height', profileData.height);
+                    safeSet('weight', profileData.weight);
+                    safeSet('off-primary', profileData.offPrimary);
+                    safeSet('off-secondary', profileData.offSecondary);
+                    safeSet('def-primary', profileData.defPrimary);
+                    safeSet('def-secondary', profileData.defSecondary);
+                    safeSet('gpa', profileData.gpa);
+                    safeSet('sat', profileData.sat);
+                    safeSet('act', profileData.act);
+                    safeSet('character-statement', profileData.statement);
 
-                // Handle Goals - passing targetUID to ensure goals save to the correct person
-                currentGoals = profileData.goals || [];
-                if (typeof renderGoals === "function") renderGoals(targetUID, currentGoals);
-                if (typeof syncGoalDisplay === "function") syncGoalDisplay(profileData);
-            } else {
-                console.log("ℹ️ This athlete has not started a recruiting profile yet.");
-                // Clear the fields so a coach doesn't see their own info accidentally
-                const fields = [
-                    'full-name', 'height', 'weight', 'off-primary', 'off-secondary', 
-                    'def-primary', 'def-secondary', 'gpa', 'sat', 'act', 
-                    'character-statement', 'hudl-link', 'twitter-link', 
-                    'youtube-link', 'other-link'
-                ];
-                fields.forEach(f => safeSet(f, ""));
+                    // PRE-FILL CLUB GOAL SELECTOR
+                    if (profileData.clubGoal) {
+                        document.getElementById('goal-selector').value = profileData.clubGoal;
+                    }
+
+                    currentGoals = profileData.goals || [];
+                    renderGoals(targetUID, currentGoals);
+                    syncGoalDisplay(profileData);
+                }
+            } catch (err) {
+                console.error("❌ Firestore Fetch Error:", err);
             }
-
-        } catch (err) {
-            console.error("❌ Firestore Fetch Error:", err);
+        } else { 
+            window.location.href = 'index.html'; 
         }
-    } else { 
-        window.location.href = 'index.html'; 
-    }
-});
+    });
+
+    // NEW FUNCTION: SAVE CLUB GOAL
+    window.saveClubGoal = async () => {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        const goalValue = document.getElementById('goal-selector').value;
+        const btn = document.getElementById('save-goal-btn');
+        
+        btn.innerText = "SAVING...";
+        btn.disabled = true;
+
+        try {
+            await setDoc(doc(db, "recruiting_profiles", user.uid), {
+                clubGoal: Number(goalValue)
+            }, { merge: true });
+            
+            btn.innerText = "GOAL SET!";
+            btn.style.backgroundColor = "#059669"; // Green success
+            
+            // Reload to update progress bar
+            setTimeout(() => location.reload(), 1000);
+        } catch (err) {
+            console.error("Goal Save Error:", err);
+            btn.innerText = "SAVE ERROR";
+            btn.disabled = false;
+        }
+    };
 
     async function renderGoals(uid, goals) {
         const container = document.getElementById('goals-container');
@@ -330,10 +307,8 @@
         if (!user) return;
         
         const btn = document.getElementById('save-btn');
-        const originalText = btn.innerText;
         btn.innerText = "UPDATING...";
 
-        // Helper to safely get value or return default
         const getVal = (id, isNumber = false) => {
             const el = document.getElementById(id);
             if (!el) return isNumber ? 0 : "";
@@ -341,7 +316,6 @@
         };
 
         try {
-            // Use setDoc with merge: true so it creates the doc if it's missing
             await setDoc(doc(db, "recruiting_profiles", user.uid), {
                 fullName: getVal('full-name'),
                 height: getVal('height'),
@@ -354,19 +328,13 @@
                 sat: getVal('sat'),
                 act: getVal('act'),
                 statement: getVal('character-statement'),
-                hudlLink: getVal('hudl-link'),
-                twitterLink: getVal('twitter-link'),
-                youtubeLink: getVal('youtube-link'),
-                otherLink: getVal('other-link'),
                 lastUpdated: new Date().toISOString()
             }, { merge: true });
 
             btn.innerText = "PROFILE SAVED!";
         } catch (e) { 
-            console.error("Save Error:", e);
             btn.innerText = "ERROR SAVING";
         }
-        
         setTimeout(() => { btn.innerText = "SAVE PROFILE"; }, 2000);
     };
 
@@ -374,13 +342,21 @@
         const currentScore = pData.boardScore || 0; 
         const targetGoal = pData.clubGoal || 0;
         const progressBar = document.getElementById('goal-progress-bar');
+        const goalMsg = document.getElementById('goal-message');
+
         if (targetGoal > 0 && progressBar) {
             const percent = Math.min((currentScore / targetGoal) * 100, 100);
             progressBar.style.width = `${percent}%`;
+            
+            if (goalMsg) {
+                goalMsg.innerText = `${Math.round(percent)}% to ${targetGoal} Club (${currentScore} / ${targetGoal})`;
+            }
         }
     }
 
+    // Attach events to buttons
     document.getElementById('save-btn').onclick = window.saveProfile;
+    document.getElementById('save-goal-btn').onclick = window.saveClubGoal;
     document.getElementById('btn-view-card').onclick = () => { 
         if(auth.currentUser) window.location.href = `recruiting-card.html?uid=${auth.currentUser.uid}`; 
     };
