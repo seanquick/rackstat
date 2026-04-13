@@ -201,6 +201,13 @@
 
     // --- AUTH OBSERVER ---
     onAuthStateChanged(auth, async (user) => {
+        // Define elements and check if they exist
+        const authSection = document.getElementById('auth-section');
+        const mainMenu = document.getElementById('main-menu');
+        const branding = document.getElementById('branding');
+        const welcomeMsg = document.getElementById('welcome-msg');
+        const recruitingBtn = document.getElementById('btn-recruiting-card');
+
         if (user) {
             try {
                 const userSnap = await getDoc(doc(db, "users", user.uid));
@@ -215,26 +222,31 @@
                     const schoolId = userData.schoolId || userData.school_id;
                     const schoolData = await applyTheme(db, schoolId);
 
-                    if (schoolData) {
-                        const recruitingBtn = document.getElementById('btn-recruiting-card');
-                        if (schoolData.hasRecruitingCard === false && recruitingBtn) {
+                    // Use Optional Chaining (?.) to prevent crashes if elements are missing
+                    if (schoolData && recruitingBtn) {
+                        if (schoolData.hasRecruitingCard === false) {
                             recruitingBtn.classList.add('hidden');
                         }
                     }
 
-                    document.getElementById('welcome-msg').innerText = `Welcome, ${userData.fullName || 'Athlete'}`;
-                    authSection.classList.add('hidden');
-                    mainMenu.classList.remove('hidden');
+                    if (welcomeMsg) {
+                        welcomeMsg.innerText = `Welcome, ${userData.fullName || 'Athlete'}`;
+                    }
+                    
+                    if (authSection) authSection.classList.add('hidden');
+                    if (mainMenu) mainMenu.classList.remove('hidden');
                 }
             } catch (err) {
                 console.error("Auth Observer Error:", err);
             }
         } else {
-            authSection.classList.remove('hidden');
-            mainMenu.classList.add('hidden');
-            branding.classList.remove('theme-loaded');
+            // SAFE CHECK: Only run these if the elements actually exist on the current page
+            if (authSection) authSection.classList.remove('hidden');
+            if (mainMenu) mainMenu.classList.add('hidden');
+            if (branding) branding.classList.remove('theme-loaded');
         }
     });
+    
 </script>
 </body>
 </html>
