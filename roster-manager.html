@@ -62,7 +62,7 @@
     <script type="module">
         import { firebaseConfig } from './firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, deleteDoc, updateDoc, query, where, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, deleteDoc, updateDoc, query, where, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { applyTheme } from './theme.js';
 
@@ -121,11 +121,11 @@
                     cellClick: function(e, cell) {
                         const rowData = cell.getRow().getData();
                         if (e.target.classList.contains('edit-btn')) {
-                            // POINTING TO PROFILE.HTML WITH ID PARAMETER
                             window.location.href = `profile.html?id=${rowData.id}`;
                         }
                         if (e.target.classList.contains('delete-btn')) {
-                            handleDelete(rowData);
+                            // Pointing specifically to the new robust global function
+                            window.deleteAthlete(rowData.id, rowData.fullName);
                         }
                     }
                 }
@@ -134,10 +134,7 @@
 
         async function loadRoster(schoolID) {
             try {
-                console.log("🚀 Fetching roster for schoolID:", schoolID);
-
-                // 1. Fetch from 'users' where schoolId matches and role is 'player'
-                // Matching your Firestore screenshot: schoolId (no underscore) and role: player
+                window.currentSchoolId = schoolID;
                 const q = query(
                     collection(db, "users"), 
                     where("schoolId", "==", schoolID), 
@@ -145,18 +142,14 @@
                 );
                 
                 const userSnap = await getDocs(q);
-                console.log(`📊 Found ${userSnap.size} matching users in Firestore`);
-
-                // 2. Map basic data and fetch their recruiting profiles
                 const athleteData = await Promise.all(userSnap.docs.map(async (userDoc) => {
                     const userData = userDoc.data();
                     const profileDoc = await getDoc(doc(db, "recruiting_profiles", userDoc.id));
                     const profileData = profileDoc.exists() ? profileDoc.data() : {};
                     
-                    // Build the name: Use fullName field if it exists, otherwise combine first and last
                     const calculatedName = userData.fullName || 
-                                        ((userData.firstName || "") + " " + (userData.lastName || "")).trim() || 
-                                        "Unnamed Player";
+                                         ((userData.firstName || "") + " " + (userData.lastName || "")).trim() || 
+                                         "Unnamed Player";
 
                     return {
                         id: userDoc.id,
@@ -165,36 +158,73 @@
                         offPrimary: profileData.offPrimary || userData.offPrimary || "-",
                         defPrimary: profileData.defPrimary || userData.defPrimary || "-",
                         nextLevelComplete: profileData.nextLevelComplete || false,
-                        ...profileData // Spread remaining profile data
+                        ...profileData
                     };
                 }));
 
-                // 3. Update the Tabulator table
                 table.setData(athleteData);
-                
                 const countEl = document.getElementById('player-count');
-                if (countEl) {
-                    countEl.innerText = `${athleteData.length} ATHLETES ON FILE`;
-                }
+                if (countEl) countEl.innerText = `${athleteData.length} ATHLETES ON FILE`;
 
             } catch (err) {
                 console.error("❌ Roster Load Error:", err);
             }
         }
 
-        async function handleDelete(player) {
-            const confirmName = prompt(`Type "${player.fullName.toUpperCase()}" to confirm deletion:`);
-            if (confirmName === player.fullName.toUpperCase()) {
-                try {
-                    await deleteDoc(doc(db, "recruiting_profiles", player.id));
-                    table.deleteRow(player.id);
-                    const currentData = table.getData();
-                    document.getElementById('player-count').innerText = `${currentData.length} ATHLETES ON FILE`;
-                } catch (err) {
-                    alert("Delete failed.");
-                }
+        // --- Updated Global Delete Athlete Logic ---
+        window.deleteAthlete = async (athleteId, athleteName) => {
+            // 1. Initial Prompt for verification
+            const typedName = prompt(`To confirm deletion, type the athlete's name exactly: ${athleteName.toUpperCase()}`);
+            
+            if (typedName === null) return; // User cancelled
+
+            // 2. The Misspell Check (Your requested feedback)
+            if (typedName.trim().toLowerCase() !== athleteName.trim().toLowerCase()) {
+                alert(`ERROR: "${typedName}" does not match "${athleteName}". Deletion unsuccessful.`);
+                return;
             }
-        }
+
+            // 3. Final Confirmation
+            if (!confirm("LAST WARNING: This will permanently wipe all stats and the user account. Proceed?")) return;
+
+            try {
+                const profileRef = doc(db, "recruiting_profiles", athleteId);
+                const userRef = doc(db, "users", athleteId);
+                
+                const athleteSnap = await getDoc(profileRef);
+                const batch = writeBatch(db);
+
+                if (!athleteSnap.exists()) {
+                    console.warn("Profile doc missing. Attempting user cleanup.");
+                    await deleteDoc(userRef);
+                } else {
+                    const athleteData = athleteSnap.data();
+                    const sCheck = athleteData.school_id || athleteData.schoolId;
+
+                    if (sCheck && sCheck !== window.currentSchoolId) {
+                        alert("PERMISSION DENIED: Unauthorized access.");
+                        return;
+                    }
+
+                    batch.delete(profileRef);
+                    batch.delete(userRef);
+                    await batch.commit();
+                }
+                
+                alert(`SUCCESS: ${athleteName.toUpperCase()} has been removed.`);
+                
+                // Reload the roster to update the table
+                if (window.currentSchoolId) {
+                    loadRoster(window.currentSchoolId);
+                } else {
+                    location.reload();
+                }
+
+            } catch (error) {
+                console.error("Deletion Error:", error);
+                alert(`CRITICAL ERROR: ${error.message}`);
+            }
+        };
 
         const searchInput = document.getElementById("roster-search");
         if (searchInput) {
@@ -207,8 +237,8 @@
                 if (coachSnap.exists()) {
                     const coachData = coachSnap.data();
                     const sID = coachData.school_id || coachData.schoolId;
-                    
                     if (sID) {
+                        window.currentSchoolId = sID;
                         await applyTheme(db, sID);
                         loadRoster(sID);
                     }
