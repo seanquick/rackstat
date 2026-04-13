@@ -178,17 +178,25 @@
                     }
                 });
 
-                let profileSnap = await getDoc(doc(doc(db, "recruiting_profiles", user.uid)));
+                // FIXED: Single doc reference
+                let profileSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+                
+                // Fallback to users collection if profile doesn't exist
                 if (!profileSnap.exists()) {
                     profileSnap = await getDoc(doc(db, "users", user.uid));
                 }
 
                 if (profileSnap.exists()) {
-                    const schoolId = profileSnap.data().schoolId || profileSnap.data().school_id;
+                    const profileData = profileSnap.data();
+                    // Handle both naming conventions for school ID
+                    const schoolId = profileData.schoolId || profileData.school_id;
+                    
                     if (schoolId) {
                         const schoolData = await applyTheme(schoolId);
                         setupInputs(schoolData);
                         loadCurrentMaxes(user.uid, schoolData);
+                    } else {
+                        console.error("No school ID found for user:", user.uid);
                     }
                 }
             } else { 
