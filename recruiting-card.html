@@ -222,6 +222,16 @@
                 </div>
             </div>
 
+            <div>
+                <h3 class="label mb-4">Additional Sports</h3>
+                <div class="stat-box space-y-2">
+                    <div class="flex justify-between items-center border-b border-white/5 pb-1">
+                        <span id="disp-sports" class="font-black italic view-mode">--</span>
+                        <input id="edit-sports" type="text" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-right p-1 w-16 rounded text-xs">
+                    </div>
+                </div>
+            </div>  
+
             <div class="stat-box bg-red-600/5 border-red-600/20">
                 <span class="label">Parental Contact</span>
                 <p id="disp-parents" class="text-xs font-bold text-white view-mode mt-1">--</p>
@@ -263,6 +273,8 @@
         <button onclick="location.href='kitchen.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Kitchen</span></button>
         <button onclick="location.href='profile.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
     </nav>
+
+<script type="module" src="theme.js"></script>
 
 <script type="module">
     import { firebaseConfig } from './firebase-config.js';
@@ -346,6 +358,7 @@
                     safeSet('disp-number', d.jerseyNum ? `#${d.jerseyNum}` : "#--");
                     safeSet('disp-height', formatHeight(d.height));
                     safeSet('disp-weight', d.weight); 
+                    safesSet('disp-sports', d.sports);
                     
                     // Positions
                     safeSet('disp-pos', d.offPrimary);
