@@ -41,6 +41,17 @@
         <button onclick="logout()" class="text-xs font-black text-gray-500 hover:text-[var(--school-primary)] transition tracking-widest uppercase">Logout</button>
     </header>
 
+    <div id="global-alert-banner" class="hidden bg-blue-600/10 border border-blue-500/30 p-4 mb-6 rounded-xl flex items-center gap-3">
+        <span class="relative flex h-3 w-3">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+        </span>
+        <p class="text-sm text-blue-100">
+            <span class="font-black text-blue-400 uppercase text-[10px] tracking-widest mr-2">System Notice</span>
+            <span id="alert-text"></span>
+        </p>
+    </div>
+
     <main class="max-w-6xl mx-auto px-6 py-12">
         <div class="mb-12">
             <h2 id="coach-greeting" class="text-4xl font-black uppercase italic tracking-tighter mb-2">Welcome, Coach</h2>
@@ -99,7 +110,7 @@
         import { firebaseConfig } from './js/firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, query, where, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         
         // --- IMPORT CENTRAL THEME ENGINE ---
         import { applyTheme } from './theme.js';
@@ -107,6 +118,43 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+
+        // 2. Add this function to the script
+        function listenForAnnouncements() {
+            const q = query(
+                collection(db, "system_announcements"),
+                where("active", "==", true),
+                orderBy("timestamp", "desc"),
+                limit(1)
+            );
+
+            // This creates a "live pipe" to the admin's posts
+            onSnapshot(q, (snapshot) => {
+                const banner = document.getElementById('global-alert-banner');
+                const textEl = document.getElementById('alert-text');
+                
+                if (snapshot.empty) {
+                    if (banner) banner.classList.add('hidden');
+                    return;
+                }
+
+                const data = snapshot.docs[0].data();
+                if (banner && textEl) {
+                    textEl.innerText = data.message;
+                    banner.classList.remove('hidden');
+                }
+            }, (error) => {
+                console.error("Announcement Listener Error:", error);
+            });
+        }
+
+        // 3. Call it inside your onAuthStateChanged block after verifying the coach
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // ... your existing coach verification logic ...
+                listenForAnnouncements(); 
+            }
+        });
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
