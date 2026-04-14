@@ -138,8 +138,12 @@
     </div>
 </div>
 
+<script type="module" src="./js/firebase-config.js"></script>
+<script type="module" src="./js/theme.js"></script> 
+<script type="module" src="./js/login.js"></script>
+
 <script type="module">
-    import { firebaseConfig } from './js/firebase-config.js';
+    import { firebaseConfig, auth, db } from './js/firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -175,14 +179,34 @@
         document.body.style.overflow = 'auto';
     });
 
-    // --- AUTH ACTIONS ---
     const handleLogin = async () => {
         const email = document.getElementById('email').value.trim();
         const pass = document.getElementById('password').value;
         if (!email || !pass) return alert("Please fill in all fields.");
         
         try { 
-            await signInWithEmailAndPassword(auth, email, pass);
+            // 1. Sign in the user
+            const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+            const user = userCredential.user;
+
+            // 2. Fetch the user's document to check their role
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                
+                // 3. Traffic Control: Send them to the correct dashboard
+                if (userData.role === 'admin') {
+                    window.location.href = 'admin-lobby.html';
+                } else if (userData.role === 'coach') {
+                    window.location.href = 'coach-lobby.html';
+                } else {
+                    window.location.href = 'athlete-workout.html';
+                }
+            } else {
+                alert("No user profile found. Please contact support.");
+            }
+
         } catch (e) { 
             alert("Login failed: " + e.message); 
         }
