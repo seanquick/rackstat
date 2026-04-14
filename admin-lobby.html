@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | RACKSTAT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#0d1117] text-white font-sans min-h-screen">
+    <nav class="p-6 border-b border-white/10 flex justify-between items-center">
+        <h1 class="text-xl font-black tracking-tighter text-blue-500">RACKSTAT <span class="text-white/50 text-sm font-normal ml-2">ADMIN CENTRAL</span></h1>
+        <button onclick="window.location.href='index.html'" class="text-xs bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg transition">LOGOUT</button>
+    </nav>
+
+    <main class="max-w-6xl mx-auto p-6">
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold">Platform Utilization</h2>
+            <p class="text-gray-400 text-sm">Real-time aggregate data across all organizations.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-[#161b22] border border-white/10 p-6 rounded-2xl">
+                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest">Registered Users</h3>
+                <div class="mt-4 flex items-end gap-2">
+                    <span id="total-users" class="text-5xl font-black text-white">--</span>
+                    <span class="text-gray-500 mb-1 font-bold">TOTAL</span>
+                </div>
+                <div class="mt-6 space-y-2 border-t border-white/5 pt-4">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Athletes</span>
+                        <span id="count-athletes" class="font-bold text-blue-400">0</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Coaches</span>
+                        <span id="count-coaches" class="font-bold text-green-400">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-[#161b22] border border-white/10 p-6 rounded-2xl">
+                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest">Platform Activity</h3>
+                <div class="mt-4 flex items-end gap-2">
+                    <span id="total-activity" class="text-5xl font-black text-orange-500">--</span>
+                </div>
+                <div class="mt-6 space-y-2 border-t border-white/5 pt-4">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Workouts Logged</span>
+                        <span id="count-workouts" class="font-bold">0</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Meals Tracked</span>
+                        <span id="count-meals" class="font-bold">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-[#161b22] border border-white/10 p-6 rounded-2xl">
+                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest">Recruiting Depth</h3>
+                <div class="mt-4 flex items-end gap-2">
+                    <span id="total-profiles" class="text-5xl font-black text-purple-500">--</span>
+                </div>
+                <div class="mt-6 space-y-2 border-t border-white/5 pt-4">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Recruiting Profiles</span>
+                        <span id="count-profiles" class="font-bold">0</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Goal Metrics Set</span>
+                        <span id="count-metrics" class="font-bold">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module" src="js/admin-lobby.js"></script>
+</body>
+</html>
