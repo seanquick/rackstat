@@ -158,22 +158,22 @@
                     <div class="stat-box">
                         <span class="label">Bench Press</span>
                         <div id="stat-bench" class="value view-mode">--</div>
-                        <input id="edit-bench" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
+                        <input id="edit-bench" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center">
                     </div>
                     <div class="stat-box">
                         <span class="label">Squat</span>
                         <div id="stat-squat" class="value view-mode">--</div>
-                        <input id="edit-squat" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
+                        <input id="edit-squat" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center">
                     </div>
                     <div class="stat-box">
                         <span class="label">Clean</span>
                         <div id="stat-clean" class="value view-mode">--</div>
-                        <input id="edit-clean" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
+                        <input id="edit-clean" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center">
                     </div>
                     <div class="stat-box">
                         <span class="label">40 Yard</span>
                         <div id="stat-forty" class="value view-mode">--</div>
-                        <input id="edit-forty" type="text" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded">
+                        <input id="edit-forty" type="text" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center">
                     </div>
                 </div>
             </div>
@@ -184,7 +184,7 @@
                     <div class="flex justify-between items-center border-b border-white/5 pb-1">
                         <span class="text-[10px] uppercase font-bold text-gray-400">Core GPA</span>
                         <span id="disp-core-gpa" class="font-black italic view-mode">--</span>
-                        <input id="edit-core-gpa" type="text" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-right p-1 w-16 rounded text-xs">
+                        <input id="edit-core-gpa" type="text" placeholder="0.00" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-right p-1 w-16 rounded text-xs">
                     </div>
                     <div class="flex justify-between items-center">
                         <span class="text-[10px] uppercase font-bold text-gray-400">ACT / SAT</span>
@@ -206,7 +206,7 @@
                         <div class="h-6 w-6 bg-white text-black rounded flex items-center justify-center font-black text-[10px]">X</div>
                         <div class="flex-grow">
                             <span id="disp-twitter" class="text-xs font-bold italic">@--</span>
-                            <input id="edit-twitter" type="text" placeholder="@handle" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-xs p-1 w-full rounded">
+                            <input id="edit-twitter" type="text" placeholder="@handle" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-xs p-1 w-full rounded outline-none">
                         </div>
                     </a>
 
@@ -216,41 +216,48 @@
                         </a>
                     </div>
                     <div class="edit-mode hidden">
-                        <label class="label text-[8px] text-gray-500">Hudl/Highlight URL</label>
-                        <input id="edit-hudl" type="text" placeholder="https://hudl.com/..." class="bg-black/40 border border-blue-500 text-white text-xs p-2 w-full rounded">
+                        <label class="label text-[8px] text-gray-500 uppercase tracking-widest">Hudl/Highlight URL</label>
+                        <input id="edit-hudl" type="text" placeholder="https://hudl.com/..." class="bg-black/40 border border-blue-500 text-white text-xs p-2 w-full rounded outline-none mt-1">
                     </div>
                 </div>
             </div>
 
             <div>
-                <h3 class="label mb-4">Additional Sports</h3>
-                <div class="stat-box space-y-2">
-                    <div class="flex justify-between items-center border-b border-white/5 pb-1">
-                        <span id="disp-sports" class="font-black italic view-mode">--</span>
-                        <input id="edit-sports" type="text" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-right p-1 w-16 rounded text-xs">
+                <h3 class="label mb-4">Multi-Sport Profile</h3>
+                <div class="stat-box">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] uppercase font-bold text-gray-400 mb-1">Additional Sports</span>
+                        <span id="disp-sports" class="font-black italic view-mode text-white">--</span>
+                        <input id="edit-sports" type="text" placeholder="e.g. Track, Wrestling" class="edit-mode hidden bg-black/40 border border-blue-500 text-white p-2 w-full rounded text-xs outline-none">
                     </div>
                 </div>
             </div>  
 
             <div class="stat-box bg-red-600/5 border-red-600/20">
                 <span class="label">Parental Contact</span>
-                <p id="disp-parents" class="text-xs font-bold text-white view-mode mt-1">--</p>
-                <input id="edit-parents" type="text" placeholder="Guardian Names" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-xs p-1 w-full rounded mt-1">
+                <div class="view-mode mt-1">
+                    <p id="disp-parents" class="text-xs font-bold text-white">--</p>
+                    <p id="disp-parent-contact" class="text-[10px] text-gray-500">--</p>
+                </div>
                 
-                <p id="disp-parent-contact" class="text-[10px] text-gray-500 view-mode">--</p>
-                <input id="edit-parent-contact" type="text" placeholder="Phone/Email" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-[10px] p-1 w-full rounded mt-1">
+                <div class="edit-mode hidden mt-2 space-y-2">
+                    <input id="edit-parents" type="text" placeholder="Guardian Names" class="bg-black/40 border border-blue-500 text-white text-xs p-1 w-full rounded outline-none">
+                    <input id="edit-parent-contact" type="text" placeholder="Phone or Email" class="bg-black/40 border border-blue-500 text-white text-[10px] p-1 w-full rounded outline-none">
+                </div>
             </div>
         </div>
     </div>
 
     <div class="mt-8 pt-8 border-t border-white/5">
         <h3 class="label mb-4">Character & Leadership Profile</h3>
-        <div class="bg-white/[0.02] p-6 rounded-2xl border border-white/5 italic text-sm text-gray-400 space-y-4">
-            <div class="grid grid-cols-1 gap-6">
-                <div>
-                    <p class="label not-italic mb-1 opacity-40">Teammate Definition:</p>
-                    <p id="disp-teammate-type" class="leading-relaxed view-mode">--</p>
-                    <textarea id="edit-team-type" class="edit-mode hidden bg-black/40 border border-blue-500 text-white w-full p-3 rounded h-24 text-xs mt-2 outline-none"></textarea>
+        <div class="bg-white/[0.02] p-6 rounded-2xl border border-white/5 italic text-sm text-gray-400">
+            <div class="flex flex-col">
+                <p class="label not-italic mb-2 opacity-40">Teammate Definition & Personal Philosophy:</p>
+                <p id="disp-teammate-type" class="leading-relaxed view-mode">--</p>
+                
+                <div class="edit-mode hidden">
+                    <textarea id="edit-team-type" placeholder="Describe your leadership style and what you bring to a locker room..." 
+                              class="bg-black/40 border border-blue-500 text-white w-full p-4 rounded-xl h-32 text-xs outline-none focus:ring-1 focus:ring-blue-400 transition-all"></textarea>
                 </div>
             </div>
         </div>
@@ -267,12 +274,14 @@
     </button>
 </div>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-red-900/30 px-6 py-4 flex justify-between items-center z-50">
-        <button onclick="location.href='board.html'" class="text-red-600 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Board</span></button>
-        <button onclick="location.href='rack.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">The Rack</span></button>
-        <button onclick="location.href='kitchen.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Kitchen</span></button>
-        <button onclick="location.href='profile.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
-    </nav>
+<nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-red-900/30 px-6 py-4 flex justify-between items-center z-50 no-print">
+    <button onclick="location.href='board.html'" class="text-red-600 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Board</span></button>
+    <button onclick="location.href='rack.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">The Rack</span></button>
+    <button onclick="location.href='kitchen.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Kitchen</span></button>
+    <button onclick="location.href='profile.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
+</nav>
+
+</body>
 
 <script type="module" src="theme.js"></script>
 
@@ -349,8 +358,8 @@
 
                     // --- IDENTITY & UI ---
                     const logoEl = document.getElementById('disp-logo');
-                    if (d.logo_primary && logoEl) {
-                        logoEl.src = d.logo_primary;
+                    if (logoEl) {
+                        logoEl.src = d.logo_primary || 'images/rackstat-logo.png';
                     }
 
                     safeSet('disp-name', d.fullName);
@@ -370,15 +379,13 @@
                     if (defPos2) defPos2.innerText = d.defSecondary ? `/ ${d.defSecondary}` : "";
 
                     // --- STATS ---
+                    // Pulling from "maxes" subcollection if available, otherwise falling back to profile fields
                     safeSet('stat-bench', mx.bench_press || d.bench);
                     safeSet('stat-squat', mx.squat || d.squat);
                     safeSet('stat-clean', mx.clean || d.clean);
-                    safeSet('stat-deadlift', mx.deadlift || d.deadlift);
-                    safeSet('stat-push-press', mx.push_press || d.push_press); // Fixed ID hyphen
                     safeSet('stat-forty', d.forty ? `${d.forty}s` : "--");
 
                     // Academics
-                    safeSet('disp-gpa', d.gpa);
                     safeSet('disp-core-gpa', d.coreGpa);
                     safeSet('disp-act', d.act);
                     safeSet('disp-sat', d.sat);
@@ -395,10 +402,8 @@
                     };
                     formatLink('link-hudl', null, d.hudlLink || d.highlightUrl);
                     formatLink('link-twitter', 'disp-twitter', d.twitter, 'twitter');
-                    formatLink('link-instagram', 'disp-instagram', d.instagram, 'instagram');
-                    formatLink('link-tiktok', 'disp-tiktok', d.tiktok, 'tiktok');
 
-                    // Bio
+                    // Bio / Parent / Character
                     safeSet('disp-parents', d.parentNames);
                     safeSet('disp-parent-contact', d.parentContact);
                     safeSet('disp-teammate-type', d.teammateType);
@@ -416,13 +421,11 @@
                     setVal('edit-bench', d.bench);
                     setVal('edit-squat', d.squat);
                     setVal('edit-clean', d.clean);
-                    setVal('edit-deadlift', d.deadlift);
-                    setVal('edit-push-press', d.push_press); // Fixed ID hyphen
                     setVal('edit-forty', d.forty);
-                    setVal('edit-gpa', d.gpa);
                     setVal('edit-core-gpa', d.coreGpa);
                     setVal('edit-act', d.act);
                     setVal('edit-sat', d.sat);
+                    setVal('edit-sports', d.sports);
                     setVal('edit-parents', d.parentNames);
                     setVal('edit-parent-contact', d.parentContact);
                     setVal('edit-team-type', d.teammateType);
@@ -473,15 +476,13 @@
             bench: document.getElementById('edit-bench')?.value || "",
             squat: document.getElementById('edit-squat')?.value || "",
             clean: document.getElementById('edit-clean')?.value || "",
-            deadlift: document.getElementById('edit-deadlift')?.value || "",
-            push_press: document.getElementById('edit-push-press')?.value || "", // Fixed ID hyphen
             forty: document.getElementById('edit-forty')?.value || "",
-            gpa: document.getElementById('edit-gpa')?.value || "",
             coreGpa: document.getElementById('edit-core-gpa')?.value || "",
             act: document.getElementById('edit-act')?.value || "",
             sat: document.getElementById('edit-sat')?.value || "",
             height: document.getElementById('edit-height')?.value || "",
             weight: document.getElementById('edit-weight')?.value || "",
+            sports: document.getElementById('edit-sports')?.value || "",
             parentNames: document.getElementById('edit-parents')?.value || "",
             parentContact: document.getElementById('edit-parent-contact')?.value || "",
             teammateType: document.getElementById('edit-team-type')?.value || "",

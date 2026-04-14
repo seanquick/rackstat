@@ -87,9 +87,8 @@
 
             <div class="bg-[#0f0f0f] p-4 rounded-xl border border-red-900/20 mb-4">
                 <span class="sub-label text-red-500">What Additional Sports do you Play</span>
-                <div class="grid-2">
-                    <input type="text" id="sports" placeholder="Enter Sports ">
-                    </div>
+                <div class="grid-2"> <input type="text" id="sports" placeholder="Enter Sports ">
+                </div>
             </div>
 
             <span class="sub-label">Parent/Guardian Name(s)</span>
@@ -361,6 +360,7 @@
                     safeSet('twitter', d.twitter);
                     safeSet('instagram', d.instagram);
                     safeSet('tiktok', d.tiktok);
+                    safeSet('sports', d.sports); // ADD THIS LINE
                     safeSet('parentNames', d.parentNames);
                     safeSet('parentContact', d.parentContact);
                     safeSet('wantsToPlay', d.wantsToPlay || "Yes-Definitely");
@@ -431,7 +431,8 @@
             playerEmail: document.getElementById('playerEmail').value,
             twitter: document.getElementById('twitter').value,        
             instagram: document.getElementById('instagram').value,    
-            tiktok: document.getElementById('tiktok').value,          
+            tiktok: document.getElementById('tiktok').value,  
+            sports: document.getElementById('sports').value, // ADD THIS LINE        
             parentNames: document.getElementById('parentNames').value,
             parentContact: document.getElementById('parentContact').value,
             wantsToPlay: document.getElementById('wantsToPlay').value,
