@@ -249,19 +249,42 @@
     </div>
 
     <div class="mt-8 pt-8 border-t border-white/5">
-        <h3 class="label mb-4">Character & Leadership Profile</h3>
-        <div class="bg-white/[0.02] p-6 rounded-2xl border border-white/5 italic text-sm text-gray-400">
-            <div class="flex flex-col">
-                <p class="label not-italic mb-2 opacity-40">Teammate Definition & Personal Philosophy:</p>
-                <p id="disp-teammate-type" class="leading-relaxed view-mode">--</p>
-                
-                <div class="edit-mode hidden">
-                    <textarea id="edit-team-type" placeholder="Describe your leadership style and what you bring to a locker room..." 
-                              class="bg-black/40 border border-blue-500 text-white w-full p-4 rounded-xl h-32 text-xs outline-none focus:ring-1 focus:ring-blue-400 transition-all"></textarea>
+            <h3 class="label mb-4">College Aspirations & Recruiting</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="stat-box bg-blue-600/5">
+                    <span class="label text-[9px]">Desired Level</span>
+                    <p id="perceivedLevel" class="text-sm font-black italic text-white uppercase view-mode">--</p>
+                    <span class="label text-[9px] mt-2 block">Commitment Level</span>
+                    <p id="seriousness" class="text-xs font-bold text-gray-400 view-mode">--</p>
+                </div>
+                <div class="stat-box">
+                    <span class="label text-[9px]">Intended Major</span>
+                    <p id="major" class="text-sm font-black italic text-white view-mode">--</p>
+                    <span class="label text-[9px] mt-2 block">NCAA Registered</span>
+                    <p id="ncaaReg" class="text-xs font-bold text-gray-400 view-mode">--</p>
+                </div>
+            </div>
+
+            <div class="mt-4 bg-white/[0.02] p-4 rounded-2xl border border-white/5">
+                <p class="label text-[9px] mb-1 opacity-40">Why I want to play at the next level:</p>
+                <p id="whyPlay" class="text-xs italic text-gray-400 leading-relaxed view-mode">--</p>
+            </div>
+        </div>
+
+        <div class="mt-8 pt-8 border-t border-white/5">
+            <h3 class="label mb-4">Character & Leadership Profile</h3>
+            <div class="bg-white/[0.02] p-6 rounded-2xl border border-white/5 italic text-sm text-gray-400">
+                <div class="flex flex-col">
+                    <p class="label not-italic mb-2 opacity-40">Teammate Definition & Personal Philosophy:</p>
+                    <p id="disp-teammate-type" class="leading-relaxed view-mode">--</p>
+                    
+                    <div class="edit-mode hidden">
+                        <textarea id="edit-team-type" placeholder="Leadership style..." 
+                                class="bg-black/40 border border-blue-500 text-white w-full p-4 rounded-xl h-32 text-xs outline-none"></textarea>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
     <div class="mt-12 pt-6 border-t border-white/5 flex justify-between items-center opacity-30">
         <span class="text-[8px] font-black uppercase tracking-widest">RACKSTAT ELITE RECRUITING SYSTEM</span>
@@ -283,7 +306,7 @@
 
 </body>
 
-<script type="module" src="theme.js"></script>
+<script type="module" src="js/theme.js"></script>
 
 <script type="module">
     import { firebaseConfig } from './firebase-config.js';
@@ -392,14 +415,18 @@
 
                     // --- SOCIAL LINKS ---
                     const formatLink = (linkId, dispId, handle, platform = '') => {
-                        const linkEl = document.getElementById(linkId);
-                        const dispEl = document.getElementById(dispId);
-                        if (handle) {
-                            const cleanHandle = handle.replace('@', '');
-                            if (linkEl) linkEl.href = platform ? `https://www.${platform}.com/${cleanHandle}` : handle;
-                            if (dispEl) dispEl.innerText = platform ? `@${cleanHandle}` : handle;
-                        }
-                    };
+                    const linkEl = document.getElementById(linkId);
+                    const dispEl = document.getElementById(dispId);
+                    if (handle) {
+                        // If it's already a full URL, don't append the platform prefix
+                        const isUrl = handle.includes('http');
+                        const cleanHandle = handle.replace('@', '');
+                        
+                        if (linkEl) linkEl.href = isUrl ? handle : `https://www.${platform}.com/${cleanHandle}`;
+                        if (dispEl) dispEl.innerText = isUrl ? 'View Link' : `@${cleanHandle}`;
+                    }
+                };
+
                     formatLink('link-hudl', null, d.hudlLink || d.highlightUrl);
                     formatLink('link-twitter', 'disp-twitter', d.twitter, 'twitter');
 
@@ -407,6 +434,26 @@
                     safeSet('disp-parents', d.parentNames);
                     safeSet('disp-parent-contact', d.parentContact);
                     safeSet('disp-teammate-type', d.teammateType);
+
+                    // --- NEXT LEVEL QUESTIONNAIRE DATA ---
+                    safeSet('perceivedLevel', d.perceivedLevel || "D1");
+                    safeSet('seriousness', d.seriousness || "Very Serious");
+                    safeSet('major', d.major || "Undecided");
+                    safeSet('ncaaReg', d.ncaaReg || "No");
+                    safeSet('whyPlay', d.whyPlay || "No statement provided.");
+                    safeSet('wantsToPlay', d.wantsToPlay || "Yes");
+                    safeSet('postCollegeGoals', d.postCollegeGoals);
+                    safeSet('acadImportance', d.acadImportance || "Extremely");
+                    safeSet('acadPrioritize', d.acadPrioritize || "Yes");
+                    safeSet('acadStrengths', d.acadStrengths);
+
+                    // Recruiting Preferences
+                    safeSet('prefLoc', d.prefLoc || "Anywhere");
+                    safeSet('prefSize', d.prefSize || "Any");
+
+                    // Athletic Context
+                    safeSet('isStarter', d.isStarter || "No");
+                    safeSet('honors', d.honors || "None listed");
 
                     // --- PRE-FILL EDITORS ---
                     setVal('edit-name', d.fullName);
