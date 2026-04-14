@@ -126,10 +126,12 @@
         </div>
 
         <div class="flex flex-col items-center justify-center min-w-[100px]">
-            <img id="disp-logo" src="" class="h-16 w-16 object-contain view-mode" alt="Logo">
+            <img id="disp-logo" src="" class="h-16 w-16 object-contain hidden" alt="School Logo">
+            
             <div class="edit-mode hidden w-full text-center">
                 <label class="block text-[8px] uppercase text-gray-500 mb-1">Logo URL</label>
-                <input id="edit-logo" type="text" placeholder="images/school.png" class="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-white text-[9px]">
+                <input id="edit-logo" type="text" placeholder="images/school.png" 
+                    class="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-white text-[9px]">
             </div>
         </div>
 
@@ -351,7 +353,6 @@
         }, 500);
     };
 
-    // --- MAIN RENDER LOGIC ---
     onAuthStateChanged(auth, async (user) => {
         const urlParams = new URLSearchParams(window.location.search);
         const athleteId = urlParams.get('uid');
@@ -360,6 +361,19 @@
         if (user) {
             try {
                 const targetUid = athleteId || user.uid;
+                
+                // --- SECURITY & PERMISSIONS ---
+                // Fetch the logged-in user's role first to verify access
+                const userSnap = await getDoc(doc(db, "users", user.uid));
+                const userData = userSnap?.data();
+
+                // If a user tries to access a different UID and isn't a coach, redirect them
+                if (athleteId && athleteId !== user.uid && userData?.role !== 'coach') {
+                    console.error("Unauthorized access attempt.");
+                    window.location.href = 'rack.html'; 
+                    return;
+                }
+
                 const profileRef = doc(db, "recruiting_profiles", targetUid);
                 const maxesRef = doc(db, "recruiting_profiles", targetUid, "maxes", "latest");
                 
@@ -369,11 +383,8 @@
                     const d = recSnap.data();
                     const mx = maxesSnap.exists() ? maxesSnap.data() : {};
 
-                    // --- NAVIGATION & PERMISSIONS ---
-                    const userSnap = await getDoc(doc(db, "users", user.uid));
-                    const userData = userSnap.data();
+                    // --- NAVIGATION & PERMISSIONS UI ---
                     const backBtn = document.getElementById('back-button');
-
                     if (backBtn && userData) {
                         if (userData.role === 'coach') {
                             backBtn.innerText = "← BACK TO OFFICE";
@@ -385,12 +396,20 @@
                         }
                     }
 
-                    // --- IDENTITY & UI ---
+                    // --- LOGO LOGIC ---
+                    // Feature: Only show the logo if it exists; never fallback to RACKSTAT logo.
                     const logoEl = document.getElementById('disp-logo');
                     if (logoEl) {
-                        logoEl.src = d.logo_primary || 'images/rackstat-logo.png';
+                        if (d.logo_primary && d.logo_primary.trim() !== "") {
+                            logoEl.src = d.logo_primary;
+                            logoEl.classList.remove('hidden');
+                        } else {
+                            logoEl.classList.add('hidden');
+                            logoEl.src = ""; // Clear src to prevent broken icon
+                        }
                     }
 
+                    // --- IDENTITY & UI ---
                     safeSet('disp-name', d.fullName);
                     safeSet('disp-class', d.gradYear ? `CLASS OF ${d.gradYear}` : "--");
                     safeSet('disp-number', d.jerseyNum ? `#${d.jerseyNum}` : "#--");
@@ -408,7 +427,6 @@
                     if (defPos2) defPos2.innerText = d.defSecondary ? `/ ${d.defSecondary}` : "";
 
                     // --- STATS ---
-                    // Pulling from "maxes" subcollection if available, otherwise falling back to profile fields
                     safeSet('stat-bench', mx.bench_press || d.bench);
                     safeSet('stat-squat', mx.squat || d.squat);
                     safeSet('stat-clean', mx.clean || d.clean);
@@ -421,17 +439,15 @@
 
                     // --- SOCIAL LINKS ---
                     const formatLink = (linkId, dispId, handle, platform = '') => {
-                    const linkEl = document.getElementById(linkId);
-                    const dispEl = document.getElementById(dispId);
-                    if (handle) {
-                        // If it's already a full URL, don't append the platform prefix
-                        const isUrl = handle.includes('http');
-                        const cleanHandle = handle.replace('@', '');
-                        
-                        if (linkEl) linkEl.href = isUrl ? handle : `https://www.${platform}.com/${cleanHandle}`;
-                        if (dispEl) dispEl.innerText = isUrl ? 'View Link' : `@${cleanHandle}`;
-                    }
-                };
+                        const linkEl = document.getElementById(linkId);
+                        const dispEl = document.getElementById(dispId);
+                        if (handle) {
+                            const isUrl = handle.includes('http');
+                            const cleanHandle = handle.replace('@', '');
+                            if (linkEl) linkEl.href = isUrl ? handle : `https://www.${platform}.com/${cleanHandle}`;
+                            if (dispEl) dispEl.innerText = isUrl ? 'View Link' : `@${cleanHandle}`;
+                        }
+                    };
 
                     formatLink('link-hudl', null, d.hudlLink || d.highlightUrl);
                     formatLink('link-twitter', 'disp-twitter', d.twitter, 'twitter');
@@ -442,24 +458,14 @@
                     safeSet('disp-teammate-type', d.teammateType);
 
                     // --- NEXT LEVEL QUESTIONNAIRE DATA ---
-                    safeSet('perceivedLevel', d.perceivedLevel || "D1");
-                    safeSet('seriousness', d.seriousness || "Very Serious");
-                    safeSet('major', d.major || "Undecided");
-                    safeSet('ncaaReg', d.ncaaReg || "No");
+                    safeSet('perceivedLevel', d.perceivedLevel || "--");
+                    safeSet('seriousness', d.seriousness || "--");
+                    safeSet('major', d.major || "--");
+                    safeSet('ncaaReg', d.ncaaReg || "--");
                     safeSet('whyPlay', d.whyPlay || "No statement provided.");
-                    safeSet('wantsToPlay', d.wantsToPlay || "Yes");
                     safeSet('postCollegeGoals', d.postCollegeGoals);
-                    safeSet('acadImportance', d.acadImportance || "Extremely");
-                    safeSet('acadPrioritize', d.acadPrioritize || "Yes");
                     safeSet('acadStrengths', d.acadStrengths);
-
-                    // Recruiting Preferences
-                    safeSet('prefLoc', d.prefLoc || "Anywhere");
-                    safeSet('prefSize', d.prefSize || "Any");
-
-                    // Athletic Context
-                    safeSet('isStarter', d.isStarter || "No");
-                    safeSet('honors', d.honors || "None listed");
+                    safeSet('disp-is-starter', d.isStarter || "No");
 
                     // --- PRE-FILL EDITORS ---
                     setVal('edit-name', d.fullName);
