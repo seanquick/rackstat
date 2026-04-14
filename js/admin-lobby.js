@@ -43,7 +43,7 @@ onAuthStateChanged(auth, async (user) => {
 async function renderMetrics() {
     try {
         // User Counts
-        const athleteCount = await getCount(query(collection(db, "users"), where("role", "==", "athlete")));
+        const athleteCount = await getCount(query(collection(db, "users"), where("role", "==", "player")));
         const coachCount = await getCount(query(collection(db, "users"), where("role", "==", "coach")));
         
         document.getElementById('count-athletes').innerText = athleteCount || 0;
