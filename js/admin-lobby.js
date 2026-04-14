@@ -33,6 +33,7 @@ onAuthStateChanged(auth, async (user) => {
         // If verified, run the dashboard engines
         renderMetrics();
         getRecentPulse();
+        loadSchoolActivity(); // <--- Added this call
     } catch (error) {
         console.error("Auth Error:", error);
     }
@@ -45,13 +46,16 @@ async function renderMetrics() {
         const athleteCount = await getCount(query(collection(db, "users"), where("role", "==", "athlete")));
         const coachCount = await getCount(query(collection(db, "users"), where("role", "==", "coach")));
         
-        document.getElementById('count-athletes').innerText = athleteCount;
-        document.getElementById('count-coaches').innerText = coachCount;
-        document.getElementById('total-users').innerText = athleteCount + coachCount;
+        document.getElementById('count-athletes').innerText = athleteCount || 0;
+        document.getElementById('count-coaches').innerText = coachCount || 0;
+        document.getElementById('total-users').innerText = (athleteCount + coachCount) || 0;
 
-        // Activity Counts
-        const workoutCount = await getCount(collection(db, "completed_workouts"));
-        const mealCount = await getCount(collection(db, "meals"));
+        // Activity Counts - Using try/catch specifically for these in case collections don't exist yet
+        let workoutCount = 0;
+        let mealCount = 0;
+
+        try { workoutCount = await getCount(collection(db, "completed_workouts")); } catch(e) { console.warn("Workouts coll empty"); }
+        try { mealCount = await getCount(collection(db, "meals")); } catch(e) { console.warn("Meals coll empty"); }
         
         document.getElementById('count-workouts').innerText = workoutCount;
         document.getElementById('count-meals').innerText = mealCount;
@@ -77,9 +81,13 @@ async function getRecentPulse() {
         if (!listEl) return;
         listEl.innerHTML = '';
 
+        if (snap.empty) {
+            listEl.innerHTML = '<p class="p-6 text-xs text-gray-600 italic text-center">No recent activity.</p>';
+            return;
+        }
+
         snap.forEach(doc => {
             const data = doc.data();
-            // Fallback for missing timestamps to prevent crash
             const time = data.timestamp ? data.timestamp.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "Recent";
             
             const item = document.createElement('div');
@@ -92,14 +100,52 @@ async function getRecentPulse() {
         });
     } catch (err) {
         console.error("Pulse Load Error:", err);
-        // Common fix: You might need to create a Firestore Index if you see an error in the console
+    }
+}
+
+// --- ENGINE 3: ACTIVE SCHOOLS ---
+async function loadSchoolActivity() {
+    try {
+        const q = query(collection(db, "schools"), limit(10));
+        const snap = await getDocs(q);
+        const container = document.getElementById('school-list');
+
+        if (!container) return;
+        container.innerHTML = '';
+
+        if (snap.empty) {
+            container.innerHTML = '<p class="p-6 text-xs text-gray-600 italic text-center">No schools registered yet.</p>';
+            return;
+        }
+
+        snap.forEach(doc => {
+            const school = doc.data();
+            const row = document.createElement('div');
+            row.className = "p-4 flex justify-between items-center hover:bg-white/[0.02] transition";
+            row.innerHTML = `
+                <div>
+                    <p class="font-bold text-sm">${school.name || 'Unnamed School'}</p>
+                    <p class="text-[10px] text-gray-500 uppercase">${school.city || 'Unknown'}, ${school.state || '--'}</p>
+                </div>
+                <div class="text-right">
+                    <span class="text-[10px] bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20 uppercase font-bold">Active</span>
+                </div>
+            `;
+            container.appendChild(row);
+        });
+    } catch (err) {
+        console.error("School Load Error:", err);
     }
 }
 
 // --- UTILITY ---
 async function getCount(queryOrColl) {
-    const snap = await getAggregateFromServer(queryOrColl, {
-        total: count()
-    });
-    return snap.data().total;
+    try {
+        const snap = await getAggregateFromServer(queryOrColl, {
+            total: count()
+        });
+        return snap.data().total;
+    } catch (e) {
+        return 0;
+    }
 }
