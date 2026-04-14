@@ -206,42 +206,55 @@
                 const userSnap = await getDoc(doc(db, "users", user.uid));
                 if (userSnap.exists()) {
                     const userData = userSnap.data();
+                    const role = userData.role?.toLowerCase();
 
-                    // Automatic redirect if a Coach or Admin lands here while logged in
-                    if (userData.role === 'admin') {
+                    // 1. Role-Based Routing
+                    // We only redirect if the user is NOT already on index.html
+                    // This prevents the "Logout Loop"
+                    const isLoginPage = window.location.pathname.endsWith('index.html') || window.location.pathname === '/';
+
+                    if (role === 'admin' && isLoginPage) {
                         window.location.href = 'admin-lobby.html';
                         return;
                     }
-                    if (userData.role === 'coach') {
+                    if (role === 'coach' && isLoginPage) {
                         window.location.href = 'coach-lobby.html';
                         return;
                     }
 
-                    // Athlete-Specific Setup
-                    const schoolId = userData.schoolId || userData.school_id;
-                    const schoolData = await applyTheme(db, schoolId);
+                    // 2. Athlete/Player Setup
+                    // Changed to check for 'player' per your Firestore data
+                    if (role === 'player' || role === 'athlete') {
+                        const schoolId = userData.schoolId || userData.school_id;
+                        const schoolData = await applyTheme(db, schoolId);
 
-                    if (schoolData && recruitingBtn) {
-                        if (schoolData.hasRecruitingCard === false) {
-                            recruitingBtn.classList.add('hidden');
+                        if (schoolData && recruitingBtn) {
+                            if (schoolData.hasRecruitingCard === false) {
+                                recruitingBtn.classList.add('hidden');
+                            }
                         }
-                    }
 
-                    if (welcomeMsg) {
-                        welcomeMsg.innerText = `Welcome, ${userData.firstName || 'Athlete'}`;
+                        if (welcomeMsg) {
+                            welcomeMsg.innerText = `Welcome, ${userData.firstName || 'Athlete'}`;
+                        }
+                        
+                        authSection.classList.add('hidden');
+                        mainMenu.classList.remove('hidden');
                     }
-                    
-                    authSection.classList.add('hidden');
-                    mainMenu.classList.remove('hidden');
                 }
             } catch (err) {
                 console.error("Observer Error:", err);
             }
         } else {
+            // No user is signed in - Show login, hide menu
             authSection.classList.remove('hidden');
             mainMenu.classList.add('hidden');
+            
+            // Reset dynamic styles/welcome if needed
+            if (welcomeMsg) welcomeMsg.innerText = '';
         }
     });
+
 </script>
 </body>
 </html>

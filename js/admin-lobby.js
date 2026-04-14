@@ -177,3 +177,23 @@ async function getCount(queryOrColl) {
         return 0;
     }
 }
+
+// Add this at the bottom of js/admin-lobby.js
+const logoutBtn = document.querySelector("button[onclick*='index.html']");
+
+if (logoutBtn) {
+    // Remove the inline onclick from the HTML to avoid conflicts
+    logoutBtn.removeAttribute('onclick'); 
+    
+    logoutBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+            await signOut(auth);
+            console.log("Logged out successfully");
+            // Use replace to prevent the "back" button from returning here
+            window.location.replace('index.html'); 
+        } catch (err) {
+            console.error("Logout failed:", err);
+        }
+    });
+}
