@@ -6,8 +6,7 @@
     <title>Scouting Report | RACKSTAT</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="theme.js" defer></script>
-
+    
     <style>
         :root {
             --rackstat-red: #b91c1c;
@@ -97,7 +96,7 @@
 
             <p id="disp-class" class="text-red-500 font-bold tracking-widest text-sm mt-1 view-mode uppercase">CLASS OF --</p>
             <div class="edit-mode hidden mt-2">
-                <label class="label text-gray-400">Graduation Year</label>
+                <label class="label text-[8px] uppercase text-gray-500">Graduation Year</label>
                 <input id="edit-grad" type="number" class="bg-black/40 border border-blue-500 text-red-500 text-sm p-1 w-24 rounded">
             </div>
 
@@ -128,8 +127,8 @@
 
         <div class="flex flex-col items-center justify-center min-w-[100px]">
             <img id="disp-logo" src="" class="h-16 w-16 object-contain view-mode" alt="Logo">
-            <div class="edit-mode hidden w-full">
-                <label class="block text-[8px] uppercase text-gray-500 text-center mb-1">Logo URL</label>
+            <div class="edit-mode hidden w-full text-center">
+                <label class="block text-[8px] uppercase text-gray-500 mb-1">Logo URL</label>
                 <input id="edit-logo" type="text" placeholder="images/school.png" class="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-white text-[9px]">
             </div>
         </div>
@@ -143,8 +142,8 @@
             <div class="edit-mode hidden mt-2 flex flex-col items-end gap-1">
                 <input id="edit-number" type="text" placeholder="#" class="w-12 bg-black/40 border border-blue-500 rounded px-1 py-1 text-white text-xs text-right">
                 <div class="flex gap-1">
-                    <input id="edit-height" type="text" placeholder="6'2" class="w-12 bg-black/40 border border-blue-500 rounded px-1 py-1 text-white text-xs text-center">
-                    <input id="edit-weight" type="text" placeholder="215" class="w-12 bg-black/40 border border-blue-500 rounded px-1 py-1 text-white text-xs text-center">
+                    <input id="edit-height" type="text" placeholder="Inches" class="w-12 bg-black/40 border border-blue-500 rounded px-1 py-1 text-white text-xs text-center">
+                    <input id="edit-weight" type="text" placeholder="LBS" class="w-12 bg-black/40 border border-blue-500 rounded px-1 py-1 text-white text-xs text-center">
                 </div>
             </div>
         </div>
@@ -153,42 +152,42 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div class="space-y-6">
             <div>
-                <h3 class="label mb-4">Verified Strength & Speed</h3>
+                <h3 class="label mb-4 uppercase text-[10px] tracking-widest text-gray-500">Verified Strength & Speed</h3>
                 <div class="grid grid-cols-2 gap-3">
                     <div class="stat-box">
                         <span class="label">Bench Press</span>
-                        <div id="stat-bench" class="value view-mode">--</div>
+                        <div id="stat-bench" class="value view-mode text-white font-black italic">--</div>
                         <input id="edit-bench" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center">
                     </div>
                     <div class="stat-box">
                         <span class="label">Squat</span>
-                        <div id="stat-squat" class="value view-mode">--</div>
+                        <div id="stat-squat" class="value view-mode text-white font-black italic">--</div>
                         <input id="edit-squat" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center">
                     </div>
                     <div class="stat-box">
                         <span class="label">Clean</span>
-                        <div id="stat-clean" class="value view-mode">--</div>
+                        <div id="stat-clean" class="value view-mode text-white font-black italic">--</div>
                         <input id="edit-clean" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center">
                     </div>
                     <div class="stat-box">
                         <span class="label">40 Yard</span>
-                        <div id="stat-forty" class="value view-mode">--</div>
+                        <div id="stat-forty" class="value view-mode text-white font-black italic">--</div>
                         <input id="edit-forty" type="text" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center">
                     </div>
                 </div>
             </div>
 
             <div>
-                <h3 class="label mb-4">Academic Profile</h3>
+                <h3 class="label mb-4 uppercase text-[10px] tracking-widest text-gray-500">Academic Profile</h3>
                 <div class="stat-box space-y-2">
                     <div class="flex justify-between items-center border-b border-white/5 pb-1">
                         <span class="text-[10px] uppercase font-bold text-gray-400">Core GPA</span>
-                        <span id="disp-core-gpa" class="font-black italic view-mode">--</span>
+                        <span id="disp-core-gpa" class="font-black italic view-mode text-white">--</span>
                         <input id="edit-core-gpa" type="text" placeholder="0.00" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-right p-1 w-16 rounded text-xs">
                     </div>
                     <div class="flex justify-between items-center">
                         <span class="text-[10px] uppercase font-bold text-gray-400">ACT / SAT</span>
-                        <span class="font-black italic view-mode"><span id="disp-act">--</span> / <span id="disp-sat">--</span></span>
+                        <span class="font-black italic view-mode text-white"><span id="disp-act">--</span> / <span id="disp-sat">--</span></span>
                         <div class="edit-mode hidden flex gap-1">
                             <input id="edit-act" type="number" placeholder="ACT" class="bg-black/40 border border-blue-500 text-white text-right p-1 w-12 rounded text-xs">
                             <input id="edit-sat" type="number" placeholder="SAT" class="bg-black/40 border border-blue-500 text-white text-right p-1 w-12 rounded text-xs">
@@ -200,15 +199,15 @@
 
         <div class="space-y-6">
             <div>
-                <h3 class="label mb-4">Digital Scouting</h3>
+                <h3 class="label mb-4 uppercase text-[10px] tracking-widest text-gray-500">Digital Scouting</h3>
                 <div class="space-y-3">
-                    <a id="link-twitter" href="#" target="_blank" class="stat-box flex items-center gap-3 hover:border-blue-500/50 transition-all">
+                    <div class="stat-box flex items-center gap-3">
                         <div class="h-6 w-6 bg-white text-black rounded flex items-center justify-center font-black text-[10px]">X</div>
                         <div class="flex-grow">
-                            <span id="disp-twitter" class="text-xs font-bold italic">@--</span>
+                            <span id="disp-twitter" class="text-xs font-bold italic text-white view-mode">@--</span>
                             <input id="edit-twitter" type="text" placeholder="@handle" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-xs p-1 w-full rounded outline-none">
                         </div>
-                    </a>
+                    </div>
 
                     <div class="view-mode">
                         <a id="link-hudl" href="#" target="_blank">
@@ -216,75 +215,82 @@
                         </a>
                     </div>
                     <div class="edit-mode hidden">
-                        <label class="label text-[8px] text-gray-500 uppercase tracking-widest">Hudl/Highlight URL</label>
+                        <label class="label text-[8px] text-gray-500 uppercase">Hudl/Highlight URL</label>
                         <input id="edit-hudl" type="text" placeholder="https://hudl.com/..." class="bg-black/40 border border-blue-500 text-white text-xs p-2 w-full rounded outline-none mt-1">
                     </div>
                 </div>
             </div>
 
             <div>
-                <h3 class="label mb-4">Multi-Sport Profile</h3>
-                <div class="stat-box">
-                    <div class="flex flex-col">
-                        <span class="text-[10px] uppercase font-bold text-gray-400 mb-1">Additional Sports</span>
-                        <span id="disp-sports" class="font-black italic view-mode text-white">--</span>
-                        <input id="edit-sports" type="text" placeholder="e.g. Track, Wrestling" class="edit-mode hidden bg-black/40 border border-blue-500 text-white p-2 w-full rounded text-xs outline-none">
+                <h3 class="label mb-4 uppercase text-[10px] tracking-widest text-gray-500">Recruiting Context</h3>
+                <div class="stat-box bg-red-600/5 border-red-600/20">
+                    <span class="label">Parental Contact</span>
+                    <div class="view-mode mt-1">
+                        <p id="disp-parents" class="text-xs font-bold text-white">--</p>
+                        <p id="disp-parent-contact" class="text-[10px] text-gray-500">--</p>
                     </div>
-                </div>
-            </div>  
-
-            <div class="stat-box bg-red-600/5 border-red-600/20">
-                <span class="label">Parental Contact</span>
-                <div class="view-mode mt-1">
-                    <p id="disp-parents" class="text-xs font-bold text-white">--</p>
-                    <p id="disp-parent-contact" class="text-[10px] text-gray-500">--</p>
-                </div>
-                
-                <div class="edit-mode hidden mt-2 space-y-2">
-                    <input id="edit-parents" type="text" placeholder="Guardian Names" class="bg-black/40 border border-blue-500 text-white text-xs p-1 w-full rounded outline-none">
-                    <input id="edit-parent-contact" type="text" placeholder="Phone or Email" class="bg-black/40 border border-blue-500 text-white text-[10px] p-1 w-full rounded outline-none">
+                    <div class="edit-mode hidden mt-2 space-y-2">
+                        <input id="edit-parents" type="text" placeholder="Guardian Names" class="bg-black/40 border border-blue-500 text-white text-xs p-1 w-full rounded outline-none">
+                        <input id="edit-parent-contact" type="text" placeholder="Phone or Email" class="bg-black/40 border border-blue-500 text-white text-[10px] p-1 w-full rounded outline-none">
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="mt-8 pt-8 border-t border-white/5">
-            <h3 class="label mb-4">College Aspirations & Recruiting</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="stat-box bg-blue-600/5">
-                    <span class="label text-[9px]">Desired Level</span>
-                    <p id="perceivedLevel" class="text-sm font-black italic text-white uppercase view-mode">--</p>
-                    <span class="label text-[9px] mt-2 block">Commitment Level</span>
-                    <p id="seriousness" class="text-xs font-bold text-gray-400 view-mode">--</p>
-                </div>
-                <div class="stat-box">
-                    <span class="label text-[9px]">Intended Major</span>
-                    <p id="major" class="text-sm font-black italic text-white view-mode">--</p>
-                    <span class="label text-[9px] mt-2 block">NCAA Registered</span>
-                    <p id="ncaaReg" class="text-xs font-bold text-gray-400 view-mode">--</p>
-                </div>
+        <h3 class="label mb-4 uppercase text-[10px] tracking-widest text-gray-500">College Aspirations & Recruiting</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="stat-box bg-blue-600/5">
+                <span class="label text-[9px]">Desired Level</span>
+                <p id="perceivedLevel" class="text-sm font-black italic text-white uppercase view-mode">--</p>
+                <input id="edit-level" type="text" placeholder="D1, D2, etc." class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-xs p-1 w-full rounded outline-none">
+                
+                <span class="label text-[9px] mt-2 block">Commitment Level</span>
+                <p id="seriousness" class="text-xs font-bold text-gray-400 view-mode">--</p>
+                <input id="edit-seriousness" type="text" placeholder="Very Serious, etc." class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-[10px] p-1 w-full rounded outline-none mt-1">
             </div>
+            <div class="stat-box">
+                <span class="label text-[9px]">Intended Major</span>
+                <p id="major" class="text-sm font-black italic text-white view-mode">--</p>
+                <input id="edit-major" type="text" placeholder="Engineering, etc." class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-xs p-1 w-full rounded outline-none">
+                
+                <span class="label text-[9px] mt-2 block">NCAA Registered</span>
+                <p id="ncaaReg" class="text-xs font-bold text-gray-400 view-mode">--</p>
+                <input id="edit-ncaa" type="text" placeholder="Yes/No" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-[10px] p-1 w-full rounded outline-none mt-1">
+            </div>
+        </div>
 
-            <div class="mt-4 bg-white/[0.02] p-4 rounded-2xl border border-white/5">
-                <p class="label text-[9px] mb-1 opacity-40">Why I want to play at the next level:</p>
-                <p id="whyPlay" class="text-xs italic text-gray-400 leading-relaxed view-mode">--</p>
+        <div class="mt-4 bg-white/[0.02] p-4 rounded-2xl border border-white/5">
+            <p class="label text-[9px] mb-1 opacity-40 uppercase">Why I want to play at the next level:</p>
+            <p id="whyPlay" class="text-xs italic text-gray-400 leading-relaxed view-mode">--</p>
+            <textarea id="edit-why-play" placeholder="My motivation..." class="edit-mode hidden bg-black/40 border border-blue-500 text-white w-full p-2 rounded-xl h-20 text-xs outline-none mt-1"></textarea>
+        </div>
+    </div>
+
+    <div class="mt-8 pt-8 border-t border-white/5">
+        <h3 class="label mb-4 uppercase text-[10px] tracking-widest text-gray-500">Character & Multi-Sport Profile</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+             <div class="stat-box">
+                <span class="text-[9px] uppercase font-bold text-gray-400">Additional Sports</span>
+                <p id="disp-sports" class="font-black italic view-mode text-white text-xs mt-1">--</p>
+                <input id="edit-sports" type="text" placeholder="Track, Wrestling..." class="edit-mode hidden bg-black/40 border border-blue-500 text-white p-2 w-full rounded text-[10px] outline-none mt-1">
+            </div>
+            <div class="stat-box">
+                <span class="text-[9px] uppercase font-bold text-gray-400">Starter Status</span>
+                <p id="disp-is-starter" class="font-black italic view-mode text-white text-xs mt-1">--</p>
+                <input id="edit-is-starter" type="text" placeholder="Yes/No" class="edit-mode hidden bg-black/40 border border-blue-500 text-white p-2 w-full rounded text-[10px] outline-none mt-1">
             </div>
         </div>
 
-        <div class="mt-8 pt-8 border-t border-white/5">
-            <h3 class="label mb-4">Character & Leadership Profile</h3>
-            <div class="bg-white/[0.02] p-6 rounded-2xl border border-white/5 italic text-sm text-gray-400">
-                <div class="flex flex-col">
-                    <p class="label not-italic mb-2 opacity-40">Teammate Definition & Personal Philosophy:</p>
-                    <p id="disp-teammate-type" class="leading-relaxed view-mode">--</p>
-                    
-                    <div class="edit-mode hidden">
-                        <textarea id="edit-team-type" placeholder="Leadership style..." 
-                                class="bg-black/40 border border-blue-500 text-white w-full p-4 rounded-xl h-32 text-xs outline-none"></textarea>
-                    </div>
-                </div>
+        <div class="bg-white/[0.02] p-6 rounded-2xl border border-white/5 italic text-sm text-gray-400">
+            <div class="flex flex-col">
+                <p class="label not-italic mb-2 opacity-40 text-[9px] uppercase">Personal Philosophy & Teammate Type:</p>
+                <p id="disp-teammate-type" class="leading-relaxed view-mode">--</p>
+                <textarea id="edit-team-type" placeholder="Leadership style..." class="edit-mode hidden bg-black/40 border border-blue-500 text-white w-full p-4 rounded-xl h-32 text-xs outline-none"></textarea>
             </div>
         </div>
+    </div>
 
     <div class="mt-12 pt-6 border-t border-white/5 flex justify-between items-center opacity-30">
         <span class="text-[8px] font-black uppercase tracking-widest">RACKSTAT ELITE RECRUITING SYSTEM</span>
