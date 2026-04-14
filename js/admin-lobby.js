@@ -11,7 +11,9 @@ import {
     getDoc,
     getDocs,
     orderBy,
-    limit 
+    limit,
+    addDoc, 
+    serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // --- AUTH PROTECTOR ---
@@ -43,12 +45,12 @@ onAuthStateChanged(auth, async (user) => {
 async function renderMetrics() {
     try {
         // User Counts
-        const athleteCount = await getCount(query(collection(db, "users"), where("role", "==", "player")));
+        const athleteCount = await getCount(query(collection(db, "users"), where("role", "==", "player"))); // Changed from 'athlete' to 'player'
         const coachCount = await getCount(query(collection(db, "users"), where("role", "==", "coach")));
-        
-        document.getElementById('count-athletes').innerText = athleteCount || 0;
-        document.getElementById('count-coaches').innerText = coachCount || 0;
-        document.getElementById('total-users').innerText = (athleteCount + coachCount) || 0;
+
+        document.getElementById('count-athletes').innerText = athleteCount;
+        document.getElementById('count-coaches').innerText = coachCount;
+        document.getElementById('total-users').innerText = athleteCount + coachCount;
 
         // Activity Counts - Using try/catch specifically for these in case collections don't exist yet
         let workoutCount = 0;
@@ -136,6 +138,32 @@ async function loadSchoolActivity() {
     } catch (err) {
         console.error("School Load Error:", err);
     }
+}
+
+// --- ENGINE 4: GLOBAL ANNOUNCEMENTS ---
+const postBtn = document.getElementById('post-announcement');
+const announcementInput = document.getElementById('announcement-text');
+
+if (postBtn) {
+    postBtn.onclick = async () => {
+        const text = announcementInput.value.trim();
+        if (!text) return alert("Please enter a message.");
+
+        try {
+            await addDoc(collection(db, "system_announcements"), {
+                message: text,
+                timestamp: serverTimestamp(),
+                postedBy: auth.currentUser.uid,
+                active: true
+            });
+
+            announcementInput.value = ''; // Clear input
+            alert("Announcement published successfully!");
+        } catch (err) {
+            console.error("Error posting announcement:", err);
+            alert("Failed to post: Check security rules.");
+        }
+    };
 }
 
 // --- UTILITY ---
