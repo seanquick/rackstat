@@ -107,25 +107,45 @@
     </main>
 
     <script type="module">
+        // Firebase Core Imports
         import { firebaseConfig } from './js/firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, collection, query, where, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         
-        // Use dynamic import to prevent script crash if theme.js is missing
-        let applyTheme;
-        try {
-            const themeModule = await import('./theme.js');
-            applyTheme = themeModule.applyTheme;
-        } catch (e) {
-            console.warn("Theme module not found, using fallbacks.");
-        }
-
+        // --- 1. INITIALIZE FIREBASE ---
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // --- ANNOUNCEMENT ENGINE ---
+        // --- 2. GLOBAL LOGOUT DEFINITION (CRITICAL FIX) ---
+        // We define this BEFORE the dynamic imports so it is available even if theme.js fails.
+        window.handleLogout = async (e) => {
+            if (e) e.preventDefault();
+            console.log("🚀 Logout initiated via Global Window");
+
+            try {
+                await signOut(auth);
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.replace('index.html');
+            } catch (err) {
+                console.error("Logout Error:", err);
+                alert("Logout failed. Please refresh the page.");
+            }
+        };
+
+        // --- 3. DYNAMIC THEME LOADER ---
+        // We use a safe loader so a 404 in theme.js doesn't break the lobby logic.
+        let applyThemeFunc = null;
+        try {
+            const { applyTheme } = await import('./theme.js');
+            applyThemeFunc = applyTheme;
+        } catch (e) {
+            console.warn("⚠️ theme.js not found or failed to load. Using visual fallbacks.");
+        }
+
+        // --- 4. ANNOUNCEMENT ENGINE ---
         function listenForAnnouncements() {
             const q = query(
                 collection(db, "system_announcements"),
@@ -153,7 +173,7 @@
             });
         }
 
-        // --- AUTH & THEME ENGINE ---
+        // --- 5. AUTH & PROFILE ENGINE ---
         onAuthStateChanged(auth, async (user) => {
             if (!user) {
                 window.location.replace('index.html');
@@ -162,6 +182,7 @@
 
             try {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
+                
                 if (!userDoc.exists()) {
                     window.location.replace('index.html');
                     return;
@@ -169,49 +190,37 @@
 
                 const userData = userDoc.data();
 
+                // Role Security Check
                 if (userData.role !== 'coach') {
                     window.location.replace('index.html');
                     return;
                 }
 
+                // Start Live Data Feeds
                 listenForAnnouncements();
 
-                // Apply Branding safely
+                // Apply Branding Safely
                 const schoolID = userData.school_id || userData.schoolId;
-                if (schoolID && applyTheme) {
+                if (schoolID && applyThemeFunc) {
                     try {
-                        await applyTheme(db, schoolID);
+                        await applyThemeFunc(db, schoolID);
                     } catch (themeErr) {
-                        console.error("Theme application failed:", themeErr);
+                        console.error("Branding failed to apply:", themeErr);
                     }
                 } else {
                     const nameEl = document.getElementById('school-name');
                     if (nameEl) nameEl.innerText = "INDEPENDENT COACH";
                 }
 
+                // Personalize Greeting
                 if (userData.lastName) {
                     document.getElementById('coach-greeting').innerText = `Welcome, Coach ${userData.lastName}`;
                 }
+
             } catch (err) {
                 console.error("Error loading coach profile:", err);
             }
         });
-
-        // --- GLOBAL LOGOUT FIX ---
-        window.handleLogout = async (e) => {
-            if (e) e.preventDefault();
-            console.log("🚀 Logout initiated");
-
-            try {
-                await signOut(auth);
-                localStorage.clear();
-                sessionStorage.clear();
-                window.location.replace('index.html');
-            } catch (err) {
-                console.error("Logout Error:", err);
-                alert("Logout failed. Please refresh the page.");
-            }
-        };
     </script>
 </body>
 </html>
