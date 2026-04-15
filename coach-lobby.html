@@ -38,28 +38,27 @@
                 </p>
             </div>
         </div>
-        <button onclick="logout()" class="text-xs font-black text-gray-500 hover:text-[var(--school-primary)] transition tracking-widest uppercase">Logout</button>
+        <button id="coach-logout-btn" class="text-xs font-black text-gray-500 hover:text-[var(--school-primary)] transition tracking-widest uppercase">Logout</button>
     </header>
 
-    <div id="global-alert-banner" class="hidden bg-blue-600/10 border border-blue-500/30 p-4 mb-6 rounded-xl flex items-center gap-3">
-        <span class="relative flex h-3 w-3">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
-        </span>
-        <p class="text-sm text-blue-100">
-            <span class="font-black text-blue-400 uppercase text-[10px] tracking-widest mr-2">System Notice</span>
-            <span id="alert-text"></span>
-        </p>
-    </div>
-
     <main class="max-w-6xl mx-auto px-6 py-12">
+        <div id="global-alert-banner" class="hidden bg-blue-600/10 border border-blue-500/30 p-4 mb-8 rounded-xl flex items-center gap-3">
+            <span class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+            </span>
+            <p class="text-sm text-blue-100">
+                <span class="font-black text-blue-400 uppercase text-[10px] tracking-widest mr-2">System Notice</span>
+                <span id="alert-text"></span>
+            </p>
+        </div>
+
         <div class="mb-12">
             <h2 id="coach-greeting" class="text-4xl font-black uppercase italic tracking-tighter mb-2">Welcome, Coach</h2>
             <p class="text-gray-400 font-medium">Select a module below to manage your program.</p>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
             <a href="roster-manager.html" class="office-card p-8 rounded-2xl group">
                 <div class="flex items-center gap-4 mb-4">
                     <span class="text-3xl">📋</span>
@@ -102,7 +101,6 @@
                 </div>
                 <p class="text-sm text-gray-500 font-medium">Toggle recruiting visibility, define core lifts, and manage branding.</p>
             </a>
-
         </div>
     </main>
 
@@ -111,15 +109,13 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, collection, query, where, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        
-        // --- IMPORT CENTRAL THEME ENGINE ---
         import { applyTheme } from './theme.js';
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // 2. Add this function to the script
+        // --- ANNOUNCEMENT ENGINE ---
         function listenForAnnouncements() {
             const q = query(
                 collection(db, "system_announcements"),
@@ -128,7 +124,6 @@
                 limit(1)
             );
 
-            // This creates a "live pipe" to the admin's posts
             onSnapshot(q, (snapshot) => {
                 const banner = document.getElementById('global-alert-banner');
                 const textEl = document.getElementById('alert-text');
@@ -148,68 +143,62 @@
             });
         }
 
-        // 3. Call it inside your onAuthStateChanged block after verifying the coach
+        // --- AUTH & THEME ENGINE ---
         onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                // ... your existing coach verification logic ...
-                listenForAnnouncements(); 
+            if (!user) {
+                window.location.replace('index.html');
+                return;
             }
-        });
 
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                console.log("✅ Coach Auth Success:", user.uid);
-                
-                try {
-                    const userDoc = await getDoc(doc(db, "users", user.uid));
-                    if (!userDoc.exists()) {
-                        window.location.href = 'index.html';
-                        return;
-                    }
-
-                    const userData = userDoc.data();
-
-                    // Security Check
-                    if (userData.role !== 'coach') {
-                        console.warn("🚫 Access Denied: User is not a coach.");
-                        window.location.href = 'index.html';
-                        return;
-                    }
-
-                    // --- APPLY THEME ---
-                    // Using the same field names we verified for athletes
-                    const schoolID = userData.school_id || userData.schoolId;
-
-                    if (schoolID) {
-                        console.log("🏫 Loading Coach Branding for:", schoolID);
-                        // Using a small timeout to ensure DOM is ready
-                        setTimeout(async () => {
-                            await applyTheme(db, schoolID);
-                        }, 50);
-                    } else {
-                        console.warn("⚠️ No School ID found for this coach.");
-                        const nameEl = document.getElementById('school-name');
-                        if (nameEl) nameEl.innerText = "INDEPENDENT COACH";
-                    }
-
-                    // Personalize Greeting
-                    if (userData.lastName) {
-                        document.getElementById('coach-greeting').innerText = `Welcome, Coach ${userData.lastName}`;
-                    }
-                } catch (err) {
-                    console.error("❌ Error loading coach profile:", err);
+            try {
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (!userDoc.exists()) {
+                    window.location.replace('index.html');
+                    return;
                 }
-            } else {
-                window.location.href = 'index.html';
+
+                const userData = userDoc.data();
+
+                // Security Check
+                if (userData.role !== 'coach') {
+                    window.location.replace('index.html');
+                    return;
+                }
+
+                // Initializations
+                listenForAnnouncements();
+
+                // Apply Branding
+                const schoolID = userData.school_id || userData.schoolId;
+                if (schoolID) {
+                    setTimeout(async () => {
+                        await applyTheme(db, schoolID);
+                    }, 50);
+                } else {
+                    const nameEl = document.getElementById('school-name');
+                    if (nameEl) nameEl.innerText = "INDEPENDENT COACH";
+                }
+
+                // Personalize Greeting
+                if (userData.lastName) {
+                    document.getElementById('coach-greeting').innerText = `Welcome, Coach ${userData.lastName}`;
+                }
+            } catch (err) {
+                console.error("Error loading coach profile:", err);
             }
         });
 
-        // Global Logout
-        window.logout = () => {
-            signOut(auth).then(() => {
-                window.location.href = 'index.html';
-            });
-        };
+        // --- HARDENED LOGOUT HANDLER ---
+        document.addEventListener('click', async (e) => {
+            if (e.target && e.target.id === 'coach-logout-btn') {
+                try {
+                    await signOut(auth);
+                    window.location.replace('index.html');
+                } catch (err) {
+                    console.error("Logout Error:", err);
+                }
+            }
+        });
     </script>
 </body>
 </html>
