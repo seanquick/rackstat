@@ -38,7 +38,7 @@
                 </p>
             </div>
         </div>
-        <button id="coach-logout-btn" class="text-xs font-black text-gray-500 hover:text-[var(--school-primary)] transition tracking-widest uppercase">Logout</button>
+        <button id="coach-logout-btn" class="text-xs font-black text-gray-500 hover:text-[var(--school-primary)] transition tracking-widest uppercase px-4 py-2">Logout</button>
     </header>
 
     <main class="max-w-6xl mx-auto px-6 py-12">
@@ -188,9 +188,14 @@
             }
         });
 
-        // --- HARDENED LOGOUT HANDLER ---
+        // --- BULLETPROOF LOGOUT HANDLER ---
         document.addEventListener('click', async (e) => {
-            if (e.target && e.target.id === 'coach-logout-btn') {
+            // Check if the click was the button or anything INSIDE the button
+            const logoutBtn = e.target.closest('#coach-logout-btn');
+            
+            if (logoutBtn) {
+                e.preventDefault();
+                console.log("Logout sequence initiated...");
                 try {
                     await signOut(auth);
                     window.location.replace('index.html');
