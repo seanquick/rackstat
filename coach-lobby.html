@@ -111,7 +111,15 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, collection, query, where, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { applyTheme } from './theme.js';
+        
+        // Use dynamic import to prevent script crash if theme.js is missing
+        let applyTheme;
+        try {
+            const themeModule = await import('./theme.js');
+            applyTheme = themeModule.applyTheme;
+        } catch (e) {
+            console.warn("Theme module not found, using fallbacks.");
+        }
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -161,27 +169,26 @@
 
                 const userData = userDoc.data();
 
-                // Security Check
                 if (userData.role !== 'coach') {
                     window.location.replace('index.html');
                     return;
                 }
 
-                // Initializations
                 listenForAnnouncements();
 
-                // Apply Branding
+                // Apply Branding safely
                 const schoolID = userData.school_id || userData.schoolId;
-                if (schoolID) {
-                    setTimeout(async () => {
+                if (schoolID && applyTheme) {
+                    try {
                         await applyTheme(db, schoolID);
-                    }, 50);
+                    } catch (themeErr) {
+                        console.error("Theme application failed:", themeErr);
+                    }
                 } else {
                     const nameEl = document.getElementById('school-name');
                     if (nameEl) nameEl.innerText = "INDEPENDENT COACH";
                 }
 
-                // Personalize Greeting
                 if (userData.lastName) {
                     document.getElementById('coach-greeting').innerText = `Welcome, Coach ${userData.lastName}`;
                 }
@@ -191,24 +198,18 @@
         });
 
         // --- GLOBAL LOGOUT FIX ---
-        // Exposing handleLogout to the window object so the HTML onclick can access it
         window.handleLogout = async (e) => {
             if (e) e.preventDefault();
-            
-            console.log("🚀 Logout triggered via Global Window");
+            console.log("🚀 Logout initiated");
 
             try {
                 await signOut(auth);
-                console.log("✅ Signed out successfully");
-                
-                // Clear session data
                 localStorage.clear();
                 sessionStorage.clear();
-                
-                // Redirect and kill history
                 window.location.replace('index.html');
             } catch (err) {
-                console.error("❌ Logout failed:", err);
+                console.error("Logout Error:", err);
+                alert("Logout failed. Please refresh the page.");
             }
         };
     </script>
