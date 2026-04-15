@@ -76,9 +76,9 @@ body {
 }
 
 .rackstat-logo-large {
-    height: 140px; 
+    height: 40px;
     width: auto;
-    filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.1));
+    object-fit: contain;
 }
 
 .school-section-large {
@@ -91,11 +91,10 @@ body {
 }
 
 .school-logo-large {
-    height: 140px;
+    height: 48px; /* Adjust size as needed */
     width: auto;
-    max-width: 250px;
     object-fit: contain;
-    filter: drop-shadow(0 0 15px var(--school-primary));
+    display: none; /* theme.js will change this to 'block' once loaded */
 }
 
 /* ==========================================================================

@@ -288,15 +288,13 @@
         <button onclick="location.href='profile.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
     </nav>
 
-    <script type="module" src="js/theme.js"></script>
-
     <script type="module">
     // 2. Firebase Imports & Config
     import { firebaseConfig } from './js/firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { applyTheme } from './theme.js';
+    import { applyTheme } from './js/theme.js';
 
     // 3. Initialization
     const app = initializeApp(firebaseConfig);
