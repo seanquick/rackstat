@@ -38,8 +38,9 @@
                 </p>
             </div>
         </div>
-        <button onclick="handleLogout(event)" class="relative z-[100] text-xs font-black text-gray-500 hover:text-[var(--school-primary)] transition tracking-widest uppercase px-4 py-2">Logout
-</button>
+        <button onclick="handleLogout(event)" class="relative z-[100] cursor-pointer pointer-events-auto text-xs font-black text-gray-500 hover:text-[var(--school-primary)] transition tracking-widest uppercase px-4 py-2">
+            Logout
+        </button>
     </header>
 
     <main class="max-w-6xl mx-auto px-6 py-12">
@@ -190,7 +191,7 @@
         });
 
         // --- GLOBAL LOGOUT FIX ---
-        // This must be inside your <script type="module">
+        // Exposing handleLogout to the window object so the HTML onclick can access it
         window.handleLogout = async (e) => {
             if (e) e.preventDefault();
             
@@ -200,10 +201,11 @@
                 await signOut(auth);
                 console.log("✅ Signed out successfully");
                 
-                // Clear everything to prevent 'back-button' entry
+                // Clear session data
                 localStorage.clear();
                 sessionStorage.clear();
                 
+                // Redirect and kill history
                 window.location.replace('index.html');
             } catch (err) {
                 console.error("❌ Logout failed:", err);
