@@ -7,10 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
     <style>
-        :root {
-            --school-primary: #b91c1c; /* Fallback */
-        }
-        /* Card Background Fallback */
+        :root { --school-primary: #b91c1c; }
         .office-card {
             background: #1a1a1c;
             border: 1px solid #2a2a2c;
@@ -28,14 +25,10 @@
     <header class="p-6 flex justify-between items-center border-b border-gray-800 sticky top-0 bg-[#0a0a0b] z-50">
         <div class="flex items-center gap-4">
             <img id="school-logo" src="images/rackstat-logo.png" class="school-logo-primary h-12 w-auto object-contain" alt="Logo" onerror="this.src='images/rackstat-logo.png'">
-            
             <div class="h-10 w-[1px] bg-gray-800 mx-2"></div>
-
             <div>
                 <h1 class="text-xl font-black italic uppercase tracking-tighter leading-none">Coach's Office</h1>
-                <p id="school-name" class="text-[10px] font-black text-[var(--school-primary)] uppercase tracking-widest mt-1">
-                    LOADING...
-                </p>
+                <p id="school-name" class="text-[10px] font-black text-[var(--school-primary)] uppercase tracking-widest mt-1">LOADING...</p>
             </div>
         </div>
         <button onclick="handleLogout(event)" class="relative z-[100] cursor-pointer pointer-events-auto text-xs font-black text-gray-500 hover:text-[var(--school-primary)] transition tracking-widest uppercase px-4 py-2">
@@ -68,7 +61,6 @@
                 </div>
                 <p class="text-sm text-gray-500 font-medium">Manage athlete profiles, edit metrics, and update recruiting card data.</p>
             </a>
-
             <a href="training-center.html" class="office-card p-8 rounded-2xl group">
                 <div class="flex items-center gap-4 mb-4">
                     <span class="text-3xl">🏋️‍♂️</span>
@@ -76,7 +68,6 @@
                 </div>
                 <p class="text-sm text-gray-500 font-medium">Create, edit, and publish daily workouts for your athletes to view.</p>
             </a>
-
             <a href="coach-review.html" class="office-card p-8 rounded-2xl group">
                 <div class="flex justify-between items-start mb-4">
                     <div class="flex items-center gap-4">
@@ -87,7 +78,6 @@
                 </div>
                 <p class="text-sm text-gray-500 font-medium">Analyze athlete performance and track new PRs in real-time.</p>
             </a>
-
             <a href="analytics-vault.html" class="office-card p-8 rounded-2xl group">
                 <div class="flex items-center gap-4 mb-4">
                     <span class="text-3xl">📊</span>
@@ -95,7 +85,6 @@
                 </div>
                 <p class="text-sm text-gray-500 font-medium">View team leaderboards, track progress over time, and export data.</p>
             </a>
-
             <a href="team-settings.html" class="office-card p-8 rounded-2xl group">
                 <div class="flex items-center gap-4 mb-4">
                     <span class="text-3xl">⚙️</span>
@@ -107,35 +96,40 @@
     </main>
 
     <script type="module">
-        // --- 1. DEFINE LOGOUT FIRST (PREVENTS REFERENCE ERRORS) ---
-        // By using a separate variable for auth, we ensure the button works immediately.
         let authInstance = null;
 
+        // --- 1. GLOBAL LOGOUT (Always available) ---
         window.handleLogout = async (e) => {
             if (e) e.preventDefault();
-            console.log("🚀 Logout sequence triggered");
+            console.log("🚀 Logout triggered");
             try {
                 if (authInstance) {
                     const { signOut } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
                     await signOut(authInstance);
                 }
-                localStorage.clear();
-                sessionStorage.clear();
-                window.location.replace('index.html');
             } catch (err) {
-                console.error("Logout Error:", err);
-                window.location.replace('index.html');
+                console.warn("Firebase signout failed, clearing local data anyway.");
             }
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.href = 'index.html'; 
         };
 
-        // --- 2. START THE SYSTEM ENGINE ---
         async function initDashboard() {
             try {
-                // IMPORT CONFIG (Handles both 'export const' and 'export default')
+                // --- 2. CONFIG LOADER (Aggressive Check) ---
                 const configModule = await import('./js/firebase-config.js');
-                const firebaseConfig = configModule.firebaseConfig || configModule.default;
+                
+                // Try to find the config object in any possible export format
+                const firebaseConfig = configModule.firebaseConfig || 
+                                     configModule.default?.firebaseConfig || 
+                                     configModule.default;
 
-                // IMPORT FIREBASE CORE
+                if (!firebaseConfig || !firebaseConfig.apiKey) {
+                    throw new Error("Could not extract valid Firebase options from firebase-config.js");
+                }
+
+                // --- 3. FIREBASE INITIALIZATION ---
                 const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js");
                 const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
                 const { getFirestore, doc, getDoc, collection, query, where, orderBy, limit, onSnapshot } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
@@ -143,9 +137,8 @@
                 const app = initializeApp(firebaseConfig);
                 const auth = getAuth(app);
                 const db = getFirestore(app);
-                authInstance = auth; // Make it available for the logout button
+                authInstance = auth; 
 
-                // --- 3. AUTH & UI LOGIC ---
                 onAuthStateChanged(auth, async (user) => {
                     if (!user) { window.location.replace('index.html'); return; }
 
@@ -169,25 +162,22 @@
                         banner?.classList.remove('hidden');
                     });
 
-                    // THEME LOADING
+                    // THEME
                     const schoolID = userData.school_id || userData.schoolId;
                     if (schoolID) {
-                        try {
-                            const { applyTheme } = await import('./theme.js');
-                            await applyTheme(db, schoolID);
-                        } catch (e) {
-                            console.warn("Theme load failed, using fallback.");
+                        import('./theme.js').then(m => m.applyTheme(db, schoolID)).catch(() => {
                             document.getElementById('school-name').innerText = "COACH OFFICE";
-                        }
+                        });
                     }
                 });
 
             } catch (error) {
                 console.error("Dashboard engine failed to start:", error);
+                // If the system fails to load, let's at least allow them to logout/reset
+                document.getElementById('school-name').innerText = "SYSTEM ERROR - CHECK CONFIG";
             }
         }
 
-        // Run the system
         initDashboard();
     </script>
 </body>
