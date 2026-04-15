@@ -96,49 +96,48 @@
     </main>
 
     <script type="module">
-        let authInstance = null;
-
-        // --- 1. GLOBAL LOGOUT (Always available) ---
+        // 1. DEFINE LOGOUT IMMEDIATELY
+        // This uses a "fallback" redirect so it works even if the imports below fail.
         window.handleLogout = async (e) => {
             if (e) e.preventDefault();
-            console.log("🚀 Logout triggered");
+            console.log("🚀 Logout initiated");
             try {
-                if (authInstance) {
+                // Try to find the auth instance from the window or the import
+                const activeAuth = window.firebaseAuthInstance;
+                if (activeAuth) {
                     const { signOut } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
-                    await signOut(authInstance);
+                    await signOut(activeAuth);
                 }
             } catch (err) {
-                console.warn("Firebase signout failed, clearing local data anyway.");
+                console.warn("Firebase signout failed, forcing local clear.");
             }
             localStorage.clear();
             sessionStorage.clear();
-            window.location.href = 'index.html'; 
+            window.location.href = 'index.html';
         };
 
         async function initDashboard() {
             try {
-                // --- 2. CONFIG LOADER (Aggressive Check) ---
-                const configModule = await import('./js/firebase-config.js');
+                // 2. DYNAMICALLY IMPORT YOUR SERVICES
+                // We use * as config to see everything inside your js/firebase-config.js
+                const services = await import('./js/firebase-config.js');
                 
-                // Try to find the config object in any possible export format
-                const firebaseConfig = configModule.firebaseConfig || 
-                                     configModule.default?.firebaseConfig || 
-                                     configModule.default;
+                // We look for 'auth' and 'db' which your file is supposed to export
+                const auth = services.auth || services.default?.auth;
+                const db = services.db || services.default?.db;
 
-                if (!firebaseConfig || !firebaseConfig.apiKey) {
-                    throw new Error("Could not extract valid Firebase options from firebase-config.js");
+                if (!auth || !db) {
+                    console.error("Available exports found:", Object.keys(services));
+                    throw new Error("Could not find 'auth' or 'db' in js/firebase-config.js");
                 }
 
-                // --- 3. FIREBASE INITIALIZATION ---
-                const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js");
-                const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
-                const { getFirestore, doc, getDoc, collection, query, where, orderBy, limit, onSnapshot } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+                // Save auth to window so the logout button can find it
+                window.firebaseAuthInstance = auth;
 
-                const app = initializeApp(firebaseConfig);
-                const auth = getAuth(app);
-                const db = getFirestore(app);
-                authInstance = auth; 
+                const { onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
+                const { doc, getDoc, collection, query, where, orderBy, limit, onSnapshot } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
 
+                // 3. RUN THE LOBBY LOGIC
                 onAuthStateChanged(auth, async (user) => {
                     if (!user) { window.location.replace('index.html'); return; }
 
@@ -153,7 +152,7 @@
                         document.getElementById('coach-greeting').innerText = `Welcome, Coach ${userData.lastName}`;
                     }
 
-                    // ANNOUNCEMENTS
+                    // Announcements
                     const q = query(collection(db, "system_announcements"), where("active", "==", true), orderBy("timestamp", "desc"), limit(1));
                     onSnapshot(q, (snapshot) => {
                         const banner = document.getElementById('global-alert-banner');
@@ -162,7 +161,7 @@
                         banner?.classList.remove('hidden');
                     });
 
-                    // THEME
+                    // Branding
                     const schoolID = userData.school_id || userData.schoolId;
                     if (schoolID) {
                         import('./theme.js').then(m => m.applyTheme(db, schoolID)).catch(() => {
@@ -172,9 +171,8 @@
                 });
 
             } catch (error) {
-                console.error("Dashboard engine failed to start:", error);
-                // If the system fails to load, let's at least allow them to logout/reset
-                document.getElementById('school-name').innerText = "SYSTEM ERROR - CHECK CONFIG";
+                console.error("Dashboard failed to start:", error);
+                // Even if it fails, the Logout button (defined in step 1) remains active
             }
         }
 
