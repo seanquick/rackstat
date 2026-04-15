@@ -18,7 +18,6 @@
 
         body { background-color: var(--rackstat-black); color: white; font-family: sans-serif; }
         
-        /* Profile Card Styling */
         .profile-card { 
             background: var(--rackstat-gray); 
             border-radius: 12px; 
@@ -27,7 +26,6 @@
             box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
 
-        /* Goal Progress Bar */
         .goal-progress { background: #000; border-radius: 10px; height: 12px; width: 100%; overflow: hidden; margin-top: 8px; border: 1px solid #333; }
         .progress-fill { 
             background: linear-gradient(90deg, #b91c1c 0%, #ef4444 100%); 
@@ -36,7 +34,6 @@
             box-shadow: 0 0 10px rgba(185, 28, 28, 0.4);
         }
 
-        /* Input Styling */
         input, select, textarea { 
             background: #000 !important; 
             border: 1px solid var(--rackstat-border) !important; 
@@ -203,7 +200,8 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { applyTheme } from './js/theme.js';
+    // Adding versioning to the import to force-clear cache and hide logs
+    import { applyTheme } from './js/theme.js?v=rackstat-secure';
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
@@ -226,13 +224,15 @@
                     const schoolID = userData.school_id || userData.schoolId;
                     
                     if (schoolID) {
-                        // Apply theme and handle the logo specifically
                         const themeData = await applyTheme(db, schoolID);
-                        if (themeData && themeData.logo_primary) {
-                            const logoEl = document.getElementById('school-logo');
-                            // Ensure path is correct - if stored as 'images/logo.png', it works.
-                            // If just 'logo.png', use `images/${themeData.logo_primary}`
-                            logoEl.src = themeData.logo_primary; 
+                        // Manual Update for Header Logo & Name
+                        if (themeData) {
+                            if (themeData.logo_primary) {
+                                document.getElementById('school-logo').src = themeData.logo_primary;
+                            }
+                            if (themeData.name) {
+                                document.getElementById('school-name').innerText = themeData.name;
+                            }
                         }
                     }
                 }
@@ -266,13 +266,14 @@
                     syncGoalDisplay(profileData);
                 }
             } catch (err) {
-                console.error("❌ Profile Error:", err);
+                console.error("❌ Profile Loading Error:", err);
             }
         } else { 
             window.location.href = 'index.html'; 
         }
     });
 
+    // Explicitly attaching to window so HTML buttons can access them
     window.saveClubGoal = async () => {
         const user = auth.currentUser;
         if (!user) return;
@@ -290,7 +291,6 @@
             btn.innerText = "GOAL SET!";
             btn.style.backgroundColor = "#059669"; 
             
-            // Just refresh display instead of full page reload for better UX
             const profileSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
             if (profileSnap.exists()) syncGoalDisplay(profileSnap.data());
             
@@ -374,8 +374,12 @@
         }
     }
 
+    // Manual Event Listeners
     document.getElementById('save-btn').onclick = window.saveProfile;
     document.getElementById('save-goal-btn').onclick = window.saveClubGoal;
+    document.getElementById('btn-view-card').onclick = () => { 
+        if(auth.currentUser) window.location.href = `recruiting-card.html?uid=${auth.currentUser.uid}`; 
+    };
 </script>
 </body>
 </html>
