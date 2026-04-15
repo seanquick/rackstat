@@ -114,129 +114,131 @@
     </div>
 
     <script type="module">
-        import { firebaseConfig } from './js/firebase-config.js';
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, collection, query, where, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-
-        let currentRole = 'player';
-
-        // --- FIXED MODAL LOGIC ---
-        const pModal = document.getElementById('privacy-modal');
-        const tModal = document.getElementById('terms-modal');
-
-        document.getElementById('open-privacy').onclick = () => pModal.classList.remove('hidden');
-        document.getElementById('open-terms').onclick = () => tModal.classList.remove('hidden');
-        
-        // Target specifically the classes in your HTML
-        document.querySelectorAll('.close-p').forEach(btn => {
-            btn.onclick = () => pModal.classList.add('hidden');
-        });
-
-        document.querySelectorAll('.close-t').forEach(btn => {
-            btn.onclick = () => tModal.classList.add('hidden');
-        });
-
-        // --- ROLE SELECTION ---
-        window.setRole = (role) => {
-            currentRole = role;
-            const pBtn = document.getElementById('btn-player');
-            const cBtn = document.getElementById('btn-coach');
-            const title = document.getElementById('reg-title');
-            const codeLabel = document.getElementById('code-label');
-            const gradGroup = document.getElementById('grad-year-group');
-
-            if (role === 'coach') {
-                cBtn.className = "flex-1 py-2 text-[10px] font-black uppercase rounded bg-white text-black transition-all";
-                pBtn.className = "flex-1 py-2 text-[10px] font-black uppercase text-gray-500 transition-all";
-                title.innerText = "Coach Registration";
-                codeLabel.innerText = "Coach Access Code";
-                gradGroup.classList.add('hidden');
-            } else {
-                pBtn.className = "flex-1 py-2 text-[10px] font-black uppercase rounded bg-red-700 text-white transition-all";
-                cBtn.className = "flex-1 py-2 text-[10px] font-black uppercase text-gray-500 transition-all";
-                title.innerText = "Athlete Registration";
-                codeLabel.innerText = "Athlete Registration Code";
-                gradGroup.classList.remove('hidden');
-            }
-        };
-
-        // --- SIGNUP PROCESS ---
-        window.handleSignUp = async () => {
-            const isAgreed = document.getElementById('legal-agree').checked;
-            const fullName = document.getElementById('reg-name').value.trim();
-            const email = document.getElementById('reg-email').value.trim();
-            const pass = document.getElementById('reg-pass').value;
-            const inputCode = document.getElementById('school-code').value.trim();
-            const gradYear = document.getElementById('reg-grad-year').value.trim();
-
-            if (!fullName || !email || !pass || !inputCode) return alert("All fields required.");
-            if (currentRole === 'player' && !gradYear) return alert("Please enter your graduation year.");
-            if (!isAgreed) return alert("You must accept the Terms and Privacy Policy to register.");
-            
-            const signupBtn = document.getElementById('signup-btn');
-            signupBtn.innerText = "VERIFYING CODE...";
-            signupBtn.disabled = true;
-
+        // 1. DYNAMIC CONFIG LOADER (Same "Universal" fix as the Lobby)
+        async function startSignup() {
             try {
-                const schoolsRef = collection(db, "schools");
-                const codeField = currentRole === 'coach' ? "coach_code" : "player_code";
-                const q = query(schoolsRef, where(codeField, "==", inputCode));
-                const querySnapshot = await getDocs(q);
+                const configModule = await import('./js/firebase-config.js');
+                // Support both named and default exports
+                const firebaseConfig = configModule.firebaseConfig || configModule.default?.firebaseConfig || configModule.default;
 
-                if (querySnapshot.empty) {
-                    throw new Error(`Invalid ${currentRole} code.`);
-                }
+                if (!firebaseConfig) throw new Error("Firebase Config not found");
 
-                const schoolDoc = querySnapshot.docs[0];
-                const schoolData = schoolDoc.data();
+                const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js");
+                const { getFirestore, doc, setDoc, collection, query, where, getDocs, writeBatch } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+                const { getAuth, createUserWithEmailAndPassword } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
 
-                const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-                const user = userCredential.user;
+                const app = initializeApp(firebaseConfig);
+                const db = getFirestore(app);
+                const auth = getAuth(app);
 
-                // Use a batch to create both user and profile documents simultaneously
-                const batch = writeBatch(db);
+                let currentRole = 'player';
 
-                // 1. Create User Document
-                const userRef = doc(db, "users", user.uid);
-                batch.set(userRef, {
-                    fullName: fullName,
-                    email: email,
-                    role: currentRole,
-                    schoolId: schoolDoc.id,
-                    gradYear: currentRole === 'player' ? gradYear : null,
-                    createdAt: Date.now()
-                });
+                // --- FIXED MODAL LOGIC (Wrapped to ensure elements exist) ---
+                const pModal = document.getElementById('privacy-modal');
+                const tModal = document.getElementById('terms-modal');
 
-                // 2. Create Initial Recruiting Profile (Essential for permission safety)
-                if (currentRole === 'player') {
-                    const profileRef = doc(db, "recruiting_profiles", user.uid);
-                    batch.set(profileRef, {
-                        fullName: fullName,
-                        schoolId: schoolDoc.id,
-                        gradYear: gradYear,
-                        nextLevelComplete: false,
-                        offPrimary: "-",
-                        defPrimary: "-"
+                if (pModal && tModal) {
+                    document.getElementById('open-privacy').onclick = () => pModal.classList.remove('hidden');
+                    document.getElementById('open-terms').onclick = () => tModal.classList.remove('hidden');
+
+                    document.querySelectorAll('.close-p').forEach(btn => {
+                        btn.onclick = () => pModal.classList.add('hidden');
+                    });
+
+                    document.querySelectorAll('.close-t').forEach(btn => {
+                        btn.onclick = () => tModal.classList.add('hidden');
                     });
                 }
 
-                await batch.commit();
+                // --- ROLE SELECTION (Attached to window for HTML onclick) ---
+                window.setRole = (role) => {
+                    currentRole = role;
+                    const pBtn = document.getElementById('btn-player');
+                    const cBtn = document.getElementById('btn-coach');
+                    const title = document.getElementById('reg-title');
+                    const codeLabel = document.getElementById('code-label');
+                    const gradGroup = document.getElementById('grad-year-group');
 
-                alert(`Welcome, ${fullName}!`);
-                window.location.href = 'index.html';
+                    if (role === 'coach') {
+                        cBtn.className = "flex-1 py-2 text-[10px] font-black uppercase rounded bg-white text-black transition-all";
+                        pBtn.className = "flex-1 py-2 text-[10px] font-black uppercase text-gray-500 transition-all";
+                        title.innerText = "Coach Registration";
+                        codeLabel.innerText = "Coach Access Code";
+                        gradGroup.classList.add('hidden');
+                    } else {
+                        pBtn.className = "flex-1 py-2 text-[10px] font-black uppercase rounded bg-red-700 text-white transition-all";
+                        cBtn.className = "flex-1 py-2 text-[10px] font-black uppercase text-gray-500 transition-all";
+                        title.innerText = "Athlete Registration";
+                        codeLabel.innerText = "Athlete Registration Code";
+                        gradGroup.classList.remove('hidden');
+                    }
+                };
 
-            } catch (e) {
-                console.error("Signup Error:", e);
-                alert(e.message);
-                signupBtn.innerText = "Create My Profile";
-                signupBtn.disabled = false;
+                // --- SIGNUP PROCESS (Attached to window for HTML onclick) ---
+                window.handleSignUp = async () => {
+                    const isAgreed = document.getElementById('legal-agree').checked;
+                    const fullName = document.getElementById('reg-name').value.trim();
+                    const email = document.getElementById('reg-email').value.trim();
+                    const pass = document.getElementById('reg-pass').value;
+                    const inputCode = document.getElementById('school-code').value.trim();
+                    const gradYear = document.getElementById('reg-grad-year').value.trim();
+
+                    if (!fullName || !email || !pass || !inputCode) return alert("All fields required.");
+                    if (currentRole === 'player' && !gradYear) return alert("Please enter your graduation year.");
+                    if (!isAgreed) return alert("You must accept the Terms and Privacy Policy to register.");
+                    
+                    const signupBtn = document.getElementById('signup-btn');
+                    signupBtn.innerText = "VERIFYING CODE...";
+                    signupBtn.disabled = true;
+
+                    try {
+                        const schoolsRef = collection(db, "schools");
+                        const codeField = currentRole === 'coach' ? "coach_code" : "player_code";
+                        const q = query(schoolsRef, where(codeField, "==", inputCode));
+                        const querySnapshot = await getDocs(q);
+
+                        if (querySnapshot.empty) throw new Error(`Invalid ${currentRole} code.`);
+
+                        const schoolDoc = querySnapshot.docs[0];
+                        const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+                        const user = userCredential.user;
+                        const batch = writeBatch(db);
+
+                        // 1. User Doc
+                        batch.set(doc(db, "users", user.uid), {
+                            fullName, email, role: currentRole,
+                            schoolId: schoolDoc.id,
+                            gradYear: currentRole === 'player' ? gradYear : null,
+                            createdAt: Date.now()
+                        });
+
+                        // 2. Profile Doc
+                        if (currentRole === 'player') {
+                            batch.set(doc(db, "recruiting_profiles", user.uid), {
+                                fullName, schoolId: schoolDoc.id, gradYear,
+                                nextLevelComplete: false, offPrimary: "-", defPrimary: "-"
+                            });
+                        }
+
+                        await batch.commit();
+                        alert(`Welcome, ${fullName}!`);
+                        window.location.href = 'index.html';
+
+                    } catch (e) {
+                        console.error("Signup Error:", e);
+                        alert(e.message);
+                        signupBtn.innerText = "Create My Profile";
+                        signupBtn.disabled = false;
+                    }
+                };
+
+            } catch (err) {
+                console.error("Initialization failed:", err);
             }
-        };
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', startSignup);
     </script>
 </body>
 </html>
