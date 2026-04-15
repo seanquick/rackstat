@@ -203,7 +203,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { applyTheme } from './js/theme.js'; // Updated path to js/ folder
+    import { applyTheme } from './js/theme.js';
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
@@ -224,7 +224,17 @@
                 if (userSnap.exists()) {
                     const userData = userSnap.data();
                     const schoolID = userData.school_id || userData.schoolId;
-                    if (schoolID) await applyTheme(db, schoolID);
+                    
+                    if (schoolID) {
+                        // Apply theme and handle the logo specifically
+                        const themeData = await applyTheme(db, schoolID);
+                        if (themeData && themeData.logo_primary) {
+                            const logoEl = document.getElementById('school-logo');
+                            // Ensure path is correct - if stored as 'images/logo.png', it works.
+                            // If just 'logo.png', use `images/${themeData.logo_primary}`
+                            logoEl.src = themeData.logo_primary; 
+                        }
+                    }
                 }
 
                 const profileSnap = await getDoc(profileRef);
@@ -256,14 +266,12 @@
                     syncGoalDisplay(profileData);
                 }
             } catch (err) {
-                console.error("❌ Firestore Fetch Error:", err);
+                console.error("❌ Profile Error:", err);
             }
         } else { 
             window.location.href = 'index.html'; 
         }
     });
-
-    // --- ATTACHED TO WINDOW SO HTML BUTTONS WORK ---
 
     window.saveClubGoal = async () => {
         const user = auth.currentUser;
@@ -271,7 +279,6 @@
 
         const goalValue = document.getElementById('goal-selector').value;
         const btn = document.getElementById('save-goal-btn');
-        
         btn.innerText = "SAVING...";
         btn.disabled = true;
 
@@ -283,10 +290,17 @@
             btn.innerText = "GOAL SET!";
             btn.style.backgroundColor = "#059669"; 
             
-            // Wait for UI feedback before reloading
-            setTimeout(() => location.reload(), 800);
+            // Just refresh display instead of full page reload for better UX
+            const profileSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+            if (profileSnap.exists()) syncGoalDisplay(profileSnap.data());
+            
+            setTimeout(() => {
+                btn.innerText = "Set Target Club";
+                btn.style.backgroundColor = "";
+                btn.disabled = false;
+            }, 2000);
+
         } catch (err) {
-            console.error("Goal Save Error:", err);
             btn.innerText = "SAVE ERROR";
             btn.disabled = false;
         }
@@ -297,7 +311,6 @@
         if (!user) return;
         
         const btn = document.getElementById('save-btn');
-        const originalText = btn.innerText;
         btn.innerText = "UPDATING...";
         btn.disabled = true;
 
@@ -326,23 +339,20 @@
             btn.innerText = "PROFILE SAVED!";
             btn.style.backgroundColor = "#059669";
         } catch (e) { 
-            console.error("Profile Save Error:", e);
             btn.innerText = "ERROR SAVING";
         } finally {
             setTimeout(() => { 
-                btn.innerText = originalText; 
+                btn.innerText = "Save Profile"; 
                 btn.disabled = false;
-                btn.style.backgroundColor = ""; // Reset to CSS default
+                btn.style.backgroundColor = "";
             }, 2000);
         }
     };
 
-    // --- HELPER FUNCTIONS ---
-
     function renderGoals(uid, goals) {
         const container = document.getElementById('goals-container');
         if (!container || !goals) return;
-        container.innerHTML = goals.map((goal, index) => `
+        container.innerHTML = goals.map(goal => `
             <div class="animate-fade-in profile-card mb-4">
                 <p class="text-[10px] font-black text-gray-500 uppercase">${goal.type}</p>
                 <p class="text-lg font-black italic uppercase">${goal.target} LBS</p>
@@ -358,19 +368,14 @@
         if (targetGoal > 0 && progressBar) {
             const percent = Math.min((currentScore / targetGoal) * 100, 100);
             progressBar.style.width = `${percent}%`;
-            
             if (goalMsg) {
                 goalMsg.innerText = `${Math.round(percent)}% to ${targetGoal} Club (${currentScore} / ${targetGoal})`;
             }
         }
     }
 
-    // Manual listeners for extra safety
     document.getElementById('save-btn').onclick = window.saveProfile;
     document.getElementById('save-goal-btn').onclick = window.saveClubGoal;
-    document.getElementById('btn-view-card').onclick = () => { 
-        if(auth.currentUser) window.location.href = `recruiting-card.html?uid=${auth.currentUser.uid}`; 
-    };
 </script>
 </body>
 </html>
