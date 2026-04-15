@@ -116,32 +116,22 @@
     <script type="module">
         async function startSignup() {
             try {
-                // 1. DYNAMIC CONFIG IMPORT
-                const configModule = await import('./js/firebase-config.js');
-                
-                // This line checks every possible place the config could be hidden
-                const firebaseConfig = configModule.firebaseConfig || 
-                                    configModule.default?.firebaseConfig || 
-                                    configModule.default;
+                // 1. IMPORT READY SERVICES
+                const services = await import('./js/firebase-config.js');
+                const auth = services.auth;
+                const db = services.db;
 
-                if (!firebaseConfig || !firebaseConfig.apiKey) {
-                    // Debugging: This will tell us what IS inside the file if it fails
-                    console.error("Config structure detected:", Object.keys(configModule));
-                    throw new Error("Firebase Config not found or missing apiKey");
+                if (!auth || !db) {
+                    throw new Error("Could not find initialized auth or db in firebase-config.js");
                 }
 
-                // 2. FIREBASE IMPORTS
-                const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js");
-                const { getFirestore, doc, collection, query, where, getDocs, writeBatch } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
-                const { getAuth, createUserWithEmailAndPassword } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
-
-                const app = initializeApp(firebaseConfig);
-                const db = getFirestore(app);
-                const auth = getAuth(app);
+                // Load additional Firebase functions we need
+                const { doc, collection, query, where, getDocs, writeBatch } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+                const { createUserWithEmailAndPassword } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
 
                 let currentRole = 'player';
 
-                // 3. MODAL LOGIC
+                // 2. MODAL LOGIC
                 const pModal = document.getElementById('privacy-modal');
                 const tModal = document.getElementById('terms-modal');
 
@@ -156,7 +146,7 @@
                     btn.onclick = () => tModal.classList.add('hidden');
                 });
 
-                // 4. ROLE SELECTION (Global)
+                // 3. ROLE SELECTION (Global)
                 window.setRole = (role) => {
                     currentRole = role;
                     const pBtn = document.getElementById('btn-player');
@@ -180,7 +170,7 @@
                     }
                 };
 
-                // 5. SIGNUP PROCESS (Global)
+                // 4. SIGNUP PROCESS (Global)
                 window.handleSignUp = async () => {
                     const isAgreed = document.getElementById('legal-agree').checked;
                     const fullName = document.getElementById('reg-name').value.trim();
@@ -241,7 +231,6 @@
             }
         }
 
-        // Run when the script loads
         startSignup();
     </script>
 </body>
