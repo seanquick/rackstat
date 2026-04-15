@@ -114,17 +114,25 @@
     </div>
 
     <script type="module">
-        // 1. DYNAMIC CONFIG LOADER (Same "Universal" fix as the Lobby)
         async function startSignup() {
             try {
+                // 1. DYNAMIC CONFIG IMPORT
                 const configModule = await import('./js/firebase-config.js');
-                // Support both named and default exports
-                const firebaseConfig = configModule.firebaseConfig || configModule.default?.firebaseConfig || configModule.default;
+                
+                // This line checks every possible place the config could be hidden
+                const firebaseConfig = configModule.firebaseConfig || 
+                                    configModule.default?.firebaseConfig || 
+                                    configModule.default;
 
-                if (!firebaseConfig) throw new Error("Firebase Config not found");
+                if (!firebaseConfig || !firebaseConfig.apiKey) {
+                    // Debugging: This will tell us what IS inside the file if it fails
+                    console.error("Config structure detected:", Object.keys(configModule));
+                    throw new Error("Firebase Config not found or missing apiKey");
+                }
 
+                // 2. FIREBASE IMPORTS
                 const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js");
-                const { getFirestore, doc, setDoc, collection, query, where, getDocs, writeBatch } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+                const { getFirestore, doc, collection, query, where, getDocs, writeBatch } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
                 const { getAuth, createUserWithEmailAndPassword } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
 
                 const app = initializeApp(firebaseConfig);
@@ -133,24 +141,22 @@
 
                 let currentRole = 'player';
 
-                // --- FIXED MODAL LOGIC (Wrapped to ensure elements exist) ---
+                // 3. MODAL LOGIC
                 const pModal = document.getElementById('privacy-modal');
                 const tModal = document.getElementById('terms-modal');
 
-                if (pModal && tModal) {
-                    document.getElementById('open-privacy').onclick = () => pModal.classList.remove('hidden');
-                    document.getElementById('open-terms').onclick = () => tModal.classList.remove('hidden');
+                document.getElementById('open-privacy').onclick = () => pModal.classList.remove('hidden');
+                document.getElementById('open-terms').onclick = () => tModal.classList.remove('hidden');
 
-                    document.querySelectorAll('.close-p').forEach(btn => {
-                        btn.onclick = () => pModal.classList.add('hidden');
-                    });
+                document.querySelectorAll('.close-p').forEach(btn => {
+                    btn.onclick = () => pModal.classList.add('hidden');
+                });
 
-                    document.querySelectorAll('.close-t').forEach(btn => {
-                        btn.onclick = () => tModal.classList.add('hidden');
-                    });
-                }
+                document.querySelectorAll('.close-t').forEach(btn => {
+                    btn.onclick = () => tModal.classList.add('hidden');
+                });
 
-                // --- ROLE SELECTION (Attached to window for HTML onclick) ---
+                // 4. ROLE SELECTION (Global)
                 window.setRole = (role) => {
                     currentRole = role;
                     const pBtn = document.getElementById('btn-player');
@@ -174,7 +180,7 @@
                     }
                 };
 
-                // --- SIGNUP PROCESS (Attached to window for HTML onclick) ---
+                // 5. SIGNUP PROCESS (Global)
                 window.handleSignUp = async () => {
                     const isAgreed = document.getElementById('legal-agree').checked;
                     const fullName = document.getElementById('reg-name').value.trim();
@@ -184,11 +190,11 @@
                     const gradYear = document.getElementById('reg-grad-year').value.trim();
 
                     if (!fullName || !email || !pass || !inputCode) return alert("All fields required.");
-                    if (currentRole === 'player' && !gradYear) return alert("Please enter your graduation year.");
-                    if (!isAgreed) return alert("You must accept the Terms and Privacy Policy to register.");
+                    if (currentRole === 'player' && !gradYear) return alert("Please enter graduation year.");
+                    if (!isAgreed) return alert("Please accept the Terms and Privacy Policy.");
                     
                     const signupBtn = document.getElementById('signup-btn');
-                    signupBtn.innerText = "VERIFYING CODE...";
+                    signupBtn.innerText = "VERIFYING...";
                     signupBtn.disabled = true;
 
                     try {
@@ -204,7 +210,6 @@
                         const user = userCredential.user;
                         const batch = writeBatch(db);
 
-                        // 1. User Doc
                         batch.set(doc(db, "users", user.uid), {
                             fullName, email, role: currentRole,
                             schoolId: schoolDoc.id,
@@ -212,7 +217,6 @@
                             createdAt: Date.now()
                         });
 
-                        // 2. Profile Doc
                         if (currentRole === 'player') {
                             batch.set(doc(db, "recruiting_profiles", user.uid), {
                                 fullName, schoolId: schoolDoc.id, gradYear,
@@ -237,8 +241,8 @@
             }
         }
 
-        // Initialize on load
-        document.addEventListener('DOMContentLoaded', startSignup);
+        // Run when the script loads
+        startSignup();
     </script>
 </body>
 </html>
