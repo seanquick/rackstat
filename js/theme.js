@@ -5,7 +5,6 @@ import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-
  */
 export async function applyTheme(db, schoolID) {
     if (!schoolID) {
-        console.warn("No School ID provided to theme engine.");
         return;
     }
 
@@ -17,27 +16,24 @@ export async function applyTheme(db, schoolID) {
             const colors = data.colors || {};
             const root = document.documentElement;
 
-            console.log("🎨 Applying theme data:", data);
-
             // 1. Update CSS Variables
-            // We update --rackstat-red because that's what your profile.html uses for buttons/borders
             const primaryColor = colors.primary || '#b91c1c';
             root.style.setProperty('--school-primary', primaryColor);
             root.style.setProperty('--rackstat-red', primaryColor); 
-            
             root.style.setProperty('--school-secondary', colors.secondary || '#0a0a0b');
 
             // 2. Update all logo instances
-            if (data.logo_url) {
-                // Expanded selector to catch your #school-logo ID
+            // NOTE: Changed data.logo_url to data.logo_primary to match your database screenshot
+            const logoPath = data.logo_primary || data.logo_url; 
+            
+            if (logoPath) {
                 const logos = document.querySelectorAll('#school-logo, #school-logo-alt, .school-logo-primary, .school-logo-secondary');
                 
                 logos.forEach(img => {
-                    const finalPath = data.logo_url.startsWith('http') || data.logo_url.startsWith('images/') 
-                        ? data.logo_url 
-                        : `images/${data.logo_url}`;
+                    const finalPath = (logoPath.startsWith('http') || logoPath.startsWith('images/')) 
+                        ? logoPath 
+                        : `images/${logoPath}`;
                         
-                    console.log("🖼️ Setting logo path to:", finalPath);
                     img.src = finalPath;
                     img.style.display = 'block'; 
                 });
@@ -45,19 +41,20 @@ export async function applyTheme(db, schoolID) {
 
             // 3. Update school name
             if (data.name) {
-                // FIX: Added #school-name to the selector to match your profile.html header
                 const nameElements = document.querySelectorAll('#school-name, #school-tag, .school-name');
                 nameElements.forEach(el => {
                     el.innerText = data.name.toUpperCase();
                 });
             }
             
-            console.log(`✅ Theme successfully applied: ${data.name || schoolID}`);
-        } else {
-            console.error(`❌ School document "${schoolID}" not found in 'schools' collection.`);
+            // Log only the success message, not the full data object
+            console.log(`✅ Theme applied: ${data.name || schoolID}`);
+
+            return data; // Return data so profile.html can use it if needed
         }
     } catch (error) {
-        console.error("❌ Error in theme engine:", error);
+        // Log generic error without leaking sensitive context
+        console.error("❌ Theme engine error");
     } finally {
         const branding = document.getElementById('school-branding');
         if (branding) branding.classList.add('theme-loaded');

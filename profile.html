@@ -228,7 +228,14 @@
                         // Manual Update for Header Logo & Name
                         if (themeData) {
                             if (themeData.logo_primary) {
-                                document.getElementById('school-logo').src = themeData.logo_primary;
+                                // Force a fresh load and ensure the path is correct
+                                const logoEl = document.getElementById('school-logo');
+                                logoEl.src = themeData.logo_primary;
+                                
+                                // Add a fallback if the school logo fails to load
+                                logoEl.onerror = () => {
+                                    logoEl.src = 'images/rackstat-logo.png';
+                                };
                             }
                             if (themeData.name) {
                                 document.getElementById('school-name').innerText = themeData.name;
