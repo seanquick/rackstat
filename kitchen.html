@@ -477,7 +477,47 @@
     }
 
     window.showWeeklySummary = async () => {
+        const user = auth.currentUser;
+        if (!user) return;
+
         document.getElementById('weekly-modal').classList.remove('hidden');
+
+        // Create a timestamp for exactly 7 days ago at 12:00 AM
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        sevenDaysAgo.setHours(0, 0, 0, 0);
+
+        try {
+            const q = query(
+                collection(db, "recruiting_profiles", user.uid, "meals"), 
+                fbWhere("timestamp", ">=", sevenDaysAgo)
+            );
+            const snap = await getDocs(q);
+
+            let tCals = 0, tPro = 0, tCarb = 0, tFat = 0, tWater = 0;
+            let daysActive = new Set();
+
+            snap.forEach(doc => {
+                const d = doc.data();
+                daysActive.add(d.date);
+                if (d.mealType === 'Water') {
+                    tWater += Number(d.cups || 0);
+                } else {
+                    tCals += Number(d.calories || 0); 
+                    tPro += Number(d.protein || 0);
+                    tCarb += Number(d.carbs || 0); 
+                    tFat += Number(d.fats || 0);
+                }
+            });
+
+            // Ensure the divisor counts today even if it's the only day logged
+            const div = daysActive.size || 1;
+            
+            // UI Updates... (keep your existing UI assignment code here)
+            
+        } catch (e) {
+            console.error("Weekly Stats Error:", e);
+        }
     };
 
     window.closeWeekly = () => document.getElementById('weekly-modal').classList.add('hidden');
