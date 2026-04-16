@@ -110,7 +110,7 @@
         if (user) {
             currentAthleteId = user.uid;
             
-            // Try both collections for profile context
+            // Checking both potential profile collections
             let profileSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
             if (!profileSnap.exists()) {
                 profileSnap = await getDoc(doc(db, "users", user.uid));
@@ -118,7 +118,8 @@
 
             if (profileSnap.exists()) {
                 const profileData = profileSnap.data();
-                currentSchoolId = profileData.schoolId || profileData.school_id;
+                // MATCHING YOUR DB: Using school_id (snake_case)
+                currentSchoolId = profileData.school_id || profileData.schoolId;
                 
                 if (currentSchoolId) {
                     await applyPageTheme(currentSchoolId);
@@ -129,6 +130,48 @@
             window.location.href = "index.html";
         }
     });
+
+    async function loadAvailableWorkouts() {
+        const workoutContainer = document.getElementById('available-workouts');
+        
+        // MATCHING YOUR DB: Changed 'schoolId' to 'school_id'
+        const q = query(
+            collection(db, "workouts"), 
+            where("school_id", "==", currentSchoolId), 
+            orderBy("date", "desc")
+        );
+
+        try {
+            const querySnapshot = await getDocs(q);
+            workoutContainer.innerHTML = ''; 
+
+            if (querySnapshot.empty) {
+                // This is what you are currently seeing because of the naming mismatch
+                workoutContainer.innerHTML = `<div class="text-gray-600 text-[10px] uppercase font-bold text-center py-20 tracking-widest">No training sessions scheduled for ${currentSchoolId}.</div>`;
+                return;
+            }
+
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                const btn = document.createElement('button');
+                btn.className = "w-full bg-[#161618] border border-[#2a2a2c] p-5 rounded-xl flex justify-between items-center group text-left mb-3 transition-all hover:border-red-600";
+                btn.onclick = () => loadWorkoutDetails(doc.id);
+                
+                btn.innerHTML = `
+                    <div>
+                        <h3 class="text-white font-black uppercase text-lg italic">${data.name || "JULY MAX-OUTS"}</h3>
+                        <span class="text-red-600 font-black text-[9px] uppercase tracking-[0.2em]">${data.date || "Active Session"}</span>
+                    </div>
+                    <span class="text-gray-700 group-hover:text-red-600 font-black text-xl">→</span>
+                `;
+                workoutContainer.appendChild(btn);
+            });
+        } catch (err) {
+            console.error("Firestore Error:", err);
+            // If you see a link in the browser console, you MUST click it to build the index
+            workoutContainer.innerHTML = `<div class="text-red-500 text-[10px] text-center uppercase py-10 font-black">Index required. Check browser console.</div>`;
+        }
+    }
 
     async function applyPageTheme(schoolId) {
         const schoolSnap = await getDoc(doc(db, "schools", schoolId));
