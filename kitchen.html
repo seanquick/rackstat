@@ -282,8 +282,6 @@
 
 
  <script type="module">
-    console.log("Module loading started...");
-
     // 1. Firebase Configuration & Imports
     import { firebaseConfig } from './js/firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -293,9 +291,7 @@
         where as fbWhere 
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    
-    // FIXED PATH BASED ON YOUR FILE EXPLORER
-    import { applyTheme } from './js/theme.js';
+    import { applyTheme } from './js/theme.js'; // Fixed path
 
     // 2. Initialize Firebase
     const app = initializeApp(firebaseConfig);
@@ -307,24 +303,11 @@
     let proGoal = 150;
     let waterGoal = 16; 
 
-    // 4. Immediately define window functions so they are available even if logic fails below
-    window.setTargets = async () => {
-        console.log("setTargets clicked");
-        if (!auth.currentUser) return alert("Auth not ready");
-        const newCal = prompt("Daily Calorie Target:", calGoal);
-        const newPro = prompt("Daily Protein Target (g):", proGoal);
-        if (newCal && newPro) {
-            await updateDoc(doc(db, "recruiting_profiles", auth.currentUser.uid), {
-                dailyCalorieGoal: Number(newCal),
-                dailyProteinGoal: Number(newPro)
-            });
-            alert("Targets Updated!");
-        }
-    };
+    // Initial UI Setup
+    const entryDateInput = document.getElementById('entry-date');
+    if (entryDateInput) entryDateInput.valueAsDate = new Date();
 
-    window.closeWeekly = () => document.getElementById('weekly-modal').classList.add('hidden');
-
-    // 5. Auth & Logic
+    // 4. Auth & Theme Integration
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             onSnapshot(doc(db, "users", user.uid), async (userDoc) => {
@@ -332,6 +315,11 @@
                     const userData = userDoc.data();
                     const schoolID = userData.school_id || userData.schoolId;
                     if (schoolID) await applyTheme(db, schoolID);
+                    
+                    if (userData.weight) {
+                        const wDisplay = document.getElementById('last-weight-display');
+                        if (wDisplay) wDisplay.innerText = userData.weight + " lbs";
+                    }
                 }
             });
 
@@ -340,9 +328,13 @@
                     const data = snap.data();
                     calGoal = data.dailyCalorieGoal || 2500;
                     proGoal = data.dailyProteinGoal || 150;
-                    document.getElementById('target-cal-display').innerText = calGoal;
-                    document.getElementById('target-pro-display').innerText = proGoal;
+                    waterGoal = data.dailyWaterGoal || 16;
+                    
+                    if (document.getElementById('target-cal-display')) document.getElementById('target-cal-display').innerText = calGoal;
+                    if (document.getElementById('target-pro-display')) document.getElementById('target-pro-display').innerText = proGoal;
+                    
                     window.updateDailyTotals();
+                    fetchMealHistory();
                 }
             });
         } else {
@@ -350,10 +342,115 @@
         }
     });
 
-    // Dummy helper to prevent errors
-    window.updateDailyTotals = () => console.log("Totals updating...");
+    // 5. Global Window Functions (RESTORED)
 
-    console.log("Module loaded successfully - setTargets is now active.");
+    window.setTargets = async () => {
+        const newCal = prompt("Daily Calorie Target:", calGoal);
+        const newPro = prompt("Daily Protein Target (g):", proGoal);
+        if (newCal && newPro) {
+            await updateDoc(doc(db, "recruiting_profiles", auth.currentUser.uid), {
+                dailyCalorieGoal: Number(newCal),
+                dailyProteinGoal: Number(newPro)
+            });
+        }
+    };
+
+    window.saveQuickStats = async () => {
+        const htInput = document.getElementById('quick-height');
+        const bwInput = document.getElementById('quick-weight');
+        const user = auth.currentUser;
+        if (!user || (!htInput?.value && !bwInput?.value)) return;
+
+        const hVal = htInput.value ? Number(htInput.value) : null;
+        const wVal = bwInput.value ? Number(bwInput.value) : null;
+        const syncData = { lastSync: serverTimestamp() };
+        if (hVal) syncData.height = hVal;
+        if (wVal) syncData.weight = wVal;
+
+        await setDoc(doc(db, "users", user.uid), syncData, { merge: true });
+        await setDoc(doc(db, "recruiting_profiles", user.uid), syncData, { merge: true });
+        alert("Stats Synced!");
+        htInput.value = ''; bwInput.value = '';
+    };
+
+    window.addWater = async (cups) => {
+        if (!auth.currentUser) return;
+        const dateStr = new Date(document.getElementById('entry-date').value).toLocaleDateString();
+        
+        await addDoc(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), {
+            mealType: 'Water',
+            cups: Number(cups),
+            date: dateStr,
+            timestamp: Date.now()
+        });
+        window.updateDailyTotals();
+        fetchMealHistory();
+    };
+
+    window.saveMeal = async () => {
+        const cVal = Number(document.getElementById('calories').value);
+        if (cVal <= 0) return alert("Enter calories.");
+
+        await addDoc(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), {
+            mealType: document.getElementById('meal-type').value,
+            calories: cVal,
+            protein: Number(document.getElementById('protein').value) || 0,
+            carbs: Number(document.getElementById('carbs').value) || 0,
+            fats: Number(document.getElementById('fats').value) || 0,
+            date: new Date(document.getElementById('entry-date').value).toLocaleDateString(),
+            timestamp: serverTimestamp()
+        });
+
+        ["calories", "protein", "carbs", "fats"].forEach(id => document.getElementById(id).value = '');
+        window.updateDailyTotals();
+        fetchMealHistory();
+    };
+
+    window.updateDailyTotals = async () => {
+        const user = auth.currentUser;
+        if (!user) return;
+        const dateStr = new Date(document.getElementById('entry-date').value).toLocaleDateString();
+
+        const q = query(collection(db, "recruiting_profiles", user.uid, "meals"), fbWhere("date", "==", dateStr));
+        const snap = await getDocs(q);
+
+        let c = 0, p = 0, water = 0;
+        snap.forEach(d => {
+            const m = d.data();
+            if (m.mealType === 'Water') water += Number(m.cups || 0);
+            else { c += Number(m.calories || 0); p += Number(m.protein || 0); }
+        });
+
+        if (document.getElementById('day-cal')) document.getElementById('day-cal').innerText = c;
+        if (document.getElementById('day-pro')) document.getElementById('day-pro').innerText = p;
+        if (document.getElementById('day-water')) document.getElementById('day-water').innerText = water + " Cups";
+        
+        if (document.getElementById('cal-fill')) document.getElementById('cal-fill').style.width = Math.min((c/calGoal)*100, 100) + "%";
+        if (document.getElementById('pro-fill')) document.getElementById('pro-fill').style.width = Math.min((p/proGoal)*100, 100) + "%";
+    };
+
+    async function fetchMealHistory() {
+        const container = document.getElementById('history-list');
+        const dateStr = new Date(document.getElementById('entry-date').value).toLocaleDateString();
+        const q = query(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"),
+                        fbWhere("date", "==", dateStr), orderBy("timestamp", "desc"), limit(10));
+
+        const snap = await getDocs(q);
+        container.innerHTML = '';
+        snap.forEach(docSnap => {
+            const m = docSnap.data();
+            const div = document.createElement('div');
+            div.className = "bg-zinc-900 p-2 mb-2 rounded flex justify-between text-xs";
+            div.innerHTML = `<span>${m.mealType}</span> <span>${m.calories || m.cups + ' Cups'}</span>`;
+            container.appendChild(div);
+        });
+    }
+
+    window.showWeeklySummary = async () => {
+        document.getElementById('weekly-modal').classList.remove('hidden');
+    };
+
+    window.closeWeekly = () => document.getElementById('weekly-modal').classList.add('hidden');
 </script>
 </body>
 </html>
