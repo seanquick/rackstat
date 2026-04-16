@@ -116,15 +116,36 @@
     });
 
     async function applyPageTheme(schoolId) {
-        const schoolSnap = await getDoc(doc(db, "schools", schoolId));
-        if (schoolSnap.exists()) {
-            const data = schoolSnap.data();
-            const primaryColor = data.colors?.primary || '#b91c1c';
-            document.documentElement.style.setProperty('--school-primary', primaryColor);
-            document.getElementById('school-tag').innerText = data.name?.toUpperCase() || "RACKSTAT";
-            if (data.logo_url) document.getElementById('school-logo').src = data.logo_url;
+            try {
+                const schoolSnap = await getDoc(doc(db, "schools", schoolId));
+                if (schoolSnap.exists()) {
+                    const data = schoolSnap.data();
+                    
+                    // 1. Handle Colors
+                    const primaryColor = data.colors?.primary || data.primaryColor || '#b91c1c';
+                    document.documentElement.style.setProperty('--school-primary', primaryColor);
+                    
+                    // 2. Handle Name/Tag
+                    document.getElementById('school-tag').innerText = (data.name || data.schoolName || "RACKSTAT").toUpperCase();
+                    
+                    // 3. THE LOGO FIX: Check all common naming variations
+                    const logoPath = data.logo_url || data.logoUrl || data.logo || data.image;
+                    const logoElement = document.getElementById('school-logo');
+                    
+                    if (logoPath && logoElement) {
+                        logoElement.src = logoPath;
+                    } else {
+                        console.warn("Logo field not found in school document. Check field name in Firestore.");
+                        // Optional: set a default logo if the record is missing
+                        // logoElement.src = "images/rackstat-logo.png"; 
+                    }
+                } else {
+                    console.error(`School document not found for ID: ${schoolId}`);
+                }
+            } catch (err) {
+                console.error("Error applying theme:", err);
+            }
         }
-    }
 
     async function loadAvailableWorkouts() {
         const workoutContainer = document.getElementById('available-workouts');
