@@ -599,14 +599,20 @@
     };
 
     // 10. Goals & Weekly Summary
-    window.setTargets = async () => {
+    window.setTargets = async () => { 
         const newCal = prompt("Daily Calorie Target:", calGoal);
         const newPro = prompt("Daily Protein Target (g):", proGoal);
         if (newCal && newPro) {
-            await updateDoc(doc(db, "recruiting_profiles", auth.currentUser.uid), {
-                dailyCalorieGoal: Number(newCal),
-                dailyProteinGoal: Number(newPro)
-            });
+            try {
+                await updateDoc(doc(db, "recruiting_profiles", auth.currentUser.uid), {
+                    dailyCalorieGoal: Number(newCal),
+                    dailyProteinGoal: Number(newPro)
+                });
+                // Optional: alert confirms it worked since the snapshot will update the UI
+                alert("Targets Updated!");
+            } catch (e) {
+                console.error("Error updating targets:", e);
+            }
         }
     };
 
