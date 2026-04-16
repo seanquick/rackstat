@@ -598,63 +598,85 @@
         }
     };
 
-    // 10. Goals & Weekly Summary
-    window.setTargets = async () => { 
+ // 10. Goals & Weekly Summary
+    window.setTargets = async () => {
+        console.log("setTargets triggered"); // Debugging check
+        
+        if (!auth.currentUser) {
+            alert("Please wait for auth to initialize.");
+            return;
+        }
+
         const newCal = prompt("Daily Calorie Target:", calGoal);
         const newPro = prompt("Daily Protein Target (g):", proGoal);
+        
         if (newCal && newPro) {
             try {
                 await updateDoc(doc(db, "recruiting_profiles", auth.currentUser.uid), {
                     dailyCalorieGoal: Number(newCal),
                     dailyProteinGoal: Number(newPro)
                 });
-                // Optional: alert confirms it worked since the snapshot will update the UI
-                alert("Targets Updated!");
+                alert("TARGETS UPDATED!");
             } catch (e) {
                 console.error("Error updating targets:", e);
+                alert("Update failed. Check console for details.");
             }
         }
     };
 
-    window.showWeeklySummary = async () => {
-        document.getElementById('weekly-modal').classList.remove('hidden');
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        window.showWeeklySummary = async () => {
+            if (!auth.currentUser) return;
+            
+            document.getElementById('weekly-modal').classList.remove('hidden');
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-        const q = query(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), fbWhere("timestamp", ">=", sevenDaysAgo));
-        const snap = await getDocs(q);
+            try {
+                const q = query(
+                    collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), 
+                    fbWhere("timestamp", ">=", sevenDaysAgo)
+                );
+                const snap = await getDocs(q);
 
-        let tCals = 0, tPro = 0, tCarb = 0, tFat = 0, tWater = 0, daysActive = new Set();
-        snap.forEach(doc => {
-            const d = doc.data();
-            daysActive.add(d.date);
-            if (d.mealType === 'Water') tWater += Number(d.cups || 0);
-            else {
-                tCals += Number(d.calories || 0); tPro += Number(d.protein || 0);
-                tCarb += Number(d.carbs || 0); tFat += Number(d.fats || 0);
+                let tCals = 0, tPro = 0, tCarb = 0, tFat = 0, tWater = 0, daysActive = new Set();
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    daysActive.add(d.date);
+                    if (d.mealType === 'Water') {
+                        tWater += Number(d.cups || 0);
+                    } else {
+                        tCals += Number(d.calories || 0); 
+                        tPro += Number(d.protein || 0);
+                        tCarb += Number(d.carbs || 0); 
+                        tFat += Number(d.fats || 0);
+                    }
+                });
+
+                const div = daysActive.size || 1;
+                const avgCal = Math.round(tCals / div);
+                const avgPro = Math.round(tPro / div);
+                
+                document.getElementById('avg-cal-val').innerText = avgCal;
+                document.getElementById('avg-pro-val').innerText = avgPro + "g";
+                document.getElementById('total-water-val').innerText = tWater + " Cups";
+                document.getElementById('avg-cal-bar').style.width = Math.min((avgCal / (calGoal || 1)) * 100, 100) + "%";
+                document.getElementById('avg-pro-bar').style.width = Math.min((avgPro / (proGoal || 1)) * 100, 100) + "%";
+
+                const totalGrams = avgPro + Math.round(tCarb/div) + Math.round(tFat/div) || 1;
+                const pPct = Math.round((avgPro/totalGrams)*100);
+                const cPct = Math.round(((tCarb/div)/totalGrams)*100);
+                const fPct = 100 - pPct - cPct;
+
+                document.getElementById('macro-pie').style.background = `conic-gradient(#f43f5e 0% ${pPct}%, #38bdf8 ${pPct}% ${pPct+cPct}%, #fbbf24 ${pPct+cPct}% 100%)`;
+                document.getElementById('pie-pro-pct').innerText = pPct + "%";
+                document.getElementById('pie-carb-pct').innerText = cPct + "%";
+                document.getElementById('pie-fat-pct').innerText = fPct + "%";
+            } catch (e) {
+                console.error("Weekly Summary Error:", e);
             }
-        });
+        };
 
-        const div = daysActive.size || 1;
-        const avgCal = Math.round(tCals / div), avgPro = Math.round(tPro / div);
-        
-        document.getElementById('avg-cal-val').innerText = avgCal;
-        document.getElementById('avg-pro-val').innerText = avgPro + "g";
-        document.getElementById('total-water-val').innerText = tWater + " Cups";
-        document.getElementById('avg-cal-bar').style.width = Math.min((avgCal / calGoal) * 100, 100) + "%";
-        document.getElementById('avg-pro-bar').style.width = Math.min((avgPro / proGoal) * 100, 100) + "%";
-
-        const totalGrams = avgPro + Math.round(tCarb/div) + Math.round(tFat/div) || 1;
-        const pPct = Math.round((avgPro/totalGrams)*100), cPct = Math.round(((tCarb/div)/totalGrams)*100);
-        const fPct = 100 - pPct - cPct;
-
-        document.getElementById('macro-pie').style.background = `conic-gradient(#f43f5e 0% ${pPct}%, #38bdf8 ${pPct}% ${pPct+cPct}%, #fbbf24 ${pPct+cPct}% 100%)`;
-        document.getElementById('pie-pro-pct').innerText = pPct + "%";
-        document.getElementById('pie-carb-pct').innerText = cPct + "%";
-        document.getElementById('pie-fat-pct').innerText = fPct + "%";
-    };
-
-    window.closeWeekly = () => document.getElementById('weekly-modal').classList.add('hidden');
+        window.closeWeekly = () => document.getElementById('weekly-modal').classList.add('hidden');
 </script>
 </body>
 </html>
