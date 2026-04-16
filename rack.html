@@ -127,18 +127,11 @@
     </nav>
 
     <script type="module">
+        // 1. FIXED CONFIG PATH
+        import { firebaseConfig } from './js/firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-        const firebaseConfig = { 
-            apiKey: "AIzaSyBOQFeokKaNQKwaUhXMCA0oEm4W9G0qafE", 
-            authDomain: "rackstat-production.firebaseapp.com", 
-            projectId: "rackstat-production",
-            storageBucket: "rackstat-production.firebasestorage.app",
-            messagingSenderId: "345003825117",
-            appId: "1:345003825117:web:2ad86b1902dfdebe0c8834"
-        };
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -178,25 +171,20 @@
                     }
                 });
 
-                // FIXED: Single doc reference
+                // Get User Profile
                 let profileSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
-                
-                // Fallback to users collection if profile doesn't exist
                 if (!profileSnap.exists()) {
                     profileSnap = await getDoc(doc(db, "users", user.uid));
                 }
 
                 if (profileSnap.exists()) {
                     const profileData = profileSnap.data();
-                    // Handle both naming conventions for school ID
                     const schoolId = profileData.schoolId || profileData.school_id;
                     
                     if (schoolId) {
                         const schoolData = await applyTheme(schoolId);
                         setupInputs(schoolData);
-                        loadCurrentMaxes(user.uid, schoolData);
-                    } else {
-                        console.error("No school ID found for user:", user.uid);
+                        loadCurrentMaxes(user.uid);
                     }
                 }
             } else { 
@@ -219,7 +207,7 @@
                 </div>`).join('');
         }
 
-        async function loadCurrentMaxes(uid, schoolData) {
+        async function loadCurrentMaxes(uid) {
             const latestDocRef = doc(db, "recruiting_profiles", uid, "maxes", "latest");
             const snap = await getDoc(latestDocRef);
             if(snap.exists()) {
@@ -230,7 +218,7 @@
                 display.innerHTML = schoolPrefs.tracked_lifts.map(lift => {
                     const val = data[lift] || 0;
                     if (schoolPrefs.scoring_lifts.includes(lift)) scoringSum += val;
-                    // Pre-fill inputs
+                    
                     const inputField = document.getElementById(`input-${lift}`);
                     if(inputField) inputField.value = val;
 
