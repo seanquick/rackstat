@@ -482,39 +482,74 @@
 
         document.getElementById('weekly-modal').classList.remove('hidden');
 
-        // Create a timestamp for exactly 7 days ago at 12:00 AM
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        sevenDaysAgo.setHours(0, 0, 0, 0);
+        // 1. Calculate the date 7 days ago at midnight
+        const now = new Date();
+        const startOfRange = new Date();
+        startOfRange.setDate(now.getDate() - 7);
+        startOfRange.setHours(0, 0, 0, 0);
 
         try {
+            // 2. Fetch all meals—we'll filter them manually to ensure today is included
             const q = query(
-                collection(db, "recruiting_profiles", user.uid, "meals"), 
-                fbWhere("timestamp", ">=", sevenDaysAgo)
+                collection(db, "recruiting_profiles", user.uid, "meals"),
+                orderBy("timestamp", "desc"),
+                limit(100) // Increase limit to ensure we get the full week
             );
             const snap = await getDocs(q);
 
             let tCals = 0, tPro = 0, tCarb = 0, tFat = 0, tWater = 0;
             let daysActive = new Set();
+            let totalWeight = 0;
+            let weightEntries = 0;
 
-            snap.forEach(doc => {
-                const d = doc.data();
-                daysActive.add(d.date);
-                if (d.mealType === 'Water') {
-                    tWater += Number(d.cups || 0);
-                } else {
-                    tCals += Number(d.calories || 0); 
-                    tPro += Number(d.protein || 0);
-                    tCarb += Number(d.carbs || 0); 
-                    tFat += Number(d.fats || 0);
+            snap.forEach(docSnap => {
+                const d = docSnap.data();
+                
+                // Convert Firestore timestamp or numeric timestamp to Date object
+                const entryDate = d.timestamp?.seconds 
+                    ? new Date(d.timestamp.seconds * 1000) 
+                    : new Date(d.timestamp);
+
+                // 3. Manual Filter: Only process if within the last 7 days OR matches today's date string
+                const todayStr = now.toLocaleDateString();
+                if (entryDate >= startOfRange || d.date === todayStr) {
+                    daysActive.add(d.date);
+                    
+                    if (d.mealType === 'Water') {
+                        tWater += Number(d.cups || 0);
+                    } else if (d.mealType !== 'Weight') { // Assuming weight might be in here
+                        tCals += Number(d.calories || 0);
+                        tPro += Number(d.protein || 0);
+                        tCarb += Number(d.carbs || 0);
+                        tFat += Number(d.fats || 0);
+                    }
                 }
             });
 
-            // Ensure the divisor counts today even if it's the only day logged
-            const div = daysActive.size || 1;
-            
-            // UI Updates... (keep your existing UI assignment code here)
-            
+            // 4. Update UI with safe divisors
+            const dayCount = daysActive.size || 1;
+            const avgCal = Math.round(tCals / dayCount);
+            const avgPro = Math.round(tPro / dayCount);
+
+            document.getElementById('avg-cal-val').innerText = avgCal;
+            document.getElementById('avg-pro-val').innerText = avgPro + "g";
+            document.getElementById('total-water-val').innerText = tWater + " Cups";
+
+            // Progress Bars
+            document.getElementById('avg-cal-bar').style.width = Math.min((avgCal / (calGoal || 2500)) * 100, 100) + "%";
+            document.getElementById('avg-pro-bar').style.width = Math.min((avgPro / (proGoal || 150)) * 100, 100) + "%";
+
+            // 5. Macro Pie Chart
+            const totalGrams = avgPro + Math.round(tCarb/dayCount) + Math.round(tFat/dayCount) || 1;
+            const pPct = Math.round((avgPro/totalGrams)*100);
+            const cPct = Math.round(((tCarb/dayCount)/totalGrams)*100);
+            const fPct = 100 - pPct - cPct;
+
+            const pie = document.getElementById('macro-pie');
+            if (pie) {
+                pie.style.background = `conic-gradient(#f43f5e 0% ${pPct}%, #38bdf8 ${pPct}% ${pPct+cPct}%, #fbbf24 ${pPct+cPct}% 100%)`;
+            }
+
         } catch (e) {
             console.error("Weekly Stats Error:", e);
         }
