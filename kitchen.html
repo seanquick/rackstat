@@ -281,7 +281,7 @@
     </nav>
 
     <script type="module">
-    // 1. Firebase Configuration & Imports
+ // 1. Firebase Configuration & Imports
     import { firebaseConfig } from './js/firebase-config.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { 
@@ -290,8 +290,6 @@
         where as fbWhere 
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-    // ADD THIS LINE RIGHT HERE:
     import { applyTheme } from './theme.js';
 
     // 2. Initialize Firebase
@@ -304,26 +302,19 @@
     let proGoal = 150;
     let waterGoal = 16; 
 
-    // Set default date to today on load
-    document.getElementById('entry-date').valueAsDate = new Date();
+    // Initial UI Setup
+    const entryDateInput = document.getElementById('entry-date');
+    if (entryDateInput) entryDateInput.valueAsDate = new Date();
 
-  // 4. Auth & Theme Integration
+    // 4. Auth & Theme Integration
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            // A. MASTER DATA LISTENER (Syncs Height/Weight/Branding)
+            // A. MASTER DATA LISTENER
             onSnapshot(doc(db, "users", user.uid), async (userDoc) => {
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
-                    
                     const schoolID = userData.school_id || userData.schoolId;
-                    if (schoolID) {
-                        // CHANGE: Added 'db' so the function has access to Firestore
-                        await applyTheme(db, schoolID); 
-                        
-                        // CHANGE: Ensure the school-tag is visible if it was hidden
-                        document.getElementById('school-tag')?.classList.remove('opacity-0');
-                    }
-                    // --- THEME ENGINE END ---
+                    if (schoolID) await applyTheme(db, schoolID);
 
                     if (userData.weight) {
                         const wDisplay = document.getElementById('last-weight-display');
@@ -344,50 +335,53 @@
                 }
             });
 
-            // B. RECRUITING PROFILE LISTENER (Goals & Backup Branding)
+            // B. RECRUITING PROFILE LISTENER
             onSnapshot(doc(db, "recruiting_profiles", user.uid), async (snap) => {
                 if (snap.exists()) {
                     const data = snap.data();
-                    
-                    // Fallback theme trigger if the user doc listener didn't fire yet
-                    const schoolID = data.school_id || data.schoolId;
-                    if (schoolID) await applyTheme(db, schoolID); // Added 'db' here too
-
                     calGoal = data.dailyCalorieGoal || 2500;
                     proGoal = data.dailyProteinGoal || 150;
                     waterGoal = data.dailyWaterGoal || 16;
 
-                    // Update UI Goal Displays
                     const targetCal = document.getElementById('target-cal-display');
                     const targetPro = document.getElementById('target-pro-display');
                     if (targetCal) targetCal.innerText = calGoal;
                     if (targetPro) targetPro.innerText = proGoal;
 
-                    updateDailyTotals();
+                    window.updateDailyTotals();
                     fetchMealHistory();
                     updateStreak();
                 } else {
-                    updateDailyTotals();
+                    window.updateDailyTotals();
                 }
             });
-
         } else {
             location.href = 'index.html';
         }
     });
 
-    // 5. Weight & Height Syncing
+    // 5. Global Window Functions (Exposed to HTML)
+    window.setTargets = async () => {
+        if (!auth.currentUser) return;
+        const newCal = prompt("Daily Calorie Target:", calGoal);
+        const newPro = prompt("Daily Protein Target (g):", proGoal);
+        if (newCal && newPro) {
+            await updateDoc(doc(db, "recruiting_profiles", auth.currentUser.uid), {
+                dailyCalorieGoal: Number(newCal),
+                dailyProteinGoal: Number(newPro)
+            });
+        }
+    };
+
     window.saveQuickStats = async () => {
         const htInput = document.getElementById('quick-height');
         const bwInput = document.getElementById('quick-weight');
         const user = auth.currentUser;
-
-        if (!user || (!htInput.value && !bwInput.value)) return;
+        if (!user || (!htInput?.value && !bwInput?.value)) return;
 
         try {
             const hVal = htInput.value ? Number(htInput.value) : null;
             const wVal = bwInput.value ? Number(bwInput.value) : null;
-
             const syncData = { lastSync: serverTimestamp() };
             if (hVal) syncData.height = hVal;
             if (wVal) syncData.weight = wVal;
@@ -402,57 +396,18 @@
                     type: "weight_check"
                 });
             }
-
-            htInput.value = '';
-            bwInput.value = '';
+            if (htInput) htInput.value = '';
+            if (bwInput) bwInput.value = '';
         } catch (e) { console.error("Sync Error:", e); }
     };
 
-    // 6. Streak Logic
-    async function updateStreak() {
-        const streakContainer = document.getElementById('streak-container');
-        const streakCountLabel = document.getElementById('streak-count');
-        if (!streakContainer || !auth.currentUser) return;
-
-        const q = query(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), orderBy("date", "desc"));
-        const snap = await getDocs(q);
-        if (snap.empty) return streakContainer.classList.add('hidden');
-
-        const loggedDates = new Set();
-        snap.forEach(doc => loggedDates.add(doc.data().date));
-        const sortedDates = Array.from(loggedDates).map(d => new Date(d)).sort((a, b) => b - a);
-
-        let streak = 0;
-        let today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const lastLog = sortedDates[0];
-        const diffInDays = Math.floor((today - lastLog) / (1000 * 60 * 60 * 24));
-
-        if (diffInDays <= 1) {
-            for (let i = 0; i < sortedDates.length; i++) {
-                const logDate = sortedDates[i];
-                const expectedDate = new Date(lastLog);
-                expectedDate.setDate(lastLog.getDate() - i);
-                if (logDate.toLocaleDateString() === expectedDate.toLocaleDateString()) streak++;
-                else break;
-            }
-        }
-
-        if (streak > 0) {
-            streakContainer.classList.remove('hidden');
-            streakCountLabel.innerText = `${streak} DAY STREAK`;
-        } else {
-            streakContainer.classList.add('hidden');
-        }
-    }
-
-    // 7. Core Logic: Daily Totals
     window.updateDailyTotals = async () => {
         const user = auth.currentUser;
         if (!user) return;
 
-        const selectedDate = document.getElementById('entry-date').value;
+        const selectedDate = document.getElementById('entry-date')?.value;
+        if (!selectedDate) return;
+        
         const dateObj = new Date(selectedDate);
         dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
         const dateStr = dateObj.toLocaleDateString();
@@ -472,7 +427,6 @@
             }
         });
 
-        // Update UI
         const safeSet = (id, val) => { if(document.getElementById(id)) document.getElementById(id).innerText = val; };
         safeSet('day-cal', c);
         safeSet('day-pro', p);
@@ -483,21 +437,20 @@
         const todayStr = new Date().toLocaleDateString();
         safeSet('display-date-label', (dateStr === todayStr) ? "Today's Progress" : dateStr);
 
-        // Progress Bars
-        if (calGoal > 0) document.getElementById('cal-fill').style.width = Math.min((c / calGoal) * 100, 100) + "%";
-        if (proGoal > 0) document.getElementById('pro-fill').style.width = Math.min((p / proGoal) * 100, 100) + "%";
+        if (calGoal > 0 && document.getElementById('cal-fill')) 
+            document.getElementById('cal-fill').style.width = Math.min((c / calGoal) * 100, 100) + "%";
+        if (proGoal > 0 && document.getElementById('pro-fill')) 
+            document.getElementById('pro-fill').style.width = Math.min((p / proGoal) * 100, 100) + "%";
         
         const wBar = document.getElementById('water-progress-bar');
         if (wBar) {
             const wPerc = Math.min((water / waterGoal) * 100, 100);
             wBar.style.width = `${wPerc}%`;
-            // Dynamic color shift
             wBar.classList.toggle('bg-sky-500', wPerc < 100);
             wBar.classList.toggle('bg-emerald-500', wPerc >= 100);
         }
     };
 
-    // 8. Water Actions
     window.addWater = async (cups) => {
         const user = auth.currentUser;
         if (!user) return;
@@ -511,29 +464,16 @@
             date: dateObj.toLocaleDateString(),
             timestamp: Date.now()
         });
-        updateDailyTotals();
+        window.updateDailyTotals();
         fetchMealHistory();
     };
 
-    window.undoLastWater = async () => {
-        const q = query(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), 
-                        fbWhere("mealType", "==", "Water"), orderBy("timestamp", "desc"), limit(1));
-        const snap = await getDocs(q);
-        if (!snap.empty) {
-            await deleteDoc(doc(db, "recruiting_profiles", auth.currentUser.uid, "meals", snap.docs[0].id));
-            updateDailyTotals();
-            fetchMealHistory();
-        }
-    };
-
-    // 9. Meal Management
     window.saveMeal = async () => {
         const btn = document.getElementById('log-btn');
         const cVal = Number(document.getElementById('calories').value);
-        if (cVal <= 0) return alert("Enter calories to log fuel.");
+        if (cVal <= 0) return alert("Enter calories.");
 
         btn.disabled = true;
-        btn.innerText = "RECORDING...";
         const selectedDate = document.getElementById('entry-date').value;
         const dateObj = new Date(selectedDate);
         dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
@@ -552,22 +492,21 @@
 
             ["calories", "protein", "carbs", "fats", "meal-desc"].forEach(id => document.getElementById(id).value = '');
             btn.disabled = false;
-            btn.innerText = "RECORD MEAL";
-            updateDailyTotals();
+            window.updateDailyTotals();
             fetchMealHistory();
-        } catch (e) {
-            btn.disabled = false;
-            btn.innerText = "RECORD MEAL";
-        }
+        } catch (e) { btn.disabled = false; }
     };
 
     async function fetchMealHistory() {
         const container = document.getElementById('history-list');
+        const user = auth.currentUser;
+        if (!container || !user) return;
+
         const selectedDate = document.getElementById('entry-date').value;
         const dateObj = new Date(selectedDate);
         dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
 
-        const q = query(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"),
+        const q = query(collection(db, "recruiting_profiles", user.uid, "meals"),
                         fbWhere("date", "==", dateObj.toLocaleDateString()), orderBy("timestamp", "desc"), limit(15));
 
         const snap = await getDocs(q);
@@ -593,90 +532,68 @@
     window.deleteMeal = async (id) => {
         if (confirm("Remove this entry?")) {
             await deleteDoc(doc(db, "recruiting_profiles", auth.currentUser.uid, "meals", id));
-            updateDailyTotals();
+            window.updateDailyTotals();
             fetchMealHistory();
         }
     };
 
- // 10. Goals & Weekly Summary
-    window.setTargets = async () => {
-        console.log("setTargets triggered"); // Debugging check
-        
-        if (!auth.currentUser) {
-            alert("Please wait for auth to initialize.");
-            return;
-        }
-
-        const newCal = prompt("Daily Calorie Target:", calGoal);
-        const newPro = prompt("Daily Protein Target (g):", proGoal);
-        
-        if (newCal && newPro) {
-            try {
-                await updateDoc(doc(db, "recruiting_profiles", auth.currentUser.uid), {
-                    dailyCalorieGoal: Number(newCal),
-                    dailyProteinGoal: Number(newPro)
-                });
-                alert("TARGETS UPDATED!");
-            } catch (e) {
-                console.error("Error updating targets:", e);
-                alert("Update failed. Check console for details.");
-            }
-        }
+    window.showWeeklySummary = async () => {
+        document.getElementById('weekly-modal').classList.remove('hidden');
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const q = query(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), fbWhere("timestamp", ">=", sevenDaysAgo));
+        const snap = await getDocs(q);
+        let tCals = 0, tPro = 0, tCarb = 0, tFat = 0, tWater = 0, daysActive = new Set();
+        snap.forEach(doc => {
+            const d = doc.data();
+            daysActive.add(d.date);
+            if (d.mealType === 'Water') tWater += Number(d.cups || 0);
+            else { tCals += Number(d.calories || 0); tPro += Number(d.protein || 0); tCarb += Number(d.carbs || 0); tFat += Number(d.fats || 0); }
+        });
+        const div = daysActive.size || 1;
+        const avgCal = Math.round(tCals / div), avgPro = Math.round(tPro / div);
+        document.getElementById('avg-cal-val').innerText = avgCal;
+        document.getElementById('avg-pro-val').innerText = avgPro + "g";
+        document.getElementById('total-water-val').innerText = tWater + " Cups";
+        document.getElementById('avg-cal-bar').style.width = Math.min((avgCal / calGoal) * 100, 100) + "%";
+        document.getElementById('avg-pro-bar').style.width = Math.min((avgPro / proGoal) * 100, 100) + "%";
+        const totalGrams = avgPro + Math.round(tCarb/div) + Math.round(tFat/div) || 1;
+        const pPct = Math.round((avgPro/totalGrams)*100), cPct = Math.round(((tCarb/div)/totalGrams)*100), fPct = 100 - pPct - cPct;
+        document.getElementById('macro-pie').style.background = `conic-gradient(#f43f5e 0% ${pPct}%, #38bdf8 ${pPct}% ${pPct+cPct}%, #fbbf24 ${pPct+cPct}% 100%)`;
     };
 
-        window.showWeeklySummary = async () => {
-            if (!auth.currentUser) return;
-            
-            document.getElementById('weekly-modal').classList.remove('hidden');
-            const sevenDaysAgo = new Date();
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    window.closeWeekly = () => document.getElementById('weekly-modal').classList.add('hidden');
 
-            try {
-                const q = query(
-                    collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), 
-                    fbWhere("timestamp", ">=", sevenDaysAgo)
-                );
-                const snap = await getDocs(q);
-
-                let tCals = 0, tPro = 0, tCarb = 0, tFat = 0, tWater = 0, daysActive = new Set();
-                snap.forEach(doc => {
-                    const d = doc.data();
-                    daysActive.add(d.date);
-                    if (d.mealType === 'Water') {
-                        tWater += Number(d.cups || 0);
-                    } else {
-                        tCals += Number(d.calories || 0); 
-                        tPro += Number(d.protein || 0);
-                        tCarb += Number(d.carbs || 0); 
-                        tFat += Number(d.fats || 0);
-                    }
-                });
-
-                const div = daysActive.size || 1;
-                const avgCal = Math.round(tCals / div);
-                const avgPro = Math.round(tPro / div);
-                
-                document.getElementById('avg-cal-val').innerText = avgCal;
-                document.getElementById('avg-pro-val').innerText = avgPro + "g";
-                document.getElementById('total-water-val').innerText = tWater + " Cups";
-                document.getElementById('avg-cal-bar').style.width = Math.min((avgCal / (calGoal || 1)) * 100, 100) + "%";
-                document.getElementById('avg-pro-bar').style.width = Math.min((avgPro / (proGoal || 1)) * 100, 100) + "%";
-
-                const totalGrams = avgPro + Math.round(tCarb/div) + Math.round(tFat/div) || 1;
-                const pPct = Math.round((avgPro/totalGrams)*100);
-                const cPct = Math.round(((tCarb/div)/totalGrams)*100);
-                const fPct = 100 - pPct - cPct;
-
-                document.getElementById('macro-pie').style.background = `conic-gradient(#f43f5e 0% ${pPct}%, #38bdf8 ${pPct}% ${pPct+cPct}%, #fbbf24 ${pPct+cPct}% 100%)`;
-                document.getElementById('pie-pro-pct').innerText = pPct + "%";
-                document.getElementById('pie-carb-pct').innerText = cPct + "%";
-                document.getElementById('pie-fat-pct').innerText = fPct + "%";
-            } catch (e) {
-                console.error("Weekly Summary Error:", e);
+    async function updateStreak() {
+        const streakContainer = document.getElementById('streak-container');
+        const streakCountLabel = document.getElementById('streak-count');
+        if (!streakContainer || !auth.currentUser) return;
+        const q = query(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), orderBy("date", "desc"));
+        const snap = await getDocs(q);
+        if (snap.empty) return streakContainer.classList.add('hidden');
+        const loggedDates = new Set();
+        snap.forEach(doc => loggedDates.add(doc.data().date));
+        const sortedDates = Array.from(loggedDates).map(d => new Date(d)).sort((a, b) => b - a);
+        let streak = 0;
+        let today = new Date(); today.setHours(0, 0, 0, 0);
+        const lastLog = sortedDates[0];
+        const diffInDays = Math.floor((today - lastLog) / (1000 * 60 * 60 * 24));
+        if (diffInDays <= 1) {
+            for (let i = 0; i < sortedDates.length; i++) {
+                const logDate = sortedDates[i];
+                const expectedDate = new Date(lastLog);
+                expectedDate.setDate(lastLog.getDate() - i);
+                if (logDate.toLocaleDateString() === expectedDate.toLocaleDateString()) streak++;
+                else break;
             }
-        };
-
-        window.closeWeekly = () => document.getElementById('weekly-modal').classList.add('hidden');
+        }
+        if (streak > 0) {
+            streakContainer.classList.remove('hidden');
+            streakCountLabel.innerText = `${streak} DAY STREAK`;
+        } else {
+            streakContainer.classList.add('hidden');
+        }
+    }
 </script>
 </body>
 </html>
