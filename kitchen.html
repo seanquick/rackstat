@@ -387,6 +387,36 @@
         fetchMealHistory();
     };
 
+    window.undoLastWater = async () => {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        try {
+            // Find the most recent water entry for this user
+            const q = query(
+                collection(db, "recruiting_profiles", user.uid, "meals"), 
+                fbWhere("mealType", "==", "Water"), 
+                orderBy("timestamp", "desc"), 
+                limit(1)
+            );
+            
+            const snap = await getDocs(q);
+            
+            if (!snap.empty) {
+                // Delete the specific document found
+                await deleteDoc(doc(db, "recruiting_profiles", user.uid, "meals", snap.docs[0].id));
+                
+                // Refresh the UI
+                window.updateDailyTotals();
+                if (typeof fetchMealHistory === "function") fetchMealHistory();
+            } else {
+                alert("No water entries found to undo.");
+            }
+        } catch (e) {
+            console.error("Undo Water Error:", e);
+        }
+    };
+
     window.saveMeal = async () => {
         const cVal = Number(document.getElementById('calories').value);
         if (cVal <= 0) return alert("Enter calories.");
