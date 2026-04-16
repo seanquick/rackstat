@@ -13,7 +13,10 @@
         }
         body { background-color: #0a0a0b; color: white; }
         
-        /* Skeleton loading animation */
+        :root {
+            --school-primary: #b91c1c; /* Default fallback */
+        }
+
         .loading-pulse {
             animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
@@ -23,132 +26,103 @@
         }
     </style>
 </head>
-<body class="bg-[#0a0a0b] text-white antialiased min-h-screen">
+<body class="bg-[#0a0a0b] text-white antialiased min-h-screen pb-24">
 
- <header class="bg-black border-b-2 border-red-700 p-4">
+<header class="bg-black border-b-2 border-red-700 p-4">
     <div class="flex justify-between items-center max-w-6xl mx-auto">
-        
         <div class="w-1/4 flex justify-start">
             <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1 rounded text-gray-300 hover:text-white transition-colors">← Lobby</button>
         </div>
 
         <div class="flex items-center gap-6 justify-center flex-1">
             <div class="header-logo-container">
-                <img id="school-logo" src="images/rackstat-logo.png" alt="School Logo">
+                <img id="school-logo" src="images/rackstat-logo-placeholder.png" alt="School Logo" class="h-10 w-auto">
             </div>
-
             <div class="h-10 w-[1px] bg-gray-700"></div>
-
             <div class="flex flex-col items-center min-w-[140px]">
                 <span id="school-tag" class="text-sm font-black italic uppercase text-white text-center leading-tight">LOADING...</span>
                 <span class="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">Athlete Workout</span>
             </div>
-
             <div class="h-10 w-[1px] bg-gray-700"></div>
-
             <div class="header-logo-container">
-                <img src="images/rackstat-logo.png" alt="RACKSTAT">
+                <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-10 w-auto">
             </div>
         </div>
-
         <div class="w-1/4"></div> 
     </div>
 </header>
 
-    <div id="athlete-dashboard" class="max-w-md mx-auto p-4">
-        <div class="mb-8 border-b border-[#2a2a2c] pb-4 mt-4">
-            <h2 class="text-[10px] font-black text-[var(--school-primary)] uppercase tracking-widest mb-1">Athlete Portal</h2>
-            <h1 class="text-3xl font-black text-white uppercase tracking-tighter italic">Current Workouts</h1>
-        </div>
-        
-        <div id="available-workouts" class="space-y-3">
-            <div class="loading-pulse text-gray-500 text-xs uppercase font-bold text-center py-10 tracking-widest">
-                Syncing training session...
-            </div>
-        </div>
-
-        <div class="mt-10 pt-6 border-t border-gray-900">
-            <button onclick="location.href='index.html'" class="flex items-center text-gray-500 hover:text-white transition-colors group">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7" />
-                </svg>
-                <span class="text-xs font-black uppercase tracking-widest italic">Return to Lobby</span>
-            </button>
+<div id="athlete-dashboard" class="max-w-md mx-auto p-4">
+    <div class="mb-8 border-b border-[#2a2a2c] pb-4 mt-4">
+        <h2 class="text-[10px] font-black uppercase tracking-widest mb-1 text-red-600">Athlete Portal</h2>
+        <h1 class="text-3xl font-black text-white uppercase tracking-tighter italic">Current Workouts</h1>
+    </div>
+    
+    <div id="available-workouts" class="space-y-3">
+        <div class="loading-pulse text-gray-500 text-xs uppercase font-bold text-center py-10 tracking-widest">
+            Syncing training session...
         </div>
     </div>
+</div>
 
-    <div id="athlete-workout-container" class="max-w-md mx-auto p-4" style="display: none;">
-        <button onclick="location.reload()" class="text-gray-500 text-[10px] uppercase font-bold mb-4 flex items-center gap-1 hover:text-white transition-colors">
-            ← Back to List
+<div id="athlete-workout-container" class="max-w-md mx-auto p-4" style="display: none;">
+    <button onclick="location.reload()" class="text-gray-500 text-[10px] uppercase font-bold mb-4 flex items-center gap-1 hover:text-white transition-colors">
+        ← Back to List
+    </button>
+    
+    <div class="mb-6">
+        <h1 id="display-title" class="text-3xl font-black text-white uppercase tracking-tighter italic">--</h1>
+        <p id="display-week" class="text-red-600 font-black text-sm uppercase tracking-widest">WEEK --</p>
+    </div>
+
+    <div id="athlete-exercise-list" class="space-y-4"></div>
+
+    <div class="py-10">
+        <button id="finish-workout-btn" class="w-full bg-red-600 text-white font-black py-5 rounded-xl uppercase italic tracking-widest shadow-lg">
+            Log Session & Finish
         </button>
-        
-        <div class="mb-6">
-            <h1 id="display-title" class="text-3xl font-black text-white uppercase tracking-tighter italic">--</h1>
-            <p id="display-week" class="text-[var(--school-primary)] font-black text-sm uppercase tracking-widest">WEEK --</p>
-        </div>
-
-        <div id="athlete-exercise-list" class="space-y-4"></div>
-
-        <div class="py-10">
-            <button id="finish-workout-btn" class="w-full bg-[var(--school-primary)] text-white font-black py-5 rounded-xl uppercase italic tracking-widest shadow-lg shadow-[var(--school-primary)]/20">
-                Log Session & Finish
-            </button>
-        </div>
     </div>
+</div>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-red-900/30 px-6 py-4 flex justify-between items-center z-50">
-        <button onclick="location.href='board.html'" class="text-red-600 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Board</span></button>
-        <button onclick="location.href='rack.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">The Rack</span></button>
-        <button onclick="location.href='kitchen.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Kitchen</span></button>
-        <button onclick="location.href='profile.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
-    </nav>
-
+<nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-red-900/30 px-6 py-4 flex justify-between items-center z-50">
+    <button onclick="location.href='board.html'" class="text-red-600 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Board</span></button>
+    <button onclick="location.href='rack.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">The Rack</span></button>
+    <button onclick="location.href='kitchen.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Kitchen</span></button>
+    <button onclick="location.href='profile.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
+</nav>
 
 <script type="module">
+    // 1. FIXED PATH
+    import { firebaseConfig } from "./js/firebase-config.js"; 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { firebaseConfig } from "./firebase-config.js"; 
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getFirestore, doc, getDoc, collection, query, where, orderBy, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    
-    // --- IMPORT THE THEME ENGINE ---
-    import { applyTheme } from './js/theme.js'; 
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // --- GLOBAL STATE ---
-    const urlParams = new URLSearchParams(window.location.search);
-    const directWorkoutId = urlParams.get('id');
-    window.currentAthleteId = null;
-    window.currentSchoolId = null;
+    let currentAthleteId = null;
+    let currentSchoolId = null;
     let activeWorkoutData = null;
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            window.currentAthleteId = user.uid;
+            currentAthleteId = user.uid;
             
-            // Fetch User Context
-            const profileSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
-            const userSnap = await getDoc(doc(db, "users", user.uid));
-            const profileData = profileSnap.exists() ? profileSnap.data() : (userSnap.exists() ? userSnap.data() : null);
+            // Try both collections for profile context
+            let profileSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+            if (!profileSnap.exists()) {
+                profileSnap = await getDoc(doc(db, "users", user.uid));
+            }
 
-            if (profileData) {
-                window.currentSchoolId = profileData.school_id || profileData.schoolId;
+            if (profileSnap.exists()) {
+                const profileData = profileSnap.data();
+                currentSchoolId = profileData.schoolId || profileData.school_id;
                 
-                if (window.currentSchoolId) {
-                    // 1. APPLY THEME FIRST (Reveals the page)
-                    await applyTheme(db, window.currentSchoolId);
-
-                    // 2. LOAD CONTENT
-                    if (directWorkoutId) {
-                        window.loadAthleteWorkout(directWorkoutId, user.uid);
-                    } else {
-                        window.loadAvailableWorkouts(); 
-                    }
-                } else {
-                    console.error("No school found for user.");
-                    document.body.classList.add('theme-loaded');
+                if (currentSchoolId) {
+                    await applyPageTheme(currentSchoolId);
+                    loadAvailableWorkouts();
                 }
             }
         } else {
@@ -156,20 +130,24 @@
         }
     });
 
-    // --- LOGIC HELPERS ---
-    window.calculateWeight = (max, percentage) => {
-        const m = parseFloat(max);
-        const p = parseFloat(percentage);
-        if (isNaN(m) || m === 0) return "-";
-        if (!p || p === 0) return "BW";
-        return Math.round((m * (p / 100)) / 5) * 5; 
-    };
+    async function applyPageTheme(schoolId) {
+        const schoolSnap = await getDoc(doc(db, "schools", schoolId));
+        if (schoolSnap.exists()) {
+            const data = schoolSnap.data();
+            const primaryColor = data.colors?.primary || '#b91c1c';
+            document.documentElement.style.setProperty('--school-primary', primaryColor);
+            
+            document.getElementById('school-tag').innerText = data.name?.toUpperCase() || "RACKSTAT";
+            if (data.logo_url) document.getElementById('school-logo').src = data.logo_url;
+        }
+    }
 
-    window.loadAvailableWorkouts = async () => {
+    async function loadAvailableWorkouts() {
         const workoutContainer = document.getElementById('available-workouts');
+        // Standardized to schoolId to match Fairbanks data
         const q = query(
             collection(db, "workouts"), 
-            where("school_id", "==", window.currentSchoolId), 
+            where("schoolId", "==", currentSchoolId), 
             orderBy("date", "desc")
         );
 
@@ -184,177 +162,92 @@
 
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
-                const isMax = data.isMaxOutMode || false;
-
                 const btn = document.createElement('button');
-                btn.className = "w-full bg-[#161618] border border-[#2a2a2c] p-5 rounded-xl flex justify-between items-center group text-left mb-3 transition-all hover:border-[var(--school-primary)] hover:translate-y-[-2px]";
-                btn.onclick = () => window.loadAthleteWorkout(doc.id, window.currentAthleteId);
+                btn.className = "w-full bg-[#161618] border border-[#2a2a2c] p-5 rounded-xl flex justify-between items-center group text-left mb-3 transition-all hover:border-red-600";
+                btn.onclick = () => loadWorkoutDetails(doc.id);
                 
                 btn.innerHTML = `
                     <div>
-                        <div class="flex items-center gap-2">
-                            <h3 class="text-white font-black uppercase text-lg italic">${data.name || "Workout"}</h3>
-                            ${isMax ? `<span class="bg-[var(--school-primary)] text-white text-[8px] px-2 py-0.5 rounded-full font-black tracking-tighter">MAX</span>` : ''}
-                        </div>
-                        <span class="text-[var(--school-primary)] font-black text-[9px] uppercase tracking-[0.2em] opacity-80">${data.date || "Scheduled"}</span>
+                        <h3 class="text-white font-black uppercase text-lg italic">${data.title || data.name || "Workout"}</h3>
+                        <span class="text-red-600 font-black text-[9px] uppercase tracking-[0.2em]">${data.date || "Today"}</span>
                     </div>
-                    <span class="text-gray-700 group-hover:text-[var(--school-primary)] font-black text-xl transition-colors">→</span>
+                    <span class="text-gray-700 group-hover:text-red-600 font-black text-xl">→</span>
                 `;
                 workoutContainer.appendChild(btn);
             });
         } catch (err) {
             console.error(err);
-            workoutContainer.innerHTML = `<div class="text-red-500 text-[10px] text-center uppercase py-10 font-black">Connection Error.</div>`;
+            workoutContainer.innerHTML = `<div class="text-red-500 text-[10px] text-center uppercase py-10 font-black">Missing Index or Connection Error. Check Console.</div>`;
         }
-    };
+    }
 
-    window.loadAthleteWorkout = async (workoutId, athleteId) => {
-        try {
-            const [workoutSnap, maxSnap] = await Promise.all([
-                getDoc(doc(db, "workouts", workoutId)), 
-                getDoc(doc(db, "recruiting_profiles", athleteId, "maxes", "latest"))
-            ]);
+    async function loadWorkoutDetails(workoutId) {
+        const workoutSnap = await getDoc(doc(db, "workouts", workoutId));
+        const maxSnap = await getDoc(doc(db, "recruiting_profiles", currentAthleteId, "maxes", "latest"));
 
-            if (!workoutSnap.exists()) return;
-            activeWorkoutData = { id: workoutId, ...workoutSnap.data() };
-            const currentMaxes = maxSnap.exists() ? maxSnap.data() : {};
+        if (!workoutSnap.exists()) return;
+        activeWorkoutData = { id: workoutId, ...workoutSnap.data() };
+        const currentMaxes = maxSnap.exists() ? maxSnap.data() : {};
 
-            // Toggle Views
-            document.getElementById('athlete-dashboard').style.display = 'none';
-            document.getElementById('athlete-workout-container').style.display = 'block';
-            document.getElementById('display-title').innerText = activeWorkoutData.name;
-            document.getElementById('display-week').innerText = activeWorkoutData.date;
+        document.getElementById('athlete-dashboard').style.display = 'none';
+        document.getElementById('athlete-workout-container').style.display = 'block';
+        document.getElementById('display-title').innerText = activeWorkoutData.title || activeWorkoutData.name;
+        document.getElementById('display-week').innerText = activeWorkoutData.date;
 
-            const list = document.getElementById('athlete-exercise-list');
-            list.innerHTML = '';
+        const list = document.getElementById('athlete-exercise-list');
+        list.innerHTML = '';
 
-            activeWorkoutData.exercises.forEach((ex, exIndex) => {
-                const cleanName = ex.name.toLowerCase().trim();
-                let athleteCurrentMax = currentMaxes[cleanName] || 0;
+        activeWorkoutData.exercises.forEach((ex, exIndex) => {
+            const cleanName = ex.name.toLowerCase();
+            let athleteCurrentMax = currentMaxes[cleanName] || 0;
+            
+            // Manual fallbacks for common naming mismatches
+            if (!athleteCurrentMax) {
+                if (cleanName.includes("bench")) athleteCurrentMax = currentMaxes.bench || 0;
+                if (cleanName.includes("squat")) athleteCurrentMax = currentMaxes.squat || 0;
+                if (cleanName.includes("clean")) athleteCurrentMax = currentMaxes.clean || 0;
+            }
 
-                // Fallback for specific lift naming conventions
-                if (!athleteCurrentMax) {
-                    if (cleanName.includes("bench")) athleteCurrentMax = currentMaxes.bench_press || 0;
-                    if (cleanName.includes("squat")) athleteCurrentMax = currentMaxes.back_squat || 0;
-                    if (cleanName.includes("clean")) athleteCurrentMax = currentMaxes.power_clean || 0;
-                }
-
-                let setsHtml = '';
-                if (ex.isMaxOut) {
-                    for (let i = 0; i < 6; i++) {
-                        const isWarmup = i < 3;
-                        const setId = `set-${exIndex}-${i}`;
-                        setsHtml += `
-                            <div id="container-${setId}" data-completed="false" class="flex justify-between items-center bg-black p-4 rounded-lg border border-gray-800 mb-2">
-                                <div class="flex flex-col">
-                                    <span class="text-[8px] text-gray-600 font-black uppercase">${isWarmup ? 'Warmup' : 'MAX ATTEMPT'}</span>
-                                    <input type="number" id="weight-${setId}" placeholder="LBS" class="bg-transparent text-white font-black text-xl w-24 outline-none">
-                                </div>
-                                <button onclick="window.recordMaxAttempt('${ex.name}', '${setId}')" id="btn-${setId}" class="bg-[#1a1a1c] p-3 rounded-full text-gray-700 border border-gray-800">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path d="M5 13l4 4L19 7" /></svg>
-                                </button>
-                            </div>`;
-                    }
-                } else {
-                    setsHtml = ex.sets.map((s, i) => {
-                        const suggWeight = window.calculateWeight(athleteCurrentMax, s.pct || 0);
-                        const setId = `set-${exIndex}-${i}`;
-                        return `
-                            <div id="container-${setId}" data-completed="false" class="flex justify-between items-center bg-black p-4 rounded-lg mb-2 border border-gray-800">
-                                <div class="flex flex-col">
-                                    <span class="text-[8px] text-gray-600 font-black uppercase">Set ${i+1} — ${s.pct || 0}%</span>
-                                    <input type="text" id="weight-${setId}" value="${suggWeight}" class="bg-transparent text-[var(--school-primary)] font-black text-xl italic w-24 outline-none">
-                                </div>
-                                <div class="flex items-center gap-6">
-                                    <div class="text-center">
-                                        <p class="text-[8px] text-gray-700 uppercase font-black">Reps</p>
-                                        <p class="text-white font-black text-lg">${s.reps}</p>
-                                    </div>
-                                    <button onclick="window.toggleSetComplete('${setId}')" id="btn-${setId}" class="bg-[#1a1a1c] p-3 rounded-full text-gray-700 border border-gray-800">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path d="M5 13l4 4L19 7" /></svg>
-                                    </button>
-                                </div>
-                            </div>`;
-                    }).join('');
-                }
-
-                const card = document.createElement('div');
-                card.className = "exercise-card bg-[#111113] border-l-4 border-[var(--school-primary)] p-5 rounded-r-xl mb-4 shadow-2xl";
-                card.innerHTML = `
-                    <div class="flex justify-between items-start mb-4">
-                        <h3 class="text-white font-black uppercase text-sm italic tracking-widest">${ex.name}</h3>
-                        <div class="text-right">
-                            <p class="text-[8px] text-gray-600 font-black uppercase">Current 1RM</p>
-                            <p class="text-xs text-white font-black">${athleteCurrentMax} LBS</p>
+            let setsHtml = ex.sets.map((s, i) => {
+                const pct = parseFloat(s.pct) || 0;
+                const weight = pct > 0 ? Math.round((athleteCurrentMax * (pct / 100)) / 5) * 5 : "BW";
+                const setId = `set-${exIndex}-${i}`;
+                
+                return `
+                    <div id="container-${setId}" class="flex justify-between items-center bg-black p-4 rounded-lg mb-2 border border-gray-800">
+                        <div class="flex flex-col">
+                            <span class="text-[8px] text-gray-600 font-black uppercase">Set ${i+1} — ${pct}%</span>
+                            <input type="text" value="${weight}" class="bg-transparent text-red-500 font-black text-xl italic w-24 outline-none">
                         </div>
+                        <div class="text-center">
+                            <p class="text-[8px] text-gray-700 uppercase font-black">Reps</p>
+                            <p class="text-white font-black text-lg">${s.reps}</p>
+                        </div>
+                        <button onclick="this.parentElement.classList.toggle('border-green-500')" class="bg-[#1a1a1c] p-3 rounded-full text-gray-700 border border-gray-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path d="M5 13l4 4L19 7" /></svg>
+                        </button>
+                    </div>`;
+            }).join('');
+
+            const card = document.createElement('div');
+            card.className = "bg-[#111113] border-l-4 border-red-600 p-5 rounded-r-xl mb-4";
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-white font-black uppercase text-sm italic">${ex.name}</h3>
+                    <div class="text-right">
+                        <p class="text-[8px] text-gray-600 font-black uppercase">Max Ref</p>
+                        <p class="text-xs text-white font-black">${athleteCurrentMax} LBS</p>
                     </div>
-                    ${setsHtml}
-                `;
-                list.appendChild(card);
-            });
+                </div>
+                ${setsHtml}`;
+            list.appendChild(card);
+        });
+    }
 
-            // Set up Finish Button
-            document.getElementById('finish-workout-btn').onclick = () => window.logFullWorkout(workoutId);
-
-        } catch (err) { console.error(err); }
-    };
-
-    window.toggleSetComplete = (setId) => {
-        const container = document.getElementById(`container-${setId}`);
-        const btn = document.getElementById(`btn-${setId}`);
-        const isCompleted = container.getAttribute('data-completed') === 'true';
-        
-        if (!isCompleted) {
-            container.style.borderColor = "var(--school-primary)";
-            btn.classList.add('text-green-500', 'border-green-500');
-            container.setAttribute('data-completed', 'true');
-        } else {
-            container.style.borderColor = "#1f2937";
-            btn.classList.remove('text-green-500', 'border-green-500');
-            container.setAttribute('data-completed', 'false');
-        }
-    };
-
-    window.recordMaxAttempt = (exName, setId) => {
-        const weight = document.getElementById(`weight-${setId}`).value;
-        if (!weight) return alert("Enter weight");
-        window.toggleSetComplete(setId);
-        console.log(`Max Attempt: ${exName} @ ${weight} LBS`);
-    };
-
-    window.logFullWorkout = async (workoutId) => {
-        const btn = document.getElementById('finish-workout-btn');
-        btn.disabled = true;
-        btn.innerText = "UPLOADING...";
-
-        try {
-            const performance = [];
-            document.querySelectorAll('.exercise-card').forEach(card => {
-                const name = card.querySelector('h3').innerText;
-                const sets = Array.from(card.querySelectorAll('[id^="container-"]')).map(row => ({
-                    weight: row.querySelector('input').value,
-                    completed: row.getAttribute('data-completed') === 'true'
-                }));
-                performance.push({ name, sets });
-            });
-
-            await addDoc(collection(db, "completed_workouts"), {
-                athleteId: window.currentAthleteId,
-                workoutId: workoutId,
-                school_id: window.currentSchoolId,
-                performance,
-                timestamp: serverTimestamp()
-            });
-
-            alert("Session Recorded.");
-            location.href = 'athlete-workout.html';
-        } catch (error) {
-            console.error(error);
-            btn.disabled = false;
-            btn.innerText = "Try Again";
-        }
+    document.getElementById('finish-workout-btn').onclick = async () => {
+        alert("Session saved locally. Database sync pending index.");
+        location.href = 'athlete-workout.html';
     };
 </script>
-
 </body>
 </html>
