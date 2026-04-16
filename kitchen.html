@@ -430,7 +430,7 @@
             alert("You cannot log fuel for the future. Focus on today's targets!");
             return;
         }
-        
+
         const cVal = Number(document.getElementById('calories').value);
         if (cVal <= 0) return alert("Enter calories.");
 
@@ -452,24 +452,47 @@
     window.updateDailyTotals = async () => {
         const user = auth.currentUser;
         if (!user) return;
-        const dateStr = new Date(document.getElementById('entry-date').value).toLocaleDateString();
+
+        const selectedDate = document.getElementById('entry-date')?.value;
+        if (!selectedDate) return;
+        
+        const dateObj = new Date(selectedDate);
+        dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
+        const dateStr = dateObj.toLocaleDateString();
 
         const q = query(collection(db, "recruiting_profiles", user.uid, "meals"), fbWhere("date", "==", dateStr));
         const snap = await getDocs(q);
 
-        let c = 0, p = 0, water = 0;
+        let c = 0, p = 0, carb = 0, fat = 0, water = 0;
         snap.forEach(d => {
             const m = d.data();
-            if (m.mealType === 'Water') water += Number(m.cups || 0);
-            else { c += Number(m.calories || 0); p += Number(m.protein || 0); }
+            if (m.mealType === 'Water') {
+                water += Number(m.cups || 0);
+            } else {
+                c += Number(m.calories || 0);
+                p += Number(m.protein || 0);
+                carb += Number(m.carbs || 0);
+                fat += Number(m.fats || 0);
+            }
         });
 
-        if (document.getElementById('day-cal')) document.getElementById('day-cal').innerText = c;
-        if (document.getElementById('day-pro')) document.getElementById('day-pro').innerText = p;
-        if (document.getElementById('day-water')) document.getElementById('day-water').innerText = water + " Cups";
+        // UI Updates - Ensure these IDs match your HTML exactly
+        const safeSet = (id, val) => { 
+            const el = document.getElementById(id);
+            if (el) el.innerText = val; 
+        };
+
+        safeSet('day-cal', c);
+        safeSet('day-pro', p + "g");
+        safeSet('day-carb', carb + "g"); // This updates the Carb display
+        safeSet('day-fat', fat + "g");   // This updates the Fat display
+        safeSet('day-water', water + " Cups");
         
-        if (document.getElementById('cal-fill')) document.getElementById('cal-fill').style.width = Math.min((c/calGoal)*100, 100) + "%";
-        if (document.getElementById('pro-fill')) document.getElementById('pro-fill').style.width = Math.min((p/proGoal)*100, 100) + "%";
+        // Update Progress Bars
+        if (calGoal > 0 && document.getElementById('cal-fill')) 
+            document.getElementById('cal-fill').style.width = Math.min((c / calGoal) * 100, 100) + "%";
+        if (proGoal > 0 && document.getElementById('pro-fill')) 
+            document.getElementById('pro-fill').style.width = Math.min((p / proGoal) * 100, 100) + "%";
     };
 
     async function fetchMealHistory() {
