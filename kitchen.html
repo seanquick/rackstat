@@ -144,7 +144,7 @@
             <h2 class="text-center font-black uppercase italic text-green-500 mb-6 tracking-tight">Log Fuel Entry</h2>
             
             <label class="text-[9px] uppercase font-bold text-gray-400 ml-1">Entry Date (Select if logging previous day)</label>
-            <input id="entry-date" type="date" onchange="updateDailyTotals()">
+            <input type="date" id="entry-date" class="..." onchange="updateDailyTotals()">
 
             <select id="meal-type">
                 <option value="Breakfast">Breakfast</option>
@@ -304,8 +304,13 @@
     let waterGoal = 16; 
 
     // Initial UI Setup
-    const entryDateInput = document.getElementById('entry-date');
-    if (entryDateInput) entryDateInput.valueAsDate = new Date();
+        const entryDateInput = document.getElementById('entry-date');
+        const today = new Date().toISOString().split('T')[0]; // Gets YYYY-MM-DD format
+
+        if (entryDateInput) {
+            entryDateInput.value = today; // Set default to today
+            entryDateInput.max = today;   // PREVENT FUTURE DATES
+        }
 
     // 4. Auth & Theme Integration
     onAuthStateChanged(auth, async (user) => {
@@ -418,6 +423,14 @@
     };
 
     window.saveMeal = async () => {
+        const selectedDate = document.getElementById('entry-date').value;
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        if (selectedDate > todayStr) {
+            alert("You cannot log fuel for the future. Focus on today's targets!");
+            return;
+        }
+        
         const cVal = Number(document.getElementById('calories').value);
         if (cVal <= 0) return alert("Enter calories.");
 
