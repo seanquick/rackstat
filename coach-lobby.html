@@ -164,7 +164,7 @@
                     // Branding
                     const schoolID = userData.school_id || userData.schoolId;
                     if (schoolID) {
-                        import('./theme.js').then(m => m.applyTheme(db, schoolID)).catch(() => {
+                        import('./js/theme.js').then(m => m.applyTheme(db, schoolID)).catch(() => {
                             document.getElementById('school-name').innerText = "COACH OFFICE";
                         });
                     }
