@@ -83,9 +83,10 @@
 
 <script type="module">
     import { firebaseConfig } from "./js/firebase-config.js"; 
+    import { applyPageTheme } from "./js/theme.js"; 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, collection, query, where, orderBy, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -98,6 +99,7 @@
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             currentAthleteId = user.uid;
+            
             let profileSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
             if (!profileSnap.exists()) profileSnap = await getDoc(doc(db, "users", user.uid));
 
@@ -106,7 +108,8 @@
                 currentSchoolId = profileData.school_id || profileData.schoolId;
                 
                 if (currentSchoolId) {
-                    await applyPageTheme(currentSchoolId);
+                    // Using centralized theme logic from js/theme.js
+                    await applyPageTheme(db, currentSchoolId);
                     loadAvailableWorkouts();
                 }
             }
@@ -115,41 +118,8 @@
         }
     });
 
-    async function applyPageTheme(schoolId) {
-            try {
-                const schoolSnap = await getDoc(doc(db, "schools", schoolId));
-                if (schoolSnap.exists()) {
-                    const data = schoolSnap.data();
-                    
-                    // 1. Handle Colors
-                    const primaryColor = data.colors?.primary || data.primaryColor || '#b91c1c';
-                    document.documentElement.style.setProperty('--school-primary', primaryColor);
-                    
-                    // 2. Handle Name/Tag
-                    document.getElementById('school-tag').innerText = (data.name || data.schoolName || "RACKSTAT").toUpperCase();
-                    
-                    // 3. THE LOGO FIX: Check all common naming variations
-                    const logoPath = data.logo_url || data.logoUrl || data.logo || data.image;
-                    const logoElement = document.getElementById('school-logo');
-                    
-                    if (logoPath && logoElement) {
-                        logoElement.src = logoPath;
-                    } else {
-                        console.warn("Logo field not found in school document. Check field name in Firestore.");
-                        // Optional: set a default logo if the record is missing
-                        // logoElement.src = "images/rackstat-logo.png"; 
-                    }
-                } else {
-                    console.error(`School document not found for ID: ${schoolId}`);
-                }
-            } catch (err) {
-                console.error("Error applying theme:", err);
-            }
-        }
-
     async function loadAvailableWorkouts() {
         const workoutContainer = document.getElementById('available-workouts');
-        // MATCHING YOUR DB: school_id
         const q = query(
             collection(db, "workouts"), 
             where("school_id", "==", currentSchoolId), 
@@ -207,7 +177,6 @@
                 const cleanName = ex.name.toLowerCase();
                 let athleteCurrentMax = currentMaxes[cleanName] || 0;
                 
-                // Fallbacks for common names
                 if (!athleteCurrentMax) {
                     if (cleanName.includes("bench")) athleteCurrentMax = currentMaxes.bench || 0;
                     if (cleanName.includes("squat")) athleteCurrentMax = currentMaxes.squat || 0;
