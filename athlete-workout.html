@@ -16,7 +16,6 @@
         .loading-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
         
-        /* Apply dynamic school color to the finish button */
         #finish-workout-btn { background-color: var(--school-primary); }
     </style>
 </head>
@@ -87,11 +86,10 @@
 
 <script type="module">
     import { firebaseConfig } from "./js/firebase-config.js"; 
-    // FIXED: Name changed from applyPageTheme to applyTheme to match your file
     import { applyTheme } from "./js/theme.js"; 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -105,18 +103,21 @@
         if (user) {
             currentAthleteId = user.uid;
             
-            let profileSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
-            if (!profileSnap.exists()) profileSnap = await getDoc(doc(db, "users", user.uid));
+            try {
+                let profileSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+                if (!profileSnap.exists()) profileSnap = await getDoc(doc(db, "users", user.uid));
 
-            if (profileSnap.exists()) {
-                const profileData = profileSnap.data();
-                currentSchoolId = profileData.school_id || profileData.schoolId;
-                
-                if (currentSchoolId) {
-                    // FIXED: Using applyTheme (matching js/theme.js)
-                    await applyTheme(db, currentSchoolId);
-                    loadAvailableWorkouts();
+                if (profileSnap.exists()) {
+                    const profileData = profileSnap.data();
+                    currentSchoolId = profileData.school_id || profileData.schoolId;
+                    
+                    if (currentSchoolId) {
+                        await applyTheme(db, currentSchoolId);
+                        loadAvailableWorkouts();
+                    }
                 }
+            } catch (err) {
+                console.error("Auth initialization error:", err);
             }
         } else {
             window.location.href = "index.html";
@@ -125,10 +126,10 @@
 
     async function loadAvailableWorkouts() {
         const workoutContainer = document.getElementById('available-workouts');
+        // REMOVED orderBy("date") to fix query failure caused by missing composite indexes
         const q = query(
             collection(db, "workouts"), 
-            where("school_id", "==", currentSchoolId), 
-            orderBy("date", "desc")
+            where("school_id", "==", currentSchoolId)
         );
 
         try {
@@ -188,7 +189,7 @@
                     if (cleanName.includes("clean")) athleteCurrentMax = currentMaxes.clean || 0;
                 }
 
-                let setsHtml = ex.sets.map((s, i) => {
+                let setsHtml = (ex.sets || []).map((s, i) => {
                     const pct = parseFloat(s.pct) || 0;
                     const weight = pct > 0 ? Math.round((athleteCurrentMax * (pct / 100)) / 5) * 5 : "BW";
                     const setId = `set-${exIndex}-${i}`;
