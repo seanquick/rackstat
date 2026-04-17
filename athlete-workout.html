@@ -89,7 +89,7 @@
     import { applyTheme } from "./js/theme.js"; 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -227,9 +227,61 @@
     }
 
     document.getElementById('finish-workout-btn').onclick = async () => {
-        alert("Session saved locally. Database sync pending index.");
-        location.href = 'athlete-workout.html';
+        const btn = document.getElementById('finish-workout-btn');
+        btn.disabled = true;
+        btn.innerText = "SYNCING TO BOARD...";
+
+        try {
+            // 1. Gather the data from the inputs
+            const exerciseData = activeWorkoutData.exercises.map((ex, exIndex) => {
+                const setContainers = document.querySelectorAll(`[id^="container-set-${exIndex}-"]`);
+                const completedSets = Array.from(setContainers).map(container => {
+                    const weightInput = container.querySelector('input');
+                    return {
+                        weight: weightInput.value,
+                        reps: container.querySelector('.text-lg').innerText,
+                        // Check if the user "checked off" the set by looking at the border class
+                        completed: container.classList.contains('border-green-500')
+                    };
+                });
+
+                return {
+                    name: ex.name,
+                    sets: completedSets
+                };
+            });
+
+            // 2. Get Athlete Name for the Coach's view
+            let profileSnap = await getDoc(doc(db, "users", currentAthleteId));
+            const athleteName = profileSnap.exists() ? (profileSnap.data().name || "Unknown Athlete") : "Test Athlete";
+
+            // 3. Construct the Completion Document
+            const completionDoc = {
+                athleteId: currentAthleteId,
+                athleteName: athleteName,
+                school_id: currentSchoolId,
+                workoutId: activeWorkoutData.id,
+                workoutName: activeWorkoutData.name,
+                workoutDate: activeWorkoutData.date,
+                timestamp: serverTimestamp(),
+                exercises: exerciseData,
+                status: "completed"
+            };
+
+            // 4. Save to Firestore
+            await addDoc(collection(db, "completed_workouts"), completionDoc);
+
+            alert("WORKOUT SYNCED SUCCESSFULLY!");
+            location.href = 'athlete-workout.html';
+
+        } catch (err) {
+            console.error("Sync Error:", err);
+            alert("Failed to sync workout: " + err.message);
+            btn.disabled = false;
+            btn.innerText = "Log Session & Finish";
+        }
     };
+
 </script>
 </body>
 </html>
