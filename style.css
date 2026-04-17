@@ -32,7 +32,6 @@ body {
    2. BOARD HEADER (Small, Centered Layout)
    ========================================================================== */
 
-/* The box that holds the logos */
 .header-logo-container {
     width: 60px;
     height: 60px;
@@ -40,11 +39,9 @@ body {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    /* IMPORTANT: overflow is visible so the scale transformation works */
     overflow: visible; 
 }
 
-/* General settings for all header images */
 .header-logo-container img {
     max-width: 100%;
     max-height: 100%;
@@ -53,8 +50,6 @@ body {
     transition: transform 0.2s ease;
 }
 
-/* Specific tweak for RackStat logo to match school logo visual weight */
-/* Target the img that DOES NOT have the id school-logo */
 .header-logo-container img:not(#school-logo) {
     transform: scale(1.75); 
     filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.1));
@@ -91,10 +86,10 @@ body {
 }
 
 .school-logo-large {
-    height: 48px; /* Adjust size as needed */
+    height: 48px;
     width: auto;
     object-fit: contain;
-    display: none; /* theme.js will change this to 'block' once loaded */
+    display: none; 
 }
 
 /* ==========================================================================
@@ -174,7 +169,28 @@ body {
 }
 
 /* ==========================================================================
-   6. UTILITIES
+   6. COACH REVIEW / INTELLIGENCE HEADER
+   ========================================================================== */
+
+/* Fixes the "Blown Up" Logo issue */
+.school-logo-primary {
+    max-height: 60px; /* Adjust this to make it smaller or larger */
+    width: auto;
+    object-fit: contain;
+    display: block;
+    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+}
+
+.logo-container-fixed {
+    height: 70px; /* Provides a stable container for the logo */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* ==========================================================================
+   7. UTILITIES
    ========================================================================== */
 
 .no-scrollbar::-webkit-scrollbar { 
