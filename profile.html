@@ -148,8 +148,18 @@
             <input id="full-name" type="text" placeholder="First & Last Name" class="!bg-transparent !border-0 !border-b-2 !border-gray-800 !rounded-none !px-0 py-2 focus:!border-red-600 font-black uppercase italic text-lg transition-all">
         </div>
         <div class="grid grid-cols-2 gap-6 mb-6">
-            <div><label>Height (INCHES)</label><input id="height" placeholder="6'2" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0"></div>
-            <div><label>Weight (LBS)</label><input id="weight" type="number" placeholder="215" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0"></div>
+            <div>
+                <div class="flex justify-between items-end">
+                    <label>Height (INCHES)</label>
+                    <span id="height-display" class="text-[10px] font-black text-red-600 uppercase italic mb-1"></span>
+                </div>
+                <input id="height" type="number" placeholder="72" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0">
+            </div>
+
+            <div>
+                <label>Weight (LBS)</label>
+                <input id="weight" type="number" placeholder="215" class="!bg-transparent !border-0 !border-b !border-gray-800 !rounded-none !px-0">
+            </div>
         </div>
         <div class="grid grid-cols-2 gap-6 mb-6">
             <div>
@@ -254,6 +264,7 @@
                     const profileData = profileSnap.data();
                     safeSet('full-name', profileData.fullName);
                     safeSet('height', profileData.height);
+                if (document.getElementById('height-display')) {document.getElementById('height-display').innerText = formatHeight(profileData.height);}
                     safeSet('weight', profileData.weight);
                     safeSet('off-primary', profileData.offPrimary);
                     safeSet('off-secondary', profileData.offSecondary);
@@ -380,6 +391,27 @@
             }
         }
     }
+
+    // Helper to convert inches to Feet' Inches"
+    function formatHeight(totalInches) {
+        if (!totalInches || totalInches <= 0) return "";
+        const feet = Math.floor(totalInches / 12);
+        const inches = totalInches % 12;
+        return `${feet}'${inches}"`;
+    }
+
+    // Update the display when the user types
+    const heightInput = document.getElementById('height');
+    const heightDisplay = document.getElementById('height-display');
+
+    heightInput.addEventListener('input', (e) => {
+        heightDisplay.innerText = formatHeight(e.target.value);
+    });
+
+    // We also need to trigger this display update once data is loaded from Firebase
+    // Inside your onAuthStateChanged, after safeSet('height', profileData.height);
+    // Add this line:
+    // heightDisplay.innerText = formatHeight(profileData.height);
 
     // Manual Event Listeners
     document.getElementById('save-btn').onclick = window.saveProfile;
