@@ -234,7 +234,7 @@
         try {
             // 1. Map data specifically to match the structure coach-review expects
             // We ensure it is named 'exercises' and not 'exerciseData'
-            const workoutExercises = activeWorkoutData.exercises.map((ex, exIndex) => {
+            const workoutExercises = activeWorkoutData.exercises?.map((ex, exIndex) => {
                 const setContainers = document.querySelectorAll(`[id^="container-set-${exIndex}-"]`);
                 
                 const completedSets = Array.from(setContainers).map(container => {
