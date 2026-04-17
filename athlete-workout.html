@@ -85,7 +85,6 @@
 </nav>
 
 <script type="module">
-    // Added relative paths to ensure imports resolve correctly across different directories
     import { firebaseConfig } from "./js/firebase-config.js"; 
     import { applyTheme } from "./js/theme.js"; 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -103,7 +102,6 @@
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             currentAthleteId = user.uid;
-            
             try {
                 let profileSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
                 if (!profileSnap.exists()) profileSnap = await getDoc(doc(db, "users", user.uid));
@@ -111,7 +109,6 @@
                 if (profileSnap.exists()) {
                     const profileData = profileSnap.data();
                     currentSchoolId = profileData.school_id || profileData.schoolId;
-                    
                     if (currentSchoolId) {
                         await applyTheme(db, currentSchoolId);
                         loadAvailableWorkouts();
@@ -127,26 +124,19 @@
 
     async function loadAvailableWorkouts() {
         const workoutContainer = document.getElementById('available-workouts');
-        const q = query(
-            collection(db, "workouts"), 
-            where("school_id", "==", currentSchoolId)
-        );
-
+        const q = query(collection(db, "workouts"), where("school_id", "==", currentSchoolId));
         try {
             const querySnapshot = await getDocs(q);
             workoutContainer.innerHTML = ''; 
-
             if (querySnapshot.empty) {
                 workoutContainer.innerHTML = `<div class="text-gray-600 text-[10px] uppercase font-bold text-center py-20 tracking-widest">No training sessions found.</div>`;
                 return;
             }
-
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
                 const btn = document.createElement('button');
                 btn.className = "w-full bg-[#161618] border border-[#2a2a2c] p-5 rounded-xl flex justify-between items-center group text-left mb-3 transition-all hover:border-red-600";
                 btn.onclick = () => loadWorkoutDetails(doc.id);
-                
                 btn.innerHTML = `
                     <div>
                         <h3 class="text-white font-black uppercase text-lg italic">${data.name || "Workout"}</h3>
@@ -192,6 +182,7 @@
                 let setsHtml = (ex.sets || []).map((s, i) => {
                     const pct = parseFloat(s.pct) || 0;
                     const weight = pct > 0 ? Math.round((athleteCurrentMax * (pct / 100)) / 5) * 5 : "BW";
+                    // FIX: IDs now strictly match the selector used in the finish button logic
                     const setId = `set-${exIndex}-${i}`;
                     
                     return `
@@ -228,18 +219,20 @@
 
     document.getElementById('finish-workout-btn').onclick = async () => {
         const btn = document.getElementById('finish-workout-btn');
+        if (btn.disabled) return;
+        
         btn.disabled = true;
         btn.innerText = "SYNCING TO BOARD...";
 
         try {
-            // 1. Map data specifically to match the structure coach-review expects
-            // We ensure it is named 'exercises' and not 'exerciseData'
-            const workoutExercises = activeWorkoutData.exercises?.map((ex, exIndex) => {
+            // 1. Gather exercise data with corrected selectors
+            const workoutExercises = (activeWorkoutData.exercises || []).map((ex, exIndex) => {
+                // Selector now matches the ID generated in the loop above
                 const setContainers = document.querySelectorAll(`[id^="container-set-${exIndex}-"]`);
                 
                 const completedSets = Array.from(setContainers).map(container => {
                     const weightInput = container.querySelector('input');
-                    const repsDisplay = container.querySelector('.text-lg');
+                    const repsDisplay = container.querySelector('.text-lg') || container.querySelector('p.text-lg');
                     
                     return {
                         weight: weightInput ? weightInput.value : "0",
@@ -254,35 +247,32 @@
                 };
             });
 
-            // 2. Get Athlete Name for the Coach's view
+            // 2. Resolve Athlete Name
             let profileSnap = await getDoc(doc(db, "users", currentAthleteId));
             if (!profileSnap.exists()) profileSnap = await getDoc(doc(db, "recruiting_profiles", currentAthleteId));
-            
-            const athleteName = profileSnap.exists() ? (profileSnap.data().name || profileSnap.data().displayName || "Test Athlete") : "Test Athlete";
+            const athleteName = profileSnap.exists() ? (profileSnap.data().name || profileSnap.data().displayName || "Athlete") : "Athlete";
 
-            // 3. Construct the Completion Document
-            // IMPORTANT: Fields like 'exercises' must exist and be an array to avoid coach-review map errors
+            // 3. Document construction (ensuring 'exercises' is never undefined)
             const completionDoc = {
                 athleteId: currentAthleteId,
                 athleteName: athleteName,
                 school_id: currentSchoolId,
-                workoutId: activeWorkoutData.id,
-                workoutName: activeWorkoutData.name,
-                workoutDate: activeWorkoutData.date,
+                workoutId: activeWorkoutData.id || "manual-entry",
+                workoutName: activeWorkoutData.name || "Workout",
+                workoutDate: activeWorkoutData.date || "Today",
                 timestamp: serverTimestamp(),
-                exercises: workoutExercises, 
+                exercises: workoutExercises, // This MUST be an array for Coach Review map()
                 status: "completed"
             };
 
-            // 4. Save to Firestore
             await addDoc(collection(db, "completed_workouts"), completionDoc);
 
             alert("WORKOUT SYNCED SUCCESSFULLY!");
-            location.href = 'athlete-workout.html';
+            location.reload();
 
         } catch (err) {
             console.error("Sync Error:", err);
-            alert("Failed to sync workout: " + err.message);
+            alert("Failed to sync: " + err.message);
             btn.disabled = false;
             btn.innerText = "Log Session & Finish";
         }
