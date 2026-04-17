@@ -6,6 +6,7 @@
     <title>RackStat | Athlete Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="images/rackstat-logo.png">
     <style>
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {
             -webkit-appearance: none; margin: 0;
@@ -14,6 +15,9 @@
         :root { --school-primary: #b91c1c; }
         .loading-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        
+        /* Apply dynamic school color to the finish button */
+        #finish-workout-btn { background-color: var(--school-primary); }
     </style>
 </head>
 <body class="bg-[#0a0a0b] text-white antialiased min-h-screen pb-24">
@@ -68,7 +72,7 @@
     <div id="athlete-exercise-list" class="space-y-4"></div>
 
     <div class="py-10">
-        <button id="finish-workout-btn" class="w-full bg-red-600 text-white font-black py-5 rounded-xl uppercase italic tracking-widest shadow-lg">
+        <button id="finish-workout-btn" class="w-full text-white font-black py-5 rounded-xl uppercase italic tracking-widest shadow-lg">
             Log Session & Finish
         </button>
     </div>
@@ -83,7 +87,8 @@
 
 <script type="module">
     import { firebaseConfig } from "./js/firebase-config.js"; 
-    import { applyPageTheme } from "./js/theme.js"; 
+    // FIXED: Name changed from applyPageTheme to applyTheme to match your file
+    import { applyTheme } from "./js/theme.js"; 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getFirestore, doc, getDoc, collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -108,8 +113,8 @@
                 currentSchoolId = profileData.school_id || profileData.schoolId;
                 
                 if (currentSchoolId) {
-                    // Using centralized theme logic from js/theme.js
-                    await applyPageTheme(db, currentSchoolId);
+                    // FIXED: Using applyTheme (matching js/theme.js)
+                    await applyTheme(db, currentSchoolId);
                     loadAvailableWorkouts();
                 }
             }
@@ -131,7 +136,7 @@
             workoutContainer.innerHTML = ''; 
 
             if (querySnapshot.empty) {
-                workoutContainer.innerHTML = `<div class="text-gray-600 text-[10px] uppercase font-bold text-center py-20 tracking-widest">No training sessions found for ${currentSchoolId}.</div>`;
+                workoutContainer.innerHTML = `<div class="text-gray-600 text-[10px] uppercase font-bold text-center py-20 tracking-widest">No training sessions found.</div>`;
                 return;
             }
 
@@ -152,7 +157,7 @@
             });
         } catch (err) {
             console.error("Firestore Error:", err);
-            workoutContainer.innerHTML = `<div class="text-red-500 text-[10px] text-center uppercase py-10 font-black">Connection Error. Check console.</div>`;
+            workoutContainer.innerHTML = `<div class="text-red-500 text-[10px] text-center uppercase py-10 font-black">Connection Error.</div>`;
         }
     }
 

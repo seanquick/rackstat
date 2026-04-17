@@ -1,62 +1,234 @@
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-/**
- * Applies the school's branding (colors, logo, name) to the current page.
- */
-export async function applyTheme(db, schoolID) {
-    if (!schoolID) {
-        return;
-    }
-
-    try {
-        const schoolSnap = await getDoc(doc(db, "schools", schoolID));
-        
-        if (schoolSnap.exists()) {
-            const data = schoolSnap.data();
-            const colors = data.colors || {};
-            const root = document.documentElement;
-
-            // 1. Update CSS Variables
-            const primaryColor = colors.primary || '#b91c1c';
-            root.style.setProperty('--school-primary', primaryColor);
-            root.style.setProperty('--rackstat-red', primaryColor); 
-            root.style.setProperty('--school-secondary', colors.secondary || '#0a0a0b');
-
-            // 2. Update all logo instances
-            // NOTE: Changed data.logo_url to data.logo_primary to match your database screenshot
-            const logoPath = data.logo_primary || data.logo_url; 
-            
-            if (logoPath) {
-                const logos = document.querySelectorAll('#school-logo, #school-logo-alt, .school-logo-primary, .school-logo-secondary');
-                
-                logos.forEach(img => {
-                    const finalPath = (logoPath.startsWith('http') || logoPath.startsWith('images/')) 
-                        ? logoPath 
-                        : `images/${logoPath}`;
-                        
-                    img.src = finalPath;
-                    img.style.display = 'block'; 
-                });
-            }
-
-            // 3. Update school name
-            if (data.name) {
-                const nameElements = document.querySelectorAll('#school-name, #school-tag, .school-name');
-                nameElements.forEach(el => {
-                    el.innerText = data.name.toUpperCase();
-                });
-            }
-            
-            // Log only the success message, not the full data object
-            console.log(`✅ Theme applied: ${data.name || schoolID}`);
-
-            return data; // Return data so profile.html can use it if needed
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RackStat | Athlete Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="images/rackstat-logo.png">
+    <style>
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {
+            -webkit-appearance: none; margin: 0;
         }
-    } catch (error) {
-        // Log generic error without leaking sensitive context
-        console.error("❌ Theme engine error");
-    } finally {
-        const branding = document.getElementById('school-branding');
-        if (branding) branding.classList.add('theme-loaded');
+        body { background-color: #0a0a0b; color: white; }
+        :root { --school-primary: #b91c1c; }
+        .loading-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        
+        /* Apply dynamic school color to the finish button */
+        #finish-workout-btn { background-color: var(--school-primary); }
+    </style>
+</head>
+<body class="bg-[#0a0a0b] text-white antialiased min-h-screen pb-24">
+
+<header class="bg-black border-b-2 border-red-700 p-4">
+    <div class="flex justify-between items-center max-w-6xl mx-auto">
+        <div class="w-1/4 flex justify-start">
+            <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1 rounded text-gray-300 hover:text-white transition-colors">← Lobby</button>
+        </div>
+
+        <div class="flex items-center gap-6 justify-center flex-1">
+            <div class="header-logo-container">
+                <img id="school-logo" src="images/rackstat-logo.png" alt="School Logo" class="h-10 w-auto">
+            </div>
+            <div class="h-10 w-[1px] bg-gray-700"></div>
+            <div class="flex flex-col items-center min-w-[140px]">
+                <span id="school-tag" class="text-sm font-black italic uppercase text-white text-center leading-tight">LOADING...</span>
+                <span class="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">Athlete Workout</span>
+            </div>
+            <div class="h-10 w-[1px] bg-gray-700"></div>
+            <div class="header-logo-container">
+                <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-10 w-auto">
+            </div>
+        </div>
+        <div class="w-1/4"></div> 
+    </div>
+</header>
+
+<div id="athlete-dashboard" class="max-w-md mx-auto p-4">
+    <div class="mb-8 border-b border-[#2a2a2c] pb-4 mt-4">
+        <h2 class="text-[10px] font-black uppercase tracking-widest mb-1 text-red-600">Athlete Portal</h2>
+        <h1 class="text-3xl font-black text-white uppercase tracking-tighter italic">Current Workouts</h1>
+    </div>
+    
+    <div id="available-workouts" class="space-y-3">
+        <div class="loading-pulse text-gray-500 text-xs uppercase font-bold text-center py-10 tracking-widest">
+            Syncing training session...
+        </div>
+    </div>
+</div>
+
+<div id="athlete-workout-container" class="max-w-md mx-auto p-4" style="display: none;">
+    <button onclick="location.reload()" class="text-gray-500 text-[10px] uppercase font-bold mb-4 flex items-center gap-1 hover:text-white transition-colors">
+        ← Back to List
+    </button>
+    
+    <div class="mb-6">
+        <h1 id="display-title" class="text-3xl font-black text-white uppercase tracking-tighter italic">--</h1>
+        <p id="display-week" class="text-red-600 font-black text-sm uppercase tracking-widest">WEEK --</p>
+    </div>
+
+    <div id="athlete-exercise-list" class="space-y-4"></div>
+
+    <div class="py-10">
+        <button id="finish-workout-btn" class="w-full text-white font-black py-5 rounded-xl uppercase italic tracking-widest shadow-lg">
+            Log Session & Finish
+        </button>
+    </div>
+</div>
+
+<nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-red-900/30 px-6 py-4 flex justify-between items-center z-50">
+    <button onclick="location.href='board.html'" class="text-red-600 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Board</span></button>
+    <button onclick="location.href='rack.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">The Rack</span></button>
+    <button onclick="location.href='kitchen.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Kitchen</span></button>
+    <button onclick="location.href='profile.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
+</nav>
+
+<script type="module">
+    import { firebaseConfig } from "./js/firebase-config.js"; 
+    // FIXED: Name changed from applyPageTheme to applyTheme to match your file
+    import { applyTheme } from "./js/theme.js"; 
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentAthleteId = null;
+    let currentSchoolId = null;
+    let activeWorkoutData = null;
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            currentAthleteId = user.uid;
+            
+            let profileSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+            if (!profileSnap.exists()) profileSnap = await getDoc(doc(db, "users", user.uid));
+
+            if (profileSnap.exists()) {
+                const profileData = profileSnap.data();
+                currentSchoolId = profileData.school_id || profileData.schoolId;
+                
+                if (currentSchoolId) {
+                    // FIXED: Using applyTheme (matching js/theme.js)
+                    await applyTheme(db, currentSchoolId);
+                    loadAvailableWorkouts();
+                }
+            }
+        } else {
+            window.location.href = "index.html";
+        }
+    });
+
+    async function loadAvailableWorkouts() {
+        const workoutContainer = document.getElementById('available-workouts');
+        const q = query(
+            collection(db, "workouts"), 
+            where("school_id", "==", currentSchoolId), 
+            orderBy("date", "desc")
+        );
+
+        try {
+            const querySnapshot = await getDocs(q);
+            workoutContainer.innerHTML = ''; 
+
+            if (querySnapshot.empty) {
+                workoutContainer.innerHTML = `<div class="text-gray-600 text-[10px] uppercase font-bold text-center py-20 tracking-widest">No training sessions found.</div>`;
+                return;
+            }
+
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                const btn = document.createElement('button');
+                btn.className = "w-full bg-[#161618] border border-[#2a2a2c] p-5 rounded-xl flex justify-between items-center group text-left mb-3 transition-all hover:border-red-600";
+                btn.onclick = () => loadWorkoutDetails(doc.id);
+                
+                btn.innerHTML = `
+                    <div>
+                        <h3 class="text-white font-black uppercase text-lg italic">${data.name || "Workout"}</h3>
+                        <span class="text-red-600 font-black text-[9px] uppercase tracking-[0.2em]">${data.date || "Active Session"}</span>
+                    </div>
+                    <span class="text-gray-700 group-hover:text-red-600 font-black text-xl">→</span>
+                `;
+                workoutContainer.appendChild(btn);
+            });
+        } catch (err) {
+            console.error("Firestore Error:", err);
+            workoutContainer.innerHTML = `<div class="text-red-500 text-[10px] text-center uppercase py-10 font-black">Connection Error.</div>`;
+        }
     }
-}
+
+    async function loadWorkoutDetails(workoutId) {
+        const workoutSnap = await getDoc(doc(db, "workouts", workoutId));
+        const maxSnap = await getDoc(doc(db, "recruiting_profiles", currentAthleteId, "maxes", "latest"));
+
+        if (!workoutSnap.exists()) return;
+        activeWorkoutData = { id: workoutId, ...workoutSnap.data() };
+        const currentMaxes = maxSnap.exists() ? maxSnap.data() : {};
+
+        document.getElementById('athlete-dashboard').style.display = 'none';
+        document.getElementById('athlete-workout-container').style.display = 'block';
+        document.getElementById('display-title').innerText = activeWorkoutData.name;
+        document.getElementById('display-week').innerText = activeWorkoutData.date;
+
+        const list = document.getElementById('athlete-exercise-list');
+        list.innerHTML = '';
+
+        if (activeWorkoutData.exercises) {
+            activeWorkoutData.exercises.forEach((ex, exIndex) => {
+                const cleanName = ex.name.toLowerCase();
+                let athleteCurrentMax = currentMaxes[cleanName] || 0;
+                
+                if (!athleteCurrentMax) {
+                    if (cleanName.includes("bench")) athleteCurrentMax = currentMaxes.bench || 0;
+                    if (cleanName.includes("squat")) athleteCurrentMax = currentMaxes.squat || 0;
+                    if (cleanName.includes("clean")) athleteCurrentMax = currentMaxes.clean || 0;
+                }
+
+                let setsHtml = ex.sets.map((s, i) => {
+                    const pct = parseFloat(s.pct) || 0;
+                    const weight = pct > 0 ? Math.round((athleteCurrentMax * (pct / 100)) / 5) * 5 : "BW";
+                    const setId = `set-${exIndex}-${i}`;
+                    
+                    return `
+                        <div id="container-${setId}" class="flex justify-between items-center bg-black p-4 rounded-lg mb-2 border border-gray-800">
+                            <div class="flex flex-col">
+                                <span class="text-[8px] text-gray-600 font-black uppercase">Set ${i+1} — ${pct}%</span>
+                                <input type="text" value="${weight}" class="bg-transparent text-red-500 font-black text-xl italic w-24 outline-none">
+                            </div>
+                            <div class="text-center">
+                                <p class="text-[8px] text-gray-700 uppercase font-black">Reps</p>
+                                <p class="text-white font-black text-lg">${s.reps}</p>
+                            </div>
+                            <button onclick="this.parentElement.classList.toggle('border-green-500')" class="bg-[#1a1a1c] p-3 rounded-full text-gray-700 border border-gray-800">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path d="M5 13l4 4L19 7" /></svg>
+                            </button>
+                        </div>`;
+                }).join('');
+
+                const card = document.createElement('div');
+                card.className = "bg-[#111113] border-l-4 border-red-600 p-5 rounded-r-xl mb-4 shadow-xl";
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-white font-black uppercase text-sm italic">${ex.name}</h3>
+                        <div class="text-right">
+                            <p class="text-[8px] text-gray-600 font-black uppercase">Max Ref</p>
+                            <p class="text-xs text-white font-black">${athleteCurrentMax} LBS</p>
+                        </div>
+                    </div>
+                    ${setsHtml}`;
+                list.appendChild(card);
+            });
+        }
+    }
+
+    document.getElementById('finish-workout-btn').onclick = async () => {
+        alert("Session saved locally. Database sync pending index.");
+        location.href = 'athlete-workout.html';
+    };
+</script>
+</body>
+</html>
