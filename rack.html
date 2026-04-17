@@ -42,7 +42,6 @@
             padding: 0.75rem !important; 
             border-radius: 8px !important; 
             width: 100%; 
-            margin-bottom: 0.75rem;
             transition: border-color 0.2s;
         }
         input:focus { border-color: var(--school-primary) !important; outline: none; }
@@ -60,78 +59,82 @@
             box-shadow: 0 4px 15px rgba(185, 28, 28, 0.3);
         }
         .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
-        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        label { font-size: 9px; font-weight: 800; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.05em; }
+        label { font-size: 9px; font-weight: 800; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.05em; margin-bottom: 4px; display: block; }
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
     </style>
 </head>
-<body class="font-sans pb-24">
+<body class="font-sans pb-32">
 
     <header class="bg-black border-b-2 border-red-700 p-4 sticky top-0 z-50">
         <div class="flex justify-between items-center max-w-5xl mx-auto">
             <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1.5 rounded text-gray-400 hover:text-white transition-all">
                 ← Lobby
             </button>
-            
             <div class="flex items-center gap-5">
-                <img id="school-logo" src="images/rackstat-logo-placeholder.png" alt="School" class="h-12 w-auto object-contain">
-                <div class="h-6 w-[1px] bg-gray-800"></div>
-                <span id="school-tag" class="text-sm font-black italic uppercase tracking-[0.15em] text-white">RACKSTAT</span>
-                <div class="h-6 w-[1px] bg-gray-800"></div>
-                <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-12 w-auto object-contain">
+                <img id="school-logo" src="images/rackstat-logo.png" alt="School" class="h-10 w-auto object-contain">
+                <span id="school-tag" class="text-sm font-black italic uppercase tracking-widest text-white">RACKSTAT</span>
             </div>
             <div class="w-[65px]"></div>
         </div>
     </header>
 
-    <div class="max-w-md mx-auto px-4 space-y-6 mt-8">
-        <section>
-            <p class="text-[10px] font-black uppercase text-gray-500 mb-3 italic tracking-widest text-center">Your Personal Records</p>
-            <div class="grid grid-cols-3 gap-2 mb-2" id="maxes-display"></div>
+    <div class="max-w-md mx-auto px-4 mt-8 space-y-8">
+        
+        <section class="animate-fade-in">
+            <div class="max-card board-score-card w-full flex flex-col justify-center items-center py-6 px-6 shadow-2xl">
+                <p class="text-[10px] font-black uppercase text-blue-400 tracking-[0.2em] mb-1">Official Board Score</p>
+                <div id="view-total" class="text-7xl font-black italic tracking-tighter text-white">0</div>
+                <div id="formula-detail" class="w-full mt-4 pt-2 border-t border-blue-900/50 text-[9px] font-bold text-gray-500 uppercase tracking-widest text-center">
+                    Calculating...
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-[#0f172a]/50 p-6 rounded-3xl border border-zinc-800 shadow-xl">
+            <h2 class="text-center font-black uppercase italic text-gray-400 text-xs mb-6 tracking-widest">Manage Inventory</h2>
             
-            <div class="max-card board-score-card w-full flex flex-col justify-center items-center py-4 px-6">
-                <div class="flex justify-between items-center w-full">
-                    <p class="text-[10px] font-black uppercase text-blue-400 tracking-tighter">Board Score (Power Index)</p>
-                    <p id="view-total" class="text-3xl font-black text-blue-400">0</p>
+            <div class="space-y-4">
+                <div>
+                    <label>Current Bodyweight (LBS)</label>
+                    <input id="bodyWeight" type="number" placeholder="Enter Weight">
                 </div>
-                <div id="formula-detail" class="w-full mt-2 pt-2 border-t border-blue-900/50 text-[9px] font-bold text-gray-500 uppercase tracking-tighter text-center">
-                    Calculating Index...
-                </div>
-            </div>
 
-            <div id="sync-timestamp" class="text-[8px] font-bold text-gray-500 uppercase mt-2 text-center italic">
-                Last Sync: --
+                <div id="dynamic-inputs" class="grid grid-cols-2 gap-4">
+                    </div>
+
+                <button id="save-btn" class="btn-primary mt-4">Update My Stats</button>
+                <p id="sync-timestamp" class="text-[8px] font-bold text-gray-600 uppercase text-center italic mt-2">Last Sync: --</p>
             </div>
         </section>
 
-        <section class="bg-[#111827] p-6 rounded-2xl border border-[#1f2937] shadow-2xl">
-            <h2 id="update-header" class="text-center font-black uppercase italic text-red-600 mb-6 tracking-widest">Update Performance</h2>
-            <div class="mb-4">
-                <label>Current Bodyweight (LBS)</label>
-                <input id="bodyWeight" type="number" placeholder="Enter Weight">
-                <p id="rack-body-weight-display" class="text-[8px] text-gray-600 uppercase font-bold mt-[-8px] ml-1">Currently: -- lbs</p>
-            </div>
-            <div id="dynamic-inputs" class="grid grid-cols-2 gap-3"></div>
-            <button id="save-btn" class="btn-primary mt-6">Sync Stats to Profile</button>
+        <section class="pt-4 border-t border-zinc-900">
+            <button onclick="location.href='athlete-workout.html'" class="w-full py-6 bg-white text-black rounded-2xl flex items-center justify-center gap-3 group transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] active:scale-95">
+                <span class="text-2xl font-black italic uppercase">Start Workout</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 group-hover:translate-x-2 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+            </button>
+            <p class="text-center text-[9px] font-black text-gray-600 uppercase mt-4 tracking-widest">Access Assigned Training Sessions</p>
         </section>
+
     </div>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-red-900/30 px-6 py-4 flex justify-between items-center z-50">
-        <button onclick="location.href='board.html'" class="text-gray-500 hover:text-red-600 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Board</span></button>
-        <button onclick="location.href='rack.html'" class="text-red-600 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">The Rack</span></button>
-        <button onclick="location.href='kitchen.html'" class="text-gray-500 hover:text-red-600 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Kitchen</span></button>
-        <button onclick="location.href='profile.html'" class="text-gray-500 hover:text-red-600 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
+    <nav class="fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-md border-t border-red-900/30 px-6 py-4 flex justify-between items-center z-50">
+        <button onclick="location.href='board.html'" class="text-gray-500 hover:text-white flex flex-col items-center"><span class="text-[9px] font-black uppercase">Board</span></button>
+        <button onclick="location.href='rack.html'" class="text-[var(--school-primary)] flex flex-col items-center"><span class="text-[9px] font-black uppercase">The Rack</span></button>
+        <button onclick="location.href='kitchen.html'" class="text-gray-500 hover:text-white flex flex-col items-center"><span class="text-[9px] font-black uppercase">Kitchen</span></button>
+        <button onclick="location.href='profile.html'" class="text-gray-500 hover:text-white flex flex-col items-center"><span class="text-[9px] font-black uppercase">Profile</span></button>
     </nav>
 
     <script type="module">
-        // 1. FIXED CONFIG PATH
         import { firebaseConfig } from './js/firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { applyTheme } from './js/theme.js';
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -139,53 +142,16 @@
         
         let schoolPrefs = null;
 
-        // --- THEME ENGINE ---
-        async function applyTheme(schoolID) {
-            const schoolSnap = await getDoc(doc(db, "schools", schoolID));
-            if (schoolSnap.exists()) {
-                const data = schoolSnap.data();
-                const colors = data.colors || {};
-                const root = document.documentElement;
-                root.style.setProperty('--school-primary', colors.primary || '#b91c1c');
-                
-                if (data.logo_url) document.getElementById('school-logo').src = data.logo_url;
-                if (data.name) document.getElementById('school-tag').innerText = data.name.toUpperCase();
-                
-                const updateHeader = document.getElementById('update-header');
-                if(updateHeader) updateHeader.style.color = colors.primary || '#b91c1c';
-                
-                return data;
-            }
-        }
-
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // Real-time bodyweight sync
-                onSnapshot(doc(db, "users", user.uid), (userDoc) => {
-                    if (userDoc.exists() && userDoc.data().weight) {
-                        const weight = userDoc.data().weight;
-                        if (document.getElementById('bodyWeight')) document.getElementById('bodyWeight').value = weight;
-                        if (document.getElementById('rack-body-weight-display')) {
-                            document.getElementById('rack-body-weight-display').innerText = `Currently: ${weight} lbs`;
-                        }
-                    }
-                });
-
-                // Get User Profile
-                let profileSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
-                if (!profileSnap.exists()) {
-                    profileSnap = await getDoc(doc(db, "users", user.uid));
-                }
-
-                if (profileSnap.exists()) {
-                    const profileData = profileSnap.data();
-                    const schoolId = profileData.schoolId || profileData.school_id;
+                const userDocSnap = await getDoc(doc(db, "users", user.uid));
+                if (userDocSnap.exists()) {
+                    const userData = userDocSnap.data();
+                    const schoolId = userData.schoolId || userData.school_id;
                     
-                    if (schoolId) {
-                        const schoolData = await applyTheme(schoolId);
-                        setupInputs(schoolData);
-                        loadCurrentMaxes(user.uid);
-                    }
+                    const schoolData = await applyTheme(db, schoolId);
+                    setupInputs(schoolData);
+                    loadCurrentMaxes(user.uid);
                 }
             } else { 
                 window.location.href = 'index.html'; 
@@ -194,9 +160,9 @@
 
         function setupInputs(data) {
             schoolPrefs = {
-                tracked_lifts: data.tracked_lifts || ['bench', 'squat', 'clean', 'deadlift'],
+                tracked_lifts: data.tracked_lifts || ['bench_press', 'back_squat', 'power_clean'],
                 formula_type: data.formula_type || "power_index",
-                scoring_lifts: data.scoring_lifts || ['bench', 'squat', 'clean', 'deadlift']
+                scoring_lifts: data.scoring_lifts || ['bench_press', 'back_squat', 'power_clean']
             };
 
             const container = document.getElementById('dynamic-inputs');
@@ -210,39 +176,35 @@
         async function loadCurrentMaxes(uid) {
             const latestDocRef = doc(db, "recruiting_profiles", uid, "maxes", "latest");
             const snap = await getDoc(latestDocRef);
+            
             if(snap.exists()) {
                 const data = snap.data();
-                const display = document.getElementById('maxes-display');
                 let scoringSum = 0;
 
-                display.innerHTML = schoolPrefs.tracked_lifts.map(lift => {
+                // Sync Inputs and Calculate Score
+                schoolPrefs.tracked_lifts.forEach(lift => {
                     const val = data[lift] || 0;
                     if (schoolPrefs.scoring_lifts.includes(lift)) scoringSum += val;
-                    
                     const inputField = document.getElementById(`input-${lift}`);
                     if(inputField) inputField.value = val;
+                });
 
-                    return `
-                        <div class="max-card">
-                            <p class="text-[8px] uppercase text-gray-500 font-bold">${lift.replace('_', ' ')}</p>
-                            <p class="text-xl font-black italic">${val}</p>
-                        </div>`;
-                }).join('');
+                document.getElementById('bodyWeight').value = data.bodyWeight || data.weight || 0;
 
                 let finalScore = scoringSum;
                 if (schoolPrefs.formula_type === "power_index") {
-                    const bw = data.bodyWeight || 0;
+                    const bw = data.bodyWeight || data.weight || 0;
                     finalScore = scoringSum - (Math.min(bw, 200) * 4);
                 }
 
                 document.getElementById('view-total').innerText = Math.round(finalScore);
                 document.getElementById('formula-detail').innerText = schoolPrefs.formula_type === "power_index" 
-                    ? `Lifts: ${scoringSum} — (BW Cap) = ${Math.round(finalScore)}`
+                    ? `Lifts: ${scoringSum} — (BW Adjustment) = ${Math.round(finalScore)}`
                     : `Total Score: ${scoringSum}`;
                 
                 if (data.timestamp) {
                     const d = new Date(data.timestamp);
-                    document.getElementById('sync-timestamp').innerText = `Last Sync: ${d.toLocaleString()}`;
+                    document.getElementById('sync-timestamp').innerText = `Last Sync: ${d.toLocaleDateString()} @ ${d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
                 }
             }
         }
@@ -257,8 +219,6 @@
 
             try {
                 const bodyWeight = Number(document.getElementById('bodyWeight').value);
-                if (!bodyWeight || bodyWeight <= 0) throw new Error("Enter valid body weight");
-
                 const newMax = { timestamp: Date.now(), bodyWeight };
                 let scoringSum = 0;
 
@@ -273,10 +233,9 @@
                     finalBoardScore = scoringSum - (Math.min(bodyWeight, 200) * 4);
                 }
 
-                const profileRef = doc(db, "recruiting_profiles", user.uid);
                 await Promise.all([
                     setDoc(doc(db, "recruiting_profiles", user.uid, "maxes", "latest"), newMax, { merge: true }),
-                    setDoc(profileRef, { 
+                    setDoc(doc(db, "recruiting_profiles", user.uid), { 
                         ...newMax, 
                         boardScore: Math.round(finalBoardScore),
                         weight: bodyWeight 
@@ -284,12 +243,16 @@
                     setDoc(doc(db, "users", user.uid), { weight: bodyWeight }, { merge: true })
                 ]);
 
-                alert("Stats Synchronized!");
-                location.reload();
+                saveBtn.innerText = "SUCCESS ✓";
+                setTimeout(() => {
+                    saveBtn.innerText = "Update My Stats";
+                    saveBtn.disabled = false;
+                    loadCurrentMaxes(user.uid);
+                }, 2000);
             } catch (e) {
                 alert(e.message);
                 saveBtn.disabled = false;
-                saveBtn.innerText = "Sync Stats to Profile";
+                saveBtn.innerText = "Update My Stats";
             }
         };
     </script>
