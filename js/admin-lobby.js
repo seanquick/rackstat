@@ -1,5 +1,5 @@
 // Since this file is INSIDE the /js folder, we use ./ to find its roommate
-import { db, auth } from './firebase-config.js';
+import { db, auth } from './js/firebase-config.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { 
     collection, 

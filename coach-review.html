@@ -59,12 +59,10 @@
     </div>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { firebaseConfig } from "./firebase-config.js"; 
+ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { firebaseConfig } from "./js/firebase-config.js"; 
     import { getFirestore, collection, query, where, orderBy, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    
-    // --- IMPORT CENTRAL THEME ENGINE ---
     import { applyTheme } from './js/theme.js';
 
     const app = initializeApp(firebaseConfig);
@@ -75,16 +73,16 @@
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            const userSnap = await getDoc(doc(db, "users", user.uid));
-            if (userSnap.exists()) {
-                const userData = userSnap.data();
-                currentSchoolId = userData.school_id;
-
-                // 1. APPLY THEME FIRST
-                await applyTheme(db, currentSchoolId);
-
-                // 2. LOAD DATA
-                loadWorkouts();
+            try {
+                const userSnap = await getDoc(doc(db, "users", user.uid));
+                if (userSnap.exists()) {
+                    const userData = userSnap.data();
+                    currentSchoolId = userData.school_id || userData.schoolId;
+                    await applyTheme(db, currentSchoolId);
+                    loadWorkouts();
+                }
+            } catch (err) {
+                console.error("Auth/Theme Error:", err);
             }
         } else {
             location.href = 'index.html';
@@ -92,117 +90,124 @@
     });
 
     async function loadWorkouts() {
-        const q = query(collection(db, "workouts"), where("school_id", "==", currentSchoolId), orderBy("date", "desc"));
-        const snap = await getDocs(q);
         const list = document.getElementById('workout-list');
-        list.innerHTML = '';
+        try {
+            // Added error handling for the workout query
+            const q = query(collection(db, "workouts"), where("school_id", "==", currentSchoolId), orderBy("date", "desc"));
+            const snap = await getDocs(q);
+            list.innerHTML = '';
 
-        snap.forEach(doc => {
-            const data = doc.data();
-            const btn = document.createElement('button');
-            btn.className = "w-full text-left p-4 rounded-xl bg-[#1a1a1c] border border-transparent transition-all group hover:border-[var(--school-primary)]";
-            btn.onclick = () => window.loadPerformance(doc.id, data.name);
-            btn.innerHTML = `
-                <p class="text-[10px] font-black uppercase mb-1" style="color: var(--school-primary)">${data.date}</p>
-                <p class="text-white font-black uppercase text-sm italic group-hover:translate-x-1 transition-transform">${data.name}</p>
-            `;
-            list.appendChild(btn);
-        });
+            if (snap.empty) {
+                list.innerHTML = '<p class="text-[10px] text-gray-600 uppercase p-4">No workouts found.</p>';
+                return;
+            }
+
+            snap.forEach(doc => {
+                const data = doc.data();
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-4 rounded-xl bg-[#1a1a1c] border border-transparent transition-all group hover:border-[var(--school-primary)] mb-2";
+                btn.onclick = () => window.loadPerformance(doc.id, data.name);
+                btn.innerHTML = `
+                    <p class="text-[10px] font-black uppercase mb-1" style="color: var(--school-primary)">${data.date || 'No Date'}</p>
+                    <p class="text-white font-black uppercase text-sm italic group-hover:translate-x-1 transition-transform">${data.name}</p>
+                `;
+                list.appendChild(btn);
+            });
+        } catch (err) {
+            console.error("LoadWorkouts Error:", err);
+            list.innerHTML = '<p class="text-red-500 text-[10px] p-4">INDEX REQUIRED. Check Console.</p>';
+        }
     }
 
     window.loadPerformance = async function(workoutId, workoutName) {
         const feed = document.getElementById('performance-feed');
         feed.innerHTML = '<div class="text-center py-10 animate-pulse uppercase text-xs font-black text-gray-500 tracking-widest">Retrieving Athlete Logs...</div>';
 
-        const q = query(collection(db, "completed_workouts"), where("workoutId", "==", workoutId), orderBy("timestamp", "desc"));
-        const snap = await getDocs(q);
-        
-        document.getElementById('stat-count').innerText = `${snap.size} Athletes`;
-        document.getElementById('stats-header').classList.remove('hidden');
-
-        if (snap.empty) {
-            feed.innerHTML = `<div class="text-center py-20 bg-[#1a1a1c] rounded-3xl border border-[#2a2a2c]">
-                                <p class="text-gray-500 text-xs font-bold uppercase tracking-widest">No athletes have logged this session yet.</p>
-                              </div>`;
-            return;
-        }
-
-        feed.innerHTML = '';
-        
-        for (const logDoc of snap.docs) {
-            const log = logDoc.data();
+        try {
+            // IMPORTANT: If this fails, check the browser console for a link to create a Firestore Index
+            const q = query(collection(db, "completed_workouts"), where("workoutId", "==", workoutId), orderBy("timestamp", "desc"));
+            const snap = await getDocs(q);
             
-            const [athleteSnap, maxSnap] = await Promise.all([
-                getDoc(doc(db, "recruiting_profiles", log.athleteId)),
-                getDoc(doc(db, "recruiting_profiles", log.athleteId, "maxes", "latest"))
-            ]);
+            document.getElementById('stat-count').innerText = `${snap.size} Athletes`;
+            document.getElementById('stats-header').classList.remove('hidden');
+
+            if (snap.empty) {
+                feed.innerHTML = `<div class="text-center py-20 bg-[#1a1a1c] rounded-3xl border border-[#2a2a2c]">
+                                    <p class="text-gray-500 text-xs font-bold uppercase tracking-widest">No athletes have logged this session yet.</p>
+                                  </div>`;
+                return;
+            }
+
+            feed.innerHTML = '';
             
-            const athleteName = athleteSnap.exists() ? `${athleteSnap.data().firstName} ${athleteSnap.data().lastName}` : "Unknown Athlete";
-            const currentMaxes = maxSnap.exists() ? maxSnap.data() : {};
+            for (const logDoc of snap.docs) {
+                const log = logDoc.data();
+                
+                // Fetch athlete profile (Check both athleteId and uid for compatibility)
+                const athleteId = log.athleteId || log.uid;
+                const [athleteSnap, maxSnap] = await Promise.all([
+                    getDoc(doc(db, "recruiting_profiles", athleteId)),
+                    getDoc(doc(db, "recruiting_profiles", athleteId, "maxes", "latest"))
+                ]);
+                
+                const aData = athleteSnap.data();
+                const athleteName = athleteSnap.exists() ? (aData.fullName || `${aData.firstName} ${aData.lastName}`) : "Unknown Athlete";
+                const currentMaxes = maxSnap.exists() ? maxSnap.data() : {};
 
-            const card = document.createElement('div');
-            card.className = "bg-[#111113] border border-[#2a2a2c] rounded-2xl overflow-hidden mb-6 shadow-2xl";
-            
-            let exerciseRows = log.performance.map(ex => {
-                const completedSets = ex.sets.filter(s => s.completed).length;
-                const totalSets = ex.sets.length;
-                const weights = ex.sets.map(s => parseFloat(s.weight) || 0);
-                const topWeight = weights.length > 0 ? Math.max(...weights) : 0;
-
-                const cleanName = ex.name.toLowerCase().trim();
-                let previousMax = 0;
-                let matchedKey = cleanName;
-
-                // Flexible Matching for Maxes
-                const searchKeys = [cleanName, cleanName.replace(/\s+/g, '_'), cleanName.split(" ")[0]];
-                for (let key of searchKeys) {
-                    if (currentMaxes[key]) {
-                        previousMax = parseFloat(currentMaxes[key]);
-                        matchedKey = key;
-                        break;
-                    }
+                // Safe Date Formatting (wont crash if timestamp is a string or null)
+                let timeString = "Recently";
+                if (log.timestamp) {
+                    const dateObj = log.timestamp.toDate ? log.timestamp.toDate() : new Date(log.timestamp);
+                    timeString = dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 }
 
-                const isPR = topWeight > previousMax && previousMax > 0;
+                const card = document.createElement('div');
+                card.className = "bg-[#111113] border border-[#2a2a2c] rounded-2xl overflow-hidden mb-6 shadow-2xl";
+                
+                let exerciseRows = log.performance.map(ex => {
+                    const completedSets = ex.sets.filter(s => s.completed).length;
+                    const totalSets = ex.sets.length;
+                    const weights = ex.sets.map(s => parseFloat(s.weight) || 0);
+                    const topWeight = Math.max(...weights, 0);
 
-                return `
-                    <div class="flex justify-between items-center py-3 border-b border-white/5 last:border-0">
-                        <div class="flex items-center gap-3">
+                    const cleanName = ex.name.toLowerCase().trim();
+                    let previousMax = parseFloat(currentMaxes[cleanName]) || 0;
+                    const isPR = topWeight > previousMax && previousMax > 0;
+
+                    return `
+                        <div class="flex justify-between items-center py-3 border-b border-white/5 last:border-0">
                             <div class="flex flex-col">
                                 <span class="text-white font-bold text-xs uppercase tracking-wider">${ex.name}</span>
                                 <span class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">${completedSets}/${totalSets} Sets</span>
                             </div>
-                            ${isPR ? `
-                                <div class="flex items-center gap-2 ml-2">
-                                    <span class="pr-badge text-white text-[8px] font-black px-2 py-0.5 rounded-full animate-pulse uppercase">NEW PR</span>
-                                    <button onclick="window.approvePR('${log.athleteId}', '${matchedKey}', ${topWeight}, this)" class="bg-white/10 hover:bg-green-600 border border-white/10 text-[8px] font-black px-2 py-0.5 rounded-md text-white transition-colors uppercase">
-                                        Approve
-                                    </button>
+                            <div class="flex items-center gap-4">
+                                ${isPR ? `<span class="pr-badge text-white text-[8px] font-black px-2 py-0.5 rounded-full animate-pulse uppercase">PR</span>` : ''}
+                                <div class="text-right">
+                                    <span class="text-white font-black italic text-lg">${topWeight > 0 ? topWeight : 'BW'}</span>
+                                    <span class="text-[9px] text-gray-600 font-bold uppercase ml-1">${topWeight > 0 ? 'LBS' : ''}</span>
                                 </div>
-                            ` : ''}
+                            </div>
                         </div>
-                        <div class="text-right">
-                            <span class="text-white font-black italic text-lg">${topWeight > 0 ? topWeight : 'BW'}</span>
-                            <span class="text-[9px] text-gray-600 font-bold uppercase ml-1">${topWeight > 0 ? 'LBS' : ''}</span>
-                            ${isPR ? `<p class="text-[8px] text-gray-500 font-bold uppercase mt-[-4px]">Prev: ${previousMax}</p>` : ''}
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
 
-            card.innerHTML = `
-                <div class="bg-[#1a1a1c] p-4 flex justify-between items-center border-b border-[#2a2a2c]">
-                    <h4 class="font-black text-white uppercase italic tracking-tighter text-lg">${athleteName}</h4>
-                    <div class="text-right">
-                        <span class="text-[9px] font-black text-gray-500 uppercase block leading-none mb-1">Logged At</span>
-                        <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">${new Date(log.timestamp?.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                card.innerHTML = `
+                    <div class="bg-[#1a1a1c] p-4 flex justify-between items-center border-b border-[#2a2a2c]">
+                        <h4 class="font-black text-white uppercase italic tracking-tighter text-lg">${athleteName}</h4>
+                        <div class="text-right">
+                            <span class="text-[9px] font-black text-gray-500 uppercase block leading-none mb-1">Logged At</span>
+                            <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">${timeString}</span>
+                        </div>
                     </div>
-                </div>
-                <div class="p-4 bg-black/20">
-                    ${exerciseRows}
-                </div>
-            `;
-            feed.appendChild(card);
+                    <div class="p-4 bg-black/20">${exerciseRows}</div>
+                `;
+                feed.appendChild(card);
+            }
+        } catch (err) {
+            console.error("LoadPerformance Error:", err);
+            feed.innerHTML = `<div class="p-6 text-red-500 bg-red-900/10 border border-red-900/50 rounded-xl text-xs font-bold uppercase">
+                Query Failed. If this is a new workout type, check the browser console for the index creation link.
+            </div>`;
         }
     }
 
@@ -210,15 +215,10 @@
         try {
             btnElement.innerText = "SAVING...";
             const maxRef = doc(db, "recruiting_profiles", athleteId, "maxes", "latest");
-            await updateDoc(maxRef, {
-                [exerciseKey]: newWeight
-            });
-
+            await updateDoc(maxRef, { [exerciseKey]: newWeight });
             btnElement.innerText = "APPROVED ✓";
-            btnElement.classList.remove('bg-white/10', 'hover:bg-green-600', 'border-white/10');
-            btnElement.classList.add('bg-green-600', 'border-green-500');
+            btnElement.classList.replace('bg-white/10', 'bg-green-600');
             btnElement.disabled = true;
-
         } catch (error) {
             console.error("Error approving PR:", error);
             btnElement.innerText = "ERROR";
