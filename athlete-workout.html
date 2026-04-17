@@ -85,6 +85,7 @@
 </nav>
 
 <script type="module">
+    // Added relative paths to ensure imports resolve correctly across different directories
     import { firebaseConfig } from "./js/firebase-config.js"; 
     import { applyTheme } from "./js/theme.js"; 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -126,7 +127,6 @@
 
     async function loadAvailableWorkouts() {
         const workoutContainer = document.getElementById('available-workouts');
-        // REMOVED orderBy("date") to fix query failure caused by missing composite indexes
         const q = query(
             collection(db, "workouts"), 
             where("school_id", "==", currentSchoolId)
@@ -232,15 +232,18 @@
         btn.innerText = "SYNCING TO BOARD...";
 
         try {
-            // 1. Gather the data from the inputs
-            const exerciseData = activeWorkoutData.exercises.map((ex, exIndex) => {
+            // 1. Map data specifically to match the structure coach-review expects
+            // We ensure it is named 'exercises' and not 'exerciseData'
+            const workoutExercises = activeWorkoutData.exercises.map((ex, exIndex) => {
                 const setContainers = document.querySelectorAll(`[id^="container-set-${exIndex}-"]`);
+                
                 const completedSets = Array.from(setContainers).map(container => {
                     const weightInput = container.querySelector('input');
+                    const repsDisplay = container.querySelector('.text-lg');
+                    
                     return {
-                        weight: weightInput.value,
-                        reps: container.querySelector('.text-lg').innerText,
-                        // Check if the user "checked off" the set by looking at the border class
+                        weight: weightInput ? weightInput.value : "0",
+                        reps: repsDisplay ? repsDisplay.innerText : "0",
                         completed: container.classList.contains('border-green-500')
                     };
                 });
@@ -253,9 +256,12 @@
 
             // 2. Get Athlete Name for the Coach's view
             let profileSnap = await getDoc(doc(db, "users", currentAthleteId));
-            const athleteName = profileSnap.exists() ? (profileSnap.data().name || "Unknown Athlete") : "Test Athlete";
+            if (!profileSnap.exists()) profileSnap = await getDoc(doc(db, "recruiting_profiles", currentAthleteId));
+            
+            const athleteName = profileSnap.exists() ? (profileSnap.data().name || profileSnap.data().displayName || "Test Athlete") : "Test Athlete";
 
             // 3. Construct the Completion Document
+            // IMPORTANT: Fields like 'exercises' must exist and be an array to avoid coach-review map errors
             const completionDoc = {
                 athleteId: currentAthleteId,
                 athleteName: athleteName,
@@ -264,7 +270,7 @@
                 workoutName: activeWorkoutData.name,
                 workoutDate: activeWorkoutData.date,
                 timestamp: serverTimestamp(),
-                exercises: exerciseData,
+                exercises: workoutExercises, 
                 status: "completed"
             };
 
@@ -281,7 +287,6 @@
             btn.innerText = "Log Session & Finish";
         }
     };
-
 </script>
 </body>
 </html>
