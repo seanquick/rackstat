@@ -172,22 +172,46 @@
                     const weights = ex.sets.map(s => parseFloat(s.weight) || 0);
                     const topWeight = Math.max(...weights, 0);
 
+                    // IMPROVED MATCHING: Convert "BENCH PRESS" to "bench_press" or "benchpress"
                     const cleanName = ex.name.toLowerCase().trim();
-                    let previousMax = parseFloat(currentMaxes[cleanName]) || 0;
-                    const isPR = topWeight > previousMax && previousMax > 0;
+                    const underscoreName = cleanName.replace(/\s+/g, '_');
+                    const flatName = cleanName.replace(/\s+/g, '');
+                    
+                    let previousMax = 0;
+                    let matchedKey = underscoreName; // Default to underscore for database standard
+
+                    // Check all possible naming variations in the athlete's maxes
+                    const variations = [underscoreName, cleanName, flatName];
+                    for (let key of variations) {
+                        if (currentMaxes[key] !== undefined) {
+                            previousMax = parseFloat(currentMaxes[key]);
+                            matchedKey = key;
+                            break;
+                        }
+                    }
+
+                    const isPR = topWeight > previousMax;
 
                     return `
                         <div class="flex justify-between items-center py-3 border-b border-white/5 last:border-0">
-                            <div class="flex flex-col">
-                                <span class="text-white font-bold text-xs uppercase tracking-wider">${ex.name}</span>
-                                <span class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">${completedSets}/${totalSets} Sets</span>
-                            </div>
-                            <div class="flex items-center gap-4">
-                                ${isPR ? `<span class="pr-badge text-white text-[8px] font-black px-2 py-0.5 rounded-full animate-pulse uppercase">PR</span>` : ''}
-                                <div class="text-right">
-                                    <span class="text-white font-black italic text-lg">${topWeight > 0 ? topWeight : 'BW'}</span>
-                                    <span class="text-[9px] text-gray-600 font-bold uppercase ml-1">${topWeight > 0 ? 'LBS' : ''}</span>
+                            <div class="flex items-center gap-3">
+                                <div class="flex flex-col">
+                                    <span class="text-white font-bold text-xs uppercase tracking-wider">${ex.name}</span>
+                                    <span class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">${completedSets}/${totalSets} Sets</span>
                                 </div>
+                                
+                                <div class="flex items-center gap-2 ml-4">
+                                    ${isPR ? `<span class="pr-badge text-white text-[8px] font-black px-2 py-0.5 rounded-full animate-pulse uppercase">NEW PR</span>` : ''}
+                                    <button onclick="window.approvePR('${athleteId}', '${matchedKey}', ${topWeight}, this)" 
+                                            class="bg-white/5 hover:bg-[var(--school-primary)] border border-white/10 text-[8px] font-black px-3 py-1 rounded-md text-white transition-all uppercase tracking-tighter">
+                                        Verify Lift
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-white font-black italic text-lg">${topWeight > 0 ? topWeight : 'BW'}</span>
+                                <span class="text-[9px] text-gray-600 font-bold uppercase ml-1">${topWeight > 0 ? 'LBS' : ''}</span>
+                                <p class="text-[8px] text-gray-500 font-bold uppercase mt-[-4px]">Current: ${previousMax}</p>
                             </div>
                         </div>
                     `;
