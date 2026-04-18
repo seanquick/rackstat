@@ -102,8 +102,7 @@
                     <input id="bodyWeight" type="number" placeholder="Enter Weight">
                 </div>
 
-                <div id="dynamic-inputs" class="grid grid-cols-2 gap-4">
-                    </div>
+                <div id="dynamic-inputs" class="grid grid-cols-2 gap-4"></div>
 
                 <button id="save-btn" class="btn-primary mt-4">Update My Stats</button>
                 <p id="sync-timestamp" class="text-[8px] font-bold text-gray-600 uppercase text-center italic mt-2">Last Sync: --</p>
@@ -141,17 +140,25 @@
         const auth = getAuth(app);
         
         let schoolPrefs = null;
+        let unsubscribe = null;
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                const userDocSnap = await getDoc(doc(db, "users", user.uid));
-                if (userDocSnap.exists()) {
-                    const userData = userDocSnap.data();
-                    const schoolId = userData.schoolId || userData.school_id;
-                    
-                    const schoolData = await applyTheme(db, schoolId);
-                    setupInputs(schoolData);
-                    loadCurrentMaxes(user.uid);
+                try {
+                    // Try recruiting_profiles first, then fallback to users
+                    let profileSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+                    if (!profileSnap.exists()) profileSnap = await getDoc(doc(db, "users", user.uid));
+
+                    if (profileSnap.exists()) {
+                        const userData = profileSnap.data();
+                        const schoolId = userData.schoolId || userData.school_id;
+                        
+                        const schoolData = await applyTheme(db, schoolId);
+                        setupInputs(schoolData);
+                        startRealtimeSync(user.uid);
+                    }
+                } catch (err) {
+                    console.error("Initialization error:", err);
                 }
             } else { 
                 window.location.href = 'index.html'; 
@@ -159,7 +166,6 @@
         });
 
         function setupInputs(data) {
-            // FIX: Changed 'tracked_lifts' to 'activeLifts' to match your Firestore screenshot
             schoolPrefs = {
                 tracked_lifts: data.activeLifts || ['bench_press', 'back_squat', 'power_clean'],
                 formula_type: data.formula_type || "power_index",
@@ -168,9 +174,7 @@
 
             const container = document.getElementById('dynamic-inputs');
             container.innerHTML = schoolPrefs.tracked_lifts.map(lift => {
-                // Clean up names like "bench" or "push_press" for the UI labels
                 const prettyName = lift.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
-                
                 return `
                     <div class="animate-fade-in">
                         <label>${prettyName}</label>
@@ -179,39 +183,51 @@
             }).join('');
         }
 
-        async function loadCurrentMaxes(uid) {
+        function startRealtimeSync(uid) {
+            if (unsubscribe) unsubscribe();
+
             const latestDocRef = doc(db, "recruiting_profiles", uid, "maxes", "latest");
-            const snap = await getDoc(latestDocRef);
             
-            if(snap.exists()) {
-                const data = snap.data();
-                let scoringSum = 0;
-
-                // Sync Inputs and Calculate Score
-                schoolPrefs.tracked_lifts.forEach(lift => {
-                    const val = data[lift] || 0;
-                    if (schoolPrefs.scoring_lifts.includes(lift)) scoringSum += val;
-                    const inputField = document.getElementById(`input-${lift}`);
-                    if(inputField) inputField.value = val;
-                });
-
-                document.getElementById('bodyWeight').value = data.bodyWeight || data.weight || 0;
-
-                let finalScore = scoringSum;
-                if (schoolPrefs.formula_type === "power_index") {
-                    const bw = data.bodyWeight || data.weight || 0;
-                    finalScore = scoringSum - (Math.min(bw, 200) * 4);
+            // Listen for changes in real-time
+            unsubscribe = onSnapshot(latestDocRef, (snap) => {
+                if(snap.exists()) {
+                    const data = snap.data();
+                    renderData(data);
                 }
+            });
+        }
 
-                document.getElementById('view-total').innerText = Math.round(finalScore);
-                document.getElementById('formula-detail').innerText = schoolPrefs.formula_type === "power_index" 
-                    ? `Lifts: ${scoringSum} — (BW Adjustment) = ${Math.round(finalScore)}`
-                    : `Total Score: ${scoringSum}`;
+        function renderData(data) {
+            let scoringSum = 0;
+
+            schoolPrefs.tracked_lifts.forEach(lift => {
+                // Key mapping to handle both short and long keys (bench vs bench_press)
+                const val = data[lift] || data[lift.split('_')[0]] || 0;
                 
-                if (data.timestamp) {
-                    const d = new Date(data.timestamp);
-                    document.getElementById('sync-timestamp').innerText = `Last Sync: ${d.toLocaleDateString()} @ ${d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+                if (schoolPrefs.scoring_lifts.includes(lift)) scoringSum += val;
+                
+                const inputField = document.getElementById(`input-${lift}`);
+                if(inputField && !inputField.matches(':focus')) {
+                    inputField.value = val;
                 }
+            });
+
+            const bw = data.bodyWeight || data.weight || 0;
+            document.getElementById('bodyWeight').value = bw;
+
+            let finalScore = scoringSum;
+            if (schoolPrefs.formula_type === "power_index") {
+                finalScore = scoringSum - (Math.min(bw, 200) * 4);
+            }
+
+            document.getElementById('view-total').innerText = Math.round(finalScore);
+            document.getElementById('formula-detail').innerText = schoolPrefs.formula_type === "power_index" 
+                ? `Lifts: ${scoringSum} — (BW Adjustment) = ${Math.round(finalScore)}`
+                : `Total Score: ${scoringSum}`;
+            
+            if (data.timestamp) {
+                const d = new Date(data.timestamp);
+                document.getElementById('sync-timestamp').innerText = `Last Sync: ${d.toLocaleDateString()} @ ${d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
             }
         }
 
@@ -225,12 +241,20 @@
 
             try {
                 const bodyWeight = Number(document.getElementById('bodyWeight').value);
-                const newMax = { timestamp: Date.now(), bodyWeight };
+                const newMax = { 
+                    timestamp: Date.now(), 
+                    bodyWeight: bodyWeight 
+                };
+                
                 let scoringSum = 0;
 
                 schoolPrefs.tracked_lifts.forEach(lift => {
                     const val = Number(document.getElementById(`input-${lift}`).value) || 0;
                     newMax[lift] = val;
+                    // Also save the simplified key for compatibility
+                    const shortKey = lift.split('_')[0];
+                    newMax[shortKey] = val;
+
                     if (schoolPrefs.scoring_lifts.includes(lift)) scoringSum += val;
                 });
 
@@ -239,6 +263,7 @@
                     finalBoardScore = scoringSum - (Math.min(bodyWeight, 200) * 4);
                 }
 
+                // Batch updates to all relevant profile locations
                 await Promise.all([
                     setDoc(doc(db, "recruiting_profiles", user.uid, "maxes", "latest"), newMax, { merge: true }),
                     setDoc(doc(db, "recruiting_profiles", user.uid), { 
@@ -253,10 +278,11 @@
                 setTimeout(() => {
                     saveBtn.innerText = "Update My Stats";
                     saveBtn.disabled = false;
-                    loadCurrentMaxes(user.uid);
                 }, 2000);
+
             } catch (e) {
-                alert(e.message);
+                console.error(e);
+                alert("Error saving: " + e.message);
                 saveBtn.disabled = false;
                 saveBtn.innerText = "Update My Stats";
             }
