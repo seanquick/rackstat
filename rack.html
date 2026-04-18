@@ -94,7 +94,7 @@
         </section>
 
         <section class="bg-[#0f172a]/50 p-6 rounded-3xl border border-zinc-800 shadow-xl">
-            <h2 class="text-center font-black uppercase italic text-gray-400 text-xs mb-6 tracking-widest">Manage Inventory</h2>
+            <h2 class="text-center font-black uppercase italic text-gray-400 text-xs mb-6 tracking-widest">Max Tracking</h2>
             
             <div class="space-y-4">
                 <div>
@@ -159,18 +159,24 @@
         });
 
         function setupInputs(data) {
+            // FIX: Changed 'tracked_lifts' to 'activeLifts' to match your Firestore screenshot
             schoolPrefs = {
-                tracked_lifts: data.tracked_lifts || ['bench_press', 'back_squat', 'power_clean'],
+                tracked_lifts: data.activeLifts || ['bench_press', 'back_squat', 'power_clean'],
                 formula_type: data.formula_type || "power_index",
-                scoring_lifts: data.scoring_lifts || ['bench_press', 'back_squat', 'power_clean']
+                scoring_lifts: data.scoring_lifts || data.activeLifts || ['bench_press', 'back_squat', 'power_clean']
             };
 
             const container = document.getElementById('dynamic-inputs');
-            container.innerHTML = schoolPrefs.tracked_lifts.map(lift => `
-                <div class="animate-fade-in">
-                    <label>${lift.replace('_', ' ')}</label>
-                    <input id="input-${lift}" type="number" placeholder="Lbs">
-                </div>`).join('');
+            container.innerHTML = schoolPrefs.tracked_lifts.map(lift => {
+                // Clean up names like "bench" or "push_press" for the UI labels
+                const prettyName = lift.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                
+                return `
+                    <div class="animate-fade-in">
+                        <label>${prettyName}</label>
+                        <input id="input-${lift}" type="number" placeholder="Lbs">
+                    </div>`;
+            }).join('');
         }
 
         async function loadCurrentMaxes(uid) {
