@@ -170,16 +170,11 @@
 
         if (activeWorkoutData.exercises) {
             activeWorkoutData.exercises.forEach((ex, exIndex) => {
-                // 1. Normalize the exercise name from the workout template
                 const cleanName = ex.name.toLowerCase().trim();
-                
-                // 2. Map to Rack IDs (activeLifts)
                 let athleteCurrentMax = 0;
 
-                if (currentMaxes[cleanName]) {
-                    athleteCurrentMax = currentMaxes[cleanName];
-                } 
-                else if (cleanName.includes("bench")) {
+                // IMPROVED KEY MATCHING: Matches template names to your database keys
+                if (cleanName.includes("bench")) {
                     athleteCurrentMax = currentMaxes.bench_press || currentMaxes.bench || 0;
                 } 
                 else if (cleanName.includes("squat")) {
@@ -188,19 +183,18 @@
                 else if (cleanName.includes("clean")) {
                     athleteCurrentMax = currentMaxes.power_clean || currentMaxes.clean || 0;
                 } 
-                else if (cleanName.includes("deadlift")) {
+                else if (cleanName.includes("deadlift") || cleanName.includes("dead lift")) {
                     athleteCurrentMax = currentMaxes.deadlift || 0;
                 }
                 else if (cleanName.includes("push press")) {
                     athleteCurrentMax = currentMaxes.push_press || 0;
                 }
-                
-                if (!athleteCurrentMax) {
+                else {
+                    // Fallback to exact match or underscore match
                     const dbKey = cleanName.replace(/\s+/g, '_');
-                    athleteCurrentMax = currentMaxes[dbKey] || 0;
+                    athleteCurrentMax = currentMaxes[cleanName] || currentMaxes[dbKey] || 0;
                 }
 
-                // 3. GENERATE THE UI (This part was missing in your draft)
                 let setsHtml = (ex.sets || []).map((s, i) => {
                     const pct = parseFloat(s.pct) || 0;
                     const weight = pct > 0 ? Math.round((athleteCurrentMax * (pct / 100)) / 5) * 5 : "BW";
@@ -236,7 +230,57 @@
                 list.appendChild(card);
             });
         }
-    } 
+    }
+
+    // SYNC LOGIC: Handles the 'Finish Workout' button click
+    document.getElementById('finish-workout-btn').onclick = async () => {
+        const btn = document.getElementById('finish-workout-btn');
+        if (btn.disabled || !activeWorkoutData) return;
+        
+        btn.disabled = true;
+        btn.innerText = "SYNCING TO BOARD...";
+
+        try {
+            const workoutExercises = (activeWorkoutData.exercises || []).map((ex, exIndex) => {
+                const setContainers = document.querySelectorAll(`[id^="container-set-${exIndex}-"]`);
+                const completedSets = Array.from(setContainers).map(container => {
+                    const weightInput = container.querySelector('input');
+                    const repsDisplay = container.querySelector('.text-lg');
+                    return {
+                        weight: weightInput ? weightInput.value : "0",
+                        reps: repsDisplay ? repsDisplay.innerText : "0",
+                        completed: container.classList.contains('border-green-500')
+                    };
+                });
+                return { name: ex.name, sets: completedSets };
+            });
+
+            let profileSnap = await getDoc(doc(db, "users", currentAthleteId));
+            if (!profileSnap.exists()) profileSnap = await getDoc(doc(db, "recruiting_profiles", currentAthleteId));
+            const athleteName = profileSnap.exists() ? (profileSnap.data().name || profileSnap.data().displayName || "Athlete") : "Athlete";
+
+            const completionDoc = {
+                athleteId: currentAthleteId,
+                athleteName: athleteName,
+                school_id: currentSchoolId,
+                workoutId: activeWorkoutData.id || "manual-entry",
+                workoutName: activeWorkoutData.name || "Workout",
+                workoutDate: activeWorkoutData.date || "Today",
+                timestamp: serverTimestamp(),
+                exercises: workoutExercises,
+                status: "completed"
+            };
+
+            await addDoc(collection(db, "completed_workouts"), completionDoc);
+            alert("WORKOUT SYNCED SUCCESSFULLY!");
+            location.reload();
+        } catch (err) {
+            console.error("Sync Error:", err);
+            alert("Failed to sync: " + err.message);
+            btn.disabled = false;
+            btn.innerText = "Log Session & Finish";
+        }
+    };
 </script>
 </body>
 </html>
