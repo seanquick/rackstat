@@ -99,6 +99,7 @@
     let currentSchoolId = null;
     let activeWorkoutData = null;
 
+    // --- INITIALIZATION ---
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             currentAthleteId = user.uid;
@@ -122,6 +123,7 @@
         }
     });
 
+    // --- WORKOUT LIST LOADING ---
     async function loadAvailableWorkouts() {
         const workoutContainer = document.getElementById('available-workouts');
         const q = query(collection(db, "workouts"), where("school_id", "==", currentSchoolId));
@@ -152,9 +154,12 @@
         }
     }
 
+    // --- WORKOUT ENGINE ---
     async function loadWorkoutDetails(workoutId) {
         const workoutSnap = await getDoc(doc(db, "workouts", workoutId));
-        const maxSnap = await getDoc(doc(db, "recruiting_profiles", currentAthleteId, "maxes", "latest"));
+        // Pointing to the central maxes subcollection we updated in recruiting-card
+        const maxesRef = doc(db, "recruiting_profiles", currentAthleteId, "maxes", "latest");
+        const maxSnap = await getDoc(maxesRef);
 
         if (!workoutSnap.exists()) return;
         activeWorkoutData = { id: workoutId, ...workoutSnap.data() };
@@ -173,7 +178,7 @@
                 const cleanName = ex.name.toLowerCase().trim();
                 let athleteCurrentMax = 0;
 
-                // IMPROVED KEY MATCHING: Matches template names to your database keys
+                // COMPREHENSIVE MAPPING LOGIC
                 if (cleanName.includes("bench")) {
                     athleteCurrentMax = currentMaxes.bench_press || currentMaxes.bench || 0;
                 } 
@@ -190,18 +195,18 @@
                     athleteCurrentMax = currentMaxes.push_press || 0;
                 }
                 else {
-                    // Fallback to exact match or underscore match
                     const dbKey = cleanName.replace(/\s+/g, '_');
                     athleteCurrentMax = currentMaxes[cleanName] || currentMaxes[dbKey] || 0;
                 }
 
                 let setsHtml = (ex.sets || []).map((s, i) => {
                     const pct = parseFloat(s.pct) || 0;
+                    // Formula: (Max * (Pct/100)) rounded to nearest 5lbs
                     const weight = pct > 0 ? Math.round((athleteCurrentMax * (pct / 100)) / 5) * 5 : "BW";
                     const setId = `set-${exIndex}-${i}`;
                     
                     return `
-                        <div id="container-${setId}" class="flex justify-between items-center bg-black p-4 rounded-lg mb-2 border border-gray-800">
+                        <div id="container-${setId}" class="flex justify-between items-center bg-black p-4 rounded-lg mb-2 border border-gray-800 transition-all">
                             <div class="flex flex-col">
                                 <span class="text-[8px] text-gray-600 font-black uppercase">Set ${i+1} — ${pct}%</span>
                                 <input type="text" value="${weight}" class="bg-transparent text-red-500 font-black text-xl italic w-24 outline-none">
@@ -210,7 +215,7 @@
                                 <p class="text-[8px] text-gray-700 uppercase font-black">Reps</p>
                                 <p class="text-white font-black text-lg">${s.reps}</p>
                             </div>
-                            <button onclick="this.parentElement.classList.toggle('border-green-500')" class="bg-[#1a1a1c] p-3 rounded-full text-gray-700 border border-gray-800">
+                            <button onclick="this.parentElement.classList.toggle('border-green-500'); this.parentElement.classList.toggle('border-gray-800')" class="bg-[#1a1a1c] p-3 rounded-full text-gray-700 border border-gray-800">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path d="M5 13l4 4L19 7" /></svg>
                             </button>
                         </div>`;
@@ -232,7 +237,13 @@
         }
     }
 
-    // SYNC LOGIC: Handles the 'Finish Workout' button click
+    // --- NAVIGATION ---
+    window.goBack = () => {
+        document.getElementById('athlete-workout-container').style.display = 'none';
+        document.getElementById('athlete-dashboard').style.display = 'block';
+    };
+
+    // --- SYNC / LOGGING LOGIC ---
     document.getElementById('finish-workout-btn').onclick = async () => {
         const btn = document.getElementById('finish-workout-btn');
         if (btn.disabled || !activeWorkoutData) return;
@@ -255,17 +266,18 @@
                 return { name: ex.name, sets: completedSets };
             });
 
+            // Fetch name for the leaderboard
             let profileSnap = await getDoc(doc(db, "users", currentAthleteId));
             if (!profileSnap.exists()) profileSnap = await getDoc(doc(db, "recruiting_profiles", currentAthleteId));
-            const athleteName = profileSnap.exists() ? (profileSnap.data().name || profileSnap.data().displayName || "Athlete") : "Athlete";
+            const athleteName = profileSnap.exists() ? (profileSnap.data().fullName || profileSnap.data().name || "Athlete") : "Athlete";
 
             const completionDoc = {
                 athleteId: currentAthleteId,
                 athleteName: athleteName,
                 school_id: currentSchoolId,
-                workoutId: activeWorkoutData.id || "manual-entry",
-                workoutName: activeWorkoutData.name || "Workout",
-                workoutDate: activeWorkoutData.date || "Today",
+                workoutId: activeWorkoutData.id,
+                workoutName: activeWorkoutData.name,
+                workoutDate: activeWorkoutData.date,
                 timestamp: serverTimestamp(),
                 exercises: workoutExercises,
                 status: "completed"

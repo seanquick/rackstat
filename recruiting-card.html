@@ -362,12 +362,9 @@
             try {
                 const targetUid = athleteId || user.uid;
                 
-                // --- SECURITY & PERMISSIONS ---
-                // Fetch the logged-in user's role first to verify access
                 const userSnap = await getDoc(doc(db, "users", user.uid));
                 const userData = userSnap?.data();
 
-                // If a user tries to access a different UID and isn't a coach, redirect them
                 if (athleteId && athleteId !== user.uid && userData?.role !== 'coach') {
                     console.error("Unauthorized access attempt.");
                     window.location.href = 'rack.html'; 
@@ -397,7 +394,6 @@
                     }
 
                     // --- LOGO LOGIC ---
-                    // Feature: Only show the logo if it exists; never fallback to RACKSTAT logo.
                     const logoEl = document.getElementById('disp-logo');
                     if (logoEl) {
                         if (d.logo_primary && d.logo_primary.trim() !== "") {
@@ -405,7 +401,7 @@
                             logoEl.classList.remove('hidden');
                         } else {
                             logoEl.classList.add('hidden');
-                            logoEl.src = ""; // Clear src to prevent broken icon
+                            logoEl.src = ""; 
                         }
                     }
 
@@ -417,7 +413,6 @@
                     safeSet('disp-weight', d.weight); 
                     safeSet('disp-sports', d.sports);
                     
-                    // Positions
                     safeSet('disp-pos', d.offPrimary);
                     const pos2 = document.getElementById('disp-pos2');
                     if (pos2) pos2.innerText = d.offSecondary ? `/ ${d.offSecondary}` : "";
@@ -426,10 +421,12 @@
                     const defPos2 = document.getElementById('disp-def-pos2');
                     if (defPos2) defPos2.innerText = d.defSecondary ? `/ ${d.defSecondary}` : "";
 
-                    // --- STATS ---
-                    safeSet('stat-bench', mx.bench_press || d.bench);
-                    safeSet('stat-squat', mx.squat || d.squat);
-                    safeSet('stat-clean', mx.clean || d.clean);
+                    // --- STATS (CORE LIFTS UPDATED) ---
+                    safeSet('stat-bench', mx.bench_press || mx.bench || d.bench);
+                    safeSet('stat-squat', mx.back_squat || mx.squat || d.squat);
+                    safeSet('stat-clean', mx.power_clean || mx.clean || d.clean);
+                    safeSet('stat-deadlift', mx.deadlift || d.deadlift); // Added
+                    safeSet('stat-push-press', mx.push_press || d.push_press); // Added
                     safeSet('stat-forty', d.forty ? `${d.forty}s` : "--");
 
                     // Academics
@@ -457,7 +454,7 @@
                     safeSet('disp-parent-contact', d.parentContact);
                     safeSet('disp-teammate-type', d.teammateType);
 
-                    // --- NEXT LEVEL QUESTIONNAIRE DATA ---
+                    // Questionnaire
                     safeSet('perceivedLevel', d.perceivedLevel || "--");
                     safeSet('seriousness', d.seriousness || "--");
                     safeSet('major', d.major || "--");
@@ -467,7 +464,7 @@
                     safeSet('acadStrengths', d.acadStrengths);
                     safeSet('disp-is-starter', d.isStarter || "No");
 
-                    // --- PRE-FILL EDITORS ---
+                    // --- PRE-FILL EDITORS (CORE LIFTS UPDATED) ---
                     setVal('edit-name', d.fullName);
                     setVal('edit-grad', d.gradYear);
                     setVal('edit-number', d.jerseyNum);
@@ -480,6 +477,8 @@
                     setVal('edit-bench', d.bench);
                     setVal('edit-squat', d.squat);
                     setVal('edit-clean', d.clean);
+                    setVal('edit-deadlift', d.deadlift); // Added
+                    setVal('edit-push-press', d.push_press); // Added
                     setVal('edit-forty', d.forty);
                     setVal('edit-core-gpa', d.coreGpa);
                     setVal('edit-act', d.act);
@@ -492,7 +491,6 @@
                     setVal('edit-logo', d.logo_primary);
                     setVal('edit-hudl', d.hudlLink || d.highlightUrl);
 
-                    // Auto-unlock if coming from coach edit link
                     if (isEditMode && userData?.role === 'coach') {
                         window.toggleEditMode();
                     }
@@ -535,6 +533,8 @@
             bench: document.getElementById('edit-bench')?.value || "",
             squat: document.getElementById('edit-squat')?.value || "",
             clean: document.getElementById('edit-clean')?.value || "",
+            deadlift: document.getElementById('edit-deadlift')?.value || "", // Added
+            push_press: document.getElementById('edit-push-press')?.value || "", // Added
             forty: document.getElementById('edit-forty')?.value || "",
             coreGpa: document.getElementById('edit-core-gpa')?.value || "",
             act: document.getElementById('edit-act')?.value || "",
