@@ -63,7 +63,7 @@
 <script type="module">
  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { firebaseConfig } from "./js/firebase-config.js"; 
-    import { getFirestore, collection, query, where, orderBy, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, collection, query, where, getDocs, orderBy, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { applyTheme } from './js/theme.js';
 
@@ -236,17 +236,35 @@
     }
 }
 
-    window.approvePR = async (athleteId, exerciseKey, newWeight, btnElement) => {
+    window.approvePR = async function(athleteId, exerciseKey, newWeight, btnElement) {
+        // 1. Change the button state to show progress
+        const originalText = btnElement.innerText;
+        btnElement.innerText = "SAVING...";
+        btnElement.disabled = true;
+
         try {
-            btnElement.innerText = "SAVING...";
+            // 2. Reference the specific 'latest' maxes document
             const maxRef = doc(db, "recruiting_profiles", athleteId, "maxes", "latest");
-            await updateDoc(maxRef, { [exerciseKey]: newWeight });
-            btnElement.innerText = "APPROVED ✓";
-            btnElement.classList.replace('bg-white/10', 'bg-green-600');
-            btnElement.disabled = true;
-        } catch (error) {
-            console.error("Error approving PR:", error);
-            btnElement.innerText = "ERROR";
+
+            // 3. USE setDoc with merge: true instead of updateDoc
+            // This ensures the document is created if it's missing
+            await setDoc(maxRef, {
+                [exerciseKey]: parseFloat(newWeight),
+                lastUpdated: serverTimestamp()
+            }, { merge: true });
+
+            // 4. Success UI Feedback
+            btnElement.innerText = "VERIFIED ✓";
+            btnElement.classList.replace('bg-white/5', 'bg-green-600');
+            btnElement.classList.remove('hover:bg-red-700');
+            
+            console.log(`Successfully verified ${exerciseKey} at ${newWeight}lbs`);
+
+        } catch (err) {
+            console.error("Error approving PR:", err);
+            alert("Failed to verify lift. Check console for details.");
+            btnElement.innerText = originalText;
+            btnElement.disabled = false;
         }
     };
 </script>
