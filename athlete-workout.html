@@ -170,19 +170,40 @@
 
         if (activeWorkoutData.exercises) {
             activeWorkoutData.exercises.forEach((ex, exIndex) => {
-                const cleanName = ex.name.toLowerCase();
-                let athleteCurrentMax = currentMaxes[cleanName] || 0;
+                // 1. Normalize the exercise name from the workout template
+                const cleanName = ex.name.toLowerCase().trim();
+                
+                // 2. Map to Rack IDs (activeLifts)
+                let athleteCurrentMax = 0;
+
+                if (currentMaxes[cleanName]) {
+                    athleteCurrentMax = currentMaxes[cleanName];
+                } 
+                else if (cleanName.includes("bench")) {
+                    athleteCurrentMax = currentMaxes.bench_press || currentMaxes.bench || 0;
+                } 
+                else if (cleanName.includes("squat")) {
+                    athleteCurrentMax = currentMaxes.back_squat || currentMaxes.squat || 0;
+                } 
+                else if (cleanName.includes("clean")) {
+                    athleteCurrentMax = currentMaxes.power_clean || currentMaxes.clean || 0;
+                } 
+                else if (cleanName.includes("deadlift")) {
+                    athleteCurrentMax = currentMaxes.deadlift || 0;
+                }
+                else if (cleanName.includes("push press")) {
+                    athleteCurrentMax = currentMaxes.push_press || 0;
+                }
                 
                 if (!athleteCurrentMax) {
-                    if (cleanName.includes("bench")) athleteCurrentMax = currentMaxes.bench || 0;
-                    if (cleanName.includes("squat")) athleteCurrentMax = currentMaxes.squat || 0;
-                    if (cleanName.includes("clean")) athleteCurrentMax = currentMaxes.clean || 0;
+                    const dbKey = cleanName.replace(/\s+/g, '_');
+                    athleteCurrentMax = currentMaxes[dbKey] || 0;
                 }
 
+                // 3. GENERATE THE UI (This part was missing in your draft)
                 let setsHtml = (ex.sets || []).map((s, i) => {
                     const pct = parseFloat(s.pct) || 0;
                     const weight = pct > 0 ? Math.round((athleteCurrentMax * (pct / 100)) / 5) * 5 : "BW";
-                    // FIX: IDs now strictly match the selector used in the finish button logic
                     const setId = `set-${exIndex}-${i}`;
                     
                     return `
@@ -215,68 +236,7 @@
                 list.appendChild(card);
             });
         }
-    }
-
-    document.getElementById('finish-workout-btn').onclick = async () => {
-        const btn = document.getElementById('finish-workout-btn');
-        if (btn.disabled) return;
-        
-        btn.disabled = true;
-        btn.innerText = "SYNCING TO BOARD...";
-
-        try {
-            // 1. Gather exercise data with corrected selectors
-            const workoutExercises = (activeWorkoutData.exercises || []).map((ex, exIndex) => {
-                // Selector now matches the ID generated in the loop above
-                const setContainers = document.querySelectorAll(`[id^="container-set-${exIndex}-"]`);
-                
-                const completedSets = Array.from(setContainers).map(container => {
-                    const weightInput = container.querySelector('input');
-                    const repsDisplay = container.querySelector('.text-lg') || container.querySelector('p.text-lg');
-                    
-                    return {
-                        weight: weightInput ? weightInput.value : "0",
-                        reps: repsDisplay ? repsDisplay.innerText : "0",
-                        completed: container.classList.contains('border-green-500')
-                    };
-                });
-
-                return {
-                    name: ex.name,
-                    sets: completedSets
-                };
-            });
-
-            // 2. Resolve Athlete Name
-            let profileSnap = await getDoc(doc(db, "users", currentAthleteId));
-            if (!profileSnap.exists()) profileSnap = await getDoc(doc(db, "recruiting_profiles", currentAthleteId));
-            const athleteName = profileSnap.exists() ? (profileSnap.data().name || profileSnap.data().displayName || "Athlete") : "Athlete";
-
-            // 3. Document construction (ensuring 'exercises' is never undefined)
-            const completionDoc = {
-                athleteId: currentAthleteId,
-                athleteName: athleteName,
-                school_id: currentSchoolId,
-                workoutId: activeWorkoutData.id || "manual-entry",
-                workoutName: activeWorkoutData.name || "Workout",
-                workoutDate: activeWorkoutData.date || "Today",
-                timestamp: serverTimestamp(),
-                exercises: workoutExercises, // This MUST be an array for Coach Review map()
-                status: "completed"
-            };
-
-            await addDoc(collection(db, "completed_workouts"), completionDoc);
-
-            alert("WORKOUT SYNCED SUCCESSFULLY!");
-            location.reload();
-
-        } catch (err) {
-            console.error("Sync Error:", err);
-            alert("Failed to sync: " + err.message);
-            btn.disabled = false;
-            btn.innerText = "Log Session & Finish";
-        }
-    };
+    } 
 </script>
 </body>
 </html>
