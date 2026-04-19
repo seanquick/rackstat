@@ -54,11 +54,32 @@
                 </div>
             </div>
 
-            <div class="bg-[#0d1117] border border-gray-700 rounded-xl p-5">
+            <div class="bg-[#0d1117] border border-gray-700 rounded-xl p-5 mb-8">
                 <h3 class="text-sm font-black uppercase text-white mb-2">Current Formula Explanation</h3>
                 <p id="formula-help" class="text-sm text-gray-400 leading-relaxed">
                     Straight Total uses the sum of selected scoring lifts.
                 </p>
+            </div>
+
+            <div class="border-t border-gray-800 pt-8">
+                <h3 class="text-xl font-black text-white uppercase mb-2 italic">Board Score Calculation Lifts</h3>
+                <p class="text-gray-400 text-sm mb-8">
+                    Select which tracked lifts are used in the Board Score and Weight Club calculation. Tracked lifts can appear on the leaderboard without being included in the formula.
+                </p>
+
+                <div id="scoring-lifts-container" class="grid grid-cols-2 md:grid-cols-3 gap-6 text-gray-300 mb-6 font-bold uppercase text-sm">
+                    <p class="text-gray-500 text-sm normal-case col-span-full">Select tracked lifts in the section below to configure Board Score lifts.</p>
+                </div>
+
+                <div class="bg-[#0d1117] border border-gray-700 rounded-xl p-5">
+                    <h3 class="text-sm font-black uppercase text-white mb-2">Power Index Formula</h3>
+                    <p class="text-sm text-gray-400 leading-relaxed">
+                        L = sum of selected lifts<br>
+                        BWadj = min(bodyweight, 200)<br>
+                        N = number of selected lifts<br><br>
+                        <span class="text-white font-bold">Formula: L - (BWadj × N)</span>
+                    </p>
+                </div>
             </div>
         </section>
 
@@ -108,27 +129,6 @@
                 <button onclick="addCustomLiftToUI()" class="bg-gray-700 hover:bg-red-600 text-white px-8 font-black rounded-lg transition-all uppercase text-xs">
                     Add Lift
                 </button>
-            </div>
-        </section>
-
-        <section class="bg-gray-900 border border-gray-700 p-8 rounded-xl mb-10">
-            <h2 class="text-2xl font-black text-white uppercase mb-2 italic">Board Score Calculation Lifts</h2>
-            <p class="text-gray-400 text-sm mb-8">
-                Select which tracked lifts are used in the Board Score and Weight Club calculation. Tracked lifts can appear on the leaderboard without being included in the formula.
-            </p>
-
-            <div id="scoring-lifts-container" class="grid grid-cols-2 md:grid-cols-3 gap-6 text-gray-300 mb-6 font-bold uppercase text-sm">
-                <p class="text-gray-500 text-sm normal-case col-span-full">Select tracked lifts above to configure scoring lifts.</p>
-            </div>
-
-            <div class="bg-[#0d1117] border border-gray-700 rounded-xl p-5">
-                <h3 class="text-sm font-black uppercase text-white mb-2">Power Index Formula</h3>
-                <p class="text-sm text-gray-400 leading-relaxed">
-                    L = sum of selected lifts<br>
-                    BWadj = min(bodyweight, 200)<br>
-                    N = number of selected lifts<br><br>
-                    <span class="text-white font-bold">Formula: L - (BWadj × N)</span>
-                </p>
             </div>
         </section>
 
@@ -210,7 +210,7 @@
         container.innerHTML = '';
 
         if (!trackedCheckboxes.length) {
-            container.innerHTML = `<p class="text-gray-500 text-sm normal-case col-span-full">Select tracked lifts above to configure scoring lifts.</p>`;
+            container.innerHTML = `<p class="text-gray-500 text-sm normal-case col-span-full">Select tracked lifts in the section below to configure Board Score lifts.</p>`;
             return;
         }
 
