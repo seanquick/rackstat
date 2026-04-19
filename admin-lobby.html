@@ -1,23 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Document metadata and responsive viewport setup -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Browser tab title -->
     <title>Admin Dashboard | RACKSTAT</title>
+
+    <!-- Shared global styles -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Tailwind utility framework -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-[#0d1117] text-white font-sans min-h-screen">
+
+    <!-- Top admin navigation bar with platform identity and logout action -->
     <nav class="p-6 border-b border-white/10 flex justify-between items-center">
-        <h1 class="text-xl font-black tracking-tighter text-blue-500">RACKSTAT <span class="text-white/50 text-sm font-normal ml-2">ADMIN CENTRAL</span></h1>
-        <button id="admin-logout-btn" class="text-xs bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg transition">LOGOUT</button>
+        <h1 class="text-xl font-black tracking-tighter text-blue-500">
+            RACKSTAT
+            <span class="text-white/50 text-sm font-normal ml-2">ADMIN CENTRAL</span>
+        </h1>
+        <button id="admin-logout-btn" class="text-xs bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg transition uppercase tracking-wider">
+            Logout
+        </button>
     </nav>
 
     <main class="max-w-6xl mx-auto p-6">
+        <!-- Page heading and dashboard description -->
         <div class="mb-8">
             <h2 class="text-2xl font-bold">Platform Utilization</h2>
             <p class="text-gray-400 text-sm">Real-time aggregate data across all organizations.</p>
         </div>
 
+        <!-- Top metric cards for users, activity, and recruiting utilization -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="bg-[#161b22] border border-white/10 p-6 rounded-2xl">
                 <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest">Registered Users</h3>
@@ -72,8 +89,8 @@
             </div>
         </div>
 
+        <!-- Live activity feed and school directory panels -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12">
-            
             <div class="bg-[#161b22] border border-white/10 rounded-2xl overflow-hidden h-fit">
                 <div class="p-4 border-b border-white/5 flex justify-between items-center">
                     <h3 class="text-xs font-bold uppercase tracking-widest text-gray-500">Live Activity Pulse</h3>
@@ -97,17 +114,25 @@
             </div>
         </div>
 
+        <!-- Admin announcement composer for system-wide notices -->
         <div class="mt-12 p-8 bg-blue-600/5 border border-blue-500/20 rounded-2xl">
             <h3 class="font-bold text-lg mb-2">Global Announcement</h3>
             <p class="text-sm text-gray-400 mb-4">Post a message that appears on all Athlete and Coach dashboards.</p>
-            <div class="flex gap-4">
-                <input type="text" id="announcement-text" placeholder="System maintenance at 10 PM..." class="bg-black/20 border border-white/10 rounded-lg px-4 py-2 flex-grow text-sm focus:outline-none focus:border-blue-500">
-                <button id="post-announcement" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg text-sm font-bold transition">POST</button>
+            <div class="flex gap-4 flex-col sm:flex-row">
+                <input
+                    type="text"
+                    id="announcement-text"
+                    placeholder="System maintenance at 10 PM..."
+                    class="bg-black/20 border border-white/10 rounded-lg px-4 py-2 flex-grow text-sm focus:outline-none focus:border-blue-500"
+                >
+                <button id="post-announcement" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg text-sm font-bold transition uppercase tracking-wider">
+                    Post
+                </button>
             </div>
         </div>
-
     </main>
 
+    <!-- Admin dashboard logic -->
     <script type="module" src="js/admin-lobby.js"></script>
 </body>
 </html>

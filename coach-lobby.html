@@ -61,6 +61,7 @@
                 </div>
                 <p class="text-sm text-gray-500 font-medium">Manage athlete profiles, edit metrics, and update recruiting card data.</p>
             </a>
+
             <a href="training-center.html" class="office-card p-8 rounded-2xl group">
                 <div class="flex items-center gap-4 mb-4">
                     <span class="text-3xl">🏋️‍♂️</span>
@@ -68,6 +69,7 @@
                 </div>
                 <p class="text-sm text-gray-500 font-medium">Create, edit, and publish daily workouts for your athletes to view.</p>
             </a>
+
             <a href="coach-review.html" class="office-card p-8 rounded-2xl group">
                 <div class="flex justify-between items-start mb-4">
                     <div class="flex items-center gap-4">
@@ -78,6 +80,7 @@
                 </div>
                 <p class="text-sm text-gray-500 font-medium">Analyze athlete performance and track new PRs in real-time.</p>
             </a>
+
             <a href="analytics-vault.html" class="office-card p-8 rounded-2xl group">
                 <div class="flex items-center gap-4 mb-4">
                     <span class="text-3xl">📊</span>
@@ -85,6 +88,7 @@
                 </div>
                 <p class="text-sm text-gray-500 font-medium">View team leaderboards, track progress over time, and export data.</p>
             </a>
+
             <a href="team-settings.html" class="office-card p-8 rounded-2xl group">
                 <div class="flex items-center gap-4 mb-4">
                     <span class="text-3xl">⚙️</span>
@@ -96,84 +100,110 @@
     </main>
 
     <script type="module">
-        // 1. DEFINE LOGOUT IMMEDIATELY
-        // This uses a "fallback" redirect so it works even if the imports below fail.
+        import { db, auth } from './js/firebase-config.js';
+        import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { doc, getDoc, collection, query, where, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { applyTheme } from './js/theme.js';
+
+        // Returns school ID regardless of legacy underscore/camelCase naming
+        const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
+
+        // Builds a coach greeting from available user fields
+        const getCoachGreeting = (userData = {}) => {
+            const lastName = String(userData.lastName || "").trim();
+            if (lastName) return `Welcome, Coach ${lastName}`;
+
+            const fullName = String(userData.fullName || "").trim();
+            if (fullName) {
+                const parts = fullName.split(/\s+/);
+                const fallbackLast = parts.length > 1 ? parts[parts.length - 1] : parts[0];
+                return `Welcome, Coach ${fallbackLast}`;
+            }
+
+            return "Welcome, Coach";
+        };
+
+        // Logout handler exposed for inline button click
         window.handleLogout = async (e) => {
             if (e) e.preventDefault();
-            console.log("🚀 Logout initiated");
+
             try {
-                // Try to find the auth instance from the window or the import
-                const activeAuth = window.firebaseAuthInstance;
-                if (activeAuth) {
-                    const { signOut } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
-                    await signOut(activeAuth);
-                }
+                await signOut(auth);
             } catch (err) {
-                console.warn("Firebase signout failed, forcing local clear.");
+                console.warn("Firebase signout failed, clearing local session state.", err);
             }
+
             localStorage.clear();
             sessionStorage.clear();
             window.location.href = 'index.html';
         };
 
+        // Starts coach lobby after auth is verified
         async function initDashboard() {
-            try {
-                // 2. DYNAMICALLY IMPORT YOUR SERVICES
-                // We use * as config to see everything inside your js/firebase-config.js
-                const services = await import('./js/firebase-config.js');
-                
-                // We look for 'auth' and 'db' which your file is supposed to export
-                const auth = services.auth || services.default?.auth;
-                const db = services.db || services.default?.db;
-
-                if (!auth || !db) {
-                    console.error("Available exports found:", Object.keys(services));
-                    throw new Error("Could not find 'auth' or 'db' in js/firebase-config.js");
+            onAuthStateChanged(auth, async (user) => {
+                if (!user) {
+                    window.location.replace('index.html');
+                    return;
                 }
 
-                // Save auth to window so the logout button can find it
-                window.firebaseAuthInstance = auth;
-
-                const { onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
-                const { doc, getDoc, collection, query, where, orderBy, limit, onSnapshot } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
-
-                // 3. RUN THE LOBBY LOGIC
-                onAuthStateChanged(auth, async (user) => {
-                    if (!user) { window.location.replace('index.html'); return; }
-
+                try {
                     const userDoc = await getDoc(doc(db, "users", user.uid));
+
                     if (!userDoc.exists() || userDoc.data().role !== 'coach') {
                         window.location.replace('index.html');
                         return;
                     }
 
                     const userData = userDoc.data();
-                    if (userData.lastName) {
-                        document.getElementById('coach-greeting').innerText = `Welcome, Coach ${userData.lastName}`;
+
+                    // Update coach greeting from available profile fields
+                    const greetingEl = document.getElementById('coach-greeting');
+                    if (greetingEl) {
+                        greetingEl.innerText = getCoachGreeting(userData);
                     }
 
-                    // Announcements
-                    const q = query(collection(db, "system_announcements"), where("active", "==", true), orderBy("timestamp", "desc"), limit(1));
-                    onSnapshot(q, (snapshot) => {
+                    // Subscribe to latest active system announcement
+                    const announcementsQuery = query(
+                        collection(db, "system_announcements"),
+                        where("active", "==", true),
+                        orderBy("timestamp", "desc"),
+                        limit(1)
+                    );
+
+                    onSnapshot(announcementsQuery, (snapshot) => {
                         const banner = document.getElementById('global-alert-banner');
-                        if (snapshot.empty) { banner?.classList.add('hidden'); return; }
-                        document.getElementById('alert-text').innerText = snapshot.docs[0].data().message;
-                        banner?.classList.remove('hidden');
+                        const alertText = document.getElementById('alert-text');
+
+                        if (!banner || !alertText) return;
+
+                        if (snapshot.empty) {
+                            banner.classList.add('hidden');
+                            return;
+                        }
+
+                        alertText.innerText = snapshot.docs[0].data().message || "";
+                        banner.classList.remove('hidden');
                     });
 
-                    // Branding
-                    const schoolID = userData.school_id || userData.schoolId;
-                    if (schoolID) {
-                        import('./js/theme.js').then(m => m.applyTheme(db, schoolID)).catch(() => {
-                            document.getElementById('school-name').innerText = "COACH OFFICE";
-                        });
-                    }
-                });
+                    // Apply school branding/theme
+                    const schoolId = getSchoolIdFromData(userData);
 
-            } catch (error) {
-                console.error("Dashboard failed to start:", error);
-                // Even if it fails, the Logout button (defined in step 1) remains active
-            }
+                    if (schoolId) {
+                        try {
+                            await applyTheme(db, schoolId);
+                        } catch (err) {
+                            console.error("Theme load failed:", err);
+                            document.getElementById('school-name').innerText = "COACH OFFICE";
+                        }
+                    } else {
+                        document.getElementById('school-name').innerText = "COACH OFFICE";
+                    }
+
+                } catch (error) {
+                    console.error("Dashboard failed to start:", error);
+                    window.location.replace('index.html');
+                }
+            });
         }
 
         initDashboard();

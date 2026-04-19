@@ -45,66 +45,86 @@
     </main>
 
     <script type="module">
-        import { firebaseConfig } from './js/firebase-config.js';
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, getDocs, doc, getDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        import { db, auth } from './js/firebase-config.js';
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { collection, getDocs, doc, getDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         let currentTab = 'rack';
         let coachSchoolId = null;
 
-        // --- Helper: Safe Date Formatting ---
+        // Returns school ID regardless of legacy underscore/camelCase naming
+        function getSchoolIdFromData(data = {}) {
+            return data.schoolId || data.school_id || "";
+        }
+
+        // Returns a consistent display name from available fields
+        function getDisplayName(data = {}) {
+            if (data.fullName && String(data.fullName).trim()) {
+                return String(data.fullName).trim();
+            }
+
+            const first = String(data.firstName || "").trim();
+            const last = String(data.lastName || "").trim();
+            const combined = `${first} ${last}`.trim();
+
+            return combined || "Unnamed";
+        }
+
+        // Safe date formatting for Firestore timestamps or legacy date values
         const formatFirebaseDate = (timestamp) => {
             if (!timestamp) return "--";
-            const date = (typeof timestamp.toDate === 'function') ? timestamp.toDate() : new Date(timestamp);
-            return date.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+            try {
+                const date = (typeof timestamp.toDate === 'function') ? timestamp.toDate() : new Date(timestamp);
+                if (Number.isNaN(date.getTime())) return "--";
+                return date.toLocaleString('default', { month: 'long', year: 'numeric' });
+            } catch {
+                return "--";
+            }
         };
 
-        // --- Column Definitions ---
+        // Column definitions for lift analytics
         const rackColumns = [
-            {title: "Athlete", field: "name", widthGrow: 2, headerFilter: "input"},
-            {title: "Lift Date", field: "dateGroup", width: 150, headerFilter: "input"},
-            {title: "Body Weight", field: "bodyWeight"},
-            {title: "Off.", field: "offPos", width: 80, headerFilter: "input"},
-            {title: "Def.", field: "defPos", width: 80, headerFilter: "input"},
+            { title: "Athlete", field: "name", widthGrow: 2, headerFilter: "input" },
+            { title: "Lift Date", field: "dateGroup", width: 150, headerFilter: "input" },
+            { title: "Body Weight", field: "bodyWeight" },
+            { title: "Off.", field: "offPos", width: 80, headerFilter: "input" },
+            { title: "Def.", field: "defPos", width: 80, headerFilter: "input" },
             {
-                title: "Grad", 
-                field: "grad", 
-                width: 90, 
-                hozAlign: "center", 
-                headerFilter: "list", 
-                headerFilterParams: {valuesLookup: "data", clearable: true}
+                title: "Grad",
+                field: "grad",
+                width: 90,
+                hozAlign: "center",
+                headerFilter: "list",
+                headerFilterParams: { valuesLookup: "data", clearable: true }
             },
-            {title: "Bench", field: "bench", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--"},
-            {title: "Squat", field: "squat", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--"},
-            {title: "Clean", field: "clean", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--"},
-            {title: "Deadlift", field: "deadlift", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--"},
-            {title: "Push Press", field: "pushPress", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--"},
+            { title: "Bench", field: "bench", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--" },
+            { title: "Squat", field: "squat", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--" },
+            { title: "Clean", field: "clean", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--" },
+            { title: "Deadlift", field: "deadlift", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--" },
+            { title: "Push Press", field: "pushPress", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--" },
         ];
 
+        // Column definitions for nutrition analytics
         const kitchenColumns = [
-            {title: "Athlete", field: "name", widthGrow: 2, headerFilter: "input"},
-            {title: "Date", field: "dateGroup", width: 150},
-            {title: "Body Weight", field: "bodyWeight"},
-            {title: "Grad", field: "grad", width: 80},
+            { title: "Athlete", field: "name", widthGrow: 2, headerFilter: "input" },
+            { title: "Date", field: "dateGroup", width: 150 },
+            { title: "Body Weight", field: "bodyWeight" },
+            { title: "Grad", field: "grad", width: 80 },
             {
-                title: "Meal", 
-                field: "mealType", 
-                width: 120, 
+                title: "Meal",
+                field: "mealType",
+                width: 120,
                 headerFilter: "list",
                 headerFilterParams: {
                     values: ["Breakfast", "Lunch", "Dinner", "Snack/Shake"],
                     clearable: true
                 }
             },
-            {title: "Cals", field: "calories", hozAlign: "right", sorter: "number"},
-            {title: "Protein", field: "protein", hozAlign: "right", sorter: "number"},
-            {title: "Carbs", field: "carbs", hozAlign: "right", sorter: "number"},
-            {title: "Fats", field: "fats", hozAlign: "right", sorter: "number"},
+            { title: "Cals", field: "calories", hozAlign: "right", sorter: "number" },
+            { title: "Protein", field: "protein", hozAlign: "right", sorter: "number" },
+            { title: "Carbs", field: "carbs", hozAlign: "right", sorter: "number" },
+            { title: "Fats", field: "fats", hozAlign: "right", sorter: "number" },
         ];
 
         const table = new Tabulator("#stats-table", {
@@ -112,28 +132,47 @@
             responsiveLayout: "collapse",
             pagination: "local",
             paginationSize: 20,
-            columns: rackColumns 
+            columns: rackColumns
         });
 
         onAuthStateChanged(auth, async (user) => {
-            if (user) {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            try {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
-                if (userDoc.exists() && userDoc.data().role === 'coach') {
-                    // Capture the coach's school ID to filter data
-                    const userData = userDoc.data();
-                    coachSchoolId = userData.schoolId || userData.school_id;
-                    
-                    if (!coachSchoolId) {
-                        console.error("Coach has no assigned school ID.");
-                        return;
-                    }
-                    loadData('rack');
-                } else { window.location.href = 'index.html'; }
-            } else { window.location.href = 'index.html'; }
+                if (!userDoc.exists()) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                const userData = userDoc.data();
+
+                if ((userData.role || "").toLowerCase() !== 'coach') {
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                coachSchoolId = getSchoolIdFromData(userData);
+
+                if (!coachSchoolId) {
+                    console.error("Coach has no assigned school ID.");
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                await loadData('rack');
+            } catch (error) {
+                console.error("Analytics vault init error:", error);
+                window.location.href = 'index.html';
+            }
         });
 
-        window.switchTable = (type) => {
+        window.switchTable = async (type) => {
             currentTab = type;
+
             const rackBtn = document.getElementById('btn-rack');
             const kitchenBtn = document.getElementById('btn-kitchen');
 
@@ -146,67 +185,111 @@
                 rackBtn.className = "px-6 py-3 rounded-t-lg bg-gray-800 text-gray-400 hover:bg-gray-700 font-bold transition-all duration-200";
                 table.setColumns(kitchenColumns);
             }
-            loadData(type);
+
+            await loadData(type);
         };
 
         async function loadData(type) {
             if (!coachSchoolId) return;
+
             table.clearData();
             const tableData = [];
-            
+
             try {
-                // ADDED FILTER: Only fetch athletes belonging to the coach's school
-                const athletesQuery = query(
-                    collection(db, "recruiting_profiles"), 
+                // Query current-format recruiting profiles first
+                let athletesQuery = query(
+                    collection(db, "recruiting_profiles"),
                     where("schoolId", "==", coachSchoolId)
                 );
-                
-                const athletesSnap = await getDocs(athletesQuery);
-                
-                const dataPromises = athletesSnap.docs.map(async (athleteDoc) => {
-                    const d = athleteDoc.data();
-                    const subColName = (type === 'rack') ? "maxes" : "meals";
-                    const subSnap = await getDocs(collection(db, "recruiting_profiles", athleteDoc.id, subColName));
-                    
-                    subSnap.forEach((subDoc) => {
-                        const s = subDoc.data();
-                        
-                        const row = {
-                            name: d.fullName || "Unnamed",
-                            grad: d.gradYear || "--",
-                            offPos: d.offPrimary || "--",
-                            defPos: d.defPrimary || "--",
-                            bodyWeight: s.bodyWeight || s.body_weight || "--",
-                            dateGroup: formatFirebaseDate(s.timestamp)
-                        };
 
-                        if (type === 'rack') {
-                            Object.assign(row, {
-                                bench: s.bench_press || s.benchMax || s.bench || 0, 
-                                squat: s.squat || 0,
-                                clean: s.clean || 0,
-                                deadlift: s.deadlift || 0,
-                                pushPress: s.push_press || s.pushPress || 0
+                let athletesSnap = await getDocs(athletesQuery);
+
+                // Legacy fallback for older recruiting profile docs
+                if (athletesSnap.empty) {
+                    athletesQuery = query(
+                        collection(db, "recruiting_profiles"),
+                        where("school_id", "==", coachSchoolId)
+                    );
+                    athletesSnap = await getDocs(athletesQuery);
+                }
+
+                const dataPromises = athletesSnap.docs.map(async (athleteDoc) => {
+                    const profileData = athleteDoc.data();
+                    const uid = athleteDoc.id;
+
+                    // Merge users/{uid} data for more consistent names and grad years
+                    const userSnap = await getDoc(doc(db, "users", uid));
+                    const userData = userSnap.exists() ? userSnap.data() : {};
+                    const mergedAthlete = { ...userData, ...profileData };
+
+                    if (type === 'rack') {
+                        // Try the current single-doc latest maxes model first
+                        const latestSnap = await getDoc(doc(db, "recruiting_profiles", uid, "maxes", "latest"));
+
+                        if (latestSnap.exists()) {
+                            const s = latestSnap.data();
+
+                            tableData.push({
+                                name: getDisplayName(mergedAthlete),
+                                grad: mergedAthlete.gradYear || "--",
+                                offPos: mergedAthlete.offPrimary || mergedAthlete.primaryPos || "--",
+                                defPos: mergedAthlete.defPrimary || mergedAthlete.primaryDefPos || "--",
+                                bodyWeight: s.bodyWeight || s.body_weight || "--",
+                                dateGroup: formatFirebaseDate(s.timestamp || s.updatedAt || s.createdAt),
+                                bench: s.bench ?? s.bench_press ?? s.benchMax ?? 0,
+                                squat: s.squat ?? 0,
+                                clean: s.clean ?? s.power_clean ?? 0,
+                                deadlift: s.deadlift ?? 0,
+                                pushPress: s.push_press ?? s.pushPress ?? 0
                             });
-                        } else {
-                            Object.assign(row, {
-                                mealType: s.type || "Meal",
+
+                            return;
+                        }
+
+                        // Legacy fallback: iterate all docs in maxes subcollection
+                        const subSnap = await getDocs(collection(db, "recruiting_profiles", uid, "maxes"));
+                        subSnap.forEach((subDoc) => {
+                            const s = subDoc.data();
+
+                            tableData.push({
+                                name: getDisplayName(mergedAthlete),
+                                grad: mergedAthlete.gradYear || "--",
+                                offPos: mergedAthlete.offPrimary || mergedAthlete.primaryPos || "--",
+                                defPos: mergedAthlete.defPrimary || mergedAthlete.primaryDefPos || "--",
+                                bodyWeight: s.bodyWeight || s.body_weight || "--",
+                                dateGroup: formatFirebaseDate(s.timestamp || s.updatedAt || s.createdAt),
+                                bench: s.bench ?? s.bench_press ?? s.benchMax ?? 0,
+                                squat: s.squat ?? 0,
+                                clean: s.clean ?? s.power_clean ?? 0,
+                                deadlift: s.deadlift ?? 0,
+                                pushPress: s.push_press ?? s.pushPress ?? 0
+                            });
+                        });
+                    } else {
+                        const mealsSnap = await getDocs(collection(db, "recruiting_profiles", uid, "meals"));
+
+                        mealsSnap.forEach((mealDoc) => {
+                            const s = mealDoc.data();
+
+                            tableData.push({
+                                name: getDisplayName(mergedAthlete),
+                                grad: mergedAthlete.gradYear || "--",
+                                bodyWeight: s.bodyWeight || s.body_weight || "--",
+                                dateGroup: formatFirebaseDate(s.timestamp || s.updatedAt || s.createdAt || s.date),
+                                mealType: s.type || s.mealType || s.mealName || "Meal",
                                 calories: s.calories || 0,
                                 protein: s.protein || 0,
                                 carbs: s.carbs || 0,
                                 fats: s.fats || 0
                             });
-                        }
-                        tableData.push(row);
-                    });
+                        });
+                    }
                 });
 
                 await Promise.all(dataPromises);
-                
-                table.setData(tableData).then(() => {
-                    table.refreshFilter(); 
-                });
-                        
+
+                await table.setData(tableData);
+                table.refreshFilter();
             } catch (err) {
                 console.error("Data Load Error:", err);
             }

@@ -9,7 +9,7 @@
     <style>
         /* UI FIX: Contrast for Dropdown Menus */
         select option {
-            background-color: #111827; /* Matches Tailwind gray-900 */
+            background-color: #111827;
             color: white;
         }
 
@@ -17,11 +17,11 @@
         .remove-btn {
             color: rgba(255, 255, 255, 0.3);
             transition: all 0.2s ease;
-            opacity: 1 !important; /* Ensure it's not hidden */
+            opacity: 1 !important;
         }
         
         .remove-btn:hover {
-            color: #ef4444 !important; /* Bright red on hover */
+            color: #ef4444 !important;
             transform: scale(1.2);
         }
 
@@ -88,65 +88,102 @@
         </section>
     </main>
 
-    <script type="module" src="js/theme.js"></script>
-
     <script type="module">
-        import { firebaseConfig } from './js/firebase-config.js';
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc, getDoc, updateDoc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
+        import { db, auth } from './js/firebase-config.js';
+        import {
+            collection,
+            addDoc,
+            getDocs,
+            doc,
+            deleteDoc,
+            getDoc,
+            updateDoc,
+            query,
+            where,
+            serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { applyTheme } from './js/theme.js';
 
         // GLOBAL STATE
-        let coreLifts = ["BENCH", "SQUAT", "CLEAN"]; // Default fallback
-        let supplementLibrary = []; 
+        let coreLifts = ["bench", "squat", "clean"];
+        let supplementLibrary = [];
         let exercises = [];
         let isMaxOutMode = false;
-        let userSchoolId = null; // Used for saving/history
+        let userSchoolId = null;
         let editingWorkoutId = null;
-        let coachSchoolId = null; // Used for settings/theme
+
+        // Returns school ID regardless of legacy underscore/camelCase naming
+        function getSchoolIdFromData(data = {}) {
+            return data.schoolId || data.school_id || "";
+        }
+
+        // Normalizes lift labels for storage/logic consistency
+        function normalizeLiftValue(value = "") {
+            return String(value).trim().toLowerCase().replace(/\s+/g, '_');
+        }
+
+        // Returns the displayed lift name
+        function displayLiftName(value = "") {
+            return String(value).replace(/_/g, ' ').toUpperCase();
+        }
 
         onAuthStateChanged(auth, async (user) => {
-            if (user) {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            try {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
-                if (userDoc.exists()) {
-                    const userData = userDoc.data();
-                    // Sync both IDs to ensure history and settings both work
-                    coachSchoolId = userData.schoolId || userData.school_id;
-                    userSchoolId = coachSchoolId; 
-                    
-                    await fetchSupplements();
-                    await fetchTeamSettings();
-                    loadHistory();
+                if (!userDoc.exists()) {
+                    window.location.href = 'index.html';
+                    return;
                 }
-            } else {
+
+                const userData = userDoc.data();
+                if ((userData.role || "").toLowerCase() !== "coach") {
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                userSchoolId = getSchoolIdFromData(userData);
+
+                if (!userSchoolId) {
+                    alert("Coach profile is missing a school ID.");
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                await fetchSupplements();
+                await fetchTeamSettings();
+                await loadHistory();
+            } catch (error) {
+                console.error("Training Center init error:", error);
                 window.location.href = 'index.html';
             }
         });
 
         async function fetchTeamSettings() {
             try {
-                if (!coachSchoolId) return;
+                if (!userSchoolId) return;
 
-                const settingsDoc = await getDoc(doc(db, "school_settings", coachSchoolId));
+                const schoolDoc = await getDoc(doc(db, "schools", userSchoolId));
 
-                if (settingsDoc.exists()) {
-                    const settings = settingsDoc.data();
-                    
-                    // 1. Update the global lift array with school-specific lifts
-                    if (settings.activeLifts && settings.activeLifts.length > 0) {
-                        coreLifts = settings.activeLifts;
-                    }
-                    
-                    // 2. Apply UI branding
-                    applyTheme(settings);
-                    
-                    // 3. Update existing UI dropdowns
-                    updateCoreLiftDropdown(coreLifts);
+                if (!schoolDoc.exists()) return;
+
+                const schoolData = schoolDoc.data();
+
+                // Apply shared theme engine
+                await applyTheme(db, userSchoolId);
+
+                // Load tracked lifts from the current school document
+                const trackedLifts = schoolData.trackedLifts || schoolData.activeLifts || ["bench", "squat", "clean"];
+                if (Array.isArray(trackedLifts) && trackedLifts.length > 0) {
+                    coreLifts = trackedLifts.map(normalizeLiftValue);
                 }
+
+                updateCoreLiftDropdown(coreLifts);
             } catch (error) {
                 console.error("Settings Error:", error);
             }
@@ -154,10 +191,11 @@
 
         function updateCoreLiftDropdown(lifts) {
             const dropdowns = document.querySelectorAll('.core-lift-select');
+
             dropdowns.forEach(select => {
                 const currentVal = select.value;
                 select.innerHTML = '';
-                
+
                 const placeholder = document.createElement('option');
                 placeholder.value = "";
                 placeholder.textContent = "-- Select Lift --";
@@ -167,32 +205,24 @@
 
                 lifts.forEach(lift => {
                     const option = document.createElement('option');
-                    option.value = lift; // Keep original case for logic
-                    option.textContent = lift.toUpperCase();
+                    option.value = lift;
+                    option.textContent = displayLiftName(lift);
                     select.appendChild(option);
                 });
 
-                if (currentVal) select.value = currentVal;
+                if (currentVal) {
+                    select.value = currentVal;
+                }
             });
-        }
-
-        function applyTheme(settings) {
-            const schoolNameDisplay = document.getElementById('header-school-name');
-            if (schoolNameDisplay) {
-                schoolNameDisplay.textContent = settings.schoolName || "RACKSTAT ATHLETICS";
-            }
-            const logoDisplay = document.getElementById('header-logo');
-            if (logoDisplay && settings.logoUrl) {
-                logoDisplay.src = settings.logoUrl;
-                logoDisplay.classList.remove('hidden');
-            }
         }
 
         async function fetchSupplements() {
             try {
                 const snap = await getDocs(collection(db, "supplement_library"));
-                supplementLibrary = snap.docs.map(doc => doc.data().name);
-            } catch (err) { console.error("Library Error", err); }
+                supplementLibrary = snap.docs.map(docSnap => docSnap.data().name).filter(Boolean);
+            } catch (err) {
+                console.error("Library Error", err);
+            }
         }
 
         window.toggleMaxOut = () => {
@@ -205,13 +235,20 @@
                 bg.classList.replace('bg-gray-700', 'bg-red-600');
                 knob.classList.add('translate-x-6');
                 addBtn?.classList.add('hidden');
-                // Now uses the updated coreLifts array
+
                 exercises = coreLifts.map(lift => ({
                     id: Date.now() + Math.random(),
                     category: 'core',
                     name: lift,
                     isMaxOut: true,
-                    sets: [{ reps: 5, pct: 50 }, { reps: 3, pct: 70 }, { reps: 1, pct: 85 }, { reps: 1, pct: 100 }, { reps: 1, pct: 105 }, { reps: 1, pct: 110 }]
+                    sets: [
+                        { reps: 5, pct: 50 },
+                        { reps: 3, pct: 70 },
+                        { reps: 1, pct: 85 },
+                        { reps: 1, pct: 100 },
+                        { reps: 1, pct: 105 },
+                        { reps: 1, pct: 110 }
+                    ]
                 }));
             } else {
                 bg.classList.replace('bg-red-600', 'bg-gray-700');
@@ -220,75 +257,95 @@
                 exercises = [];
                 addExerciseBlock();
             }
+
             renderExercises();
         };
 
         window.addExerciseBlock = () => {
             exercises.push({
-                id: Date.now(),
+                id: Date.now() + Math.random(),
                 category: 'core',
-                name: coreLifts[0],
+                name: coreLifts[0] || 'bench',
                 isCircuit: false,
                 circuitExercises: [''],
                 circuitConfig: { cycles: 3, work: 40, rest: 20 },
                 sets: [{ reps: '', pct: '' }]
             });
+
             renderExercises();
         };
 
         window.updateExercise = (id, field, value) => {
             const ex = exercises.find(e => e.id === id);
-            if (ex) {
-                ex[field] = value;
-                if (field === 'category') {
-                    ex.isCircuit = false;
-                    ex.name = value === 'core' ? coreLifts[0] : '';
-                    ex.sets = [{ reps: '', pct: '' }];
-                }
-                renderExercises();
+            if (!ex) return;
+
+            ex[field] = value;
+
+            if (field === 'category') {
+                ex.isCircuit = false;
+                ex.name = value === 'core' ? (coreLifts[0] || 'bench') : '';
+                ex.sets = [{ reps: '', pct: '' }];
             }
+
+            renderExercises();
         };
 
         window.toggleCircuit = (id) => {
             const ex = exercises.find(e => e.id === id);
-            if (ex) {
-                ex.isCircuit = !ex.isCircuit;
-                if (ex.isCircuit && ex.circuitExercises.length === 0) ex.circuitExercises = [ex.name || '']; 
-                renderExercises();
+            if (!ex) return;
+
+            ex.isCircuit = !ex.isCircuit;
+
+            if (ex.isCircuit && ex.circuitExercises.length === 0) {
+                ex.circuitExercises = [ex.name || ''];
             }
+
+            renderExercises();
         };
 
         window.addCircuitExercise = (blockId) => {
             const ex = exercises.find(e => e.id === blockId);
-            if (ex) { ex.circuitExercises.push(''); renderExercises(); }
+            if (!ex) return;
+
+            ex.circuitExercises.push('');
+            renderExercises();
         };
 
         window.updateCircuitExercise = (blockId, exIndex, value) => {
             const ex = exercises.find(e => e.id === blockId);
-            if (ex) ex.circuitExercises[exIndex] = value;
+            if (!ex) return;
+
+            ex.circuitExercises[exIndex] = value;
         };
 
         window.removeCircuitExercise = (blockId, exIndex) => {
             const ex = exercises.find(e => e.id === blockId);
-            if (ex) { ex.circuitExercises.splice(exIndex, 1); renderExercises(); }
+            if (!ex) return;
+
+            ex.circuitExercises.splice(exIndex, 1);
+            renderExercises();
         };
 
         window.updateCircuitConfig = (blockId, field, value) => {
             const ex = exercises.find(e => e.id === blockId);
-            if (ex) ex.circuitConfig[field] = value;
+            if (!ex) return;
+
+            ex.circuitConfig[field] = value;
         };
 
         window.addSet = (id) => {
             const ex = exercises.find(e => e.id === id);
-            if (ex) {
-                ex.sets.push(ex.category === 'supplement' ? { reps: '' } : { reps: '', pct: '' });
-                renderExercises();
-            }
+            if (!ex) return;
+
+            ex.sets.push(ex.category === 'supplement' ? { reps: '' } : { reps: '', pct: '' });
+            renderExercises();
         };
 
         window.updateSet = (exId, setIndex, field, value) => {
             const ex = exercises.find(e => e.id === exId);
-            if (ex && ex.sets[setIndex]) ex.sets[setIndex][field] = value;
+            if (ex && ex.sets[setIndex]) {
+                ex.sets[setIndex][field] = value;
+            }
         };
 
         window.removeExercise = (id) => {
@@ -298,7 +355,10 @@
 
         window.removeSet = (exId, setIndex) => {
             const ex = exercises.find(e => e.id === exId);
-            if (ex) { ex.sets.splice(setIndex, 1); renderExercises(); }
+            if (!ex) return;
+
+            ex.sets.splice(setIndex, 1);
+            renderExercises();
         };
 
         function renderExercises() {
@@ -316,17 +376,17 @@
 
                 if (ex.isMaxOut) {
                     blockHtml += `
-                                <h2 class="text-xl font-black uppercase text-red-600 tracking-tight italic">${ex.name} <span class="text-[10px] bg-red-600 text-white px-3 py-1 ml-3 rounded-full not-italic">MAX TEST</span></h2>
+                                <h2 class="text-xl font-black uppercase text-red-600 tracking-tight italic">${displayLiftName(ex.name)} <span class="text-[10px] bg-red-600 text-white px-3 py-1 ml-3 rounded-full not-italic">MAX TEST</span></h2>
                             </div>
                         </div>
                         <p class="text-[10px] text-gray-500 uppercase font-black tracking-widest border-t border-white/5 pt-4">Automatic Load Calculation Enabled</p>
                     </div>`;
                     container.insertAdjacentHTML('beforeend', blockHtml);
                     return; 
-                } 
+                }
 
                 blockHtml += `
-                    <select onchange="updateExercise(${ex.id}, 'category', this.value)" class="bg-white/5 border border-white/10 text-[10px] font-black uppercase rounded px-3 py-1.5 text-white outline-none focus:border-red-600">
+                    <select onchange="updateExercise(${JSON.stringify(ex.id)}, 'category', this.value)" class="bg-white/5 border border-white/10 text-[10px] font-black uppercase rounded px-3 py-1.5 text-white outline-none focus:border-red-600">
                         <option value="core" ${isCore ? 'selected' : ''}>CORE LIFT</option>
                         <option value="supplement" ${!isCore ? 'selected' : ''}>SUPPLEMENT</option>
                     </select>
@@ -335,27 +395,29 @@
                 if (!isCore) {
                     blockHtml += `
                         <div class="flex items-center gap-2 ml-4">
-                            <input type="checkbox" id="circ-${ex.id}" ${ex.isCircuit ? 'checked' : ''} onchange="toggleCircuit(${ex.id})" class="accent-red-600 w-4 h-4">
+                            <input type="checkbox" id="circ-${ex.id}" ${ex.isCircuit ? 'checked' : ''} onchange="toggleCircuit(${JSON.stringify(ex.id)})" class="accent-red-600 w-4 h-4">
                             <label for="circ-${ex.id}" class="text-[10px] font-black text-white/40 uppercase cursor-pointer">CIRCUIT</label>
                         </div>
                     `;
                 }
 
                 if (isCore) {
-                    // UPDATED: Dynamically uses the current coreLifts array
-                    const options = coreLifts.map(l => `<option value="${l}" ${ex.name === l ? 'selected' : ''}>${l}</option>`).join('');
-                    blockHtml += `<select onchange="updateExercise(${ex.id}, 'name', this.value)" class="core-lift-select flex-1 bg-transparent border-b-2 border-white/10 focus:border-red-600 outline-none text-white font-black uppercase text-lg px-2 transition-all">${options}</select>`;
+                    const options = coreLifts
+                        .map(l => `<option value="${l}" ${ex.name === l ? 'selected' : ''}>${displayLiftName(l)}</option>`)
+                        .join('');
+
+                    blockHtml += `<select onchange="updateExercise(${JSON.stringify(ex.id)}, 'name', this.value)" class="core-lift-select flex-1 bg-transparent border-b-2 border-white/10 focus:border-red-600 outline-none text-white font-black uppercase text-lg px-2 transition-all">${options}</select>`;
                 } else if (!ex.isCircuit) {
                     const dlId = `list-${ex.id}`;
                     blockHtml += `
-                        <input type="text" list="${dlId}" value="${ex.name}" onchange="updateExercise(${ex.id}, 'name', this.value)" placeholder="EXERCISE NAME" class="flex-1 bg-transparent border-b-2 border-white/10 focus:border-red-600 outline-none text-white font-black uppercase text-lg px-2 transition-all">
+                        <input type="text" list="${dlId}" value="${ex.name || ''}" onchange="updateExercise(${JSON.stringify(ex.id)}, 'name', this.value)" placeholder="EXERCISE NAME" class="flex-1 bg-transparent border-b-2 border-white/10 focus:border-red-600 outline-none text-white font-black uppercase text-lg px-2 transition-all">
                         <datalist id="${dlId}">${supplementLibrary.map(s => `<option value="${s}">`).join('')}</datalist>
                     `;
                 } else {
                     blockHtml += `<span class="flex-1 font-black text-red-600 uppercase italic text-sm tracking-widest">CIRCUIT BUILDER</span>`;
                 }
 
-                blockHtml += `<button onclick="removeExercise(${ex.id})" class="remove-btn px-3 font-bold text-xl">✕</button></div></div>`;
+                blockHtml += `<button onclick="removeExercise(${JSON.stringify(ex.id)})" class="remove-btn px-3 font-bold text-xl">✕</button></div></div>`;
 
                 if (ex.isCircuit && !isCore) {
                     blockHtml += `<div class="bg-black/40 border border-white/5 p-5 rounded-xl mb-4 space-y-4">`;
@@ -363,17 +425,17 @@
                         blockHtml += `
                             <div class="flex gap-3 items-center">
                                 <span class="text-white/20 text-[10px] font-black italic">0${cIdx + 1}</span>
-                                <input type="text" value="${cEx}" onchange="updateCircuitExercise(${ex.id}, ${cIdx}, this.value)" placeholder="MOVEMENT" class="flex-1 bg-black border border-white/10 rounded-lg px-4 py-3 text-xs font-black text-white uppercase outline-none focus:border-red-600 transition-all">
-                                ${cIdx > 0 ? `<button onclick="removeCircuitExercise(${ex.id}, ${cIdx})" class="remove-btn px-3 font-black text-lg">✕</button>` : `<div class="w-10"></div>`}
+                                <input type="text" value="${cEx || ''}" onchange="updateCircuitExercise(${JSON.stringify(ex.id)}, ${cIdx}, this.value)" placeholder="MOVEMENT" class="flex-1 bg-black border border-white/10 rounded-lg px-4 py-3 text-xs font-black text-white uppercase outline-none focus:border-red-600 transition-all">
+                                ${cIdx > 0 ? `<button onclick="removeCircuitExercise(${JSON.stringify(ex.id)}, ${cIdx})" class="remove-btn px-3 font-black text-lg">✕</button>` : `<div class="w-10"></div>`}
                             </div>
                         `;
                     });
                     blockHtml += `
-                        <button onclick="addCircuitExercise(${ex.id})" class="text-[10px] font-black text-red-600 uppercase tracking-widest hover:text-white transition-colors py-2">+ ADD MOVEMENT</button>
+                        <button onclick="addCircuitExercise(${JSON.stringify(ex.id)})" class="text-[10px] font-black text-red-600 uppercase tracking-widest hover:text-white transition-colors py-2">+ ADD MOVEMENT</button>
                         <div class="grid grid-cols-3 gap-4 pt-6 border-t border-white/5">
-                            <div class="text-center"><label class="text-[9px] font-black text-white/40 uppercase block mb-2">Cycles</label><input type="number" value="${ex.circuitConfig.cycles}" onchange="updateCircuitConfig(${ex.id}, 'cycles', this.value)" class="w-full bg-black border border-white/10 rounded-lg py-3 text-xs font-black text-center text-white outline-none focus:border-red-600"></div>
-                            <div class="text-center"><label class="text-[9px] font-black text-white/40 uppercase block mb-2">Work (s)</label><input type="number" value="${ex.circuitConfig.work}" onchange="updateCircuitConfig(${ex.id}, 'work', this.value)" class="w-full bg-black border border-white/10 rounded-lg py-3 text-xs font-black text-center text-white outline-none focus:border-red-600"></div>
-                            <div class="text-center"><label class="text-[9px] font-black text-white/40 uppercase block mb-2">Rest (s)</label><input type="number" value="${ex.circuitConfig.rest}" onchange="updateCircuitConfig(${ex.id}, 'rest', this.value)" class="w-full bg-black border border-white/10 rounded-lg py-3 text-xs font-black text-center text-white outline-none focus:border-red-600"></div>
+                            <div class="text-center"><label class="text-[9px] font-black text-white/40 uppercase block mb-2">Cycles</label><input type="number" value="${ex.circuitConfig.cycles}" onchange="updateCircuitConfig(${JSON.stringify(ex.id)}, 'cycles', this.value)" class="w-full bg-black border border-white/10 rounded-lg py-3 text-xs font-black text-center text-white outline-none focus:border-red-600"></div>
+                            <div class="text-center"><label class="text-[9px] font-black text-white/40 uppercase block mb-2">Work (s)</label><input type="number" value="${ex.circuitConfig.work}" onchange="updateCircuitConfig(${JSON.stringify(ex.id)}, 'work', this.value)" class="w-full bg-black border border-white/10 rounded-lg py-3 text-xs font-black text-center text-white outline-none focus:border-red-600"></div>
+                            <div class="text-center"><label class="text-[9px] font-black text-white/40 uppercase block mb-2">Rest (s)</label><input type="number" value="${ex.circuitConfig.rest}" onchange="updateCircuitConfig(${JSON.stringify(ex.id)}, 'rest', this.value)" class="w-full bg-black border border-white/10 rounded-lg py-3 text-xs font-black text-center text-white outline-none focus:border-red-600"></div>
                         </div>
                     </div>`;
                 } else {
@@ -383,17 +445,17 @@
                             <div class="flex items-center gap-6 group">
                                 <span class="text-[10px] font-black text-white/20 uppercase w-16 tracking-tighter italic">Set ${sIndex + 1}</span>
                                 <div class="flex-1 grid grid-cols-2 gap-4 max-w-sm">
-                                    <input type="number" placeholder="REPS" value="${set.reps || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'reps', this.value)" class="w-full bg-black border border-white/10 rounded-lg py-3 text-sm font-black text-center text-white outline-none focus:border-red-600 transition-all">
-                                    ${isCore ? `<input type="number" placeholder="% MAX" value="${set.pct || ''}" onchange="updateSet(${ex.id}, ${sIndex}, 'pct', this.value)" class="w-full bg-black border border-white/10 rounded-lg py-3 text-sm font-black text-center text-red-600 outline-none focus:border-red-600 transition-all">` : '<div></div>'}
+                                    <input type="number" placeholder="REPS" value="${set.reps || ''}" onchange="updateSet(${JSON.stringify(ex.id)}, ${sIndex}, 'reps', this.value)" class="w-full bg-black border border-white/10 rounded-lg py-3 text-sm font-black text-center text-white outline-none focus:border-red-600 transition-all">
+                                    ${isCore ? `<input type="number" placeholder="% MAX" value="${set.pct || ''}" onchange="updateSet(${JSON.stringify(ex.id)}, ${sIndex}, 'pct', this.value)" class="w-full bg-black border border-white/10 rounded-lg py-3 text-sm font-black text-center text-red-600 outline-none focus:border-red-600 transition-all">` : '<div></div>'}
                                 </div>
-                                <button onclick="removeSet(${ex.id}, ${sIndex})" class="remove-btn font-bold px-2">✕</button>
+                                <button onclick="removeSet(${JSON.stringify(ex.id)}, ${sIndex})" class="remove-btn font-bold px-2">✕</button>
                             </div>`;
                     });
                     blockHtml += `
                         </div>
-                        <button onclick="addSet(${ex.id})" class="text-[9px] font-black bg-white/5 text-white/60 px-6 py-2.5 rounded-md uppercase tracking-widest hover:bg-white hover:text-black transition-all">+ Add Rep Set</button>`;
+                        <button onclick="addSet(${JSON.stringify(ex.id)})" class="text-[9px] font-black bg-white/5 text-white/60 px-6 py-2.5 rounded-md uppercase tracking-widest hover:bg-white hover:text-black transition-all">+ Add Rep Set</button>`;
                 }
-                
+
                 blockHtml += `</div>`;
                 container.insertAdjacentHTML('beforeend', blockHtml);
             });
@@ -409,7 +471,7 @@
                 return;
             }
 
-            if (!dateInput.value || !nameInput.value) {
+            if (!dateInput.value || !nameInput.value.trim()) {
                 alert("SYSTEM ERROR: Date and Name required for upload.");
                 return;
             }
@@ -421,10 +483,11 @@
             try {
                 const workoutData = {
                     date: dateInput.value,
-                    name: nameInput.value.toUpperCase(),
+                    name: nameInput.value.trim().toUpperCase(),
+                    schoolId: userSchoolId,
                     school_id: userSchoolId,
-                    isMaxOutMode: isMaxOutMode,
-                    exercises: exercises,
+                    isMaxOutMode,
+                    exercises,
                     updatedAt: serverTimestamp()
                 };
 
@@ -449,80 +512,117 @@
             const container = document.getElementById('history-container');
             if (!userSchoolId || !container) return;
 
-            const q = query(collection(db, "workouts"), where("school_id", "==", userSchoolId));
-            const snap = await getDocs(q);
-            
-            container.innerHTML = '';
-            if (snap.empty) {
-                container.innerHTML = '<p class="text-white/20 text-[10px] uppercase font-black tracking-widest p-10 border-2 border-dashed border-white/5 text-center rounded-2xl">Archive Empty</p>';
-                return;
+            try {
+                let snap = await getDocs(query(collection(db, "workouts"), where("schoolId", "==", userSchoolId)));
+
+                // Legacy fallback for older workouts
+                if (snap.empty) {
+                    snap = await getDocs(query(collection(db, "workouts"), where("school_id", "==", userSchoolId)));
+                }
+
+                container.innerHTML = '';
+
+                if (snap.empty) {
+                    container.innerHTML = '<p class="text-white/20 text-[10px] uppercase font-black tracking-widest p-10 border-2 border-dashed border-white/5 text-center rounded-2xl">Archive Empty</p>';
+                    return;
+                }
+
+                const docs = snap.docs
+                    .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
+                    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                docs.forEach(workout => {
+                    const item = document.createElement('div');
+                    item.className = "bg-gray-900/60 p-5 rounded-xl border border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 hover:border-red-600/40 transition-all group";
+                    item.innerHTML = `
+                        <div class="flex flex-col">
+                            <span class="text-red-600 font-black text-[10px] uppercase tracking-widest italic leading-none mb-1">${workout.date || ''}</span>
+                            <h3 class="font-black uppercase text-white tracking-tighter text-lg">${workout.name || 'UNTITLED WORKOUT'}</h3>
+                        </div>
+                        <div class="flex gap-2 w-full sm:w-auto">
+                            <button onclick="duplicateWorkout('${workout.id}')" class="flex-1 bg-white/5 hover:bg-white hover:text-black text-white text-[10px] font-black px-4 py-2 rounded transition-all italic uppercase tracking-tighter">CLONE</button>
+                            <button onclick="editWorkout('${workout.id}')" class="flex-1 bg-white/5 hover:bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded transition-all italic uppercase tracking-tighter">EDIT</button>
+                            <button onclick="deleteWorkout('${workout.id}')" class="flex-1 bg-white/5 hover:bg-red-600 text-white text-[10px] font-black px-4 py-2 rounded transition-all italic uppercase tracking-tighter">DEL</button>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+            } catch (err) {
+                console.error("History load error:", err);
+                container.innerHTML = '<p class="text-red-500 text-[10px] uppercase font-black tracking-widest p-10 border border-red-500/20 text-center rounded-2xl">Unable To Load Archive</p>';
             }
-
-            const docs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-                                .sort((a, b) => new Date(b.date) - new Date(a.date));
-
-            docs.forEach(workout => {
-                const item = document.createElement('div');
-                item.className = "bg-gray-900/60 p-5 rounded-xl border border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 hover:border-red-600/40 transition-all group";
-                item.innerHTML = `
-                    <div class="flex flex-col">
-                        <span class="text-red-600 font-black text-[10px] uppercase tracking-widest italic leading-none mb-1">${workout.date}</span>
-                        <h3 class="font-black uppercase text-white tracking-tighter text-lg">${workout.name}</h3>
-                    </div>
-                    <div class="flex gap-2 w-full sm:w-auto">
-                        <button onclick="duplicateWorkout('${workout.id}')" class="flex-1 bg-white/5 hover:bg-white hover:text-black text-white text-[10px] font-black px-4 py-2 rounded transition-all italic uppercase tracking-tighter">CLONE</button>
-                        <button onclick="editWorkout('${workout.id}')" class="flex-1 bg-white/5 hover:bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded transition-all italic uppercase tracking-tighter">EDIT</button>
-                        <button onclick="deleteWorkout('${workout.id}')" class="flex-1 bg-white/5 hover:bg-red-600 text-white text-[10px] font-black px-4 py-2 rounded transition-all italic uppercase tracking-tighter">DEL</button>
-                    </div>
-                `;
-                container.appendChild(item);
-            });
         }
 
         window.editWorkout = async (id) => {
             const snap = await getDoc(doc(db, "workouts", id));
-            if (snap.exists()) {
-                const data = snap.data();
-                editingWorkoutId = id;
-                document.getElementById('workout-date').value = data.date;
-                document.getElementById('workout-name').value = data.name;
-                exercises = data.exercises;
-                isMaxOutMode = data.isMaxOutMode || false;
-                
-                const bg = document.getElementById('max-out-indicator');
-                const knob = document.getElementById('max-out-knob');
-                if (isMaxOutMode) {
-                    bg.classList.replace('bg-gray-700', 'bg-red-600');
-                    knob.classList.add('translate-x-6');
-                } else {
-                    bg.classList.replace('bg-red-600', 'bg-gray-700');
-                    knob.classList.remove('translate-x-6');
-                }
+            if (!snap.exists()) return;
 
-                renderExercises();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                document.getElementById('save-workout-btn').innerText = "Update Archive";
+            const data = snap.data();
+            editingWorkoutId = id;
+            document.getElementById('workout-date').value = data.date || '';
+            document.getElementById('workout-name').value = data.name || '';
+            exercises = Array.isArray(data.exercises) ? data.exercises : [];
+            isMaxOutMode = !!data.isMaxOutMode;
+            
+            const bg = document.getElementById('max-out-indicator');
+            const knob = document.getElementById('max-out-knob');
+            const addBtn = document.getElementById('add-exercise-btn');
+
+            if (isMaxOutMode) {
+                bg.classList.replace('bg-gray-700', 'bg-red-600');
+                knob.classList.add('translate-x-6');
+                addBtn?.classList.add('hidden');
+            } else {
+                bg.classList.replace('bg-red-600', 'bg-gray-700');
+                knob.classList.remove('translate-x-6');
+                addBtn?.classList.remove('hidden');
             }
+
+            renderExercises();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.getElementById('save-workout-btn').innerText = "Update Archive";
         };
 
         window.duplicateWorkout = async (id) => {
             const snap = await getDoc(doc(db, "workouts", id));
-            if (snap.exists()) {
-                const data = snap.data();
-                editingWorkoutId = null;
-                exercises = data.exercises;
-                document.getElementById('workout-date').value = '';
-                document.getElementById('workout-name').value = `${data.name} CLONE`;
-                renderExercises();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                document.getElementById('save-workout-btn').innerText = "Save Clone";
+            if (!snap.exists()) return;
+
+            const data = snap.data();
+            editingWorkoutId = null;
+            exercises = Array.isArray(data.exercises) ? data.exercises : [];
+            isMaxOutMode = !!data.isMaxOutMode;
+
+            document.getElementById('workout-date').value = '';
+            document.getElementById('workout-name').value = `${data.name || 'WORKOUT'} CLONE`;
+
+            const bg = document.getElementById('max-out-indicator');
+            const knob = document.getElementById('max-out-knob');
+            const addBtn = document.getElementById('add-exercise-btn');
+
+            if (isMaxOutMode) {
+                bg.classList.replace('bg-gray-700', 'bg-red-600');
+                knob.classList.add('translate-x-6');
+                addBtn?.classList.add('hidden');
+            } else {
+                bg.classList.replace('bg-red-600', 'bg-gray-700');
+                knob.classList.remove('translate-x-6');
+                addBtn?.classList.remove('hidden');
             }
+
+            renderExercises();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.getElementById('save-workout-btn').innerText = "Save Clone";
         };
 
         window.deleteWorkout = async (id) => {
-            if (confirm("DANGER: This training session will be permanently purged from the archive. Continue?")) {
+            if (!confirm("DANGER: This training session will be permanently purged from the archive. Continue?")) return;
+
+            try {
                 await deleteDoc(doc(db, "workouts", id));
-                loadHistory();
+                await loadHistory();
+            } catch (err) {
+                console.error("Delete workout failed:", err);
+                alert("Unable to delete workout.");
             }
         };
 

@@ -12,10 +12,14 @@
         .progress-container { background: #334155; border-radius: 20px; height: 10px; width: 100%; overflow: hidden; margin: 8px 0; border: 1px solid #475569; }
         .fill-green { background: linear-gradient(90deg, #22c55e, #16a34a); height: 100%; width: 0%; transition: width 0.5s ease; }
         .fill-red { background: linear-gradient(90deg, #ef4444, #b91c1c); height: 100%; width: 0%; transition: width 0.5s ease; }
-        input, select, textarea { 
-            background-color: #0c0c0e !important; color: white !important; 
-            border: 1px solid #2a2a2c !important; padding: 0.75rem !important; 
-            border-radius: 8px !important; width: 100%; margin-bottom: 0.75rem; 
+        input, select, textarea {
+            background-color: #0c0c0e !important;
+            color: white !important;
+            border: 1px solid #2a2a2c !important;
+            padding: 0.75rem !important;
+            border-radius: 8px !important;
+            width: 100%;
+            margin-bottom: 0.75rem;
         }
     </style>
 </head>
@@ -23,7 +27,6 @@
 
 <header class="bg-black border-b-2 border-red-700 p-4">
     <div class="flex justify-between items-center max-w-6xl mx-auto">
-        
         <div class="w-1/4 flex justify-start">
             <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1 rounded text-gray-300 hover:text-white transition-colors">← Lobby</button>
         </div>
@@ -47,315 +50,332 @@
             </div>
         </div>
 
-        <div class="w-1/4"></div> 
+        <div class="w-1/4"></div>
     </div>
 </header>
 
-    <div class="max-w-md mx-auto px-4 py-6 space-y-6">
-        
-        <div class="bg-[#111] border border-gray-800 p-5 rounded-2xl shadow-xl">
-            <div id="streak-container" class="hidden flex items-center justify-center gap-2 mb-4 bg-orange-500/10 border border-orange-500/30 p-2 rounded-lg w-fit mx-auto">
-                <span class="text-sm">🔥</span>
-                <span id="streak-count" class="text-[10px] font-black text-orange-500 uppercase italic tracking-tighter">0 DAY STREAK</span>
+<div class="max-w-md mx-auto px-4 py-6 space-y-6">
+
+    <div class="bg-[#111] border border-gray-800 p-5 rounded-2xl shadow-xl">
+        <div id="streak-container" class="hidden flex items-center justify-center gap-2 mb-4 bg-orange-500/10 border border-orange-500/30 p-2 rounded-lg w-fit mx-auto">
+            <span class="text-sm">🔥</span>
+            <span id="streak-count" class="text-[10px] font-black text-orange-500 uppercase italic tracking-tighter">0 DAY STREAK</span>
+        </div>
+
+        <div class="flex justify-between items-end mb-4">
+            <div>
+                <span class="text-[10px] font-black uppercase text-green-500 italic tracking-widest">Macro Command Center</span>
+                <h2 id="display-date-label" class="text-xs font-bold text-gray-400 uppercase">Today</h2>
             </div>
+            <button onclick="setTargets()" class="text-[9px] bg-white text-black px-3 py-1 rounded font-black uppercase hover:bg-gray-200">Set Targets</button>
+        </div>
 
-            <div class="flex justify-between items-end mb-4">
-                <div>
-                    <span class="text-[10px] font-black uppercase text-green-500 italic tracking-widest">Macro Command Center</span>
-                    <h2 id="display-date-label" class="text-xs font-bold text-gray-400 uppercase">Today</h2>
-                </div>
-                <button onclick="setTargets()" class="text-[9px] bg-white text-black px-3 py-1 rounded font-black uppercase hover:bg-gray-200">Set Targets</button>
+        <div class="grid grid-cols-2 gap-3 mb-4">
+            <div class="stat-card border-green-900/50">
+                <p class="text-[9px] text-green-500 uppercase font-bold">Calories</p>
+                <p class="text-xl font-black">
+                    <span id="day-cal">0</span>
+                    <span class="text-[10px] text-gray-500">/ <span id="target-cal-display">0</span></span>
+                </p>
+                <div class="progress-container"><div id="cal-fill" class="fill-green"></div></div>
             </div>
-
-            <div class="grid grid-cols-2 gap-3 mb-4">
-                <div class="stat-card border-green-900/50">
-                    <p class="text-[9px] text-green-500 uppercase font-bold">Calories</p>
-                    <p class="text-xl font-black"><span id="day-cal">0</span> <span class="text-[10px] text-gray-500">/ <span id="target-cal-display">0</span></span></p>
-                    <div class="progress-container"><div id="cal-fill" class="fill-green"></div></div>
-                </div>
-                <div class="stat-card border-red-900/50">
-                    <p class="text-[9px] text-red-500 uppercase font-bold">Protein</p>
-                    <p class="text-xl font-black"><span id="day-pro">0</span>g <span class="text-[10px] text-gray-500">/ <span id="target-pro-display">0</span>g</span></p>
-                    <div class="progress-container"><div id="pro-fill" class="fill-red"></div></div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-2">
-                <div class="stat-card bg-black">
-                    <p class="text-[8px] text-gray-500 uppercase">Carbs</p>
-                    <p id="day-carb" class="text-sm font-black text-blue-400">0g</p>
-                </div>
-                <div class="stat-card bg-black">
-                    <p class="text-[8px] text-gray-500 uppercase">Fats</p>
-                    <p id="day-fat" class="text-sm font-black text-yellow-500">0g</p>
-                </div>
-                <div class="stat-card bg-black border-blue-500/30 p-3 rounded-lg border">
-                    <p class="text-[8px] text-blue-400 uppercase tracking-widest leading-none mb-1">Water</p>
-                    <p id="day-water" class="text-sm font-black text-white">0 Cups</p>
-
-                    <div class="w-full bg-blue-900/20 h-1.5 rounded-full mt-2 overflow-hidden">
-                        
-                        <div id="water-progress-bar" 
-                            class="bg-blue-500 h-full transition-all duration-500 ease-out" 
-                            style="width: 0%">
-                        </div>
-
-                    </div>
-                </div>
+            <div class="stat-card border-red-900/50">
+                <p class="text-[9px] text-red-500 uppercase font-bold">Protein</p>
+                <p class="text-xl font-black">
+                    <span id="day-pro">0g</span>
+                    <span class="text-[10px] text-gray-500"> / <span id="target-pro-display">0</span>g</span>
+                </p>
+                <div class="progress-container"><div id="pro-fill" class="fill-red"></div></div>
             </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
-            <section class="bg-[#1a1a1c] p-4 rounded-2xl border border-blue-900/30">
-                <h2 class="text-[10px] font-black uppercase italic text-blue-400 mb-3">Add Water</h2>
-                <div class="flex gap-2">
-                    <button onclick="addWater(1)" class="flex-1 bg-blue-900/40 border border-blue-500/50 py-2 rounded font-black text-xs">+1</button>
-                    <button onclick="addWater(4)" class="flex-1 bg-blue-900/40 border border-blue-500/50 py-2 rounded font-black text-xs">+4</button>
-                    <button onclick="undoLastWater()" class="text-red-500 text-[10px] font-black uppercase ml-2 opacity-70 hover:opacity-100">Undo Last</button>
-                </div>
-            </section>
-            
-            <section class="bg-[#1a1a1c] p-4 rounded-2xl border border-gray-800">
-                <div class="flex justify-between items-center mb-2">
-                    <div class="flex items-center gap-2">
-                        <h2 class="text-[8px] font-black uppercase italic text-white">Body Weight</h2>
-                        <span id="last-weight-display" class="text-[10px] font-bold text-gray-500">-- lbs</span>
-                    </div>
-                    <div class="flex items-center gap-2 text-right">
-                        <h2 class="text-[8px] font-black uppercase italic text-white">Height</h2>
-                        <span id="last-height-display" class="text-[10px] font-bold text-gray-500">-- in</span>
-                    </div>
-                </div>
-
-                <div class="flex flex-col gap-2">
-                    <div class="flex gap-1">
-                        <input id="quick-weight" type="number" placeholder="Lbs" class="flex-1 !m-0 !py-2 text-sm text-center bg-black border-gray-800 text-white rounded">
-                        <input id="quick-height" type="number" placeholder="Inches" class="flex-1 !m-0 !py-2 text-sm text-center bg-black border-gray-800 text-white rounded">
-                    </div>
-                    <button onclick="saveQuickStats()" class="w-full bg-white text-black py-2 rounded-lg font-black uppercase text-[10px] tracking-wider shadow-md hover:bg-gray-200 transition-colors">Update</button>
-                </div>
-            </section>
-
-                </div>
-            </section>
-        </div>
-
-        <section class="bg-[#1a1a1c] p-6 rounded-2xl border border-[#2a2a2c] shadow-2xl">
-            <h2 class="text-center font-black uppercase italic text-green-500 mb-6 tracking-tight">Log Fuel Entry</h2>
-            
-            <label class="text-[9px] uppercase font-bold text-gray-400 ml-1">Entry Date (Select if logging previous day)</label>
-            <input type="date" id="entry-date" class="..." onchange="updateDailyTotals()">
-
-            <select id="meal-type">
-                <option value="Breakfast">Breakfast</option>
-                <option value="Lunch">Lunch</option>
-                <option value="Dinner">Dinner</option>
-                <option value="Snack">Snack / Shake</option>
-            </select>
-
-            <div class="grid grid-cols-2 gap-2">
-                <div>
-                    <label class="text-[8px] uppercase font-bold text-gray-500 ml-1">Calories</label>
-                    <input id="calories" type="number" placeholder="0">
-                </div>
-                <div>
-                    <label class="text-[8px] uppercase font-bold text-gray-500 ml-1">Protein (g)</label>
-                    <input id="protein" type="number" placeholder="0">
-                </div>
-                <div>
-                    <label class="text-[8px] uppercase font-bold text-gray-500 ml-1">Carbs (g)</label>
-                    <input id="carbs" type="number" placeholder="0">
-                </div>
-                <div>
-                    <label class="text-[8px] uppercase font-bold text-gray-500 ml-1">Fats (g)</label>
-                    <input id="fats" type="number" placeholder="0">
-                </div>
+        <div class="grid grid-cols-3 gap-2">
+            <div class="stat-card bg-black">
+                <p class="text-[8px] text-gray-500 uppercase">Carbs</p>
+                <p id="day-carb" class="text-sm font-black text-blue-400">0g</p>
             </div>
-            
-            <textarea id="meal-desc" placeholder="What did you eat?" rows="2"></textarea>
-            
-            <button onclick="saveMeal()" id="log-btn" class="w-full bg-green-600 hover:bg-green-700 py-4 rounded-xl font-black uppercase shadow-lg transition-all active:scale-95">Record Meal</button>
-        </section>
-
-        <section class="bg-[#111] p-6 rounded-2xl border border-gray-800 shadow-2xl mt-6">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="font-black uppercase italic text-gray-400 tracking-tight text-sm">Recent Fuel Log</h2>
-                <span class="text-[9px] text-gray-600 font-bold uppercase">Last 5 Entries</span>
+            <div class="stat-card bg-black">
+                <p class="text-[8px] text-gray-500 uppercase">Fats</p>
+                <p id="day-fat" class="text-sm font-black text-yellow-500">0g</p>
             </div>
-            
-            <div id="history-list" class="space-y-3">
-                <p class="text-[10px] text-gray-600 italic text-center py-4">Loading history...</p>
-            </div>
-        </section>
-
-        <div class="max-w-md mx-auto px-4 pb-8">
-            <button onclick="showWeeklySummary()" class="w-full bg-gray-900 border border-gray-700 text-gray-400 py-3 rounded-xl font-black uppercase text-xs hover:text-white transition-all">
-                View 7-Day Performance Report
-            </button>
-        </div>
-
-        <div id="weekly-modal" class="hidden fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4">
-            <div class="bg-[#1a1a1c] border border-gray-800 w-full max-w-sm rounded-3xl p-6 relative overflow-y-auto max-h-[90vh]">
-                <button onclick="closeWeekly()" class="absolute top-4 right-4 text-gray-500 hover:text-white">✕</button>
-                
-                <div class="flex justify-between items-start mb-1">
-                    <h2 class="text-xl font-black uppercase italic text-green-500">Weekly Report</h2>
-                    <div class="bg-orange-500/10 border border-orange-500/30 px-2 py-1 rounded flex items-center gap-1">
-                        <span class="text-[10px]">🔥</span>
-                        <span id="pb-streak-display" class="text-[9px] font-black text-orange-500 uppercase">PB: 0</span>
-                    </div>
+            <div class="stat-card bg-black border-blue-500/30 p-3 rounded-lg border">
+                <p class="text-[8px] text-blue-400 uppercase tracking-widest leading-none mb-1">Water</p>
+                <p id="day-water" class="text-sm font-black text-white">0 Cups</p>
+                <div class="w-full bg-blue-900/20 h-1.5 rounded-full mt-2 overflow-hidden">
+                    <div id="water-progress-bar" class="bg-blue-500 h-full transition-all duration-500 ease-out" style="width: 0%"></div>
                 </div>
-                <p class="text-[10px] text-gray-500 uppercase font-bold mb-6 tracking-widest text-left">Last 7 Days Consistency</p>
-
-                <div class="space-y-4">
-                    <div class="bg-black p-4 rounded-xl border border-gray-800">
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="text-[10px] font-bold text-gray-400 uppercase">Avg Calories</span>
-                            <span id="avg-cal-val" class="text-lg font-black text-white">0</span>
-                        </div>
-                        <div class="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
-                            <div id="avg-cal-bar" class="h-full bg-green-500 transition-all duration-1000" style="width: 0%"></div>
-                        </div>
-                    </div>
-
-                    <div class="bg-black p-4 rounded-xl border border-gray-800">
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="text-[10px] font-bold text-gray-400 uppercase">Avg Protein</span>
-                            <span id="avg-pro-val" class="text-lg font-black text-white">0g</span>
-                        </div>
-                        <div class="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
-                            <div id="avg-pro-bar" class="h-full bg-red-500 transition-all duration-1000" style="width: 0%"></div>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-2">
-                        <div class="bg-black p-3 rounded-xl border border-gray-800">
-                            <p class="text-[8px] font-bold text-gray-500 uppercase">Total Water</p>
-                            <p id="total-water-val" class="text-sm font-black text-blue-400">0 Cups</p>
-                        </div>
-                        <div class="bg-black p-3 rounded-xl border border-gray-800">
-                            <p class="text-[8px] font-bold text-gray-500 uppercase">Avg Weight</p>
-                            <p id="avg-weight-val" class="text-sm font-black text-white">-- lbs</p>
-                        </div>
-                    </div>
-
-                    <div class="bg-black p-4 rounded-xl border border-gray-800">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase mb-4 text-center">Weekly Macro Distribution</p>
-                        <div class="flex items-center justify-around">
-                            <div id="macro-pie" class="w-20 h-20 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)]" 
-                                style="background: conic-gradient(#ef4444 0% 33%, #3b82f6 33% 66%, #eab308 66% 100%);">
-                            </div>
-                            
-                            <div class="space-y-1">
-                                <div class="flex items-center gap-2 text-[9px] font-black uppercase">
-                                    <div class="w-2 h-2 bg-red-500 rounded-full"></div> Protein: <span id="pie-pro-pct">0%</span>
-                                </div>
-                                <div class="flex items-center gap-2 text-[9px] font-black uppercase">
-                                    <div class="w-2 h-2 bg-blue-500 rounded-full"></div> Carbs: <span id="pie-carb-pct">0%</span>
-                                </div>
-                                <div class="flex items-center gap-2 text-[9px] font-black uppercase">
-                                    <div class="w-2 h-2 bg-yellow-500 rounded-full"></div> Fats: <span id="pie-fat-pct">0%</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="coach-insight" class="mt-4 p-3 bg-[#111] rounded-lg border-l-2 border-green-500">
-                            <p class="text-[8px] font-black text-green-500 uppercase mb-1">Coach's Insight</p>
-                            <p id="insight-text" class="text-[10px] italic text-gray-400 leading-tight">
-                                Gathering data to analyze your fuel performance...
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <button onclick="closeWeekly()" class="w-full mt-6 bg-white text-black py-4 rounded-xl font-black uppercase text-xs shadow-lg active:scale-95 transition-all">Back to Kitchen</button>
             </div>
         </div>
     </div>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-red-900/30 px-6 py-4 flex justify-between items-center z-50">
-        <button onclick="location.href='board.html'" class="text-red-600 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Board</span></button>
-        <button onclick="location.href='rack.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">The Rack</span></button>
-        <button onclick="location.href='kitchen.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Kitchen</span></button>
-        <button onclick="location.href='profile.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
-    </nav>
+    <div class="grid grid-cols-2 gap-3">
+        <section class="bg-[#1a1a1c] p-4 rounded-2xl border border-blue-900/30">
+            <h2 class="text-[10px] font-black uppercase italic text-blue-400 mb-3">Add Water</h2>
+            <div class="flex gap-2">
+                <button onclick="addWater(1)" class="flex-1 bg-blue-900/40 border border-blue-500/50 py-2 rounded font-black text-xs">+1</button>
+                <button onclick="addWater(4)" class="flex-1 bg-blue-900/40 border border-blue-500/50 py-2 rounded font-black text-xs">+4</button>
+                <button onclick="undoLastWater()" class="text-red-500 text-[10px] font-black uppercase ml-2 opacity-70 hover:opacity-100">Undo Last</button>
+            </div>
+        </section>
 
+        <section class="bg-[#1a1a1c] p-4 rounded-2xl border border-gray-800">
+            <div class="flex justify-between items-center mb-2">
+                <div class="flex items-center gap-2">
+                    <h2 class="text-[8px] font-black uppercase italic text-white">Body Weight</h2>
+                    <span id="last-weight-display" class="text-[10px] font-bold text-gray-500">-- lbs</span>
+                </div>
+                <div class="flex items-center gap-2 text-right">
+                    <h2 class="text-[8px] font-black uppercase italic text-white">Height</h2>
+                    <span id="last-height-display" class="text-[10px] font-bold text-gray-500">-- in</span>
+                </div>
+            </div>
 
- <script type="module">
-    // 1. Firebase Configuration & Imports
-    import { firebaseConfig } from './js/firebase-config.js';
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { 
-        getFirestore, doc, getDoc, setDoc, addDoc, deleteDoc, collection, serverTimestamp, 
-        query, orderBy, limit, getDocs, onSnapshot, updateDoc,
-        where as fbWhere 
+            <div class="flex flex-col gap-2">
+                <div class="flex gap-1">
+                    <input id="quick-weight" type="number" placeholder="Lbs" class="flex-1 !m-0 !py-2 text-sm text-center bg-black border-gray-800 text-white rounded">
+                    <input id="quick-height" type="number" placeholder="Inches" class="flex-1 !m-0 !py-2 text-sm text-center bg-black border-gray-800 text-white rounded">
+                </div>
+                <button onclick="saveQuickStats()" class="w-full bg-white text-black py-2 rounded-lg font-black uppercase text-[10px] tracking-wider shadow-md hover:bg-gray-200 transition-colors">Update</button>
+            </div>
+        </section>
+    </div>
+
+    <section class="bg-[#1a1a1c] p-6 rounded-2xl border border-[#2a2a2c] shadow-2xl">
+        <h2 class="text-center font-black uppercase italic text-green-500 mb-6 tracking-tight">Log Fuel Entry</h2>
+
+        <label class="text-[9px] uppercase font-bold text-gray-400 ml-1">Entry Date (Select if logging previous day)</label>
+        <input type="date" id="entry-date" onchange="updateDailyTotals(); fetchMealHistory();">
+
+        <select id="meal-type">
+            <option value="Breakfast">Breakfast</option>
+            <option value="Lunch">Lunch</option>
+            <option value="Dinner">Dinner</option>
+            <option value="Snack">Snack / Shake</option>
+        </select>
+
+        <div class="grid grid-cols-2 gap-2">
+            <div>
+                <label class="text-[8px] uppercase font-bold text-gray-500 ml-1">Calories</label>
+                <input id="calories" type="number" placeholder="0">
+            </div>
+            <div>
+                <label class="text-[8px] uppercase font-bold text-gray-500 ml-1">Protein (g)</label>
+                <input id="protein" type="number" placeholder="0">
+            </div>
+            <div>
+                <label class="text-[8px] uppercase font-bold text-gray-500 ml-1">Carbs (g)</label>
+                <input id="carbs" type="number" placeholder="0">
+            </div>
+            <div>
+                <label class="text-[8px] uppercase font-bold text-gray-500 ml-1">Fats (g)</label>
+                <input id="fats" type="number" placeholder="0">
+            </div>
+        </div>
+
+        <textarea id="meal-desc" placeholder="What did you eat?" rows="2"></textarea>
+
+        <button onclick="saveMeal()" id="log-btn" class="w-full bg-green-600 hover:bg-green-700 py-4 rounded-xl font-black uppercase shadow-lg transition-all active:scale-95">
+            Record Meal
+        </button>
+    </section>
+
+    <section class="bg-[#111] p-6 rounded-2xl border border-gray-800 shadow-2xl mt-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="font-black uppercase italic text-gray-400 tracking-tight text-sm">Recent Fuel Log</h2>
+            <span class="text-[9px] text-gray-600 font-bold uppercase">Last 10 Entries</span>
+        </div>
+
+        <div id="history-list" class="space-y-3">
+            <p class="text-[10px] text-gray-600 italic text-center py-4">Loading history...</p>
+        </div>
+    </section>
+
+    <div class="max-w-md mx-auto px-4 pb-8">
+        <button onclick="showWeeklySummary()" class="w-full bg-gray-900 border border-gray-700 text-gray-400 py-3 rounded-xl font-black uppercase text-xs hover:text-white transition-all">
+            View 7-Day Performance Report
+        </button>
+    </div>
+
+    <div id="weekly-modal" class="hidden fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4">
+        <div class="bg-[#1a1a1c] border border-gray-800 w-full max-w-sm rounded-3xl p-6 relative overflow-y-auto max-h-[90vh]">
+            <button onclick="closeWeekly()" class="absolute top-4 right-4 text-gray-500 hover:text-white">✕</button>
+
+            <div class="flex justify-between items-start mb-1">
+                <h2 class="text-xl font-black uppercase italic text-green-500">Weekly Report</h2>
+                <div class="bg-orange-500/10 border border-orange-500/30 px-2 py-1 rounded flex items-center gap-1">
+                    <span class="text-[10px]">🔥</span>
+                    <span id="pb-streak-display" class="text-[9px] font-black text-orange-500 uppercase">PB: 0</span>
+                </div>
+            </div>
+            <p class="text-[10px] text-gray-500 uppercase font-bold mb-6 tracking-widest text-left">Last 7 Days Consistency</p>
+
+            <div class="space-y-4">
+                <div class="bg-black p-4 rounded-xl border border-gray-800">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[10px] font-bold text-gray-400 uppercase">Avg Calories</span>
+                        <span id="avg-cal-val" class="text-lg font-black text-white">0</span>
+                    </div>
+                    <div class="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
+                        <div id="avg-cal-bar" class="h-full bg-green-500 transition-all duration-1000" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="bg-black p-4 rounded-xl border border-gray-800">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[10px] font-bold text-gray-400 uppercase">Avg Protein</span>
+                        <span id="avg-pro-val" class="text-lg font-black text-white">0g</span>
+                    </div>
+                    <div class="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
+                        <div id="avg-pro-bar" class="h-full bg-red-500 transition-all duration-1000" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-black p-3 rounded-xl border border-gray-800">
+                        <p class="text-[8px] font-bold text-gray-500 uppercase">Total Water</p>
+                        <p id="total-water-val" class="text-sm font-black text-blue-400">0 Cups</p>
+                    </div>
+                    <div class="bg-black p-3 rounded-xl border border-gray-800">
+                        <p class="text-[8px] font-bold text-gray-500 uppercase">Avg Weight</p>
+                        <p id="avg-weight-val" class="text-sm font-black text-white">-- lbs</p>
+                    </div>
+                </div>
+
+                <div class="bg-black p-4 rounded-xl border border-gray-800">
+                    <p class="text-[10px] font-bold text-gray-400 uppercase mb-4 text-center">Weekly Macro Distribution</p>
+                    <div class="flex items-center justify-around">
+                        <div id="macro-pie" class="w-20 h-20 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)]"
+                             style="background: conic-gradient(#ef4444 0% 33%, #3b82f6 33% 66%, #eab308 66% 100%);"></div>
+
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2 text-[9px] font-black uppercase">
+                                <div class="w-2 h-2 bg-red-500 rounded-full"></div> Protein: <span id="pie-pro-pct">0%</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-[9px] font-black uppercase">
+                                <div class="w-2 h-2 bg-blue-500 rounded-full"></div> Carbs: <span id="pie-carb-pct">0%</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-[9px] font-black uppercase">
+                                <div class="w-2 h-2 bg-yellow-500 rounded-full"></div> Fats: <span id="pie-fat-pct">0%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="coach-insight" class="mt-4 p-3 bg-[#111] rounded-lg border-l-2 border-green-500">
+                        <p class="text-[8px] font-black text-green-500 uppercase mb-1">Coach's Insight</p>
+                        <p id="insight-text" class="text-[10px] italic text-gray-400 leading-tight">
+                            Gathering data to analyze your fuel performance...
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="closeWeekly()" class="w-full mt-6 bg-white text-black py-4 rounded-xl font-black uppercase text-xs shadow-lg active:scale-95 transition-all">
+                Back to Kitchen
+            </button>
+        </div>
+    </div>
+</div>
+
+<nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-red-900/30 px-6 py-4 flex justify-between items-center z-50">
+    <button onclick="location.href='board.html'" class="text-red-600 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Board</span></button>
+    <button onclick="location.href='rack.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">The Rack</span></button>
+    <button onclick="location.href='kitchen.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Kitchen</span></button>
+    <button onclick="location.href='profile.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
+</nav>
+
+<script type="module">
+    import { db, auth } from './js/firebase-config.js';
+    import {
+        doc, setDoc, addDoc, deleteDoc, collection, serverTimestamp,
+        query, orderBy, limit, getDocs, onSnapshot, updateDoc, where as fbWhere
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { applyTheme } from './js/theme.js'; // Fixed path
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { applyTheme } from './js/theme.js';
 
-    // 2. Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-
-    // 3. Global Variables
-    let calGoal = 2500; 
+    let calGoal = 2500;
     let proGoal = 150;
-    let waterGoal = 16; 
+    let waterGoal = 16;
 
-    // Initial UI Setup
-        const entryDateInput = document.getElementById('entry-date');
-        const today = new Date().toISOString().split('T')[0]; // Gets YYYY-MM-DD format
+    const entryDateInput = document.getElementById('entry-date');
+    const today = new Date().toISOString().split('T')[0];
 
-        if (entryDateInput) {
-            entryDateInput.value = today; // Set default to today
-            entryDateInput.max = today;   // PREVENT FUTURE DATES
+    if (entryDateInput) {
+        entryDateInput.value = today;
+        entryDateInput.max = today;
+    }
+
+    function safeText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.innerText = value;
+    }
+
+    function getSelectedDate() {
+        const selectedDate = document.getElementById('entry-date')?.value;
+        return selectedDate || null;
+    }
+
+    function getLegacyDisplayDate(selectedDate) {
+        if (!selectedDate) return "";
+        return new Date(selectedDate + 'T00:00:00').toLocaleDateString();
+    }
+
+    function updateWaterBar(water) {
+        const waterBar = document.getElementById('water-progress-bar');
+        if (waterBar) {
+            waterBar.style.width = `${Math.min((water / waterGoal) * 100, 100)}%`;
         }
+    }
 
-    // 4. Auth & Theme Integration
     onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            onSnapshot(doc(db, "users", user.uid), async (userDoc) => {
-                if (userDoc.exists()) {
-                    const userData = userDoc.data();
-                    const schoolID = userData.school_id || userData.schoolId;
-                    if (schoolID) await applyTheme(db, schoolID);
-                    
-                    if (userData.weight) {
-                        const wDisplay = document.getElementById('last-weight-display');
-                        if (wDisplay) wDisplay.innerText = userData.weight + " lbs";
-                    }
-                }
-            });
-
-            onSnapshot(doc(db, "recruiting_profiles", user.uid), async (snap) => {
-                if (snap.exists()) {
-                    const data = snap.data();
-                    calGoal = data.dailyCalorieGoal || 2500;
-                    proGoal = data.dailyProteinGoal || 150;
-                    waterGoal = data.dailyWaterGoal || 16;
-                    
-                    if (document.getElementById('target-cal-display')) document.getElementById('target-cal-display').innerText = calGoal;
-                    if (document.getElementById('target-pro-display')) document.getElementById('target-pro-display').innerText = proGoal;
-                    
-                    window.updateDailyTotals();
-                    fetchMealHistory();
-                }
-            });
-        } else {
+        if (!user) {
             location.href = 'index.html';
+            return;
         }
-    });
 
-    // 5. Global Window Functions (RESTORED)
+        onSnapshot(doc(db, "users", user.uid), async (userDoc) => {
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                const schoolId = userData.schoolId || userData.school_id;
+
+                if (schoolId) {
+                    await applyTheme(db, schoolId);
+                }
+
+                if (userData.weight) safeText('last-weight-display', `${userData.weight} lbs`);
+                if (userData.height) safeText('last-height-display', `${userData.height} in`);
+            }
+        });
+
+        onSnapshot(doc(db, "recruiting_profiles", user.uid), async (snap) => {
+            if (snap.exists()) {
+                const data = snap.data();
+
+                calGoal = data.dailyCalorieGoal || 2500;
+                proGoal = data.dailyProteinGoal || 150;
+                waterGoal = data.dailyWaterGoal || 16;
+
+                safeText('target-cal-display', calGoal);
+                safeText('target-pro-display', proGoal);
+
+                if (data.weight) safeText('last-weight-display', `${data.weight} lbs`);
+                if (data.height) safeText('last-height-display', `${data.height} in`);
+
+                window.updateDailyTotals();
+                fetchMealHistory();
+            }
+        });
+    });
 
     window.setTargets = async () => {
         const newCal = prompt("Daily Calorie Target:", calGoal);
         const newPro = prompt("Daily Protein Target (g):", proGoal);
+        const newWater = prompt("Daily Water Goal (cups):", waterGoal);
+
         if (newCal && newPro) {
             await updateDoc(doc(db, "recruiting_profiles", auth.currentUser.uid), {
                 dailyCalorieGoal: Number(newCal),
-                dailyProteinGoal: Number(newPro)
+                dailyProteinGoal: Number(newPro),
+                dailyWaterGoal: newWater ? Number(newWater) : waterGoal
             });
         }
     };
@@ -368,26 +388,38 @@
 
         const hVal = htInput.value ? Number(htInput.value) : null;
         const wVal = bwInput.value ? Number(bwInput.value) : null;
+
         const syncData = { lastSync: serverTimestamp() };
         if (hVal) syncData.height = hVal;
-        if (wVal) syncData.weight = wVal;
+        if (wVal) {
+            syncData.weight = wVal;
+            syncData.bodyWeight = wVal;
+        }
 
-        await setDoc(doc(db, "users", user.uid), syncData, { merge: true });
-        await setDoc(doc(db, "recruiting_profiles", user.uid), syncData, { merge: true });
+        await Promise.all([
+            setDoc(doc(db, "users", user.uid), syncData, { merge: true }),
+            setDoc(doc(db, "recruiting_profiles", user.uid), syncData, { merge: true })
+        ]);
+
         alert("Stats Synced!");
-        htInput.value = ''; bwInput.value = '';
+        htInput.value = '';
+        bwInput.value = '';
     };
 
     window.addWater = async (cups) => {
         if (!auth.currentUser) return;
-        const dateStr = new Date(document.getElementById('entry-date').value).toLocaleDateString();
-        
+
+        const selectedDate = getSelectedDate();
+        if (!selectedDate) return;
+
         await addDoc(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), {
             mealType: 'Water',
             cups: Number(cups),
-            date: dateStr,
+            dateKey: selectedDate,
+            date: getLegacyDisplayDate(selectedDate),
             timestamp: Date.now()
         });
+
         window.updateDailyTotals();
         fetchMealHistory();
     };
@@ -397,23 +429,19 @@
         if (!user) return;
 
         try {
-            // Find the most recent water entry for this user
             const q = query(
-                collection(db, "recruiting_profiles", user.uid, "meals"), 
-                fbWhere("mealType", "==", "Water"), 
-                orderBy("timestamp", "desc"), 
+                collection(db, "recruiting_profiles", user.uid, "meals"),
+                fbWhere("mealType", "==", "Water"),
+                orderBy("timestamp", "desc"),
                 limit(1)
             );
-            
+
             const snap = await getDocs(q);
-            
+
             if (!snap.empty) {
-                // Delete the specific document found
                 await deleteDoc(doc(db, "recruiting_profiles", user.uid, "meals", snap.docs[0].id));
-                
-                // Refresh the UI
                 window.updateDailyTotals();
-                if (typeof fetchMealHistory === "function") fetchMealHistory();
+                fetchMealHistory();
             } else {
                 alert("No water entries found to undo.");
             }
@@ -423,9 +451,10 @@
     };
 
     window.saveMeal = async () => {
-        const selectedDate = document.getElementById('entry-date').value;
+        const selectedDate = getSelectedDate();
         const todayStr = new Date().toISOString().split('T')[0];
 
+        if (!selectedDate) return;
         if (selectedDate > todayStr) {
             alert("You cannot log fuel for the future. Focus on today's targets!");
             return;
@@ -436,15 +465,21 @@
 
         await addDoc(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), {
             mealType: document.getElementById('meal-type').value,
+            mealName: document.getElementById('meal-desc').value || document.getElementById('meal-type').value,
             calories: cVal,
             protein: Number(document.getElementById('protein').value) || 0,
             carbs: Number(document.getElementById('carbs').value) || 0,
             fats: Number(document.getElementById('fats').value) || 0,
-            date: new Date(document.getElementById('entry-date').value).toLocaleDateString(),
+            dateKey: selectedDate,
+            date: getLegacyDisplayDate(selectedDate),
             timestamp: serverTimestamp()
         });
 
-        ["calories", "protein", "carbs", "fats"].forEach(id => document.getElementById(id).value = '');
+        ['calories', 'protein', 'carbs', 'fats', 'meal-desc'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+
         window.updateDailyTotals();
         fetchMealHistory();
     };
@@ -453,17 +488,18 @@
         const user = auth.currentUser;
         if (!user) return;
 
-        const selectedDate = document.getElementById('entry-date')?.value;
+        const selectedDate = getSelectedDate();
         if (!selectedDate) return;
-        
-        const dateObj = new Date(selectedDate);
-        dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
-        const dateStr = dateObj.toLocaleDateString();
 
-        const q = query(collection(db, "recruiting_profiles", user.uid, "meals"), fbWhere("date", "==", dateStr));
+        const q = query(
+            collection(db, "recruiting_profiles", user.uid, "meals"),
+            fbWhere("dateKey", "==", selectedDate)
+        );
+
         const snap = await getDocs(q);
 
         let c = 0, p = 0, carb = 0, fat = 0, water = 0;
+
         snap.forEach(d => {
             const m = d.data();
             if (m.mealType === 'Water') {
@@ -476,38 +512,63 @@
             }
         });
 
-        // UI Updates - Ensure these IDs match your HTML exactly
-        const safeSet = (id, val) => { 
-            const el = document.getElementById(id);
-            if (el) el.innerText = val; 
-        };
+        safeText('day-cal', c);
+        safeText('day-pro', `${p}g`);
+        safeText('day-carb', `${carb}g`);
+        safeText('day-fat', `${fat}g`);
+        safeText('day-water', `${water} Cups`);
 
-        safeSet('day-cal', c);
-        safeSet('day-pro', p + "g");
-        safeSet('day-carb', carb + "g"); // This updates the Carb display
-        safeSet('day-fat', fat + "g");   // This updates the Fat display
-        safeSet('day-water', water + " Cups");
-        
-        // Update Progress Bars
-        if (calGoal > 0 && document.getElementById('cal-fill')) 
-            document.getElementById('cal-fill').style.width = Math.min((c / calGoal) * 100, 100) + "%";
-        if (proGoal > 0 && document.getElementById('pro-fill')) 
-            document.getElementById('pro-fill').style.width = Math.min((p / proGoal) * 100, 100) + "%";
+        const calFill = document.getElementById('cal-fill');
+        const proFill = document.getElementById('pro-fill');
+
+        if (calGoal > 0 && calFill) calFill.style.width = `${Math.min((c / calGoal) * 100, 100)}%`;
+        if (proGoal > 0 && proFill) proFill.style.width = `${Math.min((p / proGoal) * 100, 100)}%`;
+
+        updateWaterBar(water);
+
+        const displayDate = new Date(selectedDate + 'T00:00:00');
+        safeText('display-date-label', displayDate.toLocaleDateString([], {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        }));
     };
 
     async function fetchMealHistory() {
         const container = document.getElementById('history-list');
-        const dateStr = new Date(document.getElementById('entry-date').value).toLocaleDateString();
-        const q = query(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"),
-                        fbWhere("date", "==", dateStr), orderBy("timestamp", "desc"), limit(10));
+        if (!container || !auth.currentUser) return;
+
+        const selectedDate = getSelectedDate();
+        if (!selectedDate) return;
+
+        const q = query(
+            collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"),
+            fbWhere("dateKey", "==", selectedDate),
+            orderBy("timestamp", "desc"),
+            limit(10)
+        );
 
         const snap = await getDocs(q);
         container.innerHTML = '';
+
+        if (snap.empty) {
+            container.innerHTML = '<p class="text-[10px] text-gray-600 italic text-center py-4">No entries for this date.</p>';
+            return;
+        }
+
         snap.forEach(docSnap => {
             const m = docSnap.data();
             const div = document.createElement('div');
-            div.className = "bg-zinc-900 p-2 mb-2 rounded flex justify-between text-xs";
-            div.innerHTML = `<span>${m.mealType}</span> <span>${m.calories || m.cups + ' Cups'}</span>`;
+            div.className = "bg-zinc-900 p-3 rounded flex justify-between items-center text-xs border border-zinc-800";
+            div.innerHTML = `
+                <div>
+                    <div class="font-black uppercase text-white">${m.mealType || 'Entry'}</div>
+                    <div class="text-gray-500 text-[10px]">${m.mealName || ''}</div>
+                </div>
+                <div class="font-bold text-gray-300">
+                    ${m.mealType === 'Water' ? `${m.cups || 0} Cups` : `${m.calories || 0} CAL`}
+                </div>
+            `;
             container.appendChild(div);
         });
     }
@@ -518,42 +579,36 @@
 
         document.getElementById('weekly-modal').classList.remove('hidden');
 
-        // 1. Calculate the date 7 days ago at midnight
         const now = new Date();
         const startOfRange = new Date();
         startOfRange.setDate(now.getDate() - 7);
         startOfRange.setHours(0, 0, 0, 0);
 
         try {
-            // 2. Fetch all meals—we'll filter them manually to ensure today is included
             const q = query(
                 collection(db, "recruiting_profiles", user.uid, "meals"),
                 orderBy("timestamp", "desc"),
-                limit(100) // Increase limit to ensure we get the full week
+                limit(100)
             );
+
             const snap = await getDocs(q);
 
             let tCals = 0, tPro = 0, tCarb = 0, tFat = 0, tWater = 0;
-            let daysActive = new Set();
-            let totalWeight = 0;
-            let weightEntries = 0;
+            const daysActive = new Set();
 
             snap.forEach(docSnap => {
                 const d = docSnap.data();
-                
-                // Convert Firestore timestamp or numeric timestamp to Date object
-                const entryDate = d.timestamp?.seconds 
-                    ? new Date(d.timestamp.seconds * 1000) 
+                const entryDate = d.timestamp?.seconds
+                    ? new Date(d.timestamp.seconds * 1000)
                     : new Date(d.timestamp);
 
-                // 3. Manual Filter: Only process if within the last 7 days OR matches today's date string
-                const todayStr = now.toLocaleDateString();
-                if (entryDate >= startOfRange || d.date === todayStr) {
-                    daysActive.add(d.date);
-                    
+                if (entryDate >= startOfRange) {
+                    const dayKey = d.dateKey || d.date;
+                    if (dayKey) daysActive.add(dayKey);
+
                     if (d.mealType === 'Water') {
                         tWater += Number(d.cups || 0);
-                    } else if (d.mealType !== 'Weight') { // Assuming weight might be in here
+                    } else {
                         tCals += Number(d.calories || 0);
                         tPro += Number(d.protein || 0);
                         tCarb += Number(d.carbs || 0);
@@ -562,36 +617,55 @@
                 }
             });
 
-            // 4. Update UI with safe divisors
             const dayCount = daysActive.size || 1;
             const avgCal = Math.round(tCals / dayCount);
             const avgPro = Math.round(tPro / dayCount);
+            const avgCarb = Math.round(tCarb / dayCount);
+            const avgFat = Math.round(tFat / dayCount);
 
-            document.getElementById('avg-cal-val').innerText = avgCal;
-            document.getElementById('avg-pro-val').innerText = avgPro + "g";
-            document.getElementById('total-water-val').innerText = tWater + " Cups";
+            safeText('avg-cal-val', avgCal);
+            safeText('avg-pro-val', `${avgPro}g`);
+            safeText('total-water-val', `${tWater} Cups`);
 
-            // Progress Bars
-            document.getElementById('avg-cal-bar').style.width = Math.min((avgCal / (calGoal || 2500)) * 100, 100) + "%";
-            document.getElementById('avg-pro-bar').style.width = Math.min((avgPro / (proGoal || 150)) * 100, 100) + "%";
+            document.getElementById('avg-cal-bar').style.width = `${Math.min((avgCal / (calGoal || 2500)) * 100, 100)}%`;
+            document.getElementById('avg-pro-bar').style.width = `${Math.min((avgPro / (proGoal || 150)) * 100, 100)}%`;
 
-            // 5. Macro Pie Chart
-            const totalGrams = avgPro + Math.round(tCarb/dayCount) + Math.round(tFat/dayCount) || 1;
-            const pPct = Math.round((avgPro/totalGrams)*100);
-            const cPct = Math.round(((tCarb/dayCount)/totalGrams)*100);
-            const fPct = 100 - pPct - cPct;
+            const totalGrams = avgPro + avgCarb + avgFat || 1;
+            const pPct = Math.round((avgPro / totalGrams) * 100);
+            const cPct = Math.round((avgCarb / totalGrams) * 100);
+            const fPct = Math.max(0, 100 - pPct - cPct);
+
+            safeText('pie-pro-pct', `${pPct}%`);
+            safeText('pie-carb-pct', `${cPct}%`);
+            safeText('pie-fat-pct', `${fPct}%`);
 
             const pie = document.getElementById('macro-pie');
             if (pie) {
-                pie.style.background = `conic-gradient(#f43f5e 0% ${pPct}%, #38bdf8 ${pPct}% ${pPct+cPct}%, #fbbf24 ${pPct+cPct}% 100%)`;
+                pie.style.background = `conic-gradient(#f43f5e 0% ${pPct}%, #38bdf8 ${pPct}% ${pPct + cPct}%, #fbbf24 ${pPct + cPct}% 100%)`;
             }
 
+            const insightText = document.getElementById('insight-text');
+            if (insightText) {
+                if (avgCal >= calGoal * 0.9 && avgPro >= proGoal * 0.9) {
+                    insightText.innerText = "Strong consistency. You are staying close to your nutrition targets and building a solid recovery foundation.";
+                } else if (avgPro < proGoal * 0.7) {
+                    insightText.innerText = "Protein intake is trailing your goal. Tighten that up to support recovery and muscle growth.";
+                } else if (avgCal < calGoal * 0.7) {
+                    insightText.innerText = "Calories are coming in low this week. You may be under-fueling performance and recovery.";
+                } else {
+                    insightText.innerText = "Your week shows some positive habits, but there is room for more consistency across calories, protein, and hydration.";
+                }
+            }
         } catch (e) {
             console.error("Weekly Stats Error:", e);
         }
     };
 
-    window.closeWeekly = () => document.getElementById('weekly-modal').classList.add('hidden');
+    window.closeWeekly = () => {
+        document.getElementById('weekly-modal').classList.add('hidden');
+    };
+
+    window.fetchMealHistory = fetchMealHistory;
 </script>
 </body>
 </html>

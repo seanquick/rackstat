@@ -2,11 +2,12 @@
    1. CORE VARIABLES & RESET
    ========================================================================== */
 :root {
-    /* Dynamic Theme Defaults (Overwritten by JS) */
+    /* Dynamic school theme colors.
+       These are default fallbacks and are intended to be overwritten by theme.js. */
     --school-primary: #b91c1c;
     --school-secondary: #0a0a0b;
     
-    /* RackStat System Palette */
+    /* Global RackStat color system used throughout the app */
     --rackstat-black: #000000;
     --rackstat-gray-dark: #0a0a0b;
     --rackstat-gray-med: #111827;
@@ -14,6 +15,7 @@
     --rackstat-border: #374151;
 }
 
+/* Global reset and base font stack for consistent rendering */
 * {
     margin: 0;
     padding: 0;
@@ -21,6 +23,7 @@
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
+/* Base page styling used across app screens */
 body {
     background-color: var(--rackstat-black);
     color: white;
@@ -32,6 +35,7 @@ body {
    2. BOARD HEADER (Small, Centered Layout)
    ========================================================================== */
 
+/* Shared logo container used in compact header layouts */
 .header-logo-container {
     width: 60px;
     height: 60px;
@@ -42,6 +46,7 @@ body {
     overflow: visible; 
 }
 
+/* Ensures logos scale cleanly inside the header container */
 .header-logo-container img {
     max-width: 100%;
     max-height: 100%;
@@ -50,6 +55,7 @@ body {
     transition: transform 0.2s ease;
 }
 
+/* Enlarges the non-school logo slightly for stronger RACKSTAT branding */
 .header-logo-container img:not(#school-logo) {
     transform: scale(1.75); 
     filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.1));
@@ -60,6 +66,7 @@ body {
    3. BRANDING / LOGIN PAGES (Large Branding)
    ========================================================================== */
 
+/* Large-format branded header used on onboarding/login-type pages */
 .brand-header {
     background: linear-gradient(to bottom, var(--school-secondary), var(--rackstat-black));
     padding: 40px 20px;
@@ -70,12 +77,14 @@ body {
     gap: 30px;
 }
 
+/* Primary large RACKSTAT logo styling */
 .rackstat-logo-large {
     height: 40px;
     width: auto;
     object-fit: contain;
 }
 
+/* Horizontal branding section that pairs school branding with platform branding */
 .school-section-large {
     display: flex;
     align-items: center;
@@ -85,6 +94,7 @@ body {
     flex-wrap: wrap;
 }
 
+/* Large school logo used on branding-heavy screens; hidden until populated */
 .school-logo-large {
     height: 48px;
     width: auto;
@@ -96,6 +106,7 @@ body {
    4. DATA TABLES (Weight Class Records)
    ========================================================================== */
 
+/* Main table styling for leaderboard/record-style displays */
 .record-table { 
     width: 100%; 
     border-collapse: collapse; 
@@ -104,6 +115,7 @@ body {
     border: 1px solid var(--rackstat-gray-light); 
 }
 
+/* Table header row styling with dynamic school accent color */
 .record-table th { 
     background: var(--rackstat-gray-light); 
     color: var(--school-primary); 
@@ -113,12 +125,14 @@ body {
     font-weight: 900; 
 }
 
+/* Standard table cell styling for record values */
 .record-table td { 
     border: 1px solid var(--rackstat-border); 
     padding: 6px; 
     text-align: center; 
 }
 
+/* Secondary text styling for athlete names or labels within a record cell */
 .record-name { 
     color: #9ca3af; 
     font-weight: bold; 
@@ -127,6 +141,7 @@ body {
     text-transform: uppercase;
 }
 
+/* Primary record number/value styling */
 .record-value { 
     color: white; 
     font-weight: 900; 
@@ -138,6 +153,7 @@ body {
    5. CARDS & UI COMPONENTS
    ========================================================================== */
 
+/* Generic card component used across dashboard-style content blocks */
 .club-card { 
     background: var(--rackstat-gray-med); 
     border-radius: 8px; 
@@ -147,10 +163,12 @@ body {
     transition: transform 0.2s ease;
 }
 
+/* Slight scale effect for hover feedback on cards */
 .club-card:hover {
     transform: scale(1.01);
 }
 
+/* Reusable primary button style tied to the active school theme */
 .btn-primary {
     background-color: var(--school-primary);
     color: white;
@@ -164,6 +182,7 @@ body {
     transition: filter 0.2s ease;
 }
 
+/* Brightness increase on hover for button feedback */
 .btn-primary:hover {
     filter: brightness(1.2);
 }
@@ -172,17 +191,18 @@ body {
    6. COACH REVIEW / INTELLIGENCE HEADER
    ========================================================================== */
 
-/* Fixes the "Blown Up" Logo issue */
+/* Controlled school logo sizing to prevent oversized rendering */
 .school-logo-primary {
-    max-height: 60px; /* Adjust this to make it smaller or larger */
+    max-height: 60px;
     width: auto;
     object-fit: contain;
     display: block;
     filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
 }
 
+/* Fixed-height logo wrapper used to keep header layouts stable */
 .logo-container-fixed {
-    height: 70px; /* Provides a stable container for the logo */
+    height: 70px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -193,20 +213,27 @@ body {
    7. UTILITIES
    ========================================================================== */
 
+/* Hides scrollbar in WebKit while preserving scroll behavior */
 .no-scrollbar::-webkit-scrollbar { 
     display: none; 
 }
 
+/* Theme utility classes for text, background, and borders */
 .dynamic-text { color: var(--school-primary) !important; }
 .dynamic-bg { background-color: var(--school-primary) !important; }
 .dynamic-border { border-color: var(--school-primary) !important; }
 
+/* Global custom scrollbar styling */
 ::-webkit-scrollbar {
     width: 6px;
 }
+
+/* Scrollbar track color */
 ::-webkit-scrollbar-track {
     background: var(--rackstat-black);
 }
+
+/* Scrollbar thumb uses current school theme color */
 ::-webkit-scrollbar-thumb {
     background: var(--school-primary);
     border-radius: 10px;

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Next Level Recruiting | RACKSTAT</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
     <style>
         body { background-color: #000; color: #fff; font-family: sans-serif; }
         .form-section { background: #0a0a0a; border: 1px solid #1a1a1a; padding: 2rem; border-radius: 1.5rem; margin-bottom: 2rem; }
@@ -16,6 +17,7 @@
         .checkbox-group { display: grid; grid-template-columns: 1fr; gap: 0.5rem; background: #080808; padding: 1rem; border-radius: 0.5rem; border: 1px solid #222; }
         .check-item { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; }
         .btn-submit { background: #ef4444; color: white; font-weight: 900; text-transform: uppercase; padding: 1.5rem; border-radius: 1rem; width: 100%; border-bottom: 4px solid #991b1b; transition: all 0.2s; cursor: pointer; }
+        .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
     </style>
 </head>
 <body class="p-4 pb-20">
@@ -29,12 +31,10 @@
         </div>
 
         <div class="flex items-center gap-6 justify-center flex-1">
-            
             <div class="header-logo-container">
                 <img id="school-logo" 
                      src="images/rackstat-logo.png" 
-                     alt="School Logo" 
-                     class="school-logo-large" 
+                     alt="School Logo"
                      onerror="this.src='images/rackstat-logo.png'">
             </div>
 
@@ -52,9 +52,7 @@
             <div class="h-10 w-[1px] bg-gray-700"></div>
 
             <div class="header-logo-container">
-                <img src="images/rackstat-logo.png" 
-                     alt="RACKSTAT" 
-                     class="rackstat-logo-large">
+                <img src="images/rackstat-logo.png" alt="RACKSTAT" class="rackstat-logo-large">
             </div>
         </div>
 
@@ -62,354 +60,345 @@
     </div>
 </header>
 
-    <form id="recruitingForm" class="max-w-3xl mx-auto mt-8">
+<form id="recruitingForm" class="max-w-3xl mx-auto mt-8">
+    
+    <div class="form-section">
+        <h2 class="section-header">01 Personal & Social Profile</h2>
+        <div class="grid-2">
+            <div><span class="sub-label">Full Name</span><input type="text" id="fullName" required></div>
+            <div><span class="sub-label">Jersey #</span><input type="text" id="jerseyNum"></div>
+        </div>
         
-        <div class="form-section">
-            <h2 class="section-header">01 Personal & Social Profile</h2>
+        <div class="grid-2">
+            <div><span class="sub-label">Player Cell Phone</span><input type="tel" id="playerPhone" placeholder="(555) 555-5555"></div>
+            <div><span class="sub-label">Email Address</span><input type="email" id="playerEmail"></div>
+        </div>
+
+        <div class="bg-[#0f0f0f] p-4 rounded-xl border border-red-900/20 mb-4">
+            <span class="sub-label text-red-500">Social Recruiting (Coaches Will Check These)</span>
             <div class="grid-2">
-                <div><span class="sub-label">Full Name</span><input type="text" id="fullName" required></div>
-                <div><span class="sub-label">Jersey #</span><input type="text" id="jerseyNum"></div>
+                <input type="text" id="twitter" placeholder="X / Twitter Handle (@...) ">
+                <input type="text" id="instagram" placeholder="Instagram Handle">
             </div>
-            
+            <input type="text" id="tiktok" placeholder="TikTok Link / Handle">
+        </div>
+
+        <div class="bg-[#0f0f0f] p-4 rounded-xl border border-red-900/20 mb-4">
+            <span class="sub-label text-red-500">What Additional Sports do you Play</span>
             <div class="grid-2">
-                <div><span class="sub-label">Player Cell Phone</span><input type="tel" id="playerPhone" placeholder="(555) 555-5555"></div>
-                <div><span class="sub-label">Email Address</span><input type="email" id="playerEmail"></div>
-            </div>
-
-            <div class="bg-[#0f0f0f] p-4 rounded-xl border border-red-900/20 mb-4">
-                <span class="sub-label text-red-500">Social Recruiting (Coaches Will Check These)</span>
-                <div class="grid-2">
-                    <input type="text" id="twitter" placeholder="X / Twitter Handle (@...) ">
-                    <input type="text" id="instagram" placeholder="Instagram Handle">
-                </div>
-                <input type="text" id="tiktok" placeholder="TikTok Link / Handle">
-            </div>
-
-            <div class="bg-[#0f0f0f] p-4 rounded-xl border border-red-900/20 mb-4">
-                <span class="sub-label text-red-500">What Additional Sports do you Play</span>
-                <div class="grid-2"> <input type="text" id="sports" placeholder="Enter Sports ">
-                </div>
-            </div>
-
-            <span class="sub-label">Parent/Guardian Name(s)</span>
-            <input type="text" id="parentNames">
-            <span class="sub-label">Parent Contact Info (Phone/Email)</span>
-            <textarea id="parentContact" rows="2"></textarea>
-        </div>
-
-        <div class="form-section">
-            <h2 class="section-header">02 College Aspirations</h2>
-            <span class="sub-label">Do you want to play after high school?</span>
-            <select id="wantsToPlay">
-                <option value="Yes-Definitely">Yes – Definitely</option>
-                <option value="Yes-Maybe">Yes – Maybe</option>
-                <option value="Unsure">Unsure</option>
-                <option value="No">No</option>
-            </select>
-            <span class="sub-label">Why do you want to play college football?</span>
-            <textarea id="whyPlay" rows="3"></textarea>
-            <span class="sub-label">How serious are you?</span>
-            <select id="seriousness">
-                <option value="Very Serious">Very serious (Whatever it takes)</option>
-                <option value="Somewhat Serious">Somewhat serious</option>
-                <option value="Exploring">Just exploring the idea</option>
-            </select>
-            <span class="sub-label">What level do you believe you can play?</span>
-            <select id="perceivedLevel">
-                <option value="D1">Division I (FBS/FCS)</option>
-                <option value="D2">Division II</option>
-                <option value="D3">Division III</option>
-                <option value="NAIA">NAIA</option>
-                <option value="JUCO">Junior College (JUCO)</option>
-                <option value="Unsure">Unsure</option>
-            </select>
-        </div>
-
-        <div class="form-section">
-            <h2 class="section-header">03 Long-Term Goals</h2>
-            <span class="sub-label">Goals after college?</span>
-            <textarea id="postCollegeGoals" rows="2"></textarea>
-            <span class="sub-label">Intended Major / Career</span>
-            <input type="text" id="major">
-            <div class="grid-2">
-                <div>
-                    <span class="sub-label">Academic Importance</span>
-                    <select id="acadImportance">
-                        <option value="Extremely">Extremely Important</option>
-                        <option value="Important">Important</option>
-                        <option value="Somewhat">Somewhat</option>
-                        <option value="Low">Not a priority</option>
-                    </select>
-                </div>
-                <div>
-                    <span class="sub-label">Prioritize Academics?</span>
-                    <select id="acadPrioritize">
-                        <option value="Yes">Yes</option>
-                        <option value="No">No</option>
-                        <option value="Unsure">Unsure</option>
-                    </select>
-                </div>
+                <input type="text" id="sports" placeholder="Enter Sports ">
             </div>
         </div>
 
-        <div class="form-section">
-            <h2 class="section-header">04 College Preferences</h2>
-            <span class="sub-label">Interest Level (0=None, 5=High)</span>
-            <div class="grid grid-cols-5 gap-2 mb-4">
-                <div><span class="text-[8px] text-gray-500">D1</span><input type="number" id="pref_d1" min="0" max="5" value="0"></div>
-                <div><span class="text-[8px] text-gray-500">D2</span><input type="number" id="pref_d2" min="0" max="5" value="0"></div>
-                <div><span class="text-[8px] text-gray-500">D3</span><input type="number" id="pref_d3" min="0" max="5" value="0"></div>
-                <div><span class="text-[8px] text-gray-500">NAIA</span><input type="number" id="pref_naia" min="0" max="5" value="0"></div>
-                <div><span class="text-[8px] text-gray-500">JUCO</span><input type="number" id="pref_juco" min="0" max="5" value="0"></div>
-            </div>
-            <div class="grid-2">
-                <div>
-                    <span class="sub-label">School Size</span>
-                    <select id="prefSize">
-                        <option value="Small">Small (&lt; 5k)</option>
-                        <option value="Medium">Medium (5-15k)</option>
-                        <option value="Large">Large (15k+)</option>
-                        <option value="None">No Preference</option>
-                    </select>
-                </div>
-                <div>
-                    <span class="sub-label">Location</span>
-                    <select id="prefLoc">
-                        <option value="Close">Close to home</option>
-                        <option value="State">Same State</option>
-                        <option value="Midwest">Midwest</option>
-                        <option value="Anywhere">Anywhere U.S.</option>
-                    </select>
-                </div>
-            </div>
-            <span class="sub-label">Other (Faith, HBCU, Military, etc.)</span>
-            <input type="text" id="prefOther">
-        </div>
+        <span class="sub-label">Parent/Guardian Name(s)</span>
+        <input type="text" id="parentNames">
+        <span class="sub-label">Parent Contact Info (Phone/Email)</span>
+        <textarea id="parentContact" rows="2"></textarea>
+    </div>
 
-        <div class="form-section">
-            <h2 class="section-header">05 Academic Information</h2>
-            <div class="grid-2">
-                <div><span class="sub-label">Current GPA</span><input type="text" id="gpa"></div>
-                <div><span class="sub-label">Core GPA</span><input type="text" id="coreGpa"></div>
-            </div>
-            <div class="grid-2">
-                <div><span class="sub-label">ACT Score</span><input type="number" id="act"></div>
-                <div><span class="sub-label">SAT Score</span><input type="number" id="sat"></div>
-            </div>
-            
-            <span class="sub-label">NCAA Eligibility Registered?</span>
-            <select id="ncaaReg">
-                <option value="No">No</option>
-                <option value="Yes">Yes</option>
-            </select>
+    <div class="form-section">
+        <h2 class="section-header">02 College Aspirations</h2>
+        <span class="sub-label">Do you want to play after high school?</span>
+        <select id="wantsToPlay">
+            <option value="Yes-Definitely">Yes – Definitely</option>
+            <option value="Yes-Maybe">Yes – Maybe</option>
+            <option value="Unsure">Unsure</option>
+            <option value="No">No</option>
+        </select>
+        <span class="sub-label">Why do you want to play college football?</span>
+        <textarea id="whyPlay" rows="3"></textarea>
+        <span class="sub-label">How serious are you?</span>
+        <select id="seriousness">
+            <option value="Very Serious">Very serious (Whatever it takes)</option>
+            <option value="Somewhat Serious">Somewhat serious</option>
+            <option value="Exploring">Just exploring the idea</option>
+        </select>
+        <span class="sub-label">What level do you believe you can play?</span>
+        <select id="perceivedLevel">
+            <option value="D1">Division I (FBS/FCS)</option>
+            <option value="D2">Division II</option>
+            <option value="D3">Division III</option>
+            <option value="NAIA">NAIA</option>
+            <option value="JUCO">Junior College (JUCO)</option>
+            <option value="Unsure">Unsure</option>
+        </select>
+    </div>
 
-            <span class="sub-label">Academic Strengths</span>
-            <textarea id="acadStrengths" rows="2"></textarea>
-        </div>
-
-        <div class="form-section">
-            <h2 class="section-header">06 Testing & Film</h2>
-            <div class="grid-2">
-                <div><span class="sub-label">Starter?</span><select id="isStarter"><option value="Yes">Yes</option><option value="No">No</option></select></div>
-                <div><span class="sub-label">Highlight Link</span><input type="url" id="highlightUrl"></div>
+    <div class="form-section">
+        <h2 class="section-header">03 Long-Term Goals</h2>
+        <span class="sub-label">Goals after college?</span>
+        <textarea id="postCollegeGoals" rows="2"></textarea>
+        <span class="sub-label">Intended Major / Career</span>
+        <input type="text" id="major">
+        <div class="grid-2">
+            <div>
+                <span class="sub-label">Academic Importance</span>
+                <select id="acadImportance">
+                    <option value="Extremely">Extremely Important</option>
+                    <option value="Important">Important</option>
+                    <option value="Somewhat">Somewhat</option>
+                    <option value="Low">Not a priority</option>
+                </select>
             </div>
-            <span class="sub-label">Honors / Awards</span>
-            <textarea id="honors" rows="2" placeholder="All-Conference, Captain, etc."></textarea>
-        </div>
-
-        <div class="form-section">
-            <h2 class="section-header">07 Training & Commitment</h2>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div>
-                    <span class="sub-label">Weekly extra training days?</span>
-                    <select id="trainFreq" class="w-full">
-                        <option value="0-1">0–1</option>
-                        <option value="2-3">2–3</option>
-                        <option value="4-5">4–5</option>
-                        <option value="6+">6+</option>
-                    </select>
-                </div>
-                <div>
-                    <span class="sub-label">Nutrition Plan?</span>
-                    <select id="hasNutrition" class="w-full">
-                        <option value="No">No</option>
-                        <option value="Yes">Yes</option>
-                        <option value="Sometimes">Sometimes</option>
-                    </select>
-                </div>
-                <div>
-                    <span class="sub-label">7-8+ Hours Sleep?</span>
-                    <select id="hasSleep" class="w-full">
-                        <option value="Yes">Yes</option>
-                        <option value="No">No</option>
-                    </select>
-                </div>
-            </div>
-
-            <span class="sub-label mb-2 block">I am willing to...</span>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 bg-black/20 p-4 rounded-lg border border-white/5" id="commitmentChecks">
-                <label class="flex items-center gap-3 cursor-pointer hover:text-red-500 transition-colors">
-                    <input type="checkbox" value="Lift Year Round" class="w-4 h-4 accent-red-600">
-                    <span class="text-[11px] font-bold uppercase tracking-wider">Lift Year-Round</span>
-                </label>
-                <label class="flex items-center gap-3 cursor-pointer hover:text-red-500 transition-colors">
-                    <input type="checkbox" value="Attend Camps" class="w-4 h-4 accent-red-600">
-                    <span class="text-[11px] font-bold uppercase tracking-wider">Attend Camps/Showcases</span>
-                </label>
-                <label class="flex items-center gap-3 cursor-pointer hover:text-red-500 transition-colors">
-                    <input type="checkbox" value="Travel Visits" class="w-4 h-4 accent-red-600">
-                    <span class="text-[11px] font-bold uppercase tracking-wider">Travel for Visits</span>
-                </label>
-                <label class="flex items-center gap-3 cursor-pointer hover:text-red-500 transition-colors">
-                    <input type="checkbox" value="Coach Contact" class="w-4 h-4 accent-red-600">
-                    <span class="text-[11px] font-bold uppercase tracking-wider">Communicate with Coaches</span>
-                </label>
+            <div>
+                <span class="sub-label">Prioritize Academics?</span>
+                <select id="acadPrioritize">
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                    <option value="Unsure">Unsure</option>
+                </select>
             </div>
         </div>
+    </div>
 
-        <div class="form-section">
-            <h2 class="section-header">08 Character & Leadership</h2>
-            <span class="sub-label">What type of teammate are you?</span>
-            <textarea id="teammateType" rows="2"></textarea>
-            <span class="sub-label">What does being a good teammate mean to you?</span>
-            <textarea id="teammateDef" rows="3"></textarea>
-            <span class="sub-label">What are you willing to sacrifice?</span>
-            <textarea id="sacrifice" rows="2"></textarea>
+    <div class="form-section">
+        <h2 class="section-header">04 College Preferences</h2>
+        <span class="sub-label">Interest Level (0=None, 5=High)</span>
+        <div class="grid grid-cols-5 gap-2 mb-4">
+            <div><span class="text-[8px] text-gray-500">D1</span><input type="number" id="pref_d1" min="0" max="5" value="0"></div>
+            <div><span class="text-[8px] text-gray-500">D2</span><input type="number" id="pref_d2" min="0" max="5" value="0"></div>
+            <div><span class="text-[8px] text-gray-500">D3</span><input type="number" id="pref_d3" min="0" max="5" value="0"></div>
+            <div><span class="text-[8px] text-gray-500">NAIA</span><input type="number" id="pref_naia" min="0" max="5" value="0"></div>
+            <div><span class="text-[8px] text-gray-500">JUCO</span><input type="number" id="pref_juco" min="0" max="5" value="0"></div>
+        </div>
+        <div class="grid-2">
+            <div>
+                <span class="sub-label">School Size</span>
+                <select id="prefSize">
+                    <option value="Small">Small (&lt; 5k)</option>
+                    <option value="Medium">Medium (5-15k)</option>
+                    <option value="Large">Large (15k+)</option>
+                    <option value="None">No Preference</option>
+                </select>
+            </div>
+            <div>
+                <span class="sub-label">Location</span>
+                <select id="prefLoc">
+                    <option value="Close">Close to home</option>
+                    <option value="State">Same State</option>
+                    <option value="Midwest">Midwest</option>
+                    <option value="Anywhere">Anywhere U.S.</option>
+                </select>
+            </div>
+        </div>
+        <span class="sub-label">Other (Faith, HBCU, Military, etc.)</span>
+        <input type="text" id="prefOther">
+    </div>
+
+    <div class="form-section">
+        <h2 class="section-header">05 Academic Information</h2>
+        <div class="grid-2">
+            <div><span class="sub-label">Current GPA</span><input type="text" id="gpa"></div>
+            <div><span class="sub-label">Core GPA</span><input type="text" id="coreGpa"></div>
+        </div>
+        <div class="grid-2">
+            <div><span class="sub-label">ACT Score</span><input type="number" id="act"></div>
+            <div><span class="sub-label">SAT Score</span><input type="number" id="sat"></div>
+        </div>
+        
+        <span class="sub-label">NCAA Eligibility Registered?</span>
+        <select id="ncaaReg">
+            <option value="No">No</option>
+            <option value="Yes">Yes</option>
+        </select>
+
+        <span class="sub-label">Academic Strengths</span>
+        <textarea id="acadStrengths" rows="2"></textarea>
+    </div>
+
+    <div class="form-section">
+        <h2 class="section-header">06 Testing & Film</h2>
+        <div class="grid-2">
+            <div><span class="sub-label">Starter?</span><select id="isStarter"><option value="Yes">Yes</option><option value="No">No</option></select></div>
+            <div><span class="sub-label">Highlight Link</span><input type="url" id="highlightUrl"></div>
+        </div>
+        <span class="sub-label">Honors / Awards</span>
+        <textarea id="honors" rows="2" placeholder="All-Conference, Captain, etc."></textarea>
+    </div>
+
+    <div class="form-section">
+        <h2 class="section-header">07 Training & Commitment</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div>
+                <span class="sub-label">Weekly extra training days?</span>
+                <select id="trainFreq" class="w-full">
+                    <option value="0-1">0–1</option>
+                    <option value="2-3">2–3</option>
+                    <option value="4-5">4–5</option>
+                    <option value="6+">6+</option>
+                </select>
+            </div>
+            <div>
+                <span class="sub-label">Nutrition Plan?</span>
+                <select id="hasNutrition" class="w-full">
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                    <option value="Sometimes">Sometimes</option>
+                </select>
+            </div>
+            <div>
+                <span class="sub-label">7-8+ Hours Sleep?</span>
+                <select id="hasSleep" class="w-full">
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                </select>
+            </div>
         </div>
 
-        <button type="submit" class="btn-submit">Sync Scouting Profile</button>
-    </form>
+        <span class="sub-label mb-2 block">I am willing to...</span>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 bg-black/20 p-4 rounded-lg border border-white/5" id="commitmentChecks">
+            <label class="flex items-center gap-3 cursor-pointer hover:text-red-500 transition-colors">
+                <input type="checkbox" value="Lift Year Round" class="w-4 h-4 accent-red-600">
+                <span class="text-[11px] font-bold uppercase tracking-wider">Lift Year-Round</span>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer hover:text-red-500 transition-colors">
+                <input type="checkbox" value="Attend Camps" class="w-4 h-4 accent-red-600">
+                <span class="text-[11px] font-bold uppercase tracking-wider">Attend Camps/Showcases</span>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer hover:text-red-500 transition-colors">
+                <input type="checkbox" value="Travel Visits" class="w-4 h-4 accent-red-600">
+                <span class="text-[11px] font-bold uppercase tracking-wider">Travel for Visits</span>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer hover:text-red-500 transition-colors">
+                <input type="checkbox" value="Coach Contact" class="w-4 h-4 accent-red-600">
+                <span class="text-[11px] font-bold uppercase tracking-wider">Communicate with Coaches</span>
+            </label>
+        </div>
+    </div>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-red-900/30 px-6 py-4 flex justify-between items-center z-50">
-        <button onclick="location.href='board.html'" class="text-red-600 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Board</span></button>
-        <button onclick="location.href='rack.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">The Rack</span></button>
-        <button onclick="location.href='kitchen.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Kitchen</span></button>
-        <button onclick="location.href='profile.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
-    </nav>
+    <div class="form-section">
+        <h2 class="section-header">08 Character & Leadership</h2>
+        <span class="sub-label">What type of teammate are you?</span>
+        <textarea id="teammateType" rows="2"></textarea>
+        <span class="sub-label">What does being a good teammate mean to you?</span>
+        <textarea id="teammateDef" rows="3"></textarea>
+        <span class="sub-label">What are you willing to sacrifice?</span>
+        <textarea id="sacrifice" rows="2"></textarea>
+    </div>
 
-    <script type="module">
-    // 2. Firebase Imports & Config
-    import { firebaseConfig } from './js/firebase-config.js';
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    <button type="submit" class="btn-submit">Sync Scouting Profile</button>
+</form>
+
+<nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-red-900/30 px-6 py-4 flex justify-between items-center z-50">
+    <button onclick="location.href='board.html'" class="text-red-600 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Board</span></button>
+    <button onclick="location.href='rack.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">The Rack</span></button>
+    <button onclick="location.href='kitchen.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Kitchen</span></button>
+    <button onclick="location.href='profile.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
+</nav>
+
+<script type="module">
+    import { db, auth } from './js/firebase-config.js';
+    import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { applyTheme } from './js/theme.js';
-
-    // 3. Initialization
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
 
     let currentUser = null;
 
-   // 4. Auth State & Data Loading
-    onAuthStateChanged(auth, async (user) => { 
-        if (user) {
-            currentUser = user;
-            
-            try {
-                const [profileSnap, recruitingSnap] = await Promise.all([
-                    getDoc(doc(db, "users", user.uid)),
-                    getDoc(doc(db, "recruiting_profiles", user.uid))
-                ]);
+    const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
 
-                // --- THEME ENGINE START ---
-                let schoolID = null;
+    const safeSet = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val ?? "";
+    };
 
-                if (recruitingSnap.exists()) {
-                    const rData = recruitingSnap.data();
-                    // Check both common naming conventions
-                    schoolID = rData.school_id || rData.schoolId;
-                }
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+            window.location.href = 'index.html';
+            return;
+        }
 
-                if (!schoolID && profileSnap.exists()) {
-                    const pData = profileSnap.data();
-                    // Check both here too
-                    schoolID = pData.school_id || pData.schoolId;
-                }
+        currentUser = user;
 
-                console.log("Detected School ID:", schoolID); // Debugging line
+        try {
+            const [userSnap, recruitingSnap] = await Promise.all([
+                getDoc(doc(db, "users", user.uid)),
+                getDoc(doc(db, "recruiting_profiles", user.uid))
+            ]);
 
-                if (schoolID) {
-                    await applyTheme(db, schoolID);
-                } else {
-                    // If no school ID is found, at least clear the "Loading" text
-                    const tag = document.getElementById('school-tag');
-                    if (tag) tag.innerText = "NO SCHOOL LINKED";
-                }
-                // --- THEME ENGINE END ---
+            const userData = userSnap.exists() ? userSnap.data() : {};
+            const recruitingData = recruitingSnap.exists() ? recruitingSnap.data() : {};
+            const merged = { ...userData, ...recruitingData };
 
-                if (profileSnap.exists()) {
-                    const pData = profileSnap.data();
-                    const nameField = document.getElementById('fullName');
-                    if (nameField && !nameField.value) nameField.value = pData.displayName || "";
-                }
+            const schoolId = getSchoolIdFromData(merged);
 
-                if (recruitingSnap.exists()) {
-                    const d = recruitingSnap.data();
-                    const safeSet = (id, val) => { if(document.getElementById(id)) document.getElementById(id).value = val || ""; };
-                    
-                    // Set all your form fields...
-                    safeSet('fullName', d.fullName);
-                    safeSet('jerseyNum', d.jerseyNum);
-                    safeSet('playerPhone', d.playerPhone);
-                    safeSet('playerEmail', d.playerEmail);
-                    safeSet('twitter', d.twitter);
-                    safeSet('instagram', d.instagram);
-                    safeSet('tiktok', d.tiktok);
-                    safeSet('sports', d.sports); // ADD THIS LINE
-                    safeSet('parentNames', d.parentNames);
-                    safeSet('parentContact', d.parentContact);
-                    safeSet('wantsToPlay', d.wantsToPlay || "Yes-Definitely");
-                    safeSet('whyPlay', d.whyPlay);
-                    safeSet('seriousness', d.seriousness || "Very Serious");
-                    safeSet('perceivedLevel', d.perceivedLevel || "D1");
-                    safeSet('postCollegeGoals', d.postCollegeGoals);
-                    safeSet('major', d.major);
-                    safeSet('acadImportance', d.acadImportance || "Extremely");
-                    safeSet('acadPrioritize', d.acadPrioritize || "Yes");
-                    safeSet('gpa', d.gpa);
-                    safeSet('coreGpa', d.coreGpa);
-                    safeSet('act', d.act);
-                    safeSet('sat', d.sat);
-                    safeSet('ncaaReg', d.ncaaReg || "No");
-                    safeSet('acadStrengths', d.acadStrengths);
-                    safeSet('pref_d1', d.pref_d1 || "0");
-                    safeSet('pref_d2', d.pref_d2 || "0");
-                    safeSet('pref_d3', d.pref_d3 || "0");
-                    safeSet('pref_naia', d.pref_naia || "0");
-                    safeSet('pref_juco', d.pref_juco || "0");
-                    safeSet('prefSize', d.prefSize || "None");
-                    safeSet('prefLoc', d.prefLoc || "Anywhere");
-                    safeSet('prefOther', d.prefOther);
-                    safeSet('isStarter', d.isStarter || "No");
-                    safeSet('highlightUrl', d.highlightUrl);
-                    safeSet('honors', d.honors);
-                    safeSet('trainFreq', d.weeklyExtraDays || "0-1");
-                    safeSet('hasNutrition', d.hasNutritionPlan || "No");
-                    safeSet('hasSleep', d.getsSleep || "No");
-
-                    if (d.commitments && Array.isArray(d.commitments)) {
-                        const checkboxes = document.querySelectorAll('#commitmentChecks input');
-                        checkboxes.forEach(cb => {
-                            cb.checked = d.commitments.includes(cb.value);
-                        });
-                    }
-
-                    safeSet('teammateType', d.teammateType);
-                    safeSet('teammateDef', d.goodTeammateMeaning || d.teammateDef); 
-                    safeSet('sacrifice', d.willingToSacrifice);
-                }
-            } catch (err) {
-                console.error("Error loading Next Level profile:", err);
+            if (schoolId) {
+                await applyTheme(db, schoolId);
+            } else {
+                const tag = document.getElementById('school-tag');
+                if (tag) tag.innerText = "NO SCHOOL LINKED";
             }
-        } else { 
-            window.location.href = 'index.html'; 
-        } 
+
+            if (userSnap.exists()) {
+                if (!document.getElementById('fullName').value) {
+                    document.getElementById('fullName').value =
+                        userData.fullName ||
+                        userData.displayName ||
+                        "";
+                }
+                if (!document.getElementById('playerEmail').value) {
+                    document.getElementById('playerEmail').value = userData.email || "";
+                }
+            }
+
+            if (recruitingSnap.exists()) {
+                const d = recruitingSnap.data();
+
+                safeSet('fullName', d.fullName || userData.fullName || userData.displayName);
+                safeSet('jerseyNum', d.jerseyNum);
+                safeSet('playerPhone', d.playerPhone);
+                safeSet('playerEmail', d.playerEmail || userData.email);
+                safeSet('twitter', d.twitter);
+                safeSet('instagram', d.instagram);
+                safeSet('tiktok', d.tiktok);
+                safeSet('sports', d.sports);
+                safeSet('parentNames', d.parentNames);
+                safeSet('parentContact', d.parentContact);
+                safeSet('wantsToPlay', d.wantsToPlay || "Yes-Definitely");
+                safeSet('whyPlay', d.whyPlay);
+                safeSet('seriousness', d.seriousness || "Very Serious");
+                safeSet('perceivedLevel', d.perceivedLevel || "D1");
+                safeSet('postCollegeGoals', d.postCollegeGoals);
+                safeSet('major', d.major);
+                safeSet('acadImportance', d.acadImportance || "Extremely");
+                safeSet('acadPrioritize', d.acadPrioritize || "Yes");
+                safeSet('gpa', d.gpa);
+                safeSet('coreGpa', d.coreGpa);
+                safeSet('act', d.act);
+                safeSet('sat', d.sat);
+                safeSet('ncaaReg', d.ncaaReg || "No");
+                safeSet('acadStrengths', d.acadStrengths);
+                safeSet('pref_d1', d.pref_d1 || "0");
+                safeSet('pref_d2', d.pref_d2 || "0");
+                safeSet('pref_d3', d.pref_d3 || "0");
+                safeSet('pref_naia', d.pref_naia || "0");
+                safeSet('pref_juco', d.pref_juco || "0");
+                safeSet('prefSize', d.prefSize || "None");
+                safeSet('prefLoc', d.prefLoc || "Anywhere");
+                safeSet('prefOther', d.prefOther);
+                safeSet('isStarter', d.isStarter || "No");
+                safeSet('highlightUrl', d.highlightUrl || d.hudlLink);
+                safeSet('honors', d.honors);
+                safeSet('trainFreq', d.weeklyExtraDays || "0-1");
+                safeSet('hasNutrition', d.hasNutritionPlan || "No");
+                safeSet('hasSleep', d.getsSleep || "No");
+
+                if (Array.isArray(d.commitments)) {
+                    const checkboxes = document.querySelectorAll('#commitmentChecks input');
+                    checkboxes.forEach(cb => {
+                        cb.checked = d.commitments.includes(cb.value);
+                    });
+                }
+
+                safeSet('teammateType', d.teammateType);
+                safeSet('teammateDef', d.goodTeammateMeaning || d.teammateDef);
+                safeSet('sacrifice', d.willingToSacrifice || d.sacrifice);
+            }
+        } catch (err) {
+            console.error("Error loading Next Level profile:", err);
+        }
     });
 
-    // 5. Form Submission Logic
     document.getElementById('recruitingForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!currentUser) return;
@@ -420,17 +409,22 @@
             submitBtn.innerText = "SYNCING PROFILE...";
         }
 
-        const commitments = Array.from(document.querySelectorAll('#commitmentChecks input:checked')).map(cb => cb.value);
+        const commitments = Array.from(
+            document.querySelectorAll('#commitmentChecks input:checked')
+        ).map(cb => cb.value);
+
+        const fullName = document.getElementById('fullName').value;
+        const playerEmail = document.getElementById('playerEmail').value;
 
         const profileData = {
-            fullName: document.getElementById('fullName').value,
+            fullName,
             jerseyNum: document.getElementById('jerseyNum').value,
-            playerPhone: document.getElementById('playerPhone').value, 
-            playerEmail: document.getElementById('playerEmail').value,
-            twitter: document.getElementById('twitter').value,        
-            instagram: document.getElementById('instagram').value,    
-            tiktok: document.getElementById('tiktok').value,  
-            sports: document.getElementById('sports').value, // ADD THIS LINE        
+            playerPhone: document.getElementById('playerPhone').value,
+            playerEmail,
+            twitter: document.getElementById('twitter').value,
+            instagram: document.getElementById('instagram').value,
+            tiktok: document.getElementById('tiktok').value,
+            sports: document.getElementById('sports').value,
             parentNames: document.getElementById('parentNames').value,
             parentContact: document.getElementById('parentContact').value,
             wantsToPlay: document.getElementById('wantsToPlay').value,
@@ -443,8 +437,8 @@
             acadPrioritize: document.getElementById('acadPrioritize').value,
             gpa: document.getElementById('gpa').value,
             coreGpa: document.getElementById('coreGpa').value,
-            act: document.getElementById('act').value, 
-            sat: document.getElementById('sat').value, 
+            act: document.getElementById('act').value,
+            sat: document.getElementById('sat').value,
             ncaaReg: document.getElementById('ncaaReg').value,
             acadStrengths: document.getElementById('acadStrengths').value,
             pref_d1: document.getElementById('pref_d1').value,
@@ -457,28 +451,38 @@
             prefOther: document.getElementById('prefOther').value,
             isStarter: document.getElementById('isStarter').value,
             highlightUrl: document.getElementById('highlightUrl').value,
+            hudlLink: document.getElementById('highlightUrl').value,
             honors: document.getElementById('honors').value,
             weeklyExtraDays: document.getElementById('trainFreq').value,
             hasNutritionPlan: document.getElementById('hasNutrition').value,
             getsSleep: document.getElementById('hasSleep').value,
-            commitments: commitments,
-            liftYearRound: commitments.includes("Lift Year Round"), 
+            commitments,
+            liftYearRound: commitments.includes("Lift Year Round"),
             teammateType: document.getElementById('teammateType').value,
-            goodTeammateMeaning: document.getElementById('teammateDef').value, 
+            goodTeammateMeaning: document.getElementById('teammateDef').value,
             willingToSacrifice: document.getElementById('sacrifice').value,
-            teammateDef: document.getElementById('teammateDef').value, 
+            teammateDef: document.getElementById('teammateDef').value,
+            sacrifice: document.getElementById('sacrifice').value,
+            nextLevelComplete: true,
             lastUpdated: new Date().toISOString()
         };
 
         try {
-            await setDoc(doc(db, "recruiting_profiles", currentUser.uid), profileData, { merge: true });
+            await Promise.all([
+                setDoc(doc(db, "recruiting_profiles", currentUser.uid), profileData, { merge: true }),
+                setDoc(doc(db, "users", currentUser.uid), {
+                    fullName,
+                    email: playerEmail || undefined
+                }, { merge: true })
+            ]);
+
             alert("SCOUTING PROFILE SYNCED!");
-            window.location.href = 'index.html';
-        } catch (err) { 
-            alert("Error: " + err.message); 
+            window.location.href = 'profile.html';
+        } catch (err) {
+            alert("Error: " + err.message);
             if (submitBtn) {
                 submitBtn.disabled = false;
-                submitBtn.innerText = "SAVE & SYNC PROFILE";
+                submitBtn.innerText = "Sync Scouting Profile";
             }
         }
     });

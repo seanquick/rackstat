@@ -16,12 +16,12 @@
         }
 
         body {
-            background-color: var(--rackstat-dark); 
+            background-color: var(--rackstat-dark);
             color: white;
             font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
 
-        .label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--rackstat-red); }
+        .label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--school-primary, var(--rackstat-red)); }
         .value { font-size: 1.125rem; font-weight: 900; font-style: italic; }
         
         .stat-box {
@@ -32,37 +32,34 @@
             transition: all 0.2s;
         }
 
-        /* Logo visibility logic */
         #disp-logo:not([src]), #disp-logo[src=""] { display: none !important; }
 
-        /* --- PDF / PRINT VIEW --- */
         @media print {
             @page { size: letter; margin: 0; }
             body { background: white !important; color: black !important; }
             .no-print { display: none !important; }
 
             #capture-area {
-                background: white !important; 
+                background: white !important;
                 color: black !important;
                 box-shadow: none !important;
                 border: 1px solid #eee !important;
                 position: absolute;
                 top: 0;
                 left: 50%;
-                transform: translateX(-50%) scale(0.75); 
+                transform: translateX(-50%) scale(0.75);
                 transform-origin: top center;
                 width: 100%;
                 max-width: 800px;
             }
 
-            span, p, h1, h2, h3, div:not(.label) { color: black !important; }
-            .label { color: var(--rackstat-red) !important; }
+            span, p, h1, h2, h3, h4, div:not(.label) { color: black !important; }
+            .label { color: var(--school-primary, var(--rackstat-red)) !important; }
             .stat-box { background: #f9fafb !important; border-color: #e5e7eb !important; }
         }
 
-        /* --- SOCIAL EXPORT MODE (Triggered via JS) --- */
         body.social-export { background-color: var(--rackstat-dark) !important; }
-        body.social-export #capture-area { border: 2px solid var(--rackstat-red) !important; }
+        body.social-export #capture-area { border: 2px solid var(--school-primary, var(--rackstat-red)) !important; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -130,8 +127,7 @@
             
             <div class="edit-mode hidden w-full text-center">
                 <label class="block text-[8px] uppercase text-gray-500 mb-1">Logo URL</label>
-                <input id="edit-logo" type="text" placeholder="images/school.png" 
-                    class="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-white text-[9px]">
+                <input id="edit-logo" type="text" placeholder="images/school.png" class="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-white text-[9px]">
             </div>
         </div>
 
@@ -176,6 +172,16 @@
                         <div id="stat-forty" class="value view-mode text-white font-black italic">--</div>
                         <input id="edit-forty" type="text" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center">
                     </div>
+                    <div class="stat-box">
+                        <span class="label">Deadlift</span>
+                        <div id="stat-deadlift" class="value view-mode text-white font-black italic">--</div>
+                        <input id="edit-deadlift" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center">
+                    </div>
+                    <div class="stat-box">
+                        <span class="label">Push Press</span>
+                        <div id="stat-push-press" class="value view-mode text-white font-black italic">--</div>
+                        <input id="edit-push-press" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center">
+                    </div>
                 </div>
             </div>
 
@@ -205,9 +211,13 @@
                 <div class="space-y-3">
                     <div class="stat-box flex items-center gap-3">
                         <div class="h-6 w-6 bg-white text-black rounded flex items-center justify-center font-black text-[10px]">X</div>
-                        <div class="flex-grow">
-                            <span id="disp-twitter" class="text-xs font-bold italic text-white view-mode">@--</span>
-                            <input id="edit-twitter" type="text" placeholder="@handle" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-xs p-1 w-full rounded outline-none">
+                        <div class="flex-grow view-mode">
+                            <a id="link-twitter" href="#" target="_blank" class="inline-block">
+                                <span id="disp-twitter" class="text-xs font-bold italic text-white">@--</span>
+                            </a>
+                        </div>
+                        <div class="edit-mode hidden flex-grow">
+                            <input id="edit-twitter" type="text" placeholder="@handle" class="bg-black/40 border border-blue-500 text-white text-xs p-1 w-full rounded outline-none">
                         </div>
                     </div>
 
@@ -273,7 +283,7 @@
     <div class="mt-8 pt-8 border-t border-white/5">
         <h3 class="label mb-4 uppercase text-[10px] tracking-widest text-gray-500">Character & Multi-Sport Profile</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-             <div class="stat-box">
+            <div class="stat-box">
                 <span class="text-[9px] uppercase font-bold text-gray-400">Additional Sports</span>
                 <p id="disp-sports" class="font-black italic view-mode text-white text-xs mt-1">--</p>
                 <input id="edit-sports" type="text" placeholder="Track, Wrestling..." class="edit-mode hidden bg-black/40 border border-blue-500 text-white p-2 w-full rounded text-[10px] outline-none mt-1">
@@ -299,8 +309,7 @@
         <img src="images/rackstat-logo.png" class="h-6 w-auto grayscale">
     </div>
 
-    <button id="save-profile-btn" onclick="saveAthleteProfile()" 
-            class="hidden fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-500 text-white font-black px-10 py-4 rounded-full shadow-2xl uppercase italic tracking-tighter transition-all z-50">
+    <button id="save-profile-btn" onclick="saveAthleteProfile()" class="hidden fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-500 text-white font-black px-10 py-4 rounded-full shadow-2xl uppercase italic tracking-tighter transition-all z-50">
         Save Profile
     </button>
 </div>
@@ -312,21 +321,12 @@
     <button onclick="location.href='profile.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
 </nav>
 
-</body>
-
-<script type="module" src="js/theme.js"></script>
-
 <script type="module">
-    import { firebaseConfig } from './js/firebase-config.js';
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { db, auth } from './js/firebase-config.js';
+    import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { applyTheme } from './js/theme.js';
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-
-    // --- HELPERS ---
     const safeSet = (id, text) => {
         const el = document.getElementById(id);
         if (el) el.innerText = text || "--";
@@ -334,17 +334,45 @@
 
     const setVal = (id, val) => {
         const el = document.getElementById(id);
-        if (el) el.value = val || "";
+        if (el) el.value = val ?? "";
     };
 
+    const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
+
     const formatHeight = (inches) => {
-        if (!inches || isNaN(inches)) return "--";
-        const feet = Math.floor(inches / 12);
-        const remainingInches = inches % 12;
+        const n = Number(inches);
+        if (!n || Number.isNaN(n)) return "--";
+        const feet = Math.floor(n / 12);
+        const remainingInches = n % 12;
         return `${feet}'${remainingInches}"`;
     };
 
-    // 1. SOCIAL EXPORT FUNCTIONALITY
+    const formatLink = (linkId, dispId, handle, platform = '') => {
+        const linkEl = document.getElementById(linkId);
+        const dispEl = dispId ? document.getElementById(dispId) : null;
+
+        if (!linkEl) return;
+
+        if (handle) {
+            const isUrl = handle.includes('http');
+            const cleanHandle = String(handle).replace('@', '');
+            linkEl.href = isUrl ? handle : `https://www.${platform}.com/${cleanHandle}`;
+            if (dispEl) dispEl.innerText = isUrl ? 'View Link' : `@${cleanHandle}`;
+            linkEl.classList.remove('pointer-events-none', 'opacity-50');
+        } else {
+            linkEl.href = '#';
+            linkEl.classList.add('pointer-events-none', 'opacity-50');
+            if (dispEl) dispEl.innerText = "@--";
+        }
+    };
+
+    function getNumericOrBlank(id) {
+        const el = document.getElementById(id);
+        if (!el) return "";
+        const raw = el.value;
+        return raw === "" ? "" : Number(raw);
+    }
+
     window.exportSocial = () => {
         document.body.classList.add('social-export');
         window.print();
@@ -358,148 +386,146 @@
         const athleteId = urlParams.get('uid');
         const isEditMode = urlParams.get('edit') === 'true';
 
-        if (user) {
-            try {
-                const targetUid = athleteId || user.uid;
-                
-                const userSnap = await getDoc(doc(db, "users", user.uid));
-                const userData = userSnap?.data();
+        if (!user) {
+            window.location.href = 'index.html';
+            return;
+        }
 
-                if (athleteId && athleteId !== user.uid && userData?.role !== 'coach') {
-                    console.error("Unauthorized access attempt.");
-                    window.location.href = 'rack.html'; 
-                    return;
-                }
+        try {
+            const targetUid = athleteId || user.uid;
 
-                const profileRef = doc(db, "recruiting_profiles", targetUid);
-                const maxesRef = doc(db, "recruiting_profiles", targetUid, "maxes", "latest");
-                
-                const [recSnap, maxesSnap] = await Promise.all([getDoc(profileRef), getDoc(maxesRef)]);
+            const [viewerSnap, targetUserSnap, recSnap, maxesSnap] = await Promise.all([
+                getDoc(doc(db, "users", user.uid)),
+                getDoc(doc(db, "users", targetUid)),
+                getDoc(doc(db, "recruiting_profiles", targetUid)),
+                getDoc(doc(db, "recruiting_profiles", targetUid, "maxes", "latest"))
+            ]);
 
-                if (recSnap.exists()) {
-                    const d = recSnap.data();
-                    const mx = maxesSnap.exists() ? maxesSnap.data() : {};
+            const viewerData = viewerSnap.exists() ? viewerSnap.data() : {};
+            const viewerRole = (viewerData.role || "").toLowerCase();
 
-                    // --- NAVIGATION & PERMISSIONS UI ---
-                    const backBtn = document.getElementById('back-button');
-                    if (backBtn && userData) {
-                        if (userData.role === 'coach') {
-                            backBtn.innerText = "← BACK TO OFFICE";
-                            backBtn.onclick = () => window.location.href = 'coach-lobby.html';
-                            document.getElementById('unlock-btn')?.classList.remove('hidden');
-                        } else {
-                            backBtn.innerText = "← BACK TO RACK";
-                            backBtn.onclick = () => window.location.href = 'rack.html';
-                        }
-                    }
-
-                    // --- LOGO LOGIC ---
-                    const logoEl = document.getElementById('disp-logo');
-                    if (logoEl) {
-                        if (d.logo_primary && d.logo_primary.trim() !== "") {
-                            logoEl.src = d.logo_primary;
-                            logoEl.classList.remove('hidden');
-                        } else {
-                            logoEl.classList.add('hidden');
-                            logoEl.src = ""; 
-                        }
-                    }
-
-                    // --- IDENTITY & UI ---
-                    safeSet('disp-name', d.fullName);
-                    safeSet('disp-class', d.gradYear ? `CLASS OF ${d.gradYear}` : "--");
-                    safeSet('disp-number', d.jerseyNum ? `#${d.jerseyNum}` : "#--");
-                    safeSet('disp-height', formatHeight(d.height));
-                    safeSet('disp-weight', d.weight); 
-                    safeSet('disp-sports', d.sports);
-                    
-                    safeSet('disp-pos', d.offPrimary);
-                    const pos2 = document.getElementById('disp-pos2');
-                    if (pos2) pos2.innerText = d.offSecondary ? `/ ${d.offSecondary}` : "";
-                    
-                    safeSet('disp-def-pos', d.defPrimary);
-                    const defPos2 = document.getElementById('disp-def-pos2');
-                    if (defPos2) defPos2.innerText = d.defSecondary ? `/ ${d.defSecondary}` : "";
-
-                    // --- STATS (CORE LIFTS UPDATED) ---
-                    safeSet('stat-bench', mx.bench_press || mx.bench || d.bench);
-                    safeSet('stat-squat', mx.back_squat || mx.squat || d.squat);
-                    safeSet('stat-clean', mx.power_clean || mx.clean || d.clean);
-                    safeSet('stat-deadlift', mx.deadlift || d.deadlift); // Added
-                    safeSet('stat-push-press', mx.push_press || d.push_press); // Added
-                    safeSet('stat-forty', d.forty ? `${d.forty}s` : "--");
-
-                    // Academics
-                    safeSet('disp-core-gpa', d.coreGpa);
-                    safeSet('disp-act', d.act);
-                    safeSet('disp-sat', d.sat);
-
-                    // --- SOCIAL LINKS ---
-                    const formatLink = (linkId, dispId, handle, platform = '') => {
-                        const linkEl = document.getElementById(linkId);
-                        const dispEl = document.getElementById(dispId);
-                        if (handle) {
-                            const isUrl = handle.includes('http');
-                            const cleanHandle = handle.replace('@', '');
-                            if (linkEl) linkEl.href = isUrl ? handle : `https://www.${platform}.com/${cleanHandle}`;
-                            if (dispEl) dispEl.innerText = isUrl ? 'View Link' : `@${cleanHandle}`;
-                        }
-                    };
-
-                    formatLink('link-hudl', null, d.hudlLink || d.highlightUrl);
-                    formatLink('link-twitter', 'disp-twitter', d.twitter, 'twitter');
-
-                    // Bio / Parent / Character
-                    safeSet('disp-parents', d.parentNames);
-                    safeSet('disp-parent-contact', d.parentContact);
-                    safeSet('disp-teammate-type', d.teammateType);
-
-                    // Questionnaire
-                    safeSet('perceivedLevel', d.perceivedLevel || "--");
-                    safeSet('seriousness', d.seriousness || "--");
-                    safeSet('major', d.major || "--");
-                    safeSet('ncaaReg', d.ncaaReg || "--");
-                    safeSet('whyPlay', d.whyPlay || "No statement provided.");
-                    safeSet('postCollegeGoals', d.postCollegeGoals);
-                    safeSet('acadStrengths', d.acadStrengths);
-                    safeSet('disp-is-starter', d.isStarter || "No");
-
-                    // --- PRE-FILL EDITORS (CORE LIFTS UPDATED) ---
-                    setVal('edit-name', d.fullName);
-                    setVal('edit-grad', d.gradYear);
-                    setVal('edit-number', d.jerseyNum);
-                    setVal('edit-height', d.height);
-                    setVal('edit-weight', d.weight);
-                    setVal('edit-off-prim', d.offPrimary);
-                    setVal('edit-off-sec', d.offSecondary);
-                    setVal('edit-def-prim', d.defPrimary);
-                    setVal('edit-def-sec', d.defSecondary);
-                    setVal('edit-bench', d.bench);
-                    setVal('edit-squat', d.squat);
-                    setVal('edit-clean', d.clean);
-                    setVal('edit-deadlift', d.deadlift); // Added
-                    setVal('edit-push-press', d.push_press); // Added
-                    setVal('edit-forty', d.forty);
-                    setVal('edit-core-gpa', d.coreGpa);
-                    setVal('edit-act', d.act);
-                    setVal('edit-sat', d.sat);
-                    setVal('edit-sports', d.sports);
-                    setVal('edit-parents', d.parentNames);
-                    setVal('edit-parent-contact', d.parentContact);
-                    setVal('edit-team-type', d.teammateType);
-                    setVal('edit-twitter', d.twitter);
-                    setVal('edit-logo', d.logo_primary);
-                    setVal('edit-hudl', d.hudlLink || d.highlightUrl);
-
-                    if (isEditMode && userData?.role === 'coach') {
-                        window.toggleEditMode();
-                    }
-                }
-            } catch (err) { 
-                console.error("Render Error:", err); 
+            if (athleteId && athleteId !== user.uid && viewerRole !== 'coach' && viewerRole !== 'admin') {
+                window.location.href = 'rack.html';
+                return;
             }
-        } else { 
-            window.location.href = 'index.html'; 
+
+            if (!recSnap.exists()) {
+                console.error("Recruiting profile not found.");
+                return;
+            }
+
+            const d = recSnap.data();
+            const u = targetUserSnap.exists() ? targetUserSnap.data() : {};
+            const mx = maxesSnap.exists() ? maxesSnap.data() : {};
+            const merged = { ...u, ...d };
+
+            const schoolId = getSchoolIdFromData(merged) || getSchoolIdFromData(viewerData);
+            if (schoolId) {
+                const schoolData = await applyTheme(db, schoolId);
+                const logoEl = document.getElementById('disp-logo');
+                if (logoEl) {
+                    const logoPath = schoolData?.logo_primary || schoolData?.logo_url || schoolData?.logo || d.logo_primary || "";
+                    if (logoPath) {
+                        logoEl.src = logoPath;
+                        logoEl.classList.remove('hidden');
+                    } else {
+                        logoEl.classList.add('hidden');
+                        logoEl.src = "";
+                    }
+                }
+            }
+
+            const backBtn = document.getElementById('back-button');
+            if (backBtn) {
+                if (viewerRole === 'coach' || viewerRole === 'admin') {
+                    backBtn.innerText = "← BACK TO OFFICE";
+                    backBtn.onclick = () => window.location.href = 'coach-lobby.html';
+                    document.getElementById('unlock-btn')?.classList.remove('hidden');
+                } else {
+                    backBtn.innerText = "← BACK TO RACK";
+                    backBtn.onclick = () => window.location.href = 'rack.html';
+                }
+            }
+
+            safeSet('disp-name', merged.fullName);
+            safeSet('disp-class', merged.gradYear ? `CLASS OF ${merged.gradYear}` : "--");
+            safeSet('disp-number', merged.jerseyNum ? `#${merged.jerseyNum}` : "#--");
+            safeSet('disp-height', formatHeight(merged.height));
+            safeSet('disp-weight', merged.weight);
+            safeSet('disp-sports', merged.sports);
+
+            safeSet('disp-pos', merged.offPrimary);
+            const pos2 = document.getElementById('disp-pos2');
+            if (pos2) pos2.innerText = merged.offSecondary ? `/ ${merged.offSecondary}` : "";
+
+            safeSet('disp-def-pos', merged.defPrimary);
+            const defPos2 = document.getElementById('disp-def-pos2');
+            if (defPos2) defPos2.innerText = merged.defSecondary ? `/ ${merged.defSecondary}` : "";
+
+            safeSet('stat-bench', mx.bench_press || mx.bench || d.bench);
+            safeSet('stat-squat', mx.back_squat || mx.squat || d.squat);
+            safeSet('stat-clean', mx.power_clean || mx.clean || d.clean);
+            safeSet('stat-deadlift', mx.deadlift || d.deadlift);
+            safeSet('stat-push-press', mx.push_press || mx.pushPress || d.push_press);
+            safeSet('stat-forty', d.forty ? `${d.forty}s` : "--");
+
+            safeSet('disp-core-gpa', d.coreGpa || d.gpa);
+            safeSet('disp-act', d.act);
+            safeSet('disp-sat', d.sat);
+
+            formatLink('link-hudl', null, d.hudlLink || d.highlightUrl);
+            formatLink('link-twitter', 'disp-twitter', d.twitter, 'twitter');
+
+            safeSet('disp-parents', d.parentNames);
+            safeSet('disp-parent-contact', d.parentContact);
+            safeSet('disp-teammate-type', d.teammateType);
+
+            safeSet('perceivedLevel', d.perceivedLevel || "--");
+            safeSet('seriousness', d.seriousness || "--");
+            safeSet('major', d.major || "--");
+            safeSet('ncaaReg', d.ncaaReg || "--");
+            safeSet('whyPlay', d.whyPlay || "No statement provided.");
+            safeSet('disp-is-starter', d.isStarter || "No");
+
+            setVal('edit-name', merged.fullName);
+            setVal('edit-grad', merged.gradYear);
+            setVal('edit-number', merged.jerseyNum);
+            setVal('edit-height', merged.height);
+            setVal('edit-weight', merged.weight);
+            setVal('edit-off-prim', merged.offPrimary);
+            setVal('edit-off-sec', merged.offSecondary);
+            setVal('edit-def-prim', merged.defPrimary);
+            setVal('edit-def-sec', merged.defSecondary);
+
+            setVal('edit-bench', mx.bench ?? mx.bench_press ?? d.bench);
+            setVal('edit-squat', mx.squat ?? mx.back_squat ?? d.squat);
+            setVal('edit-clean', mx.clean ?? mx.power_clean ?? d.clean);
+            setVal('edit-deadlift', mx.deadlift ?? d.deadlift);
+            setVal('edit-push-press', mx.push_press ?? mx.pushPress ?? d.push_press);
+
+            setVal('edit-forty', d.forty);
+            setVal('edit-core-gpa', d.coreGpa || d.gpa);
+            setVal('edit-act', d.act);
+            setVal('edit-sat', d.sat);
+            setVal('edit-sports', d.sports);
+            setVal('edit-parents', d.parentNames);
+            setVal('edit-parent-contact', d.parentContact);
+            setVal('edit-team-type', d.teammateType);
+            setVal('edit-twitter', d.twitter);
+            setVal('edit-logo', d.logo_primary);
+            setVal('edit-hudl', d.hudlLink || d.highlightUrl);
+            setVal('edit-level', d.perceivedLevel);
+            setVal('edit-seriousness', d.seriousness);
+            setVal('edit-major', d.major);
+            setVal('edit-ncaa', d.ncaaReg);
+            setVal('edit-why-play', d.whyPlay);
+            setVal('edit-is-starter', d.isStarter);
+
+            if (isEditMode && (viewerRole === 'coach' || viewerRole === 'admin')) {
+                window.toggleEditMode();
+            }
+        } catch (err) {
+            console.error("Render Error:", err);
         }
     });
 
@@ -507,21 +533,25 @@
         document.querySelectorAll('.view-mode').forEach(el => el.classList.add('hidden'));
         document.querySelectorAll('.edit-mode').forEach(el => el.classList.remove('hidden'));
         document.getElementById('save-profile-btn')?.classList.remove('hidden');
-        
+
         const btn = document.getElementById('unlock-btn');
         if (btn) {
             btn.innerText = "⚠️ EDITING ACTIVE";
             btn.classList.replace('bg-yellow-600', 'bg-red-600');
+            btn.classList.replace('text-black', 'text-white');
         }
     };
 
     window.saveAthleteProfile = async () => {
         const urlParams = new URLSearchParams(window.location.search);
         const playerUID = urlParams.get('uid') || auth.currentUser?.uid;
-        
-        if (!playerUID) return alert("No athlete profile context found.");
 
-        const updatedData = {
+        if (!playerUID) {
+            alert("No athlete profile context found.");
+            return;
+        }
+
+        const profileUpdate = {
             fullName: document.getElementById('edit-name')?.value || "",
             gradYear: document.getElementById('edit-grad')?.value || "",
             jerseyNum: document.getElementById('edit-number')?.value || "",
@@ -530,28 +560,49 @@
             offSecondary: document.getElementById('edit-off-sec')?.value || "",
             defPrimary: document.getElementById('edit-def-prim')?.value || "",
             defSecondary: document.getElementById('edit-def-sec')?.value || "",
-            bench: document.getElementById('edit-bench')?.value || "",
-            squat: document.getElementById('edit-squat')?.value || "",
-            clean: document.getElementById('edit-clean')?.value || "",
-            deadlift: document.getElementById('edit-deadlift')?.value || "", // Added
-            push_press: document.getElementById('edit-push-press')?.value || "", // Added
             forty: document.getElementById('edit-forty')?.value || "",
             coreGpa: document.getElementById('edit-core-gpa')?.value || "",
             act: document.getElementById('edit-act')?.value || "",
             sat: document.getElementById('edit-sat')?.value || "",
-            height: document.getElementById('edit-height')?.value || "",
-            weight: document.getElementById('edit-weight')?.value || "",
+            height: getNumericOrBlank('edit-height'),
+            weight: getNumericOrBlank('edit-weight'),
+            bodyWeight: getNumericOrBlank('edit-weight'),
             sports: document.getElementById('edit-sports')?.value || "",
             parentNames: document.getElementById('edit-parents')?.value || "",
             parentContact: document.getElementById('edit-parent-contact')?.value || "",
             teammateType: document.getElementById('edit-team-type')?.value || "",
             twitter: document.getElementById('edit-twitter')?.value || "",
             hudlLink: document.getElementById('edit-hudl')?.value || "",
+            perceivedLevel: document.getElementById('edit-level')?.value || "",
+            seriousness: document.getElementById('edit-seriousness')?.value || "",
+            major: document.getElementById('edit-major')?.value || "",
+            ncaaReg: document.getElementById('edit-ncaa')?.value || "",
+            whyPlay: document.getElementById('edit-why-play')?.value || "",
+            isStarter: document.getElementById('edit-is-starter')?.value || "",
             lastModified: Date.now()
         };
 
+        const maxesUpdate = {
+            bench: getNumericOrBlank('edit-bench'),
+            bench_press: getNumericOrBlank('edit-bench'),
+            squat: getNumericOrBlank('edit-squat'),
+            clean: getNumericOrBlank('edit-clean'),
+            power_clean: getNumericOrBlank('edit-clean'),
+            deadlift: getNumericOrBlank('edit-deadlift'),
+            push_press: getNumericOrBlank('edit-push-press'),
+            pushPress: getNumericOrBlank('edit-push-press')
+        };
+
         try {
-            await updateDoc(doc(db, "recruiting_profiles", playerUID), updatedData);
+            await Promise.all([
+                setDoc(doc(db, "recruiting_profiles", playerUID), profileUpdate, { merge: true }),
+                setDoc(doc(db, "recruiting_profiles", playerUID, "maxes", "latest"), maxesUpdate, { merge: true }),
+                setDoc(doc(db, "users", playerUID), {
+                    fullName: profileUpdate.fullName,
+                    weight: profileUpdate.weight
+                }, { merge: true })
+            ]);
+
             alert("Report Updated Successfully!");
             location.reload();
         } catch (error) {

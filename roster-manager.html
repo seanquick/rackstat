@@ -10,7 +10,7 @@
     <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator_midnight.min.css" rel="stylesheet">
     <script type="text/javascript" src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
     <style>
-        /* Custom Overrides for Tabulator to match RACKSTAT RED */
+        /* Custom Overrides for Tabulator to match RACKSTAT theme */
         .tabulator { border: none !important; background-color: transparent !important; }
         .tabulator-header { background-color: #111827 !important; border-bottom: 2px solid var(--school-primary, #ef4444) !important; }
         .tabulator-row { background-color: #0d1117 !important; border-bottom: 1px solid #1f2937 !important; }
@@ -49,7 +49,7 @@
                 <input type="text" id="roster-search" placeholder="Search athlete name..." 
                        class="w-full bg-gray-900 border-2 border-gray-800 px-5 py-3 rounded-xl outline-none focus:border-red-600 transition-all text-sm font-bold placeholder:text-gray-600">
                 <div class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-red-600 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <svg xmlns="https://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                 </div>
             </div>
         </div>
@@ -60,15 +60,28 @@
     </main>
 
     <script type="module">
-        import { firebaseConfig } from './js/firebase-config.js';
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, deleteDoc, updateDoc, query, where, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { db, auth } from './js/firebase-config.js';
+        import { collection, getDocs, doc, deleteDoc, updateDoc, query, where, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { applyTheme } from './js/theme.js';
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
+        // Returns school ID regardless of legacy underscore/camelCase naming
+        function getSchoolIdFromData(data = {}) {
+            return data.schoolId || data.school_id || "";
+        }
+
+        // Returns a consistent display name from available fields
+        function getDisplayName(data = {}) {
+            if (data.fullName && String(data.fullName).trim()) {
+                return String(data.fullName).trim();
+            }
+
+            const first = String(data.firstName || "").trim();
+            const last = String(data.lastName || "").trim();
+            const combined = `${first} ${last}`.trim();
+
+            return combined || "Unnamed Player";
+        }
 
         // --- Table Definition ---
         const table = new Tabulator("#roster-table", {
@@ -79,38 +92,42 @@
             placeholder: "Searching Database...",
             columns: [
                 {
-                    title: "ATHLETE NAME", 
-                    field: "fullName", 
-                    widthGrow: 2, 
+                    title: "ATHLETE NAME",
+                    field: "fullName",
+                    widthGrow: 2,
                     formatter: (cell) => `<div class="py-1"><span class="block font-black text-white tracking-tight uppercase leading-none">${cell.getValue() || "Unnamed"}</span></div>`
                 },
-                {title: "CLASS", field: "gradYear", width: 90, hozAlign: "center", cssClass: "text-gray-400 font-bold"},
-                {title: "OFF.", field: "offPrimary", width: 80, hozAlign: "center", cssClass: "text-red-600 font-black italic"},
-                {title: "DEF.", field: "defPrimary", width: 80, hozAlign: "center", cssClass: "text-blue-500 font-black italic"},
+                { title: "CLASS", field: "gradYear", width: 90, hozAlign: "center", cssClass: "text-gray-400 font-bold" },
+                { title: "OFF.", field: "offPrimary", width: 80, hozAlign: "center", cssClass: "text-red-600 font-black italic" },
+                { title: "DEF.", field: "defPrimary", width: 80, hozAlign: "center", cssClass: "text-blue-500 font-black italic" },
                 {
-                    title: "NEXT-LEVEL", 
-                    field: "nextLevelComplete", 
-                    width: 130, 
+                    title: "NEXT-LEVEL",
+                    field: "nextLevelComplete",
+                    width: 130,
                     hozAlign: "center",
-                    formatter: "tickCross", 
+                    formatter: "tickCross",
                     formatterParams: { allowEmpty: true, crossElement: false },
-                    cellClick: async function(e, cell) {
+                    cellClick: async function (e, cell) {
                         const newVal = !cell.getValue();
                         const rowData = cell.getRow().getData();
-                        if (confirm(`Toggle recruiting status for ${rowData.fullName}?`)) {
-                            try {
-                                await updateDoc(doc(db, "recruiting_profiles", rowData.id), { nextLevelComplete: newVal });
-                                cell.setValue(newVal);
-                            } catch (err) { alert("Update failed."); }
+
+                        if (!confirm(`Toggle recruiting status for ${rowData.fullName}?`)) return;
+
+                        try {
+                            await updateDoc(doc(db, "recruiting_profiles", rowData.id), { nextLevelComplete: newVal });
+                            cell.setValue(newVal);
+                        } catch (err) {
+                            console.error("Recruiting status update failed:", err);
+                            alert("Update failed.");
                         }
                     }
                 },
                 {
-                    title: "COMMANDS", 
-                    width: 200, 
-                    hozAlign: "right", 
+                    title: "COMMANDS",
+                    width: 200,
+                    hozAlign: "right",
                     headerSort: false,
-                    formatter: function() {
+                    formatter: function () {
                         return `
                             <div class="flex gap-2 justify-end pr-2">
                                 <button class="edit-btn bg-white/5 hover:bg-white text-white hover:text-black px-4 py-1.5 rounded-md text-[10px] font-black transition-all border border-white/10 italic">EDIT</button>
@@ -118,13 +135,14 @@
                             </div>
                         `;
                     },
-                    cellClick: function(e, cell) {
+                    cellClick: function (e, cell) {
                         const rowData = cell.getRow().getData();
+
                         if (e.target.classList.contains('edit-btn')) {
                             window.location.href = `profile.html?id=${rowData.id}`;
                         }
+
                         if (e.target.classList.contains('delete-btn')) {
-                            // Pointing specifically to the new robust global function
                             window.deleteAthlete(rowData.id, rowData.fullName);
                         }
                     }
@@ -132,37 +150,56 @@
             ]
         });
 
-        async function loadRoster(schoolID) {
+        async function loadRoster(schoolId) {
             try {
-                window.currentSchoolId = schoolID;
-                const q = query(
-                    collection(db, "users"), 
-                    where("schoolId", "==", schoolID), 
+                window.currentSchoolId = schoolId;
+
+                let userQuery = query(
+                    collection(db, "users"),
+                    where("schoolId", "==", schoolId),
                     where("role", "==", "player")
                 );
-                
-                const userSnap = await getDocs(q);
+
+                let userSnap = await getDocs(userQuery);
+
+                // Legacy fallback for older user docs
+                if (userSnap.empty) {
+                    userQuery = query(
+                        collection(db, "users"),
+                        where("school_id", "==", schoolId),
+                        where("role", "==", "player")
+                    );
+                    userSnap = await getDocs(userQuery);
+                }
+
                 const athleteData = await Promise.all(userSnap.docs.map(async (userDoc) => {
                     const userData = userDoc.data();
-                    const profileDoc = await getDoc(doc(db, "recruiting_profiles", userDoc.id));
+
+                    const [profileDoc, maxesDoc] = await Promise.all([
+                        getDoc(doc(db, "recruiting_profiles", userDoc.id)),
+                        getDoc(doc(db, "recruiting_profiles", userDoc.id, "maxes", "latest"))
+                    ]);
+
                     const profileData = profileDoc.exists() ? profileDoc.data() : {};
-                    
-                    const calculatedName = userData.fullName || 
-                                         ((userData.firstName || "") + " " + (userData.lastName || "")).trim() || 
-                                         "Unnamed Player";
+                    const maxesData = maxesDoc.exists() ? maxesDoc.data() : {};
 
                     return {
                         id: userDoc.id,
-                        fullName: calculatedName,
-                        gradYear: userData.gradYear || "N/A",
+                        fullName: getDisplayName({ ...userData, ...profileData }),
+                        gradYear: userData.gradYear || profileData.gradYear || "N/A",
                         offPrimary: profileData.offPrimary || userData.offPrimary || "-",
                         defPrimary: profileData.defPrimary || userData.defPrimary || "-",
                         nextLevelComplete: profileData.nextLevelComplete || false,
-                        ...profileData
+                        ...userData,
+                        ...profileData,
+                        ...maxesData
                     };
                 }));
 
+                athleteData.sort((a, b) => (a.fullName || "").localeCompare(b.fullName || ""));
+
                 table.setData(athleteData);
+
                 const countEl = document.getElementById('player-count');
                 if (countEl) countEl.innerText = `${athleteData.length} ATHLETES ON FILE`;
 
@@ -173,49 +210,48 @@
 
         // --- Updated Global Delete Athlete Logic ---
         window.deleteAthlete = async (athleteId, athleteName) => {
-            // 1. Initial Prompt for verification
             const typedName = prompt(`To confirm deletion, type the athlete's name exactly: ${athleteName.toUpperCase()}`);
-            
-            if (typedName === null) return; // User cancelled
+            if (typedName === null) return;
 
-            // 2. The Misspell Check (Your requested feedback)
             if (typedName.trim().toLowerCase() !== athleteName.trim().toLowerCase()) {
                 alert(`ERROR: "${typedName}" does not match "${athleteName}". Deletion unsuccessful.`);
                 return;
             }
 
-            // 3. Final Confirmation
             if (!confirm("LAST WARNING: This will permanently wipe all stats and the user account. Proceed?")) return;
 
             try {
                 const profileRef = doc(db, "recruiting_profiles", athleteId);
                 const userRef = doc(db, "users", athleteId);
+                const maxesRef = doc(db, "recruiting_profiles", athleteId, "maxes", "latest");
                 
-                const athleteSnap = await getDoc(profileRef);
+                const [athleteSnap, userSnap, maxesSnap] = await Promise.all([
+                    getDoc(profileRef),
+                    getDoc(userRef),
+                    getDoc(maxesRef)
+                ]);
+
+                const profileSchoolId = athleteSnap.exists() ? getSchoolIdFromData(athleteSnap.data()) : "";
+                const userSchoolId = userSnap.exists() ? getSchoolIdFromData(userSnap.data()) : "";
+                const resolvedSchoolId = userSchoolId || profileSchoolId;
+
+                if (resolvedSchoolId && resolvedSchoolId !== window.currentSchoolId) {
+                    alert("PERMISSION DENIED: Unauthorized access.");
+                    return;
+                }
+
                 const batch = writeBatch(db);
 
-                if (!athleteSnap.exists()) {
-                    console.warn("Profile doc missing. Attempting user cleanup.");
-                    await deleteDoc(userRef);
-                } else {
-                    const athleteData = athleteSnap.data();
-                    const sCheck = athleteData.school_id || athleteData.schoolId;
+                if (athleteSnap.exists()) batch.delete(profileRef);
+                if (userSnap.exists()) batch.delete(userRef);
+                if (maxesSnap.exists()) batch.delete(maxesRef);
 
-                    if (sCheck && sCheck !== window.currentSchoolId) {
-                        alert("PERMISSION DENIED: Unauthorized access.");
-                        return;
-                    }
-
-                    batch.delete(profileRef);
-                    batch.delete(userRef);
-                    await batch.commit();
-                }
+                await batch.commit();
                 
                 alert(`SUCCESS: ${athleteName.toUpperCase()} has been removed.`);
                 
-                // Reload the roster to update the table
                 if (window.currentSchoolId) {
-                    loadRoster(window.currentSchoolId);
+                    await loadRoster(window.currentSchoolId);
                 } else {
                     location.reload();
                 }
@@ -228,22 +264,46 @@
 
         const searchInput = document.getElementById("roster-search");
         if (searchInput) {
-            searchInput.addEventListener("input", (e) => table.setFilter("fullName", "like", e.target.value));
+            searchInput.addEventListener("input", (e) => {
+                table.setFilter("fullName", "like", e.target.value);
+            });
         }
 
         onAuthStateChanged(auth, async (user) => {
-            if (user) {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            try {
                 const coachSnap = await getDoc(doc(db, "users", user.uid));
-                if (coachSnap.exists()) {
-                    const coachData = coachSnap.data();
-                    const sID = coachData.school_id || coachData.schoolId;
-                    if (sID) {
-                        window.currentSchoolId = sID;
-                        await applyTheme(db, sID);
-                        loadRoster(sID);
-                    }
+
+                if (!coachSnap.exists()) {
+                    window.location.href = 'index.html';
+                    return;
                 }
-            } else {
+
+                const coachData = coachSnap.data();
+
+                if ((coachData.role || "").toLowerCase() !== "coach") {
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                const schoolId = getSchoolIdFromData(coachData);
+
+                if (!schoolId) {
+                    alert("Coach profile is missing a school ID.");
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                window.currentSchoolId = schoolId;
+                await applyTheme(db, schoolId);
+                await loadRoster(schoolId);
+
+            } catch (error) {
+                console.error("Roster manager init error:", error);
                 window.location.href = 'index.html';
             }
         });

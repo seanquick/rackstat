@@ -113,76 +113,122 @@
     </main>
 
     <script type="module">
-    import { firebaseConfig } from './js/firebase-config.js';
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { db, auth } from './js/firebase-config.js';
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { doc, getDoc, updateDoc, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    let schoolId = null;
 
-    let schoolID = null;
-
-    // HELPER: Turns "Incline Bench" into "incline_bench"
+    // Turns "Incline Bench" into "incline_bench"
     const slugify = (text) => text.toLowerCase().replace(/\s+/g, '_').replace(/[^\w-]+/g, '');
 
+    // Returns school ID regardless of legacy underscore/camelCase naming
+    const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
+
+    // Loads authenticated coach context before allowing access to settings
     onAuthStateChanged(auth, async (user) => {
-        if (user) {
+        if (!user) {
+            window.location.href = 'index.html';
+            return;
+        }
+
+        try {
             const userDoc = await getDoc(doc(db, "users", user.uid));
-            if (userDoc.exists() && userDoc.data().role === 'coach') {
-                schoolID = userDoc.data().school_id || userDoc.data().schoolId; 
-                if (schoolID) {
-                    loadSettings();
-                    fetchPlayerCount();
-                }
-            } else { 
-                window.location.href = 'index.html'; 
+
+            if (!userDoc.exists() || userDoc.data().role !== 'coach') {
+                window.location.href = 'index.html';
+                return;
             }
-        } else { 
-            window.location.href = 'index.html'; 
+
+            schoolId = getSchoolIdFromData(userDoc.data());
+
+            if (!schoolId) {
+                alert("Coach profile is missing a school ID.");
+                window.location.href = 'index.html';
+                return;
+            }
+
+            await loadSettings();
+            await fetchPlayerCount();
+        } catch (err) {
+            console.error("Error loading team settings auth context:", err);
+            window.location.href = 'index.html';
         }
     });
 
+    // Loads the current school configuration into the settings form
     async function loadSettings() {
-        if (!schoolID) return;
+        if (!schoolId) return;
+
         try {
-            const schoolRef = doc(db, "schools", schoolID);
+            const schoolRef = doc(db, "schools", schoolId);
             const snap = await getDoc(schoolRef);
             
-            if (snap.exists()) {
-                const data = snap.data();
-                
-                document.getElementById('program-title').innerText = `${data.name || 'Program'} Settings`;
-                document.getElementById('primary-color').value = data.colors?.primary || '#ff0000';
-                document.getElementById('secondary-color').value = data.colors?.secondary || '#000000';
-                document.getElementById('logo-url').value = data.logo_url || '';
-                document.getElementById('formula-type').value = data.formula_type || 'power_index';
-                document.getElementById('club-start').value = data.club_start || 50;
-                document.getElementById('toggle-recruiting').checked = data.recruitingEnabled !== false;
+            if (!snap.exists()) return;
 
-                const activeLifts = data.activeLifts || ["bench", "squat", "clean"];
-                const customLifts = data.customLifts || []; // Array of objects {id, name}
-                
-                // 1. Check standard lifts
-                document.querySelectorAll('.lift-checkbox').forEach(cb => {
-                    cb.checked = activeLifts.includes(cb.value);
-                });
+            const data = snap.data();
+            const trackedLifts = data.trackedLifts || data.activeLifts || ["bench", "squat", "clean"];
+            const customLifts = data.customLifts || [];
+            const recruitingEnabled = data.hasRecruitingCard !== undefined
+                ? data.hasRecruitingCard
+                : (data.recruitingEnabled !== false);
 
-                // 2. Render custom lifts
-                const container = document.getElementById('core-lifts-container');
-                customLifts.forEach(liftObj => {
-                    // Backwards compatibility check
-                    const liftId = typeof liftObj === 'string' ? slugify(liftObj) : liftObj.id;
-                    const liftName = typeof liftObj === 'string' ? liftObj : liftObj.name;
-                    renderNewLiftCheckbox(liftName, liftId, activeLifts.includes(liftId));
-                });
-            }
+            document.getElementById('program-title').innerText = `${data.name || 'Program'} Settings`;
+            document.getElementById('primary-color').value = data.colors?.primary || data.primaryColor || '#ff0000';
+            document.getElementById('secondary-color').value = data.colors?.secondary || '#000000';
+            document.getElementById('logo-url').value = data.logo_url || data.logo_primary || data.logo || '';
+            document.getElementById('formula-type').value = data.formula_type || 'power_index';
+            document.getElementById('club-start').value = data.club_start || 50;
+            document.getElementById('toggle-recruiting').checked = recruitingEnabled;
+
+            // Check standard lifts
+            document.querySelectorAll('.lift-checkbox').forEach(cb => {
+                cb.checked = trackedLifts.includes(cb.value);
+            });
+
+            // Render custom lifts
+            customLifts.forEach(liftObj => {
+                const liftId = typeof liftObj === 'string' ? slugify(liftObj) : liftObj.id;
+                const liftName = typeof liftObj === 'string' ? liftObj : liftObj.name;
+                renderNewLiftCheckbox(liftName, liftId, trackedLifts.includes(liftId));
+            });
         } catch (err) {
             console.error("Error loading settings:", err);
         }
     }
 
+    // Loads athlete count for the current coach's school
+    async function fetchPlayerCount() {
+        if (!schoolId) return;
+
+        const badge = document.getElementById('player-count');
+        if (!badge) return;
+
+        try {
+            let snap = await getDocs(query(
+                collection(db, "users"),
+                where("schoolId", "==", schoolId),
+                where("role", "==", "player")
+            ));
+
+            // Legacy fallback for older user docs
+            if (snap.empty) {
+                snap = await getDocs(query(
+                    collection(db, "users"),
+                    where("school_id", "==", schoolId),
+                    where("role", "==", "player")
+                ));
+            }
+
+            const count = snap.size;
+            badge.innerText = `${count} Athlete${count === 1 ? '' : 's'}`;
+        } catch (err) {
+            console.error("Error fetching athlete count:", err);
+            badge.innerText = "0 Athletes";
+        }
+    }
+
+    // Adds a custom lift to the UI in checked state by default
     window.addCustomLiftToUI = () => {
         const input = document.getElementById('custom-lift-input');
         const liftName = input.value.trim();
@@ -193,6 +239,7 @@
         input.value = "";
     };
 
+    // Renders a custom lift checkbox row if it does not already exist
     function renderNewLiftCheckbox(name, id, checked) {
         const container = document.getElementById('core-lifts-container');
         const existing = Array.from(container.querySelectorAll('.lift-checkbox')).find(cb => cb.value === id);
@@ -207,39 +254,46 @@
         container.appendChild(label);
     }
 
+    // Saves all branding, ranking, recruiting, and tracked-lift settings to the school document
     window.saveAllSettings = async () => {
-        if (!schoolID) return;
+        if (!schoolId) return;
+
         const btn = document.getElementById('master-save-btn');
         btn.innerText = "SAVING CHANGES...";
         btn.disabled = true;
 
-        const activeLifts = [];
-        const customLifts = []; // We will store as objects to keep the "Pretty Name"
+        const trackedLifts = [];
+        const customLifts = [];
         const standardIds = ["bench", "squat", "clean", "deadlift", "push_press"];
 
         document.querySelectorAll('.lift-checkbox').forEach(cb => {
             const id = cb.value;
             const name = cb.getAttribute('data-name') || cb.nextElementSibling.innerText;
 
-            if (cb.checked) activeLifts.push(id);
-            
+            if (cb.checked) trackedLifts.push(id);
+
             if (!standardIds.includes(id)) {
                 customLifts.push({ id, name });
             }
         });
 
         try {
-            await updateDoc(doc(db, "schools", schoolID), {
+            const logoUrl = document.getElementById('logo-url').value.trim();
+
+            await updateDoc(doc(db, "schools", schoolId), {
                 "colors.primary": document.getElementById('primary-color').value,
                 "colors.secondary": document.getElementById('secondary-color').value,
-                logo_url: document.getElementById('logo-url').value,
+                logo_url: logoUrl,
                 formula_type: document.getElementById('formula-type').value,
-                club_start: parseInt(document.getElementById('club-start').value) || 50,
+                club_start: parseInt(document.getElementById('club-start').value, 10) || 50,
+                hasRecruitingCard: document.getElementById('toggle-recruiting').checked,
                 recruitingEnabled: document.getElementById('toggle-recruiting').checked,
-                activeLifts,
+                trackedLifts,
+                activeLifts: trackedLifts,
                 customLifts,
                 lastUpdated: new Date()
             });
+
             alert("Settings Saved! All athlete pages will now sync to these IDs.");
         } catch (err) {
             alert("Save Error: Check console.");
@@ -249,6 +303,6 @@
             btn.disabled = false;
         }
     };
-</script>
+    </script>
 </body>
 </html>

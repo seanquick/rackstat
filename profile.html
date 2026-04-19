@@ -206,95 +206,166 @@
 </nav>
 
 <script type="module">
-    import { firebaseConfig } from './js/firebase-config.js';
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    // Adding versioning to the import to force-clear cache and hide logs
-    import { applyTheme } from './js/theme.js?v=rackstat-secure';
+    import { db, auth } from './js/firebase-config.js';
+    import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { applyTheme } from './js/theme.js';
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-    
     let currentGoals = [];
+    let viewedUid = null;
+    let currentUserRole = null;
+
+    const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
+
+    function formatHeight(totalInches) {
+        const numeric = Number(totalInches);
+        if (!numeric || numeric <= 0) return "";
+        const feet = Math.floor(numeric / 12);
+        const inches = numeric % 12;
+        return `${feet}'${inches}"`;
+    }
+
+    function renderGoals(uid, goals) {
+        const container = document.getElementById('goals-container');
+        if (!container || !goals) return;
+
+        container.innerHTML = goals.map(goal => `
+            <div class="animate-fade-in profile-card mb-4">
+                <p class="text-[10px] font-black text-gray-500 uppercase">${goal.type || 'Goal'}</p>
+                <p class="text-lg font-black italic uppercase">${goal.target || 0} LBS</p>
+            </div>
+        `).join('');
+    }
+
+    function syncGoalDisplay(pData) {
+        const currentScore = Number(pData.boardScore || 0);
+        const targetGoal = Number(pData.clubGoal || 0);
+        const progressBar = document.getElementById('goal-progress-bar');
+        const goalMsg = document.getElementById('goal-message');
+        const lastUpdatedDate = document.getElementById('last-updated-date');
+
+        if (lastUpdatedDate && pData.lastUpdated) {
+            const d = new Date(pData.lastUpdated);
+            if (!Number.isNaN(d.getTime())) {
+                lastUpdatedDate.innerText = d.toLocaleDateString();
+            }
+        }
+
+        if (targetGoal > 0 && progressBar) {
+            const percent = Math.min((currentScore / targetGoal) * 100, 100);
+            progressBar.style.width = `${percent}%`;
+            if (goalMsg) {
+                goalMsg.innerText = `${Math.round(percent)}% to ${targetGoal} Club (${currentScore} / ${targetGoal})`;
+            }
+        } else if (progressBar) {
+            progressBar.style.width = "0%";
+            if (goalMsg) {
+                goalMsg.innerText = "Update stats in the RACK to see progress";
+            }
+        }
+    }
+
+    const safeSet = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val ?? "";
+    };
 
     onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            const urlParams = new URLSearchParams(window.location.search);
-            const targetUID = urlParams.get('id') || user.uid; 
-            
-            const userRef = doc(db, "users", targetUID);
-            const profileRef = doc(db, "recruiting_profiles", targetUID);
-            
-            try {
-                const userSnap = await getDoc(userRef);
-                if (userSnap.exists()) {
-                    const userData = userSnap.data();
-                    const schoolID = userData.school_id || userData.schoolId;
-                    
-                    if (schoolID) {
-                        const themeData = await applyTheme(db, schoolID);
-                        // Manual Update for Header Logo & Name
-                        if (themeData) {
-                            if (themeData.logo_primary) {
-                                // Force a fresh load and ensure the path is correct
-                                const logoEl = document.getElementById('school-logo');
-                                logoEl.src = themeData.logo_primary;
-                                
-                                // Add a fallback if the school logo fails to load
-                                logoEl.onerror = () => {
-                                    logoEl.src = 'images/rackstat-logo.png';
-                                };
-                            }
-                            if (themeData.name) {
-                                document.getElementById('school-name').innerText = themeData.name;
-                            }
-                        }
-                    }
-                }
+        if (!user) {
+            window.location.href = 'index.html';
+            return;
+        }
 
-                const profileSnap = await getDoc(profileRef);
-                const safeSet = (id, val) => { 
-                    const el = document.getElementById(id); 
-                    if (el) el.value = val || ""; 
-                };
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetUID = urlParams.get('id') || user.uid;
+        viewedUid = targetUID;
 
-                if (profileSnap.exists()) {
-                    const profileData = profileSnap.data();
-                    safeSet('full-name', profileData.fullName);
-                    safeSet('height', profileData.height);
-                if (document.getElementById('height-display')) {document.getElementById('height-display').innerText = formatHeight(profileData.height);}
-                    safeSet('weight', profileData.weight);
-                    safeSet('off-primary', profileData.offPrimary);
-                    safeSet('off-secondary', profileData.offSecondary);
-                    safeSet('def-primary', profileData.defPrimary);
-                    safeSet('def-secondary', profileData.defSecondary);
-                    safeSet('gpa', profileData.gpa);
-                    safeSet('sat', profileData.sat);
-                    safeSet('act', profileData.act);
-                    safeSet('character-statement', profileData.statement);
+        const currentUserRef = doc(db, "users", user.uid);
+        const targetUserRef = doc(db, "users", targetUID);
+        const targetProfileRef = doc(db, "recruiting_profiles", targetUID);
 
-                    if (profileData.clubGoal) {
-                        document.getElementById('goal-selector').value = profileData.clubGoal;
-                    }
+        try {
+            const [currentUserSnap, targetUserSnap, profileSnap] = await Promise.all([
+                getDoc(currentUserRef),
+                getDoc(targetUserRef),
+                getDoc(targetProfileRef)
+            ]);
 
-                    currentGoals = profileData.goals || [];
-                    renderGoals(targetUID, currentGoals);
-                    syncGoalDisplay(profileData);
-                }
-            } catch (err) {
-                console.error("❌ Profile Loading Error:", err);
+            if (!currentUserSnap.exists()) {
+                window.location.href = 'index.html';
+                return;
             }
-        } else { 
-            window.location.href = 'index.html'; 
+
+            const currentUserData = currentUserSnap.data();
+            currentUserRole = (currentUserData.role || "").toLowerCase();
+
+            // Prevent athletes from editing someone else's profile
+            if (targetUID !== user.uid && currentUserRole !== 'coach' && currentUserRole !== 'admin') {
+                window.location.href = 'profile.html';
+                return;
+            }
+
+            const targetUserData = targetUserSnap.exists() ? targetUserSnap.data() : {};
+            const profileData = profileSnap.exists() ? profileSnap.data() : {};
+            const mergedData = { ...targetUserData, ...profileData };
+
+            const schoolId = getSchoolIdFromData(mergedData) || getSchoolIdFromData(currentUserData);
+
+            if (schoolId) {
+                const themeData = await applyTheme(db, schoolId);
+
+                if (themeData?.logo_primary) {
+                    const logoEl = document.getElementById('school-logo');
+                    logoEl.src = themeData.logo_primary;
+                    logoEl.onerror = () => {
+                        logoEl.src = 'images/rackstat-logo.png';
+                    };
+                } else if (themeData?.logo_url || themeData?.logo) {
+                    const logoEl = document.getElementById('school-logo');
+                    logoEl.src = themeData.logo_url || themeData.logo;
+                    logoEl.onerror = () => {
+                        logoEl.src = 'images/rackstat-logo.png';
+                    };
+                }
+
+                if (themeData?.name) {
+                    document.getElementById('school-name').innerText = themeData.name;
+                }
+            }
+
+            safeSet('full-name', mergedData.fullName);
+            safeSet('height', mergedData.height);
+            safeSet('weight', mergedData.weight);
+            safeSet('off-primary', mergedData.offPrimary);
+            safeSet('off-secondary', mergedData.offSecondary);
+            safeSet('def-primary', mergedData.defPrimary);
+            safeSet('def-secondary', mergedData.defSecondary);
+            safeSet('gpa', mergedData.gpa);
+            safeSet('sat', mergedData.sat);
+            safeSet('act', mergedData.act);
+            safeSet('character-statement', mergedData.statement);
+
+            const heightDisplay = document.getElementById('height-display');
+            if (heightDisplay) {
+                heightDisplay.innerText = formatHeight(mergedData.height);
+            }
+
+            if (mergedData.clubGoal) {
+                document.getElementById('goal-selector').value = mergedData.clubGoal;
+            }
+
+            currentGoals = mergedData.goals || [];
+            renderGoals(targetUID, currentGoals);
+            syncGoalDisplay(mergedData);
+
+        } catch (err) {
+            console.error("❌ Profile Loading Error:", err);
         }
     });
 
-    // Explicitly attaching to window so HTML buttons can access them
     window.saveClubGoal = async () => {
         const user = auth.currentUser;
-        if (!user) return;
+        if (!user || !viewedUid) return;
 
         const goalValue = document.getElementById('goal-selector').value;
         const btn = document.getElementById('save-goal-btn');
@@ -302,16 +373,18 @@
         btn.disabled = true;
 
         try {
-            await setDoc(doc(db, "recruiting_profiles", user.uid), {
+            await setDoc(doc(db, "recruiting_profiles", viewedUid), {
                 clubGoal: Number(goalValue)
             }, { merge: true });
             
             btn.innerText = "GOAL SET!";
-            btn.style.backgroundColor = "#059669"; 
-            
-            const profileSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
-            if (profileSnap.exists()) syncGoalDisplay(profileSnap.data());
-            
+            btn.style.backgroundColor = "#059669";
+
+            const profileSnap = await getDoc(doc(db, "recruiting_profiles", viewedUid));
+            if (profileSnap.exists()) {
+                syncGoalDisplay(profileSnap.data());
+            }
+
             setTimeout(() => {
                 btn.innerText = "Set Target Club";
                 btn.style.backgroundColor = "";
@@ -319,6 +392,7 @@
             }, 2000);
 
         } catch (err) {
+            console.error("Club goal save error:", err);
             btn.innerText = "SAVE ERROR";
             btn.disabled = false;
         }
@@ -326,7 +400,7 @@
 
     window.saveProfile = async () => {
         const user = auth.currentUser;
-        if (!user) return;
+        if (!user || !viewedUid) return;
         
         const btn = document.getElementById('save-btn');
         btn.innerText = "UPDATING...";
@@ -335,14 +409,17 @@
         const getVal = (id, isNumber = false) => {
             const el = document.getElementById(id);
             if (!el) return isNumber ? 0 : "";
-            return isNumber ? Number(el.value) : el.value;
+            return isNumber ? Number(el.value) || 0 : el.value;
         };
 
         try {
-            await setDoc(doc(db, "recruiting_profiles", user.uid), {
-                fullName: getVal('full-name'),
-                height: getVal('height'),
-                weight: getVal('weight', true),
+            const fullName = getVal('full-name');
+            const weight = getVal('weight', true);
+            const profilePayload = {
+                fullName,
+                height: getVal('height', true),
+                weight,
+                bodyWeight: weight,
                 offPrimary: getVal('off-primary'),
                 offSecondary: getVal('off-secondary'),
                 defPrimary: getVal('def-primary'),
@@ -352,11 +429,20 @@
                 act: getVal('act'),
                 statement: getVal('character-statement'),
                 lastUpdated: new Date().toISOString()
+            };
+
+            await setDoc(doc(db, "recruiting_profiles", viewedUid), profilePayload, { merge: true });
+
+            // Keep key profile fields in users synced when editing own profile or coach-editing athlete profile
+            await setDoc(doc(db, "users", viewedUid), {
+                fullName,
+                weight
             }, { merge: true });
 
             btn.innerText = "PROFILE SAVED!";
             btn.style.backgroundColor = "#059669";
         } catch (e) { 
+            console.error("Profile save error:", e);
             btn.innerText = "ERROR SAVING";
         } finally {
             setTimeout(() => { 
@@ -367,57 +453,19 @@
         }
     };
 
-    function renderGoals(uid, goals) {
-        const container = document.getElementById('goals-container');
-        if (!container || !goals) return;
-        container.innerHTML = goals.map(goal => `
-            <div class="animate-fade-in profile-card mb-4">
-                <p class="text-[10px] font-black text-gray-500 uppercase">${goal.type}</p>
-                <p class="text-lg font-black italic uppercase">${goal.target} LBS</p>
-            </div>`).join('');
-    }
-
-    function syncGoalDisplay(pData) {
-        const currentScore = pData.boardScore || 0; 
-        const targetGoal = pData.clubGoal || 0;
-        const progressBar = document.getElementById('goal-progress-bar');
-        const goalMsg = document.getElementById('goal-message');
-
-        if (targetGoal > 0 && progressBar) {
-            const percent = Math.min((currentScore / targetGoal) * 100, 100);
-            progressBar.style.width = `${percent}%`;
-            if (goalMsg) {
-                goalMsg.innerText = `${Math.round(percent)}% to ${targetGoal} Club (${currentScore} / ${targetGoal})`;
-            }
-        }
-    }
-
-    // Helper to convert inches to Feet' Inches"
-    function formatHeight(totalInches) {
-        if (!totalInches || totalInches <= 0) return "";
-        const feet = Math.floor(totalInches / 12);
-        const inches = totalInches % 12;
-        return `${feet}'${inches}"`;
-    }
-
-    // Update the display when the user types
     const heightInput = document.getElementById('height');
     const heightDisplay = document.getElementById('height-display');
 
-    heightInput.addEventListener('input', (e) => {
-        heightDisplay.innerText = formatHeight(e.target.value);
-    });
+    if (heightInput && heightDisplay) {
+        heightInput.addEventListener('input', (e) => {
+            heightDisplay.innerText = formatHeight(e.target.value);
+        });
+    }
 
-    // We also need to trigger this display update once data is loaded from Firebase
-    // Inside your onAuthStateChanged, after safeSet('height', profileData.height);
-    // Add this line:
-    // heightDisplay.innerText = formatHeight(profileData.height);
-
-    // Manual Event Listeners
     document.getElementById('save-btn').onclick = window.saveProfile;
     document.getElementById('save-goal-btn').onclick = window.saveClubGoal;
     document.getElementById('btn-view-card').onclick = () => { 
-        if(auth.currentUser) window.location.href = `recruiting-card.html?uid=${auth.currentUser.uid}`; 
+        if (viewedUid) window.location.href = `recruiting-card.html?uid=${viewedUid}`;
     };
 </script>
 </body>

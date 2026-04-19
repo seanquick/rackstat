@@ -27,7 +27,6 @@
         </div>
 
         <div class="flex items-center gap-6 justify-center flex-1">
-            
             <div class="header-logo-container">
                 <img id="school-logo" src="images/rackstat-logo.png" alt="School Logo" onerror="this.src='images/rackstat-logo.png'">
             </div>
@@ -87,101 +86,81 @@
     <button onclick="location.href='profile.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
 </nav>
 
-<script type="module" src="js/theme.js"></script>
-
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, doc, getDoc, collection, query, where, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-    const firebaseConfig = { 
-        apiKey: "AIzaSyBOQFeokKaNQKwaUhXMCA0oEm4W9G0qafE", 
-        authDomain: "rackstat-production.firebaseapp.com", 
-        projectId: "rackstat-production",
-        storageBucket: "rackstat-production.firebasestorage.app",
-        messagingSenderId: "345003825117",
-        appId: "1:345003825117:web:2ad86b1902dfdebe0c8834"
-    };
-    
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
+    import { db, auth } from "./js/firebase-config.js";
+    import { applyTheme } from "./js/theme.js";
+    import { getDoc, doc, collection, query, where, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
     // --- GLOBAL STATE ---
     let isCoachMode = false;
     let currentSchoolId = null;
+    let currentUserRole = null;
+
     const weightClasses = [125, 135, 145, 155, 165, 175, 185, 195, 210, 225, 250, "UNLIMITED"];
     
     const getWeightClass = (bw) => {
-        if (!bw || bw > 250) return "UNLIMITED";
-        return weightClasses.find(c => c !== "UNLIMITED" && bw <= c) || "UNLIMITED";
+        const numericBw = Number(bw) || 0;
+        if (!numericBw || numericBw > 250) return "UNLIMITED";
+        return weightClasses.find(c => c !== "UNLIMITED" && numericBw <= c) || "UNLIMITED";
     };
 
-    // --- THEME ENGINE ---
-    async function applyTheme(schoolID) {
-        try {
-            const schoolSnap = await getDoc(doc(db, "schools", schoolID));
-            if (schoolSnap.exists()) {
-                const data = schoolSnap.data();
-                const colors = data.colors || {};
-                const root = document.documentElement;
+    const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
 
-                // Update CSS variables
-                root.style.setProperty('--school-primary', colors.primary || '#b91c1c');
-                root.style.setProperty('--school-secondary', colors.secondary || '#0a0a0b');
-
-                // Update Logos - Check for both possible element IDs
-                const schoolLogoEl = document.getElementById('school-logo') || document.querySelector('.school-logo');
-                if (schoolLogoEl && data.logo_url) {
-                    schoolLogoEl.src = data.logo_url;
-                }
-                
-                // Trigger a class to show the theme is loaded
-                document.body.classList.add('theme-loaded');
-                return data;
-            }
-        } catch (err) {
-            console.error("Theme Load Error:", err);
+    const getDisplayName = (data = {}) => {
+        if (data.fullName && String(data.fullName).trim()) {
+            return String(data.fullName).trim();
         }
-    }
+        const first = String(data.firstName || "").trim();
+        const last = String(data.lastName || "").trim();
+        const combined = `${first} ${last}`.trim();
+        return combined || "Unknown Athlete";
+    };
 
     // --- AUTH OBSERVER ---
     onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            try {
-                let userSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
-                if (!userSnap.exists()) {
-                    userSnap = await getDoc(doc(db, "users", user.uid));
-                }
+        if (!user) {
+            window.location.href = 'index.html';
+            return;
+        }
 
-                if (userSnap.exists()) {
-                    const userData = userSnap.data();
-                    currentSchoolId = userData.school_id || userData.schoolId;
+        try {
+            const [profileSnap, userSnap] = await Promise.all([
+                getDoc(doc(db, "recruiting_profiles", user.uid)),
+                getDoc(doc(db, "users", user.uid))
+            ]);
 
-                    if (currentSchoolId) {
-                        await applyTheme(currentSchoolId);
-                        window.loadBoard(currentSchoolId);
-                    }
-                }
-            } catch (err) {
-                console.error("Board Init Error:", err);
+            const profileData = profileSnap.exists() ? profileSnap.data() : {};
+            const userData = userSnap.exists() ? userSnap.data() : {};
+            const mergedUser = { ...userData, ...profileData };
+
+            currentSchoolId = getSchoolIdFromData(mergedUser);
+            currentUserRole = (mergedUser.role || "").toLowerCase();
+
+            if (!currentSchoolId) {
+                console.error("Board Init Error: Missing school ID.");
+                return;
             }
-        } else { 
-            window.location.href = 'index.html'; 
+
+            await applyTheme(db, currentSchoolId);
+            await window.loadBoard(currentSchoolId);
+        } catch (err) {
+            console.error("Board Init Error:", err);
         }
     });
 
     // --- BOARD LOADING ENGINE ---
     window.loadBoard = async function(schoolId) {
         if (!schoolId) return;
+
         const grid = document.getElementById('player-club-grid');
         const recordBody = document.getElementById('record-rows');
         const schoolTag = document.getElementById('school-tag');
         const formulaDisplay = document.getElementById('formula-display');
         const athleteCountDisplay = document.getElementById('athlete-count');
 
-        // 1. Fetch Data Safely
         let schoolSnap, manualSnap;
+
         try {
             [schoolSnap, manualSnap] = await Promise.all([
                 getDoc(doc(db, "schools", schoolId)),
@@ -196,76 +175,125 @@
         
         const school = schoolSnap.data();
         const manualRecords = manualSnap.exists() ? manualSnap.data() : {};
-        const formulaSetting = (school.formula_type || "power_index").toLowerCase().replace("_", " ");
-        
-        // Update UI Text if elements exist
-        if (schoolTag) schoolTag.innerText = `${school.name} Weightroom`.toUpperCase();
-        if (formulaDisplay) formulaDisplay.innerText = formulaSetting.toUpperCase();
+        const formulaSettingRaw = school.formula_type || "power_index";
+        const formulaDisplayText = String(formulaSettingRaw).toLowerCase().replaceAll("_", " ");
 
-        let scoringLifts = (school.scoring_lifts && school.scoring_lifts[0]) 
-            ? school.scoring_lifts[0].split(',').map(s => s.trim()) 
-            : ["bench", "squat", "clean", "deadlift"];
+        if (schoolTag) {
+            schoolTag.innerText = `${school.name || "School"} Weightroom`.toUpperCase();
+        }
+        if (formulaDisplay) {
+            formulaDisplay.innerText = formulaDisplayText.toUpperCase();
+        }
 
-        // 2. Process Athletes
-        const q = query(collection(db, "recruiting_profiles"), where("school_id", "==", schoolId));
-        const pSnap = await getDocs(q);
-        if (athleteCountDisplay) athleteCountDisplay.innerText = `${pSnap.size} Athletes Logged`;
+        const scoringLifts = Array.isArray(school.trackedLifts) && school.trackedLifts.length
+            ? school.trackedLifts
+            : (Array.isArray(school.activeLifts) && school.activeLifts.length
+                ? school.activeLifts
+                : ["bench", "squat", "clean", "deadlift"]);
 
-        let classRecords = {};
+        // 2. Process athletes
+        let athleteQuery = query(collection(db, "recruiting_profiles"), where("schoolId", "==", schoolId));
+        let pSnap = await getDocs(athleteQuery);
+
+        // Legacy fallback
+        if (pSnap.empty) {
+            athleteQuery = query(collection(db, "recruiting_profiles"), where("school_id", "==", schoolId));
+            pSnap = await getDocs(athleteQuery);
+        }
+
+        if (athleteCountDisplay) {
+            athleteCountDisplay.innerText = `${pSnap.size} Athletes Logged`;
+        }
+
+        const classRecords = {};
         weightClasses.forEach(wc => {
             classRecords[wc] = {
-                bench: { val: 0, name: "-" }, squat: { val: 0, name: "-" },
-                clean: { val: 0, name: "-" }, deadlift: { val: 0, name: "-" },
+                bench: { val: 0, name: "-" },
+                squat: { val: 0, name: "-" },
+                clean: { val: 0, name: "-" },
+                deadlift: { val: 0, name: "-" },
                 dash: { val: 99.9, name: "-" }
             };
         });
 
-        let scores = [];
+        const scores = [];
 
-        for (const d of pSnap.docs) {
-            const athleteData = d.data();
-            const latestMaxSnap = await getDoc(doc(db, "recruiting_profiles", d.id, "maxes", "latest"));
-            
-            if (latestMaxSnap.exists()) {
-                const m = latestMaxSnap.data();
-                const totalLifts = scoringLifts.reduce((acc, lift) => acc + (Number(m[lift]) || 0), 0);
-                const athleteBW = Number(athleteData.bodyWeight || athleteData.weight || m.bodyWeight || 0);
-                const currentWC = getWeightClass(athleteBW);
-                const fullName = `${athleteData.firstName} ${athleteData.lastName}`;
+        for (const athleteDoc of pSnap.docs) {
+            const athleteProfile = athleteDoc.data();
+            const [userSnap, latestMaxSnap] = await Promise.all([
+                getDoc(doc(db, "users", athleteDoc.id)),
+                getDoc(doc(db, "recruiting_profiles", athleteDoc.id, "maxes", "latest"))
+            ]);
 
-                const checkMax = (liftKey, dbKey) => {
-                    const val = Number(m[dbKey] || athleteData[dbKey] || 0);
-                    if (val > classRecords[currentWC][liftKey].val) {
-                        classRecords[currentWC][liftKey] = { val, name: fullName };
+            if (!latestMaxSnap.exists()) continue;
+
+            const userData = userSnap.exists() ? userSnap.data() : {};
+            const athleteData = { ...userData, ...athleteProfile };
+            const m = latestMaxSnap.data();
+
+            const totalLifts = scoringLifts.reduce((acc, lift) => {
+                const normalizedLift = String(lift).trim().toLowerCase();
+                let value = Number(m[normalizedLift]) || 0;
+
+                if (!value) {
+                    if (normalizedLift === "bench") value = Number(m.bench_press) || 0;
+                    if (normalizedLift === "clean") value = Number(m.power_clean) || 0;
+                    if (normalizedLift === "push_press") value = Number(m.pushPress) || Number(m.push_press) || 0;
+                }
+
+                return acc + value;
+            }, 0);
+
+            const athleteBW = Number(m.bodyWeight || m.body_weight || athleteData.bodyWeight || athleteData.weight || 0);
+            const currentWC = getWeightClass(athleteBW);
+            const fullName = getDisplayName(athleteData);
+
+            const checkMax = (liftKey, possibleKeys) => {
+                const val = possibleKeys.reduce((found, key) => found || Number(m[key]) || Number(athleteData[key]) || 0, 0);
+                if (val > classRecords[currentWC][liftKey].val) {
+                    classRecords[currentWC][liftKey] = { val, name: fullName };
+                }
+            };
+
+            const checkMin = (liftKey, possibleKeys) => {
+                let val = 99.9;
+                for (const key of possibleKeys) {
+                    const candidate = parseFloat(m[key] || athleteData[key]);
+                    if (candidate > 0) {
+                        val = candidate;
+                        break;
                     }
-                };
+                }
+                if (val > 0 && val < classRecords[currentWC][liftKey].val) {
+                    classRecords[currentWC][liftKey] = { val, name: fullName };
+                }
+            };
 
-                const checkMin = (liftKey, dbKey) => {
-                    const val = parseFloat(m[dbKey] || athleteData[dbKey] || 99.9);
-                    if (val > 0 && val < classRecords[currentWC][liftKey].val) {
-                        classRecords[currentWC][liftKey] = { val, name: fullName };
-                    }
-                };
+            checkMax('bench', ['bench', 'bench_press']);
+            checkMax('squat', ['squat', 'back_squat']);
+            checkMax('clean', ['clean', 'power_clean']);
+            checkMax('deadlift', ['deadlift']);
+            checkMin('dash', ['forty', 'forty_yard_dash']);
 
-                checkMax('bench', 'bench'); checkMax('squat', 'squat');
-                checkMax('clean', 'clean'); checkMax('deadlift', 'deadlift');
-                checkMin('dash', 'forty'); 
+            const displayScore = (formulaDisplayText === "power index")
+                ? totalLifts - (Math.min(athleteBW, 200) * 4)
+                : totalLifts;
 
-                let displayScore = (formulaSetting === "power index") 
-                    ? totalLifts - (Math.min(athleteBW, 200) * 4) 
-                    : totalLifts;
-
-                scores.push({ name: fullName, displayScore: Math.round(displayScore), placed: false });
-            }
+            scores.push({
+                name: fullName,
+                displayScore: Math.round(displayScore),
+                placed: false
+            });
         }
 
         // 3. Render Records Table
         if (recordBody) {
             recordBody.innerHTML = '';
+
             weightClasses.forEach(wc => {
                 const getLiftData = (lift) => {
-                    return (manualRecords[wc] && manualRecords[wc][lift]) 
-                        ? manualRecords[wc][lift] 
+                    return (manualRecords[wc] && manualRecords[wc][lift])
+                        ? manualRecords[wc][lift]
                         : classRecords[wc][lift];
                 };
 
@@ -275,9 +303,9 @@
                         ${['bench', 'squat', 'clean', 'deadlift', 'dash'].map(lift => {
                             const data = getLiftData(lift);
                             return `
-                                <td contenteditable="${isCoachMode}" 
-                                    class="record-cell ${isCoachMode ? 'bg-[var(--school-primary)]/10 outline outline-1 outline-[var(--school-primary)]/30' : ''}" 
-                                    data-wc="${wc}" 
+                                <td contenteditable="${isCoachMode && currentUserRole === 'coach'}"
+                                    class="record-cell ${isCoachMode && currentUserRole === 'coach' ? 'bg-[var(--school-primary)]/10 outline outline-1 outline-[var(--school-primary)]/30' : ''}"
+                                    data-wc="${wc}"
                                     data-lift="${lift}">
                                     <span class="record-name">${data.name || '-'}</span>
                                     <span class="record-value">${data.val || 0}${lift === 'dash' ? 's' : ''}</span>
@@ -289,14 +317,13 @@
                 recordBody.innerHTML += row;
             });
 
-            // Re-attach auto-save listeners if in coach mode
-            if (isCoachMode) {
+            if (isCoachMode && currentUserRole === 'coach') {
                 document.querySelectorAll('.record-cell').forEach(cell => {
                     cell.addEventListener('blur', async (e) => {
                         const rawText = e.target.innerText;
-                        const parts = rawText.split('\n').map(p => p.trim()).filter(p => p !== "");
+                        const parts = rawText.split('\n').map(p => p.trim()).filter(Boolean);
                         const newName = parts[0] || "-";
-                        let newVal = (parts[1] || "0").replace('s', '').trim();
+                        const newVal = (parts[1] || "0").replace('s', '').trim();
                         const wc = e.target.getAttribute('data-wc');
                         const lift = e.target.getAttribute('data-lift');
                         await saveManualRecord(wc, lift, newVal, newName);
@@ -305,15 +332,18 @@
             }
         }
 
-        // 4. Render 1000/500 LB Clubs
+        // 4. Render clubs
         if (grid) {
             scores.sort((a, b) => b.displayScore - a.displayScore);
             grid.innerHTML = '';
+
             const start = school.club_start || 1000;
-            for(let level = start; level >= 50; level -= 50) {
+
+            for (let level = start; level >= 50; level -= 50) {
                 const qualifiers = scores.filter(s => !s.placed && s.displayScore >= level);
-                qualifiers.forEach(s => s.placed = true);
-                if(qualifiers.length > 0) {
+                qualifiers.forEach(s => { s.placed = true; });
+
+                if (qualifiers.length > 0) {
                     grid.innerHTML += `
                         <div class="club-card border-l-4 mb-4" style="border-color: var(--school-primary)">
                             <div class="flex justify-between items-end border-b border-gray-800 mb-3 pb-1">
@@ -324,21 +354,24 @@
                                 <div class="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
                                     <span class="text-white font-bold uppercase tracking-tight">${q.name}</span>
                                     <span class="text-white font-black italic text-lg">${q.displayScore}</span>
-                                </div>`).join('')}
-                        </div>`;
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
                 }
             }
         }
     };
 
     async function saveManualRecord(wc, lift, val, name) {
-        if (!currentSchoolId) return;
+        if (!currentSchoolId || currentUserRole !== 'coach') return;
+
         const recordRef = doc(db, "schools", currentSchoolId, "settings", "manual_records");
         try {
-            await setDoc(recordRef, { 
-                [wc]: { [lift]: { val: val, name: name } } 
+            await setDoc(recordRef, {
+                [wc]: { [lift]: { val, name } }
             }, { merge: true });
-        } catch (err) { 
+        } catch (err) {
             alert("Permission Denied: Coaches only.");
         }
     }
@@ -347,8 +380,14 @@
     const coachBtn = document.getElementById('coach-edit-btn');
     if (coachBtn) {
         coachBtn.addEventListener('click', (e) => {
+            if (currentUserRole !== 'coach') {
+                alert("Coach mode is only available to coaches.");
+                return;
+            }
+
             isCoachMode = !isCoachMode;
             e.target.innerText = `Coach Mode: ${isCoachMode ? 'ON' : 'OFF'}`;
+
             if (isCoachMode) {
                 e.target.style.color = 'var(--school-primary)';
                 e.target.style.borderColor = 'var(--school-primary)';
@@ -356,7 +395,10 @@
                 e.target.style.color = '';
                 e.target.style.borderColor = '';
             }
-            if (currentSchoolId) window.loadBoard(currentSchoolId);
+
+            if (currentSchoolId) {
+                window.loadBoard(currentSchoolId);
+            }
         });
     }
 </script>
