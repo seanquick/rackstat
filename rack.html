@@ -127,179 +127,174 @@
         <button onclick="location.href='profile.html'" class="text-gray-500 hover:text-white flex flex-col items-center"><span class="text-[9px] font-black uppercase">Profile</span></button>
     </nav>
 
-    <script type="module">
-        import { firebaseConfig } from './js/firebase-config.js';
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { applyTheme } from './js/theme.js';
+   <script type="module">
+    import { firebaseConfig } from './js/firebase-config.js';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { applyTheme } from './js/theme.js';
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-        
-        let teamSettings = null;
-        let unsubscribe = null;
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    
+    let teamSettings = null;
+    let unsubscribe = null;
 
-        // Helper to ensure database keys are consistent
-        const slugify = (text) => text.toLowerCase().replace(/\s+/g, '_').replace(/[^\w-]+/g, '');
+    // Helper to ensure database keys are consistent
+    const slugify = (text) => text.toLowerCase().replace(/\s+/g, '_').replace(/[^\w-]+/g, '');
 
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                try {
-                    // 1. Get user's team/school association
-                    const userSnap = await getDoc(doc(db, "users", user.uid));
-                    if (userSnap.exists()) {
-                        const userData = userSnap.data();
-                        const schoolId = userData.schoolId || userData.school_id;
-                        
-                        // 2. Apply theme and get the "Source of Truth" (Team Settings)
-                        const schoolData = await applyTheme(db, schoolId);
-                        
-                        // 3. Setup the Rack based on those settings
-                        setupDynamicRack(schoolData);
-                        startRealtimeSync(user.uid);
-                    }
-                } catch (err) {
-                    console.error("Initialization error:", err);
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            try {
+                const userSnap = await getDoc(doc(db, "users", user.uid));
+                if (userSnap.exists()) {
+                    const userData = userSnap.data();
+                    const schoolId = userData.schoolId || userData.school_id;
+                    
+                    const schoolData = await applyTheme(db, schoolId);
+                    
+                    setupDynamicRack(schoolData);
+                    startRealtimeSync(user.uid);
                 }
-            } else { 
-                window.location.href = 'index.html'; 
+            } catch (err) {
+                console.error("Initialization error:", err);
+            }
+        } else { 
+            window.location.href = 'index.html'; 
+        }
+    });
+
+    function setupDynamicRack(settings) {
+        // Source of Truth: The raw keys from settings (e.g., ["bench", "squat"])
+        const liftsFromSettings = settings.activeLifts || [];
+        
+        teamSettings = {
+            tracked_lifts: liftsFromSettings, // Keep original keys for DB accuracy
+            display_names: liftsFromSettings.map(l => l.replace(/_/g, ' ').toUpperCase()),
+            formula_type: settings.formula_type || "total_sum",
+            scoring_lifts: settings.scoring_lifts || liftsFromSettings
+        };
+
+        const container = document.getElementById('dynamic-inputs');
+        container.innerHTML = teamSettings.tracked_lifts.map((liftKey, index) => {
+            const labelName = teamSettings.display_names[index];
+            const inputId = `input-${slugify(liftKey)}`; // Use slug for HTML ID safety
+            return `
+                <div class="animate-fade-in">
+                    <label>${labelName}</label>
+                    <input id="${inputId}" type="number" placeholder="Lbs" data-lift-key="${liftKey}">
+                </div>`;
+        }).join('');
+    }
+
+    function startRealtimeSync(uid) {
+        if (unsubscribe) unsubscribe();
+        const latestDocRef = doc(db, "recruiting_profiles", uid, "maxes", "latest");
+        
+        unsubscribe = onSnapshot(latestDocRef, (snap) => {
+            if(snap.exists()) {
+                renderValues(snap.data());
+            }
+        });
+    }
+
+    function renderValues(data) {
+        let totalForBoard = 0;
+
+        teamSettings.tracked_lifts.forEach(liftKey => {
+            // SAFE KEY CHECK: check original key, slug version, and short version
+            const slugKey = slugify(liftKey);
+            const shortKey = liftKey.split('_')[0];
+            const val = data[liftKey] || data[slugKey] || data[shortKey] || 0;
+            
+            if (teamSettings.scoring_lifts.includes(liftKey)) {
+                totalForBoard += val;
+            }
+            
+            const inputField = document.querySelector(`[data-lift-key="${liftKey}"]`);
+            if(inputField && !inputField.matches(':focus')) {
+                inputField.value = val === 0 ? "" : val;
             }
         });
 
-        function setupDynamicRack(settings) {
-            // "Source of Truth" from team-settings.html
-            const liftsFromSettings = settings.activeLifts || [];
-            
-            teamSettings = {
-                tracked_lifts: liftsFromSettings.map(l => slugify(l)),
-                display_names: liftsFromSettings,
-                formula_type: settings.formula_type || "total_sum",
-                scoring_lifts: (settings.scoring_lifts || liftsFromSettings).map(l => slugify(l))
+        const bw = data.bodyWeight || data.weight || 0;
+        document.getElementById('bodyWeight').value = bw === 0 ? "" : bw;
+
+        let finalScore = totalForBoard;
+        if (teamSettings.formula_type === "power_index") {
+            finalScore = totalForBoard - (Math.min(bw, 200) * 4);
+        }
+
+        document.getElementById('view-total').innerText = Math.round(finalScore);
+        document.getElementById('formula-detail').innerText = teamSettings.formula_type === "power_index" 
+            ? `Total: ${totalForBoard} — (BW Adj) = ${Math.round(finalScore)}`
+            : `Total Strength: ${totalForBoard}`;
+        
+        if (data.lastUpdated) {
+            const d = data.lastUpdated.toDate ? data.lastUpdated.toDate() : new Date(data.lastUpdated);
+            document.getElementById('sync-timestamp').innerText = `Last Sync: ${d.toLocaleDateString()} @ ${d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        }
+    }
+
+    document.getElementById('save-btn').onclick = async () => {
+        const user = auth.currentUser;
+        const saveBtn = document.getElementById('save-btn');
+        if (!user || !teamSettings) return;
+
+        saveBtn.disabled = true;
+        saveBtn.innerText = "SAVING...";
+
+        try {
+            const bw = Number(document.getElementById('bodyWeight').value) || 0;
+            const updateObj = { 
+                lastUpdated: serverTimestamp(),
+                bodyWeight: bw,
+                weight: bw // Keep synced with user collection
             };
-
-            // Inject inputs into the DOM
-            const container = document.getElementById('dynamic-inputs');
-            container.innerHTML = teamSettings.tracked_lifts.map((liftSlug, index) => {
-                const labelName = teamSettings.display_names[index];
-                return `
-                    <div class="animate-fade-in">
-                        <label>${labelName}</label>
-                        <input id="input-${liftSlug}" type="number" placeholder="Lbs">
-                    </div>`;
-            }).join('');
-        }
-
-        function startRealtimeSync(uid) {
-            if (unsubscribe) unsubscribe();
-            // Source the actual values from the maxes/latest sub-collection
-            const latestDocRef = doc(db, "recruiting_profiles", uid, "maxes", "latest");
             
-            unsubscribe = onSnapshot(latestDocRef, (snap) => {
-                if(snap.exists()) {
-                    renderValues(snap.data());
-                }
-            });
-        }
+            let scoringSum = 0;
 
-        function renderValues(data) {
-            let totalForBoard = 0;
+            teamSettings.tracked_lifts.forEach(liftKey => {
+                const input = document.querySelector(`[data-lift-key="${liftKey}"]`);
+                const val = Number(input.value) || 0;
+                
+                // Save to BOTH formats to ensure Recruiting Card and Rack remain synced
+                updateObj[liftKey] = val; 
+                updateObj[slugify(liftKey)] = val;
 
-            // Loop through the lifts defined in settings, not hardcoded keys
-            teamSettings.tracked_lifts.forEach(liftSlug => {
-                const val = data[liftSlug] || 0;
-                
-                // If this lift is part of the "Board" calculation
-                if (teamSettings.scoring_lifts.includes(liftSlug)) {
-                    totalForBoard += val;
-                }
-                
-                // Update input if user isn't typing
-                const inputField = document.getElementById(`input-${liftSlug}`);
-                if(inputField && !inputField.matches(':focus')) {
-                    inputField.value = val === 0 ? "" : val;
-                }
+                if (teamSettings.scoring_lifts.includes(liftKey)) scoringSum += val;
             });
 
-            const bw = data.bodyWeight || 0;
-            document.getElementById('bodyWeight').value = bw === 0 ? "" : bw;
-
-            // Calculate Board Score based on dynamic formula
-            let finalScore = totalForBoard;
+            let boardScore = scoringSum;
             if (teamSettings.formula_type === "power_index") {
-                finalScore = totalForBoard - (Math.min(bw, 200) * 4);
+                boardScore = scoringSum - (Math.min(bw, 200) * 4);
             }
 
-            // Update UI
-            document.getElementById('view-total').innerText = Math.round(finalScore);
-            document.getElementById('formula-detail').innerText = teamSettings.formula_type === "power_index" 
-                ? `Total: ${totalForBoard} — (BW Adj) = ${Math.round(finalScore)}`
-                : `Total Strength: ${totalForBoard}`;
-            
-            if (data.lastUpdated) {
-                const d = data.lastUpdated.toDate ? data.lastUpdated.toDate() : new Date(data.lastUpdated);
-                document.getElementById('sync-timestamp').innerText = `Last Sync: ${d.toLocaleDateString()} @ ${d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
-            }
-        }
+            const roundedScore = Math.round(boardScore);
 
-        document.getElementById('save-btn').onclick = async () => {
-            const user = auth.currentUser;
-            const saveBtn = document.getElementById('save-btn');
-            if (!user || !teamSettings) return;
+            await Promise.all([
+                setDoc(doc(db, "recruiting_profiles", user.uid, "maxes", "latest"), updateObj, { merge: true }),
+                updateDoc(doc(db, "recruiting_profiles", user.uid), { 
+                    ...updateObj, 
+                    boardScore: roundedScore,
+                    weight: bw 
+                }),
+                updateDoc(doc(db, "users", user.uid), { weight: bw })
+            ]);
 
-            saveBtn.disabled = true;
-            saveBtn.innerText = "SAVING...";
-
-            try {
-                const bw = Number(document.getElementById('bodyWeight').value) || 0;
-                const updateObj = { 
-                    lastUpdated: serverTimestamp(),
-                    bodyWeight: bw 
-                };
-                
-                let scoringSum = 0;
-
-                // Build the update object dynamically
-                teamSettings.tracked_lifts.forEach(liftSlug => {
-                    const val = Number(document.getElementById(`input-${liftSlug}`).value) || 0;
-                    updateObj[liftSlug] = val;
-                    if (teamSettings.scoring_lifts.includes(liftSlug)) scoringSum += val;
-                });
-
-                let boardScore = scoringSum;
-                if (teamSettings.formula_type === "power_index") {
-                    boardScore = scoringSum - (Math.min(bw, 200) * 4);
-                }
-
-                // Batch updates to ensure all locations are synced
-                await Promise.all([
-                    // 1. The primary source for the Rack/Recruiting Card
-                    setDoc(doc(db, "recruiting_profiles", user.uid, "maxes", "latest"), updateObj, { merge: true }),
-                    
-                    // 2. The flat profile for the Leaderboard
-                    updateDoc(doc(db, "recruiting_profiles", user.uid), { 
-                        ...updateObj, 
-                        boardScore: Math.round(boardScore),
-                        weight: bw 
-                    }),
-                    
-                    // 3. User metadata
-                    updateDoc(doc(db, "users", user.uid), { weight: bw })
-                ]);
-
-                saveBtn.innerText = "SUCCESS ✓";
-                setTimeout(() => {
-                    saveBtn.innerText = "Update My Stats";
-                    saveBtn.disabled = false;
-                }, 2000);
-
-            } catch (e) {
-                console.error(e);
-                saveBtn.disabled = false;
+            saveBtn.innerText = "SUCCESS ✓";
+            setTimeout(() => {
                 saveBtn.innerText = "Update My Stats";
-            }
-        };
-    </script>
+                saveBtn.disabled = false;
+            }, 2000);
+
+        } catch (e) {
+            console.error("Rack Sync Error:", e);
+            saveBtn.disabled = false;
+            saveBtn.innerText = "Update My Stats";
+        }
+    };
+</script>
 </body>
 </html>
