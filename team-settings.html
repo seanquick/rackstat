@@ -20,11 +20,11 @@
     </header>
 
     <main class="max-w-4xl mx-auto px-6 py-12">
-        
+
         <section class="bg-gray-900 border border-gray-700 p-8 rounded-xl mb-10 shadow-2xl">
             <h2 class="text-2xl font-black text-white uppercase mb-2 italic">Program Branding & Logic</h2>
             <p class="text-gray-400 text-sm mb-8">Customize the board's appearance and the algorithm used for rankings.</p>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Primary Color (Theme)</label>
@@ -99,7 +99,7 @@
         <section class="bg-gray-900 border border-gray-700 p-8 rounded-xl mb-10">
             <h2 class="text-2xl font-black text-white uppercase mb-2 italic">Tracked Core Lifts</h2>
             <p class="text-gray-400 text-sm mb-8">Select which lifts appear in athlete trackers.</p>
-            
+
             <div id="core-lifts-container" class="grid grid-cols-2 md:grid-cols-3 gap-6 text-gray-300 mb-8 font-bold uppercase text-sm">
                 <label class="flex items-center space-x-3 cursor-pointer group">
                     <input type="checkbox" value="bench" class="lift-checkbox w-6 h-6 rounded bg-gray-800 border-gray-600 text-red-600 focus:ring-red-600 transition">
@@ -124,8 +124,12 @@
             </div>
 
             <div class="flex gap-3 pt-8 border-t border-gray-800">
-                <input type="text" id="custom-lift-input" placeholder="e.g. Incline Bench" 
-                    class="flex-1 p-3 rounded-lg bg-[#0d1117] text-white border border-gray-700 focus:border-red-500 outline-none transition">
+                <input
+                    type="text"
+                    id="custom-lift-input"
+                    placeholder="e.g. Incline Bench"
+                    class="flex-1 p-3 rounded-lg bg-[#0d1117] text-white border border-gray-700 focus:border-red-500 outline-none transition"
+                >
                 <button onclick="addCustomLiftToUI()" class="bg-gray-700 hover:bg-red-600 text-white px-8 font-black rounded-lg transition-all uppercase text-xs">
                     Add Lift
                 </button>
@@ -141,304 +145,328 @@
     </main>
 
     <script type="module">
-    import { db, auth } from './js/firebase-config.js';
-    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { doc, getDoc, updateDoc, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { db, auth } from './js/firebase-config.js';
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { doc, getDoc, updateDoc, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    let schoolId = null;
+        let schoolId = null;
 
-    const slugify = (text) => String(text || "").toLowerCase().replace(/\s+/g, '_').replace(/[^\w-]+/g, '');
-    const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
-    const standardIds = ["bench", "squat", "clean", "deadlift", "push_press"];
+        const STANDARD_LIFT_IDS = ["bench", "squat", "clean", "deadlift", "push_press"];
 
-    function normalizeLiftArray(value, fallback = []) {
-        if (!value) return [...fallback];
+        const slugify = (text) =>
+            String(text || "")
+                .toLowerCase()
+                .trim()
+                .replace(/\s+/g, '_')
+                .replace(/[^\w-]+/g, '');
 
-        if (Array.isArray(value)) {
-            return value
-                .flatMap(item => {
-                    if (typeof item === 'string') return item.split(',');
-                    return [];
-                })
-                .map(item => slugify(item.trim()))
-                .filter(Boolean);
+        const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
+
+        function normalizeFormulaType(value) {
+            return value === 'straight_calculation' ? 'straight_total' : (value || 'power_index');
         }
 
-        if (typeof value === 'string') {
-            return value
-                .split(',')
-                .map(item => slugify(item.trim()))
-                .filter(Boolean);
+        function normalizeLiftArray(value, fallback = []) {
+            if (!value) return [...fallback];
+
+            const raw = Array.isArray(value)
+                ? value.flatMap(item => typeof item === 'string' ? item.split(',') : [])
+                : typeof value === 'string'
+                    ? value.split(',')
+                    : [];
+
+            return [...new Set(
+                raw
+                    .map(item => slugify(item))
+                    .filter(Boolean)
+            )];
         }
 
-        return [...fallback];
-    }
+        function updateFormulaHelp() {
+            const formulaType = document.getElementById('formula-type')?.value;
+            const help = document.getElementById('formula-help');
+            if (!help) return;
 
-    function updateFormulaHelp() {
-        const formulaType = document.getElementById('formula-type')?.value;
-        const help = document.getElementById('formula-help');
-        if (!help) return;
-
-        if (formulaType === 'power_index') {
-            help.innerHTML = `
-                Power Index uses:<br>
-                <span class="text-white font-bold">L - (BWadj × N)</span><br><br>
-                Where L = the sum of selected lifts, BWadj = min(bodyweight, 200), and N = the number of selected lifts.
-            `;
-        } else {
-            help.innerHTML = `
-                Straight Total uses the sum of selected scoring lifts.
-            `;
-        }
-    }
-
-    function getTrackedLiftCheckboxes() {
-        return Array.from(document.querySelectorAll('.lift-checkbox'));
-    }
-
-    function getTrackedLiftIds() {
-        return getTrackedLiftCheckboxes()
-            .filter(cb => cb.checked)
-            .map(cb => slugify(cb.value));
-    }
-
-    function renderScoringLiftCheckboxes(selectedScoringLifts = []) {
-        const container = document.getElementById('scoring-lifts-container');
-        if (!container) return;
-
-        const trackedCheckboxes = getTrackedLiftCheckboxes().filter(cb => cb.checked);
-        container.innerHTML = '';
-
-        if (!trackedCheckboxes.length) {
-            container.innerHTML = `<p class="text-gray-500 text-sm normal-case col-span-full">Select tracked lifts in the section below to configure Board Score lifts.</p>`;
-            return;
+            if (formulaType === 'power_index') {
+                help.innerHTML = `
+                    Power Index uses:<br>
+                    <span class="text-white font-bold">L - (BWadj × N)</span><br><br>
+                    Where L = the sum of selected lifts, BWadj = min(bodyweight, 200), and N = the number of selected lifts.
+                `;
+            } else {
+                help.innerHTML = `
+                    Straight Total uses the sum of selected scoring lifts.
+                `;
+            }
         }
 
-        trackedCheckboxes.forEach(cb => {
-            const id = slugify(cb.value);
-            const name = cb.getAttribute('data-name') || cb.nextElementSibling?.innerText || id.replace(/_/g, ' ');
+        function getTrackedLiftCheckboxes() {
+            return Array.from(document.querySelectorAll('.lift-checkbox'));
+        }
+
+        function getTrackedLiftIds() {
+            return getTrackedLiftCheckboxes()
+                .filter(cb => cb.checked)
+                .map(cb => slugify(cb.value));
+        }
+
+        function renderScoringLiftCheckboxes(selectedScoringLifts = []) {
+            const container = document.getElementById('scoring-lifts-container');
+            if (!container) return;
+
+            const trackedCheckboxes = getTrackedLiftCheckboxes().filter(cb => cb.checked);
+            const selectedSet = new Set(selectedScoringLifts.map(slugify));
+
+            container.innerHTML = '';
+
+            if (!trackedCheckboxes.length) {
+                container.innerHTML = `<p class="text-gray-500 text-sm normal-case col-span-full">Select tracked lifts in the section below to configure Board Score lifts.</p>`;
+                return;
+            }
+
+            trackedCheckboxes.forEach(cb => {
+                const id = slugify(cb.value);
+                const name = cb.getAttribute('data-name') || cb.nextElementSibling?.innerText || id.replace(/_/g, ' ');
+
+                const label = document.createElement('label');
+                label.className = "flex items-center space-x-3 cursor-pointer group";
+                label.innerHTML = `
+                    <input type="checkbox" value="${id}" class="score-lift-checkbox w-6 h-6 rounded bg-gray-800 border-gray-600 text-blue-500 focus:ring-blue-500 transition" ${selectedSet.has(id) ? 'checked' : ''}>
+                    <span class="group-hover:text-white">${name}</span>
+                `;
+                container.appendChild(label);
+            });
+        }
+
+        function refreshScoringLiftOptions() {
+            const currentSelected = Array.from(document.querySelectorAll('.score-lift-checkbox:checked')).map(cb => slugify(cb.value));
+            const trackedIds = getTrackedLiftIds();
+            const validSelected = currentSelected.filter(id => trackedIds.includes(id));
+            renderScoringLiftCheckboxes(validSelected);
+        }
+
+        function bindTrackedLiftListeners() {
+            document.querySelectorAll('.lift-checkbox').forEach(cb => {
+                cb.removeEventListener('change', refreshScoringLiftOptions);
+                cb.addEventListener('change', refreshScoringLiftOptions);
+            });
+        }
+
+        function renderNewLiftCheckbox(name, id, checked) {
+            const container = document.getElementById('core-lifts-container');
+            if (!container) return;
+
+            const normalizedId = slugify(id);
+            const normalizedName = String(name || "").trim();
+            if (!normalizedId || !normalizedName) return;
+
+            const existing = Array.from(container.querySelectorAll('.lift-checkbox')).find(cb => cb.value === normalizedId);
+            if (existing) {
+                existing.checked = checked;
+                return;
+            }
 
             const label = document.createElement('label');
             label.className = "flex items-center space-x-3 cursor-pointer group";
             label.innerHTML = `
-                <input type="checkbox" value="${id}" class="score-lift-checkbox w-6 h-6 rounded bg-gray-800 border-gray-600 text-blue-500 focus:ring-blue-500 transition" ${selectedScoringLifts.includes(id) ? 'checked' : ''}>
-                <span class="group-hover:text-white">${name}</span>
+                <input type="checkbox" value="${normalizedId}" data-name="${normalizedName}" class="lift-checkbox w-6 h-6 rounded bg-gray-800 border-gray-600 text-red-600 focus:ring-red-600 transition" ${checked ? 'checked' : ''}>
+                <span class="group-hover:text-white text-yellow-500">${normalizedName}</span>
             `;
             container.appendChild(label);
-        });
-    }
-
-    function refreshScoringLiftOptions() {
-        const currentSelected = Array.from(document.querySelectorAll('.score-lift-checkbox:checked')).map(cb => slugify(cb.value));
-        const trackedIds = getTrackedLiftIds();
-        const validSelected = currentSelected.filter(id => trackedIds.includes(id));
-        renderScoringLiftCheckboxes(validSelected);
-    }
-
-    function bindTrackedLiftListeners() {
-        document.querySelectorAll('.lift-checkbox').forEach(cb => {
-            cb.removeEventListener('change', refreshScoringLiftOptions);
-            cb.addEventListener('change', refreshScoringLiftOptions);
-        });
-    }
-
-    onAuthStateChanged(auth, async (user) => {
-        if (!user) {
-            window.location.href = 'index.html';
-            return;
         }
 
-        try {
-            const userDoc = await getDoc(doc(db, "users", user.uid));
+        async function loadSettings() {
+            if (!schoolId) return;
 
-            if (!userDoc.exists() || userDoc.data().role !== 'coach') {
-                window.location.href = 'index.html';
-                return;
+            try {
+                const schoolRef = doc(db, "schools", schoolId);
+                const snap = await getDoc(schoolRef);
+
+                if (!snap.exists()) return;
+
+                const data = snap.data();
+
+                const trackedLifts = normalizeLiftArray(data.trackedLifts || data.activeLifts, ["bench", "squat", "clean"]);
+                const scoringLifts = normalizeLiftArray(data.scoring_lifts || data.scoringLifts, trackedLifts).filter(id => trackedLifts.includes(id));
+                const customLifts = Array.isArray(data.customLifts) ? data.customLifts : [];
+                const recruitingEnabled = data.hasRecruitingCard !== undefined
+                    ? data.hasRecruitingCard
+                    : (data.recruitingEnabled !== false);
+
+                document.getElementById('program-title').innerText = `${data.name || 'Program'} Settings`;
+                document.getElementById('primary-color').value = data.colors?.primary || data.primaryColor || '#ff0000';
+                document.getElementById('secondary-color').value = data.colors?.secondary || data.primaryColorSecondary || '#000000';
+                document.getElementById('logo-url').value = data.logo_url || data.logo_primary || data.logo || '';
+                document.getElementById('formula-type').value = normalizeFormulaType(data.formula_type);
+                document.getElementById('club-start').value = Number.isFinite(Number(data.club_start)) ? Number(data.club_start) : 50;
+                document.getElementById('toggle-recruiting').checked = recruitingEnabled;
+
+                document.querySelectorAll('.lift-checkbox').forEach(cb => {
+                    cb.checked = trackedLifts.includes(slugify(cb.value));
+                });
+
+                customLifts.forEach(liftObj => {
+                    const liftId = typeof liftObj === 'string' ? slugify(liftObj) : slugify(liftObj?.id);
+                    const liftName = typeof liftObj === 'string' ? liftObj : String(liftObj?.name || liftObj?.id || "").trim();
+                    if (!liftId || !liftName) return;
+                    renderNewLiftCheckbox(liftName, liftId, trackedLifts.includes(liftId));
+                });
+
+                bindTrackedLiftListeners();
+                renderScoringLiftCheckboxes(scoringLifts);
+                updateFormulaHelp();
+            } catch (err) {
+                console.error("Error loading settings:", err);
             }
-
-            schoolId = getSchoolIdFromData(userDoc.data());
-
-            if (!schoolId) {
-                alert("Coach profile is missing a school ID.");
-                window.location.href = 'index.html';
-                return;
-            }
-
-            await loadSettings();
-            await fetchPlayerCount();
-        } catch (err) {
-            console.error("Error loading team settings auth context:", err);
-            window.location.href = 'index.html';
         }
-    });
 
-    async function loadSettings() {
-        if (!schoolId) return;
+        async function fetchPlayerCount() {
+            if (!schoolId) return;
 
-        try {
-            const schoolRef = doc(db, "schools", schoolId);
-            const snap = await getDoc(schoolRef);
-            
-            if (!snap.exists()) return;
+            const badge = document.getElementById('player-count');
+            if (!badge) return;
 
-            const data = snap.data();
-            const trackedLifts = normalizeLiftArray(data.trackedLifts || data.activeLifts, ["bench", "squat", "clean"]);
-            const scoringLifts = normalizeLiftArray(data.scoring_lifts || data.scoringLifts, trackedLifts);
-            const customLifts = data.customLifts || [];
-            const recruitingEnabled = data.hasRecruitingCard !== undefined
-                ? data.hasRecruitingCard
-                : (data.recruitingEnabled !== false);
-
-            document.getElementById('program-title').innerText = `${data.name || 'Program'} Settings`;
-            document.getElementById('primary-color').value = data.colors?.primary || data.primaryColor || '#ff0000';
-            document.getElementById('secondary-color').value = data.colors?.secondary || '#000000';
-            document.getElementById('logo-url').value = data.logo_url || data.logo_primary || data.logo || '';
-            document.getElementById('formula-type').value =
-                data.formula_type === 'straight_calculation' ? 'straight_total' : (data.formula_type || 'power_index');
-            document.getElementById('club-start').value = data.club_start || 50;
-            document.getElementById('toggle-recruiting').checked = recruitingEnabled;
-
-            document.querySelectorAll('.lift-checkbox').forEach(cb => {
-                cb.checked = trackedLifts.includes(cb.value);
-            });
-
-            customLifts.forEach(liftObj => {
-                const liftId = typeof liftObj === 'string' ? slugify(liftObj) : slugify(liftObj.id);
-                const liftName = typeof liftObj === 'string' ? liftObj : liftObj.name;
-                renderNewLiftCheckbox(liftName, liftId, trackedLifts.includes(liftId));
-            });
-
-            bindTrackedLiftListeners();
-            renderScoringLiftCheckboxes(scoringLifts);
-            updateFormulaHelp();
-        } catch (err) {
-            console.error("Error loading settings:", err);
-        }
-    }
-
-    async function fetchPlayerCount() {
-        if (!schoolId) return;
-
-        const badge = document.getElementById('player-count');
-        if (!badge) return;
-
-        try {
-            let snap = await getDocs(query(
-                collection(db, "users"),
-                where("schoolId", "==", schoolId),
-                where("role", "==", "player")
-            ));
-
-            if (snap.empty) {
-                snap = await getDocs(query(
+            try {
+                let snap = await getDocs(query(
                     collection(db, "users"),
-                    where("school_id", "==", schoolId),
+                    where("schoolId", "==", schoolId),
                     where("role", "==", "player")
                 ));
+
+                if (snap.empty) {
+                    snap = await getDocs(query(
+                        collection(db, "users"),
+                        where("school_id", "==", schoolId),
+                        where("role", "==", "player")
+                    ));
+                }
+
+                const count = snap.size;
+                badge.innerText = `${count} Athlete${count === 1 ? '' : 's'}`;
+            } catch (err) {
+                console.error("Error fetching athlete count:", err);
+                badge.innerText = "0 Athletes";
+            }
+        }
+
+        window.addCustomLiftToUI = () => {
+            const input = document.getElementById('custom-lift-input');
+            const liftName = input.value.trim();
+            if (!liftName) return;
+
+            const liftId = slugify(liftName);
+            if (!liftId) return;
+
+            renderNewLiftCheckbox(liftName, liftId, true);
+            input.value = "";
+            bindTrackedLiftListeners();
+            refreshScoringLiftOptions();
+        };
+
+        window.saveAllSettings = async () => {
+            if (!schoolId) return;
+
+            const btn = document.getElementById('master-save-btn');
+            btn.innerText = "SAVING CHANGES...";
+            btn.disabled = true;
+
+            const trackedLifts = [];
+            const customLifts = [];
+
+            document.querySelectorAll('.lift-checkbox').forEach(cb => {
+                const id = slugify(cb.value);
+                const name = (cb.getAttribute('data-name') || cb.nextElementSibling?.innerText || id).trim();
+
+                if (cb.checked) {
+                    trackedLifts.push(id);
+                }
+
+                if (!STANDARD_LIFT_IDS.includes(id)) {
+                    customLifts.push({ id, name });
+                }
+            });
+
+            const dedupedTrackedLifts = [...new Set(trackedLifts)];
+            const scoringLifts = [...new Set(
+                Array.from(document.querySelectorAll('.score-lift-checkbox:checked'))
+                    .map(cb => slugify(cb.value))
+                    .filter(id => dedupedTrackedLifts.includes(id))
+            )];
+
+            if (dedupedTrackedLifts.length === 0) {
+                alert("Please select at least one tracked lift.");
+                btn.innerText = "Save All Changes";
+                btn.disabled = false;
+                return;
             }
 
-            const count = snap.size;
-            badge.innerText = `${count} Athlete${count === 1 ? '' : 's'}`;
-        } catch (err) {
-            console.error("Error fetching athlete count:", err);
-            badge.innerText = "0 Athletes";
-        }
-    }
+            if (scoringLifts.length === 0) {
+                alert("Please select at least one lift to use in the Board Score calculation.");
+                btn.innerText = "Save All Changes";
+                btn.disabled = false;
+                return;
+            }
 
-    window.addCustomLiftToUI = () => {
-        const input = document.getElementById('custom-lift-input');
-        const liftName = input.value.trim();
-        if (!liftName) return;
+            try {
+                const logoUrl = document.getElementById('logo-url').value.trim();
+                const formulaType = normalizeFormulaType(document.getElementById('formula-type').value);
+                const clubStartRaw = parseInt(document.getElementById('club-start').value, 10);
+                const clubStart = Number.isFinite(clubStartRaw) && clubStartRaw > 0 ? clubStartRaw : 50;
 
-        const liftId = slugify(liftName);
-        renderNewLiftCheckbox(liftName, liftId, true);
-        input.value = "";
-        bindTrackedLiftListeners();
-        refreshScoringLiftOptions();
-    };
+                await updateDoc(doc(db, "schools", schoolId), {
+                    "colors.primary": document.getElementById('primary-color').value,
+                    "colors.secondary": document.getElementById('secondary-color').value,
+                    logo_url: logoUrl,
+                    formula_type: formulaType,
+                    club_start: clubStart,
+                    hasRecruitingCard: document.getElementById('toggle-recruiting').checked,
+                    trackedLifts: dedupedTrackedLifts,
+                    scoring_lifts: scoringLifts,
+                    customLifts,
+                    lastUpdated: new Date()
+                });
 
-    function renderNewLiftCheckbox(name, id, checked) {
-        const container = document.getElementById('core-lifts-container');
-        const existing = Array.from(container.querySelectorAll('.lift-checkbox')).find(cb => cb.value === id);
-        if (existing) return;
+                alert("Settings Saved!");
+            } catch (err) {
+                alert("Save Error: Check console.");
+                console.error(err);
+            } finally {
+                btn.innerText = "Save All Changes";
+                btn.disabled = false;
+            }
+        };
 
-        const label = document.createElement('label');
-        label.className = "flex items-center space-x-3 cursor-pointer group";
-        label.innerHTML = `
-            <input type="checkbox" value="${id}" data-name="${name}" class="lift-checkbox w-6 h-6 rounded bg-gray-800 border-gray-600 text-red-600 focus:ring-red-600 transition" ${checked ? 'checked' : ''}>
-            <span class="group-hover:text-white text-yellow-500">${name}</span>
-        `;
-        container.appendChild(label);
-    }
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
 
-    window.saveAllSettings = async () => {
-        if (!schoolId) return;
+            try {
+                const userDoc = await getDoc(doc(db, "users", user.uid));
 
-        const btn = document.getElementById('master-save-btn');
-        btn.innerText = "SAVING CHANGES...";
-        btn.disabled = true;
+                if (!userDoc.exists() || userDoc.data().role !== 'coach') {
+                    window.location.href = 'index.html';
+                    return;
+                }
 
-        const trackedLifts = [];
-        const customLifts = [];
+                schoolId = getSchoolIdFromData(userDoc.data());
 
-        document.querySelectorAll('.lift-checkbox').forEach(cb => {
-            const id = slugify(cb.value);
-            const name = cb.getAttribute('data-name') || cb.nextElementSibling.innerText;
+                if (!schoolId) {
+                    alert("Coach profile is missing a school ID.");
+                    window.location.href = 'index.html';
+                    return;
+                }
 
-            if (cb.checked) trackedLifts.push(id);
-
-            if (!standardIds.includes(id)) {
-                customLifts.push({ id, name });
+                await loadSettings();
+                await fetchPlayerCount();
+            } catch (err) {
+                console.error("Error loading team settings auth context:", err);
+                window.location.href = 'index.html';
             }
         });
 
-        const scoringLifts = Array.from(document.querySelectorAll('.score-lift-checkbox:checked')).map(cb => slugify(cb.value));
-
-        if (trackedLifts.length === 0) {
-            alert("Please select at least one tracked lift.");
-            btn.innerText = "Save All Changes";
-            btn.disabled = false;
-            return;
-        }
-
-        if (scoringLifts.length === 0) {
-            alert("Please select at least one lift to use in the Board Score calculation.");
-            btn.innerText = "Save All Changes";
-            btn.disabled = false;
-            return;
-        }
-
-        try {
-            const logoUrl = document.getElementById('logo-url').value.trim();
-            const formulaType = document.getElementById('formula-type').value;
-
-            await updateDoc(doc(db, "schools", schoolId), {
-                "colors.primary": document.getElementById('primary-color').value,
-                "colors.secondary": document.getElementById('secondary-color').value,
-                logo_url: logoUrl,
-                formula_type: formulaType,
-                club_start: parseInt(document.getElementById('club-start').value, 10) || 50,
-                hasRecruitingCard: document.getElementById('toggle-recruiting').checked,
-                recruitingEnabled: document.getElementById('toggle-recruiting').checked,
-                trackedLifts,
-                activeLifts: trackedLifts,
-                scoring_lifts: scoringLifts,
-                scoringLifts: scoringLifts,
-                customLifts,
-                lastUpdated: new Date()
-            });
-
-            alert("Settings Saved! All athlete pages will now sync to these IDs.");
-        } catch (err) {
-            alert("Save Error: Check console.");
-            console.error(err);
-        } finally {
-            btn.innerText = "Save All Changes";
-            btn.disabled = false;
-        }
-    };
-
-    document.getElementById('formula-type')?.addEventListener('change', updateFormulaHelp);
+        document.getElementById('formula-type')?.addEventListener('change', updateFormulaHelp);
     </script>
 </body>
 </html>

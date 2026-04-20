@@ -40,7 +40,7 @@
                 <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-10 w-auto">
             </div>
         </div>
-        <div class="w-1/4"></div> 
+        <div class="w-1/4"></div>
     </div>
 </header>
 
@@ -90,8 +90,27 @@
     let activeWorkoutData = null;
     let currentMaxes = {};
 
-    const slugify = (text) => String(text || "").toLowerCase().replace(/\s+/g, '_').replace(/[^\w-]+/g, '');
+    const slugify = (text) => String(text || "").toLowerCase().trim().replace(/\s+/g, '_').replace(/[^\w-]+/g, '');
     const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
+
+    function getLiftValue(data = {}, liftKey = "") {
+        const normalized = slugify(liftKey);
+
+        if (normalized === "bench") {
+            return Number(data.bench ?? data.bench_press ?? 0) || 0;
+        }
+        if (normalized === "squat") {
+            return Number(data.squat ?? data.back_squat ?? 0) || 0;
+        }
+        if (normalized === "clean") {
+            return Number(data.clean ?? data.power_clean ?? 0) || 0;
+        }
+        if (normalized === "push_press") {
+            return Number(data.push_press ?? data.pushPress ?? data.pushpress ?? 0) || 0;
+        }
+
+        return Number(data[normalized] ?? 0) || 0;
+    }
 
     onAuthStateChanged(auth, async (user) => {
         if (!user) {
@@ -102,8 +121,10 @@
         currentAthleteId = user.uid;
 
         try {
-            let profileSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
-            let userSnap = await getDoc(doc(db, "users", user.uid));
+            const [profileSnap, userSnap] = await Promise.all([
+                getDoc(doc(db, "recruiting_profiles", user.uid)),
+                getDoc(doc(db, "users", user.uid))
+            ]);
 
             const profileData = profileSnap.exists() ? profileSnap.data() : {};
             const userData = userSnap.exists() ? userSnap.data() : {};
@@ -132,7 +153,6 @@
             let q = query(collection(db, "workouts"), where("schoolId", "==", currentSchoolId));
             let querySnapshot = await getDocs(q);
 
-            // Legacy fallback for older workout docs
             if (querySnapshot.empty) {
                 q = query(collection(db, "workouts"), where("school_id", "==", currentSchoolId));
                 querySnapshot = await getDocs(q);
@@ -169,9 +189,10 @@
     }
 
     async function loadWorkoutDetails(workoutId) {
-        const workoutSnap = await getDoc(doc(db, "workouts", workoutId));
-        const maxesRef = doc(db, "recruiting_profiles", currentAthleteId, "maxes", "latest");
-        const maxSnap = await getDoc(maxesRef);
+        const [workoutSnap, maxSnap] = await Promise.all([
+            getDoc(doc(db, "workouts", workoutId)),
+            getDoc(doc(db, "recruiting_profiles", currentAthleteId, "maxes", "latest"))
+        ]);
 
         if (!workoutSnap.exists()) return;
 
@@ -189,14 +210,7 @@
         if (Array.isArray(activeWorkoutData.exercises)) {
             activeWorkoutData.exercises.forEach((ex, exIndex) => {
                 const exerciseId = slugify(ex.name);
-
-                let athleteCurrentMax = currentMaxes[exerciseId] || 0;
-                if (!athleteCurrentMax) {
-                    if (exerciseId === "bench") athleteCurrentMax = currentMaxes.bench_press || 0;
-                    if (exerciseId === "squat") athleteCurrentMax = currentMaxes.back_squat || currentMaxes.squat || 0;
-                    if (exerciseId === "clean") athleteCurrentMax = currentMaxes.power_clean || currentMaxes.clean || 0;
-                    if (exerciseId === "push_press") athleteCurrentMax = currentMaxes.pushPress || 0;
-                }
+                const athleteCurrentMax = getLiftValue(currentMaxes, exerciseId);
 
                 const setsHtml = (ex.sets || []).map((s, i) => {
                     const pct = parseFloat(s.pct ?? s.percent) || 0;
@@ -256,21 +270,12 @@
                     const weightVal = parseFloat(weightInput.value) || 0;
 
                     const currentKnownMax =
-                        newMaxesToUpdate[exId] ||
-                        currentMaxes[exId] ||
-                        (exId === "bench" ? currentMaxes.bench_press : 0) ||
-                        (exId === "squat" ? (currentMaxes.back_squat || currentMaxes.squat) : 0) ||
-                        (exId === "clean" ? (currentMaxes.power_clean || currentMaxes.clean) : 0) ||
-                        (exId === "push_press" ? (currentMaxes.pushPress || currentMaxes.push_press) : 0) ||
+                        (newMaxesToUpdate[exId] ?? getLiftValue(newMaxesToUpdate, exId)) ||
+                        getLiftValue(currentMaxes, exId) ||
                         0;
 
                     if (isCompleted && weightVal > currentKnownMax) {
                         newMaxesToUpdate[exId] = weightVal;
-
-                        // Dual-key compatibility writes for known legacy fields
-                        if (exId === "bench") newMaxesToUpdate.bench_press = weightVal;
-                        if (exId === "clean") newMaxesToUpdate.power_clean = weightVal;
-                        if (exId === "push_press") newMaxesToUpdate.pushPress = weightVal;
                     }
 
                     return {
@@ -283,7 +288,6 @@
                 return { name: ex.name, id: exId, sets: completedSets };
             });
 
-            // Update maxes if PRs were hit; create the doc if it does not yet exist
             if (Object.keys(newMaxesToUpdate).length > 0) {
                 const maxesRef = doc(db, "recruiting_profiles", currentAthleteId, "maxes", "latest");
                 await setDoc(maxesRef, {
@@ -292,7 +296,6 @@
                 }, { merge: true });
             }
 
-            // Get athlete name from users first, then recruiting profile
             let profileSnap = await getDoc(doc(db, "users", currentAthleteId));
             if (!profileSnap.exists()) {
                 profileSnap = await getDoc(doc(db, "recruiting_profiles", currentAthleteId));
@@ -306,7 +309,6 @@
                 athleteId: currentAthleteId,
                 athleteName,
                 schoolId: currentSchoolId,
-                school_id: currentSchoolId,
                 workoutId: activeWorkoutData.id,
                 workoutName: activeWorkoutData.name || "Workout",
                 workoutDate: activeWorkoutData.date || "",

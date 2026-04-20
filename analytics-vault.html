@@ -6,7 +6,7 @@
     <title>Analytics Vault | RACKSTAT</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
-    
+
     <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator_midnight.min.css" rel="stylesheet">
     <script type="text/javascript" src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
 </head>
@@ -29,11 +29,11 @@
         </div>
 
         <div class="flex gap-2">
-            <button id="btn-rack" onclick="switchTable('rack')" 
+            <button id="btn-rack" onclick="switchTable('rack')"
                 class="px-6 py-3 rounded-t-lg bg-red-600 text-white font-bold transition-all duration-200">
                 THE RACK (Lifts)
             </button>
-            <button id="btn-kitchen" onclick="switchTable('kitchen')" 
+            <button id="btn-kitchen" onclick="switchTable('kitchen')"
                 class="px-6 py-3 rounded-t-lg bg-gray-800 text-gray-400 hover:bg-gray-700 font-bold transition-all duration-200">
                 THE KITCHEN (Meals)
             </button>
@@ -52,12 +52,10 @@
         let currentTab = 'rack';
         let coachSchoolId = null;
 
-        // Returns school ID regardless of legacy underscore/camelCase naming
         function getSchoolIdFromData(data = {}) {
             return data.schoolId || data.school_id || "";
         }
 
-        // Returns a consistent display name from available fields
         function getDisplayName(data = {}) {
             if (data.fullName && String(data.fullName).trim()) {
                 return String(data.fullName).trim();
@@ -70,7 +68,6 @@
             return combined || "Unnamed";
         }
 
-        // Safe date formatting for Firestore timestamps or legacy date values
         const formatFirebaseDate = (timestamp) => {
             if (!timestamp) return "--";
 
@@ -83,7 +80,19 @@
             }
         };
 
-        // Column definitions for lift analytics
+        const formatDateKey = (dateKey) => {
+            if (!dateKey || typeof dateKey !== "string") return "--";
+
+            const parts = dateKey.split("-");
+            if (parts.length !== 3) return dateKey;
+
+            const [year, month, day] = parts.map(Number);
+            const date = new Date(year, (month || 1) - 1, day || 1);
+
+            if (Number.isNaN(date.getTime())) return dateKey;
+            return date.toLocaleDateString('default', { month: 'long', day: 'numeric', year: 'numeric' });
+        };
+
         const rackColumns = [
             { title: "Athlete", field: "name", widthGrow: 2, headerFilter: "input" },
             { title: "Lift Date", field: "dateGroup", width: 150, headerFilter: "input" },
@@ -105,10 +114,9 @@
             { title: "Push Press", field: "pushPress", hozAlign: "right", sorter: "number", formatter: (c) => c.getValue() || "--" },
         ];
 
-        // Column definitions for nutrition analytics
         const kitchenColumns = [
             { title: "Athlete", field: "name", widthGrow: 2, headerFilter: "input" },
-            { title: "Date", field: "dateGroup", width: 150 },
+            { title: "Date", field: "dateGroup", width: 180 },
             { title: "Body Weight", field: "bodyWeight" },
             { title: "Grad", field: "grad", width: 80 },
             {
@@ -196,7 +204,6 @@
             const tableData = [];
 
             try {
-                // Query current-format recruiting profiles first
                 let athletesQuery = query(
                     collection(db, "recruiting_profiles"),
                     where("schoolId", "==", coachSchoolId)
@@ -204,7 +211,6 @@
 
                 let athletesSnap = await getDocs(athletesQuery);
 
-                // Legacy fallback for older recruiting profile docs
                 if (athletesSnap.empty) {
                     athletesQuery = query(
                         collection(db, "recruiting_profiles"),
@@ -217,13 +223,11 @@
                     const profileData = athleteDoc.data();
                     const uid = athleteDoc.id;
 
-                    // Merge users/{uid} data for more consistent names and grad years
                     const userSnap = await getDoc(doc(db, "users", uid));
                     const userData = userSnap.exists() ? userSnap.data() : {};
                     const mergedAthlete = { ...userData, ...profileData };
 
                     if (type === 'rack') {
-                        // Try the current single-doc latest maxes model first
                         const latestSnap = await getDoc(doc(db, "recruiting_profiles", uid, "maxes", "latest"));
 
                         if (latestSnap.exists()) {
@@ -234,8 +238,8 @@
                                 grad: mergedAthlete.gradYear || "--",
                                 offPos: mergedAthlete.offPrimary || mergedAthlete.primaryPos || "--",
                                 defPos: mergedAthlete.defPrimary || mergedAthlete.primaryDefPos || "--",
-                                bodyWeight: s.bodyWeight || s.body_weight || "--",
-                                dateGroup: formatFirebaseDate(s.timestamp || s.updatedAt || s.createdAt),
+                                bodyWeight: s.bodyWeight || s.body_weight || s.weight || "--",
+                                dateGroup: formatFirebaseDate(s.timestamp || s.updatedAt || s.createdAt || s.lastUpdated),
                                 bench: s.bench ?? s.bench_press ?? s.benchMax ?? 0,
                                 squat: s.squat ?? 0,
                                 clean: s.clean ?? s.power_clean ?? 0,
@@ -246,7 +250,6 @@
                             return;
                         }
 
-                        // Legacy fallback: iterate all docs in maxes subcollection
                         const subSnap = await getDocs(collection(db, "recruiting_profiles", uid, "maxes"));
                         subSnap.forEach((subDoc) => {
                             const s = subDoc.data();
@@ -256,8 +259,8 @@
                                 grad: mergedAthlete.gradYear || "--",
                                 offPos: mergedAthlete.offPrimary || mergedAthlete.primaryPos || "--",
                                 defPos: mergedAthlete.defPrimary || mergedAthlete.primaryDefPos || "--",
-                                bodyWeight: s.bodyWeight || s.body_weight || "--",
-                                dateGroup: formatFirebaseDate(s.timestamp || s.updatedAt || s.createdAt),
+                                bodyWeight: s.bodyWeight || s.body_weight || s.weight || "--",
+                                dateGroup: formatFirebaseDate(s.timestamp || s.updatedAt || s.createdAt || s.lastUpdated),
                                 bench: s.bench ?? s.bench_press ?? s.benchMax ?? 0,
                                 squat: s.squat ?? 0,
                                 clean: s.clean ?? s.power_clean ?? 0,
@@ -266,7 +269,11 @@
                             });
                         });
                     } else {
-                        const mealsSnap = await getDocs(collection(db, "recruiting_profiles", uid, "meals"));
+                        let mealsSnap = await getDocs(query(collection(db, "meals"), where("uid", "==", uid)));
+
+                        if (mealsSnap.empty) {
+                            mealsSnap = await getDocs(collection(db, "recruiting_profiles", uid, "meals"));
+                        }
 
                         mealsSnap.forEach((mealDoc) => {
                             const s = mealDoc.data();
@@ -274,8 +281,8 @@
                             tableData.push({
                                 name: getDisplayName(mergedAthlete),
                                 grad: mergedAthlete.gradYear || "--",
-                                bodyWeight: s.bodyWeight || s.body_weight || "--",
-                                dateGroup: formatFirebaseDate(s.timestamp || s.updatedAt || s.createdAt || s.date),
+                                bodyWeight: mergedAthlete.weight || s.bodyWeight || s.body_weight || "--",
+                                dateGroup: s.dateKey ? formatDateKey(s.dateKey) : formatFirebaseDate(s.timestamp || s.updatedAt || s.createdAt || s.date),
                                 mealType: s.type || s.mealType || s.mealName || "Meal",
                                 calories: s.calories || 0,
                                 protein: s.protein || 0,

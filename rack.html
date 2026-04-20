@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>THE RACK | RACKSTAT</title>
-    
+
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <style>
         :root {
             --rackstat-black: #020617;
@@ -19,14 +19,14 @@
         }
 
         body { background-color: var(--rackstat-black); color: white; }
-        
-        .max-card { 
-            background: var(--rackstat-card); 
-            border-radius: 1rem; 
-            padding: 1rem; 
-            text-align: center; 
+
+        .max-card {
+            background: var(--rackstat-card);
+            border-radius: 1rem;
+            padding: 1rem;
+            text-align: center;
             border: 1px solid var(--rackstat-border);
-            border-bottom: 4px solid var(--school-primary); 
+            border-bottom: 4px solid var(--school-primary);
             transition: transform 0.2s;
         }
 
@@ -35,13 +35,13 @@
             background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
         }
 
-        input { 
-            background-color: #000 !important; 
-            color: white !important; 
-            border: 1px solid var(--rackstat-border) !important; 
-            padding: 0.75rem !important; 
-            border-radius: 8px !important; 
-            width: 100%; 
+        input {
+            background-color: #000 !important;
+            color: white !important;
+            border: 1px solid var(--rackstat-border) !important;
+            padding: 0.75rem !important;
+            border-radius: 8px !important;
+            width: 100%;
             transition: border-color 0.2s;
         }
 
@@ -77,7 +77,7 @@
             margin-bottom: 4px;
             display: block;
         }
-        
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(5px); }
             to { opacity: 1; transform: translateY(0); }
@@ -104,7 +104,7 @@
     </header>
 
     <div class="max-w-md mx-auto px-4 mt-8 space-y-8">
-        
+
         <section class="animate-fade-in">
             <div class="max-card board-score-card w-full flex flex-col justify-center items-center py-6 px-6 shadow-2xl">
                 <p class="text-[10px] font-black uppercase text-blue-400 tracking-[0.2em] mb-1">Official Board Score</p>
@@ -117,7 +117,7 @@
 
         <section class="bg-[#0f172a]/50 p-6 rounded-3xl border border-zinc-800 shadow-xl">
             <h2 class="text-center font-black uppercase italic text-gray-400 text-xs mb-6 tracking-widest">Max Tracking</h2>
-            
+
             <div class="space-y-4">
                 <div>
                     <label>Current Bodyweight (LBS)</label>
@@ -157,15 +157,13 @@
         import {
             buildBoardScoreSettings,
             calculateBoardScore,
-            getLiftValue,
-            buildLiftWritebacks,
-            getFormulaTypeFromSchool
+            getLiftValue
         } from './js/board-score.js';
 
         let teamSettings = null;
         let unsubscribe = null;
 
-        const slugify = (text) => String(text || "").toLowerCase().replace(/\s+/g, '_').replace(/[^\w-]+/g, '');
+        const slugify = (text) => String(text || "").toLowerCase().trim().replace(/\s+/g, '_').replace(/[^\w-]+/g, '');
         const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
 
         onAuthStateChanged(auth, async (user) => {
@@ -281,31 +279,37 @@
             try {
                 const bw = Number(document.getElementById('bodyWeight').value) || 0;
 
-                const updateObj = {
+                const maxesUpdate = {
                     lastUpdated: serverTimestamp(),
-                    bodyWeight: bw,
-                    body_weight: bw,
-                    weight: bw
+                    bodyWeight: bw
                 };
 
                 teamSettings.tracked_lifts.forEach(liftKey => {
                     const normalizedLiftKey = slugify(liftKey);
                     const input = document.querySelector(`[data-lift-key="${normalizedLiftKey}"]`);
                     const val = Number(input?.value) || 0;
+                    maxesUpdate[normalizedLiftKey] = val;
+                });
 
-                    Object.assign(updateObj, buildLiftWritebacks(normalizedLiftKey, val));
+                const profileWriteback = {
+                    bodyWeight: bw
+                };
+
+                teamSettings.tracked_lifts.forEach(liftKey => {
+                    const normalizedLiftKey = slugify(liftKey);
+                    profileWriteback[normalizedLiftKey] = maxesUpdate[normalizedLiftKey] || 0;
                 });
 
                 const previewResult = calculateBoardScore({
-                    data: updateObj,
+                    data: maxesUpdate,
                     formulaType: teamSettings.formula_type,
                     scoringLifts: teamSettings.scoring_lifts
                 });
 
                 await Promise.all([
-                    setDoc(doc(db, "recruiting_profiles", user.uid, "maxes", "latest"), updateObj, { merge: true }),
+                    setDoc(doc(db, "recruiting_profiles", user.uid, "maxes", "latest"), maxesUpdate, { merge: true }),
                     setDoc(doc(db, "recruiting_profiles", user.uid), {
-                        ...updateObj,
+                        ...profileWriteback,
                         boardScore: previewResult.score
                     }, { merge: true }),
                     setDoc(doc(db, "users", user.uid), {

@@ -275,9 +275,7 @@
 
 <script type="module">
     import { db, auth } from './js/firebase-config.js';
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import {
-        getFirestore,
         doc,
         getDoc,
         setDoc,
@@ -293,12 +291,8 @@
         updateDoc,
         where as fbWhere
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { applyTheme } from './js/theme.js';
-
-    const app = initializeApp((await import('./js/firebase-config.js')).firebaseConfig);
-    const firestore = getFirestore(app);
-    const firebaseAuth = getAuth(app);
 
     let calGoal = 2500;
     let proGoal = 150;
@@ -347,7 +341,58 @@
         });
     }
 
-    onAuthStateChanged(firebaseAuth, async (user) => {
+    async function getUserSchoolId(uid) {
+        const userSnap = await getDoc(doc(db, "users", uid));
+        if (!userSnap.exists()) return "";
+        const userData = userSnap.data();
+        return userData.schoolId || userData.school_id || "";
+    }
+
+    async function getMealsForDate(uid, dateKey) {
+        let snap = await getDocs(query(
+            collection(db, "meals"),
+            fbWhere("uid", "==", uid),
+            fbWhere("dateKey", "==", dateKey),
+            orderBy("timestamp", "desc"),
+            limit(50)
+        ));
+
+        if (!snap.empty) {
+            return snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data(), __path: "meals" }));
+        }
+
+        const legacySnap = await getDocs(query(
+            collection(db, "recruiting_profiles", uid, "meals"),
+            fbWhere("dateKey", "==", dateKey),
+            orderBy("timestamp", "desc"),
+            limit(50)
+        ));
+
+        return legacySnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data(), __path: "legacy_meals" }));
+    }
+
+    async function getMealDocsForRange(uid, limitCount = 100) {
+        let snap = await getDocs(query(
+            collection(db, "meals"),
+            fbWhere("uid", "==", uid),
+            orderBy("timestamp", "desc"),
+            limit(limitCount)
+        ));
+
+        if (!snap.empty) {
+            return snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data(), __path: "meals" }));
+        }
+
+        const legacySnap = await getDocs(query(
+            collection(db, "recruiting_profiles", uid, "meals"),
+            orderBy("timestamp", "desc"),
+            limit(limitCount)
+        ));
+
+        return legacySnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data(), __path: "legacy_meals" }));
+    }
+
+    onAuthStateChanged(auth, async (user) => {
         if (!user) {
             location.href = 'index.html';
             return;
@@ -356,14 +401,14 @@
         if (userUnsubscribe) userUnsubscribe();
         if (profileUnsubscribe) profileUnsubscribe();
 
-        userUnsubscribe = onSnapshot(doc(firestore, "users", user.uid), async (userDoc) => {
+        userUnsubscribe = onSnapshot(doc(db, "users", user.uid), async (userDoc) => {
             if (!userDoc.exists()) return;
 
             const userData = userDoc.data();
-            const schoolID = userData.school_id || userData.schoolId;
+            const schoolID = userData.schoolId || userData.school_id;
 
             if (schoolID) {
-                await applyTheme(firestore, schoolID);
+                await applyTheme(db, schoolID);
             }
 
             if (userData.weight) {
@@ -374,7 +419,7 @@
             }
         });
 
-        profileUnsubscribe = onSnapshot(doc(firestore, "recruiting_profiles", user.uid), async (snap) => {
+        profileUnsubscribe = onSnapshot(doc(db, "recruiting_profiles", user.uid), async (snap) => {
             if (!snap.exists()) return;
 
             const data = snap.data();
@@ -415,7 +460,7 @@
     });
 
     window.setTargets = async () => {
-        const user = firebaseAuth.currentUser;
+        const user = auth.currentUser;
         if (!user) return;
 
         const newCal = prompt("Daily Calorie Target:", calGoal);
@@ -425,7 +470,7 @@
         if (newCal === null || newPro === null || newWater === null) return;
 
         try {
-            await updateDoc(doc(firestore, "recruiting_profiles", user.uid), {
+            await updateDoc(doc(db, "recruiting_profiles", user.uid), {
                 dailyCalorieGoal: Number(newCal) || calGoal,
                 dailyProteinGoal: Number(newPro) || proGoal,
                 dailyWaterGoal: Number(newWater) || waterGoal
@@ -437,7 +482,7 @@
     };
 
     window.saveQuickStats = async () => {
-        const user = firebaseAuth.currentUser;
+        const user = auth.currentUser;
         if (!user) return;
 
         const htInput = document.getElementById('quick-height');
@@ -453,8 +498,8 @@
         if (wVal) syncData.weight = wVal;
 
         try {
-            await setDoc(doc(firestore, "users", user.uid), syncData, { merge: true });
-            await setDoc(doc(firestore, "recruiting_profiles", user.uid), syncData, { merge: true });
+            await setDoc(doc(db, "users", user.uid), syncData, { merge: true });
+            await setDoc(doc(db, "recruiting_profiles", user.uid), syncData, { merge: true });
             alert("Stats Synced!");
             htInput.value = '';
             bwInput.value = '';
@@ -465,7 +510,7 @@
     };
 
     window.addWater = async (cups) => {
-        const user = firebaseAuth.currentUser;
+        const user = auth.currentUser;
         if (!user) return;
 
         const selectedDate = getSelectedDateKey();
@@ -477,11 +522,19 @@
         }
 
         try {
-            await addDoc(collection(firestore, "recruiting_profiles", user.uid, "meals"), {
+            const schoolId = await getUserSchoolId(user.uid);
+
+            await addDoc(collection(db, "meals"), {
+                uid: user.uid,
+                schoolId,
                 mealType: 'Water',
                 cups: Number(cups),
+                calories: 0,
+                protein: 0,
+                carbs: 0,
+                fats: 0,
+                mealDesc: '',
                 dateKey: selectedDate,
-                date: selectedDate,
                 timestamp: serverTimestamp()
             });
 
@@ -494,28 +547,42 @@
     };
 
     window.undoLastWater = async () => {
-        const user = firebaseAuth.currentUser;
+        const user = auth.currentUser;
         if (!user) return;
 
         const selectedDate = getSelectedDateKey();
 
         try {
-            const q = query(
-                collection(firestore, "recruiting_profiles", user.uid, "meals"),
+            let snap = await getDocs(query(
+                collection(db, "meals"),
+                fbWhere("uid", "==", user.uid),
                 fbWhere("mealType", "==", "Water"),
                 fbWhere("dateKey", "==", selectedDate),
                 orderBy("timestamp", "desc"),
                 limit(1)
-            );
+            ));
 
-            const snap = await getDocs(q);
+            if (!snap.empty) {
+                await deleteDoc(doc(db, "meals", snap.docs[0].id));
+                await window.updateDailyTotals();
+                await fetchMealHistory();
+                return;
+            }
+
+            snap = await getDocs(query(
+                collection(db, "recruiting_profiles", user.uid, "meals"),
+                fbWhere("mealType", "==", "Water"),
+                fbWhere("dateKey", "==", selectedDate),
+                orderBy("timestamp", "desc"),
+                limit(1)
+            ));
 
             if (snap.empty) {
                 alert("No water entries found to undo.");
                 return;
             }
 
-            await deleteDoc(doc(firestore, "recruiting_profiles", user.uid, "meals", snap.docs[0].id));
+            await deleteDoc(doc(db, "recruiting_profiles", user.uid, "meals", snap.docs[0].id));
             await window.updateDailyTotals();
             await fetchMealHistory();
         } catch (e) {
@@ -525,7 +592,7 @@
     };
 
     window.saveMeal = async () => {
-        const user = firebaseAuth.currentUser;
+        const user = auth.currentUser;
         if (!user) return;
 
         const selectedDate = getSelectedDateKey();
@@ -551,15 +618,19 @@
                 logBtn.innerText = "RECORDING...";
             }
 
-            await addDoc(collection(firestore, "recruiting_profiles", user.uid, "meals"), {
+            const schoolId = await getUserSchoolId(user.uid);
+
+            await addDoc(collection(db, "meals"), {
+                uid: user.uid,
+                schoolId,
                 mealType: document.getElementById('meal-type').value,
                 calories: cVal,
                 protein: Number(document.getElementById('protein').value) || 0,
                 carbs: Number(document.getElementById('carbs').value) || 0,
                 fats: Number(document.getElementById('fats').value) || 0,
                 mealDesc: document.getElementById('meal-desc').value.trim(),
+                cups: 0,
                 dateKey: selectedDate,
-                date: selectedDate,
                 timestamp: serverTimestamp()
             });
 
@@ -585,19 +656,14 @@
     };
 
     window.updateDailyTotals = async () => {
-        const user = firebaseAuth.currentUser;
+        const user = auth.currentUser;
         if (!user) return;
 
         const selectedDate = getSelectedDateKey();
         if (!selectedDate) return;
 
         try {
-            const q = query(
-                collection(firestore, "recruiting_profiles", user.uid, "meals"),
-                fbWhere("dateKey", "==", selectedDate)
-            );
-
-            const snap = await getDocs(q);
+            const entries = await getMealsForDate(user.uid, selectedDate);
 
             let c = 0;
             let p = 0;
@@ -605,8 +671,7 @@
             let fat = 0;
             let water = 0;
 
-            snap.forEach(d => {
-                const m = d.data();
+            entries.forEach(m => {
                 if (m.mealType === 'Water') {
                     water += Number(m.cups || 0);
                 } else {
@@ -618,7 +683,7 @@
             });
 
             safeSetText('day-cal', c);
-            safeSetText('day-pro', `${p}g`);
+            safeSetText('day-pro', p);
             safeSetText('day-carb', `${carb}g`);
             safeSetText('day-fat', `${fat}g`);
             safeSetText('day-water', `${water} Cups`);
@@ -641,7 +706,7 @@
 
     async function fetchMealHistory() {
         const container = document.getElementById('history-list');
-        const user = firebaseAuth.currentUser;
+        const user = auth.currentUser;
         const selectedDate = getSelectedDateKey();
 
         if (!container || !user || !selectedDate) return;
@@ -649,26 +714,16 @@
         container.innerHTML = '<p class="text-[10px] text-gray-600 italic text-center py-4">Loading history...</p>';
 
         try {
-            const mealsRef = collection(firestore, "recruiting_profiles", user.uid, "meals");
-            const q = query(
-                mealsRef,
-                fbWhere("dateKey", "==", selectedDate),
-                orderBy("timestamp", "desc"),
-                limit(10)
-            );
-
-            const snap = await getDocs(q);
+            const entries = await getMealsForDate(user.uid, selectedDate);
 
             container.innerHTML = '';
 
-            if (snap.empty) {
+            if (!entries.length) {
                 container.innerHTML = '<p class="text-[10px] text-gray-600 italic text-center py-4">No entries for this date.</p>';
                 return;
             }
 
-            snap.forEach(docSnap => {
-                const m = docSnap.data();
-
+            entries.slice(0, 10).forEach(m => {
                 const primaryValue = m.mealType === 'Water'
                     ? `${Number(m.cups || 0)} Cups`
                     : `${Number(m.calories || 0)} CAL`;
@@ -700,7 +755,7 @@
     }
 
     window.showWeeklySummary = async () => {
-        const user = firebaseAuth.currentUser;
+        const user = auth.currentUser;
         if (!user) return;
 
         document.getElementById('weekly-modal').classList.remove('hidden');
@@ -711,13 +766,7 @@
         startOfRange.setHours(0, 0, 0, 0);
 
         try {
-            const q = query(
-                collection(firestore, "recruiting_profiles", user.uid, "meals"),
-                orderBy("timestamp", "desc"),
-                limit(100)
-            );
-
-            const snap = await getDocs(q);
+            const entries = await getMealDocsForRange(user.uid, 100);
 
             let tCals = 0;
             let tPro = 0;
@@ -726,8 +775,7 @@
             let tWater = 0;
             const daysActive = new Set();
 
-            snap.forEach(docSnap => {
-                const d = docSnap.data();
+            entries.forEach(d => {
                 const ts = d.timestamp?.seconds
                     ? new Date(d.timestamp.seconds * 1000)
                     : (d.timestamp?.toDate ? d.timestamp.toDate() : null);

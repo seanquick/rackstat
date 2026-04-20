@@ -7,25 +7,22 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
     <style>
-        /* UI FIX: Contrast for Dropdown Menus */
         select option {
             background-color: #111827;
             color: white;
         }
 
-        /* UI FIX: Visibility for Delete (X) Buttons */
         .remove-btn {
             color: rgba(255, 255, 255, 0.3);
             transition: all 0.2s ease;
             opacity: 1 !important;
         }
-        
+
         .remove-btn:hover {
             color: #ef4444 !important;
             transform: scale(1.2);
         }
 
-        /* Fix for number input appearance in dark mode */
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button {
             filter: invert(1);
@@ -77,11 +74,11 @@
                     <p class="text-xs text-gray-600 font-bold uppercase tracking-widest">Manage previous training sessions</p>
                 </div>
                 <div class="relative w-64">
-                    <input type="text" id="history-search" onkeyup="filterHistory()" placeholder="SEARCH ARCHIVE..." 
+                    <input type="text" id="history-search" onkeyup="filterHistory()" placeholder="SEARCH ARCHIVE..."
                         class="w-full bg-gray-900 border border-gray-800 rounded-lg px-4 py-2 text-[10px] font-black text-white focus:outline-none focus:border-red-600 transition-all">
                 </div>
             </div>
-            
+
             <div id="history-container" class="grid gap-3">
                 <p class="text-gray-700 italic text-sm font-bold uppercase tracking-widest">Initializing database...</p>
             </div>
@@ -105,7 +102,6 @@
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { applyTheme } from './js/theme.js';
 
-        // GLOBAL STATE
         let coreLifts = ["bench", "squat", "clean"];
         let supplementLibrary = [];
         let exercises = [];
@@ -113,17 +109,14 @@
         let userSchoolId = null;
         let editingWorkoutId = null;
 
-        // Returns school ID regardless of legacy underscore/camelCase naming
         function getSchoolIdFromData(data = {}) {
             return data.schoolId || data.school_id || "";
         }
 
-        // Normalizes lift labels for storage/logic consistency
         function normalizeLiftValue(value = "") {
             return String(value).trim().toLowerCase().replace(/\s+/g, '_');
         }
 
-        // Returns the displayed lift name
         function displayLiftName(value = "") {
             return String(value).replace(/_/g, ' ').toUpperCase();
         }
@@ -174,10 +167,8 @@
 
                 const schoolData = schoolDoc.data();
 
-                // Apply shared theme engine
                 await applyTheme(db, userSchoolId);
 
-                // Load tracked lifts from the current school document
                 const trackedLifts = schoolData.trackedLifts || schoolData.activeLifts || ["bench", "squat", "clean"];
                 if (Array.isArray(trackedLifts) && trackedLifts.length > 0) {
                     coreLifts = trackedLifts.map(normalizeLiftValue);
@@ -230,7 +221,7 @@
             const bg = document.getElementById('max-out-indicator');
             const knob = document.getElementById('max-out-knob');
             const addBtn = document.getElementById('add-exercise-btn');
-            
+
             if (isMaxOutMode) {
                 bg.classList.replace('bg-gray-700', 'bg-red-600');
                 knob.classList.add('translate-x-6');
@@ -382,7 +373,7 @@
                         <p class="text-[10px] text-gray-500 uppercase font-black tracking-widest border-t border-white/5 pt-4">Automatic Load Calculation Enabled</p>
                     </div>`;
                     container.insertAdjacentHTML('beforeend', blockHtml);
-                    return; 
+                    return;
                 }
 
                 blockHtml += `
@@ -485,7 +476,6 @@
                     date: dateInput.value,
                     name: nameInput.value.trim().toUpperCase(),
                     schoolId: userSchoolId,
-                    school_id: userSchoolId,
                     isMaxOutMode,
                     exercises,
                     updatedAt: serverTimestamp()
@@ -515,7 +505,6 @@
             try {
                 let snap = await getDocs(query(collection(db, "workouts"), where("schoolId", "==", userSchoolId)));
 
-                // Legacy fallback for older workouts
                 if (snap.empty) {
                     snap = await getDocs(query(collection(db, "workouts"), where("school_id", "==", userSchoolId)));
                 }
@@ -563,7 +552,7 @@
             document.getElementById('workout-name').value = data.name || '';
             exercises = Array.isArray(data.exercises) ? data.exercises : [];
             isMaxOutMode = !!data.isMaxOutMode;
-            
+
             const bg = document.getElementById('max-out-indicator');
             const knob = document.getElementById('max-out-knob');
             const addBtn = document.getElementById('add-exercise-btn');

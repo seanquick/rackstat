@@ -10,7 +10,6 @@
         body { background-color: #0a0a0b; color: white; }
         .hide-scroll::-webkit-scrollbar { display: none; }
 
-        /* Dynamic PR Badge Glow */
         .pr-badge {
             background-color: var(--school-primary);
             box-shadow: 0 0 12px var(--school-primary);
@@ -84,13 +83,23 @@
         return combined || "Unknown Athlete";
     }
 
+    function normalizeLiftKey(name = "") {
+        return String(name)
+            .toLowerCase()
+            .trim()
+            .replace(/\s+/g, '_')
+            .replace(/[^\w-]+/g, '');
+    }
+
     function buildExerciseKeyVariations(name = "") {
-        const cleanName = String(name).toLowerCase().trim();
-        return [
-            cleanName.replace(/\s+/g, '_'),
-            cleanName,
-            cleanName.replace(/\s+/g, '')
-        ];
+        const normalized = normalizeLiftKey(name);
+        const compact = normalized.replace(/_/g, '');
+
+        return [...new Set([
+            normalized,
+            String(name).toLowerCase().trim(),
+            compact
+        ].filter(Boolean))];
     }
 
     onAuthStateChanged(auth, async (user) => {
@@ -150,7 +159,6 @@
 
             let snap = await getDocs(q);
 
-            // Legacy fallback for older workout docs
             if (snap.empty) {
                 q = query(
                     collection(db, "workouts"),
@@ -246,14 +254,13 @@
                     const weights = sets.map(s => parseFloat(s.weight) || 0);
                     const topWeight = weights.length > 0 ? Math.max(...weights) : 0;
 
+                    const normalizedKey = normalizeLiftKey(ex.name);
                     const variations = buildExerciseKeyVariations(ex.name);
                     let previousMax = 0;
-                    let matchedKey = variations[0];
 
                     for (const key of variations) {
                         if (currentMaxes[key] !== undefined) {
                             previousMax = parseFloat(currentMaxes[key]) || 0;
-                            matchedKey = key;
                             break;
                         }
                     }
@@ -267,10 +274,10 @@
                                     <span class="text-white font-bold text-xs uppercase tracking-wider">${ex.name || 'Exercise'}</span>
                                     <span class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">${completedSets}/${totalSets} Sets</span>
                                 </div>
-                                
+
                                 <div class="flex items-center gap-2 ml-4">
                                     ${isPR ? `<span class="bg-red-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full animate-pulse uppercase">NEW PR</span>` : ''}
-                                    <button onclick="window.approvePR('${athleteId}', '${matchedKey}', ${topWeight}, this)" 
+                                    <button onclick="window.approvePR('${athleteId}', '${normalizedKey}', ${topWeight}, this)"
                                             class="bg-white/5 hover:bg-red-700 border border-white/10 text-[8px] font-black px-3 py-1 rounded-md text-white transition-all uppercase tracking-tighter">
                                         Verify Lift
                                     </button>
@@ -308,6 +315,7 @@
     };
 
     window.approvePR = async function(athleteId, exerciseKey, newWeight, btnElement) {
+        const normalizedKey = normalizeLiftKey(exerciseKey);
         const originalText = btnElement.innerText;
         btnElement.innerText = "SAVING...";
         btnElement.disabled = true;
@@ -316,7 +324,7 @@
             const maxRef = doc(db, "recruiting_profiles", athleteId, "maxes", "latest");
 
             await setDoc(maxRef, {
-                [exerciseKey]: parseFloat(newWeight),
+                [normalizedKey]: parseFloat(newWeight),
                 lastUpdated: serverTimestamp()
             }, { merge: true });
 
@@ -324,7 +332,7 @@
             btnElement.classList.replace('bg-white/5', 'bg-green-600');
             btnElement.classList.remove('hover:bg-red-700');
 
-            console.log(`Successfully verified ${exerciseKey} at ${newWeight}lbs`);
+            console.log(`Successfully verified ${normalizedKey} at ${newWeight}lbs`);
         } catch (err) {
             console.error("Error approving PR:", err);
             alert("Failed to verify lift. Check console for details.");

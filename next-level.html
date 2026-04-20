@@ -23,7 +23,7 @@
 <body class="p-4 pb-20">
 <header class="bg-black border-b-2 border-red-700 p-4 sticky top-0 z-50">
     <div class="flex justify-between items-center max-w-6xl mx-auto">
-        
+
         <div class="w-1/4 flex justify-start">
             <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1 rounded text-gray-300 hover:text-white transition-colors">
                 ← Lobby
@@ -32,8 +32,8 @@
 
         <div class="flex items-center gap-6 justify-center flex-1">
             <div class="header-logo-container">
-                <img id="school-logo" 
-                     src="images/rackstat-logo.png" 
+                <img id="school-logo"
+                     src="images/rackstat-logo.png"
                      alt="School Logo"
                      onerror="this.src='images/rackstat-logo.png'">
             </div>
@@ -56,19 +56,19 @@
             </div>
         </div>
 
-        <div class="w-1/4"></div> 
+        <div class="w-1/4"></div>
     </div>
 </header>
 
 <form id="recruitingForm" class="max-w-3xl mx-auto mt-8">
-    
+
     <div class="form-section">
         <h2 class="section-header">01 Personal & Social Profile</h2>
         <div class="grid-2">
             <div><span class="sub-label">Full Name</span><input type="text" id="fullName" required></div>
             <div><span class="sub-label">Jersey #</span><input type="text" id="jerseyNum"></div>
         </div>
-        
+
         <div class="grid-2">
             <div><span class="sub-label">Player Cell Phone</span><input type="tel" id="playerPhone" placeholder="(555) 555-5555"></div>
             <div><span class="sub-label">Email Address</span><input type="email" id="playerEmail"></div>
@@ -195,7 +195,7 @@
             <div><span class="sub-label">ACT Score</span><input type="number" id="act"></div>
             <div><span class="sub-label">SAT Score</span><input type="number" id="sat"></div>
         </div>
-        
+
         <span class="sub-label">NCAA Eligibility Registered?</span>
         <select id="ncaaReg">
             <option value="No">No</option>
@@ -218,7 +218,7 @@
 
     <div class="form-section">
         <h2 class="section-header">07 Training & Commitment</h2>
-        
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div>
                 <span class="sub-label">Weekly extra training days?</span>
@@ -451,7 +451,6 @@
             prefOther: document.getElementById('prefOther').value,
             isStarter: document.getElementById('isStarter').value,
             highlightUrl: document.getElementById('highlightUrl').value,
-            hudlLink: document.getElementById('highlightUrl').value,
             honors: document.getElementById('honors').value,
             weeklyExtraDays: document.getElementById('trainFreq').value,
             hasNutritionPlan: document.getElementById('hasNutrition').value,
@@ -461,8 +460,6 @@
             teammateType: document.getElementById('teammateType').value,
             goodTeammateMeaning: document.getElementById('teammateDef').value,
             willingToSacrifice: document.getElementById('sacrifice').value,
-            teammateDef: document.getElementById('teammateDef').value,
-            sacrifice: document.getElementById('sacrifice').value,
             nextLevelComplete: true,
             lastUpdated: new Date().toISOString()
         };
@@ -471,8 +468,7 @@
             await Promise.all([
                 setDoc(doc(db, "recruiting_profiles", currentUser.uid), profileData, { merge: true }),
                 setDoc(doc(db, "users", currentUser.uid), {
-                    fullName,
-                    email: playerEmail || undefined
+                    fullName
                 }, { merge: true })
             ]);
 

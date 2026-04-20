@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scouting Report | RACKSTAT</title>
-    
+
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <style>
         :root {
             --rackstat-red: #b91c1c;
@@ -23,7 +23,7 @@
 
         .label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--school-primary, var(--rackstat-red)); }
         .value { font-size: 1.125rem; font-weight: 900; font-style: italic; }
-        
+
         .stat-box {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--rackstat-border);
@@ -70,7 +70,7 @@
             ← Back
         </button>
     </div>
-    
+
     <div class="flex gap-2">
         <button id="unlock-btn" onclick="toggleEditMode()" class="hidden bg-yellow-600 text-black font-black px-4 py-2 rounded-full uppercase text-[10px] transition-all">
             🔓 Edit Report
@@ -85,7 +85,7 @@
 </div>
 
 <div id="capture-area" class="max-w-2xl mx-auto bg-[#161b22] rounded-3xl p-8 shadow-2xl border border-white/5 relative overflow-hidden">
-    
+
     <div class="flex justify-between items-start mb-8 w-full gap-4">
         <div class="flex-1 min-w-0">
             <h1 id="disp-name" class="text-4xl font-black italic uppercase leading-none view-mode">--</h1>
@@ -102,7 +102,7 @@
                     <span class="label text-red-500 w-12">OFF:</span>
                     <span id="disp-pos" class="text-white font-bold uppercase text-sm view-mode">--</span>
                     <span id="disp-pos2" class="text-gray-500 font-bold uppercase text-sm view-mode"></span>
-                    
+
                     <div class="edit-mode hidden flex gap-2">
                         <input id="edit-off-prim" type="text" placeholder="Primary" class="bg-black/40 border border-blue-500 text-white text-xs p-1 w-20 rounded">
                         <input id="edit-off-sec" type="text" placeholder="Secondary" class="bg-black/40 border border-blue-500 text-white text-xs p-1 w-20 rounded">
@@ -113,7 +113,7 @@
                     <span class="label text-blue-500 w-12">DEF:</span>
                     <span id="disp-def-pos" class="text-white font-bold uppercase text-sm view-mode">--</span>
                     <span id="disp-def-pos2" class="text-gray-500 font-bold uppercase text-sm view-mode"></span>
-                    
+
                     <div class="edit-mode hidden flex gap-2">
                         <input id="edit-def-prim" type="text" placeholder="Primary" class="bg-black/40 border border-blue-500 text-white text-xs p-1 w-20 rounded">
                         <input id="edit-def-sec" type="text" placeholder="Secondary" class="bg-black/40 border border-blue-500 text-white text-xs p-1 w-20 rounded">
@@ -124,7 +124,7 @@
 
         <div class="flex flex-col items-center justify-center min-w-[100px]">
             <img id="disp-logo" src="" class="h-16 w-16 object-contain hidden" alt="School Logo">
-            
+
             <div class="edit-mode hidden w-full text-center">
                 <label class="block text-[8px] uppercase text-gray-500 mb-1">Logo URL</label>
                 <input id="edit-logo" type="text" placeholder="images/school.png" class="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-white text-[9px]">
@@ -136,7 +136,7 @@
             <div class="mt-2 text-xs font-bold uppercase tracking-tighter">
                 <span id="disp-height">--</span> / <span id="disp-weight">--</span> LBS
             </div>
-            
+
             <div class="edit-mode hidden mt-2 flex flex-col items-end gap-1">
                 <input id="edit-number" type="text" placeholder="#" class="w-12 bg-black/40 border border-blue-500 rounded px-1 py-1 text-white text-xs text-right">
                 <div class="flex gap-1">
@@ -257,7 +257,7 @@
                 <span class="label text-[9px]">Desired Level</span>
                 <p id="perceivedLevel" class="text-sm font-black italic text-white uppercase view-mode">--</p>
                 <input id="edit-level" type="text" placeholder="D1, D2, etc." class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-xs p-1 w-full rounded outline-none">
-                
+
                 <span class="label text-[9px] mt-2 block">Commitment Level</span>
                 <p id="seriousness" class="text-xs font-bold text-gray-400 view-mode">--</p>
                 <input id="edit-seriousness" type="text" placeholder="Very Serious, etc." class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-[10px] p-1 w-full rounded outline-none mt-1">
@@ -266,7 +266,7 @@
                 <span class="label text-[9px]">Intended Major</span>
                 <p id="major" class="text-sm font-black italic text-white view-mode">--</p>
                 <input id="edit-major" type="text" placeholder="Engineering, etc." class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-xs p-1 w-full rounded outline-none">
-                
+
                 <span class="label text-[9px] mt-2 block">NCAA Registered</span>
                 <p id="ncaaReg" class="text-xs font-bold text-gray-400 view-mode">--</p>
                 <input id="edit-ncaa" type="text" placeholder="Yes/No" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-[10px] p-1 w-full rounded outline-none mt-1">
@@ -573,6 +573,7 @@
             teammateType: document.getElementById('edit-team-type')?.value || "",
             twitter: document.getElementById('edit-twitter')?.value || "",
             hudlLink: document.getElementById('edit-hudl')?.value || "",
+            highlightUrl: document.getElementById('edit-hudl')?.value || "",
             perceivedLevel: document.getElementById('edit-level')?.value || "",
             seriousness: document.getElementById('edit-seriousness')?.value || "",
             major: document.getElementById('edit-major')?.value || "",
@@ -584,13 +585,10 @@
 
         const maxesUpdate = {
             bench: getNumericOrBlank('edit-bench'),
-            bench_press: getNumericOrBlank('edit-bench'),
             squat: getNumericOrBlank('edit-squat'),
             clean: getNumericOrBlank('edit-clean'),
-            power_clean: getNumericOrBlank('edit-clean'),
             deadlift: getNumericOrBlank('edit-deadlift'),
-            push_press: getNumericOrBlank('edit-push-press'),
-            pushPress: getNumericOrBlank('edit-push-press')
+            push_press: getNumericOrBlank('edit-push-press')
         };
 
         try {
