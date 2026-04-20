@@ -155,16 +155,17 @@
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { applyTheme } from './js/theme.js';
         import {
-            slugify,
             buildBoardScoreSettings,
             calculateBoardScore,
             getLiftValue,
-            buildLiftWritebacks
+            buildLiftWritebacks,
+            getFormulaTypeFromSchool
         } from './js/board-score.js';
 
         let teamSettings = null;
         let unsubscribe = null;
 
+        const slugify = (text) => String(text || "").toLowerCase().replace(/\s+/g, '_').replace(/[^\w-]+/g, '');
         const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
 
         onAuthStateChanged(auth, async (user) => {
@@ -197,7 +198,7 @@
         });
 
         function setupDynamicRack(settings) {
-            teamSettings = buildBoardScoreSettings(settings);
+            teamSettings = buildBoardScoreSettings(settings || {});
 
             const container = document.getElementById('dynamic-inputs');
             container.innerHTML = teamSettings.tracked_lifts.map((liftKey, index) => {
@@ -207,8 +208,7 @@
                     <div class="animate-fade-in">
                         <label>${labelName}</label>
                         <input id="input-${normalizedLiftKey}" type="number" placeholder="Lbs" data-lift-key="${normalizedLiftKey}">
-                    </div>
-                `;
+                    </div>`;
             }).join('');
         }
 
@@ -225,7 +225,7 @@
             });
         }
 
-        function renderValues(data) {
+        function renderValues(data = {}) {
             if (!teamSettings) return;
 
             teamSettings.tracked_lifts.forEach(liftKey => {
@@ -296,7 +296,7 @@
                     Object.assign(updateObj, buildLiftWritebacks(normalizedLiftKey, val));
                 });
 
-                const result = calculateBoardScore({
+                const previewResult = calculateBoardScore({
                     data: updateObj,
                     formulaType: teamSettings.formula_type,
                     scoringLifts: teamSettings.scoring_lifts
@@ -306,7 +306,7 @@
                     setDoc(doc(db, "recruiting_profiles", user.uid, "maxes", "latest"), updateObj, { merge: true }),
                     setDoc(doc(db, "recruiting_profiles", user.uid), {
                         ...updateObj,
-                        boardScore: result.score
+                        boardScore: previewResult.score
                     }, { merge: true }),
                     setDoc(doc(db, "users", user.uid), {
                         weight: bw

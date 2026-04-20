@@ -91,8 +91,7 @@
     import { applyTheme } from "./js/theme.js";
     import {
         buildBoardScoreSettings,
-        calculateBoardScore,
-        getLiftValue
+        calculateBoardScore
     } from "./js/board-score.js";
     import {
         getDoc,
@@ -290,8 +289,7 @@
 
             scores.push({
                 name: fullName,
-                displayScore: scoreResult.score,
-                placed: false
+                displayScore: Number(scoreResult.score) || 0
             });
         }
 
@@ -341,34 +339,43 @@
         }
 
         if (grid) {
-            scores.sort((a, b) => b.displayScore - a.displayScore);
             grid.innerHTML = '';
 
             const minimumClub = Number(school.club_start) || 50;
-            const scoringLiftLabel = scoringLifts.length
-                ? scoringLifts.map(l => l.replace(/_/g, ' ')).join(' + ').toUpperCase()
+            const scoringLiftLabel = boardSettings.scoring_lifts.length
+                ? boardSettings.scoring_lifts.map(l => l.replace(/_/g, ' ')).join(' + ').toUpperCase()
                 : 'NO SCORING LIFTS';
 
-            const highestScore = scores.length
-                ? Math.max(...scores.map(s => Number(s.displayScore) || 0))
-                : 0;
+            const clubMap = new Map();
 
-            const topClubLevel = Math.max(
-                minimumClub,
-                Math.floor(highestScore / 50) * 50
-            );
+            scores.forEach((athlete) => {
+                const score = Number(athlete.displayScore) || 0;
 
-            for (let level = topClubLevel; level >= minimumClub; level -= 50) {
-                const qualifiers = scores.filter(s =>
-                    !s.placed &&
-                    (Number(s.displayScore) || 0) >= level
-                );
+                if (score < minimumClub) return;
 
-                qualifiers.forEach(s => {
-                    s.placed = true;
-                });
+                const clubLevel = Math.floor(score / 50) * 50;
 
-                if (qualifiers.length > 0) {
+                if (clubLevel < minimumClub) return;
+
+                if (!clubMap.has(clubLevel)) {
+                    clubMap.set(clubLevel, []);
+                }
+
+                clubMap.get(clubLevel).push(athlete);
+            });
+
+            const sortedClubLevels = Array.from(clubMap.keys()).sort((a, b) => b - a);
+
+            if (!sortedClubLevels.length) {
+                grid.innerHTML = `
+                    <p class="text-center text-xs text-gray-500 font-black uppercase py-10">
+                        No athletes currently qualify for a lifting club.
+                    </p>
+                `;
+            } else {
+                sortedClubLevels.forEach((level) => {
+                    const qualifiers = clubMap.get(level).sort((a, b) => b.displayScore - a.displayScore);
+
                     grid.innerHTML += `
                         <div class="club-card border-l-4 mb-4" style="border-color: var(--school-primary)">
                             <div class="flex justify-between items-end border-b border-gray-800 mb-3 pb-1">
@@ -383,15 +390,7 @@
                             `).join('')}
                         </div>
                     `;
-                }
-            }
-
-            if (!grid.innerHTML.trim()) {
-                grid.innerHTML = `
-                    <p class="text-center text-xs text-gray-500 font-black uppercase py-10">
-                        No athletes currently qualify for a lifting club.
-                    </p>
-                `;
+                });
             }
         }
     };
