@@ -116,7 +116,7 @@
 
         const kitchenColumns = [
             { title: "Athlete", field: "name", widthGrow: 2, headerFilter: "input" },
-            { title: "Date", field: "dateGroup", width: 180 },
+            { title: "Date", field: "dateGroup", width: 180, headerFilter: "input" },
             { title: "Body Weight", field: "bodyWeight" },
             { title: "Grad", field: "grad", width: 80 },
             {
@@ -125,7 +125,7 @@
                 width: 120,
                 headerFilter: "list",
                 headerFilterParams: {
-                    values: ["Breakfast", "Lunch", "Dinner", "Snack/Shake"],
+                    values: ["Breakfast", "Lunch", "Dinner", "Snack", "Snack / Shake", "Water", "Meal"],
                     clearable: true
                 }
             },
@@ -269,11 +269,7 @@
                             });
                         });
                     } else {
-                        let mealsSnap = await getDocs(query(collection(db, "meals"), where("uid", "==", uid)));
-
-                        if (mealsSnap.empty) {
-                            mealsSnap = await getDocs(collection(db, "recruiting_profiles", uid, "meals"));
-                        }
+                        const mealsSnap = await getDocs(collection(db, "recruiting_profiles", uid, "meals"));
 
                         mealsSnap.forEach((mealDoc) => {
                             const s = mealDoc.data();
