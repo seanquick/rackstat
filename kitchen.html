@@ -73,18 +73,12 @@
         <div class="grid grid-cols-2 gap-3 mb-4">
             <div class="stat-card border-green-900/50">
                 <p class="text-[9px] text-green-500 uppercase font-bold">Calories</p>
-                <p class="text-xl font-black">
-                    <span id="day-cal">0</span>
-                    <span class="text-[10px] text-gray-500">/ <span id="target-cal-display">0</span></span>
-                </p>
+                <p class="text-xl font-black"><span id="day-cal">0</span> <span class="text-[10px] text-gray-500">/ <span id="target-cal-display">0</span></span></p>
                 <div class="progress-container"><div id="cal-fill" class="fill-green"></div></div>
             </div>
             <div class="stat-card border-red-900/50">
                 <p class="text-[9px] text-red-500 uppercase font-bold">Protein</p>
-                <p class="text-xl font-black">
-                    <span id="day-pro">0g</span>
-                    <span class="text-[10px] text-gray-500"> / <span id="target-pro-display">0</span>g</span>
-                </p>
+                <p class="text-xl font-black"><span id="day-pro">0</span><span class="text-[10px] text-gray-500"> / <span id="target-pro-display">0</span>g</span></p>
                 <div class="progress-container"><div id="pro-fill" class="fill-red"></div></div>
             </div>
         </div>
@@ -144,7 +138,7 @@
         <h2 class="text-center font-black uppercase italic text-green-500 mb-6 tracking-tight">Log Fuel Entry</h2>
 
         <label class="text-[9px] uppercase font-bold text-gray-400 ml-1">Entry Date (Select if logging previous day)</label>
-        <input type="date" id="entry-date" onchange="updateDailyTotals(); fetchMealHistory();">
+        <input type="date" id="entry-date">
 
         <select id="meal-type">
             <option value="Breakfast">Breakfast</option>
@@ -174,9 +168,7 @@
 
         <textarea id="meal-desc" placeholder="What did you eat?" rows="2"></textarea>
 
-        <button onclick="saveMeal()" id="log-btn" class="w-full bg-green-600 hover:bg-green-700 py-4 rounded-xl font-black uppercase shadow-lg transition-all active:scale-95">
-            Record Meal
-        </button>
+        <button onclick="saveMeal()" id="log-btn" class="w-full bg-green-600 hover:bg-green-700 py-4 rounded-xl font-black uppercase shadow-lg transition-all active:scale-95">Record Meal</button>
     </section>
 
     <section class="bg-[#111] p-6 rounded-2xl border border-gray-800 shadow-2xl mt-6">
@@ -269,9 +261,7 @@
                 </div>
             </div>
 
-            <button onclick="closeWeekly()" class="w-full mt-6 bg-white text-black py-4 rounded-xl font-black uppercase text-xs shadow-lg active:scale-95 transition-all">
-                Back to Kitchen
-            </button>
+            <button onclick="closeWeekly()" class="w-full mt-6 bg-white text-black py-4 rounded-xl font-black uppercase text-xs shadow-lg active:scale-95 transition-all">Back to Kitchen</button>
         </div>
     </div>
 </div>
@@ -285,296 +275,432 @@
 
 <script type="module">
     import { db, auth } from './js/firebase-config.js';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import {
-        doc, setDoc, addDoc, deleteDoc, collection, serverTimestamp,
-        query, orderBy, limit, getDocs, onSnapshot, updateDoc, where as fbWhere
+        getFirestore,
+        doc,
+        getDoc,
+        setDoc,
+        addDoc,
+        deleteDoc,
+        collection,
+        serverTimestamp,
+        query,
+        orderBy,
+        limit,
+        getDocs,
+        onSnapshot,
+        updateDoc,
+        where as fbWhere
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { applyTheme } from './js/theme.js';
+
+    const app = initializeApp((await import('./js/firebase-config.js')).firebaseConfig);
+    const firestore = getFirestore(app);
+    const firebaseAuth = getAuth(app);
 
     let calGoal = 2500;
     let proGoal = 150;
     let waterGoal = 16;
+    let profileUnsubscribe = null;
+    let userUnsubscribe = null;
 
     const entryDateInput = document.getElementById('entry-date');
-    const today = new Date().toISOString().split('T')[0];
+    const todayKey = new Date().toISOString().split('T')[0];
 
     if (entryDateInput) {
-        entryDateInput.value = today;
-        entryDateInput.max = today;
+        entryDateInput.value = todayKey;
+        entryDateInput.max = todayKey;
     }
 
-    function safeText(id, value) {
+    function getSelectedDateKey() {
+        return document.getElementById('entry-date')?.value || todayKey;
+    }
+
+    function formatDateLabel(dateKey) {
+        if (!dateKey) return "Today";
+        const [year, month, day] = dateKey.split('-').map(Number);
+        const safeDate = new Date(year, (month || 1) - 1, day || 1);
+        return safeDate.toLocaleDateString([], {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+    }
+
+    function setDisplayDateLabel() {
+        const label = document.getElementById('display-date-label');
+        if (!label) return;
+        label.innerText = formatDateLabel(getSelectedDateKey()).toUpperCase();
+    }
+
+    function safeSetText(id, value) {
         const el = document.getElementById(id);
         if (el) el.innerText = value;
     }
 
-    function getSelectedDate() {
-        const selectedDate = document.getElementById('entry-date')?.value;
-        return selectedDate || null;
+    function clearMealInputs() {
+        ['calories', 'protein', 'carbs', 'fats', 'meal-desc'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
     }
 
-    function getLegacyDisplayDate(selectedDate) {
-        if (!selectedDate) return "";
-        return new Date(selectedDate + 'T00:00:00').toLocaleDateString();
-    }
-
-    function updateWaterBar(water) {
-        const waterBar = document.getElementById('water-progress-bar');
-        if (waterBar) {
-            waterBar.style.width = `${Math.min((water / waterGoal) * 100, 100)}%`;
-        }
-    }
-
-    onAuthStateChanged(auth, async (user) => {
+    onAuthStateChanged(firebaseAuth, async (user) => {
         if (!user) {
             location.href = 'index.html';
             return;
         }
 
-        onSnapshot(doc(db, "users", user.uid), async (userDoc) => {
-            if (userDoc.exists()) {
-                const userData = userDoc.data();
-                const schoolId = userData.schoolId || userData.school_id;
+        if (userUnsubscribe) userUnsubscribe();
+        if (profileUnsubscribe) profileUnsubscribe();
 
-                if (schoolId) {
-                    await applyTheme(db, schoolId);
-                }
+        userUnsubscribe = onSnapshot(doc(firestore, "users", user.uid), async (userDoc) => {
+            if (!userDoc.exists()) return;
 
-                if (userData.weight) safeText('last-weight-display', `${userData.weight} lbs`);
-                if (userData.height) safeText('last-height-display', `${userData.height} in`);
+            const userData = userDoc.data();
+            const schoolID = userData.school_id || userData.schoolId;
+
+            if (schoolID) {
+                await applyTheme(firestore, schoolID);
+            }
+
+            if (userData.weight) {
+                safeSetText('last-weight-display', `${userData.weight} lbs`);
+            }
+            if (userData.height) {
+                safeSetText('last-height-display', `${userData.height} in`);
             }
         });
 
-        onSnapshot(doc(db, "recruiting_profiles", user.uid), async (snap) => {
-            if (snap.exists()) {
-                const data = snap.data();
+        profileUnsubscribe = onSnapshot(doc(firestore, "recruiting_profiles", user.uid), async (snap) => {
+            if (!snap.exists()) return;
 
-                calGoal = data.dailyCalorieGoal || 2500;
-                proGoal = data.dailyProteinGoal || 150;
-                waterGoal = data.dailyWaterGoal || 16;
+            const data = snap.data();
+            calGoal = Number(data.dailyCalorieGoal || 2500);
+            proGoal = Number(data.dailyProteinGoal || 150);
+            waterGoal = Number(data.dailyWaterGoal || 16);
 
-                safeText('target-cal-display', calGoal);
-                safeText('target-pro-display', proGoal);
+            safeSetText('target-cal-display', calGoal);
+            safeSetText('target-pro-display', proGoal);
 
-                if (data.weight) safeText('last-weight-display', `${data.weight} lbs`);
-                if (data.height) safeText('last-height-display', `${data.height} in`);
-
-                window.updateDailyTotals();
-                fetchMealHistory();
+            if (data.weight) {
+                safeSetText('last-weight-display', `${data.weight} lbs`);
             }
+            if (data.height) {
+                safeSetText('last-height-display', `${data.height} in`);
+            }
+
+            await window.updateDailyTotals();
+            await fetchMealHistory();
         });
+
+        setDisplayDateLabel();
+        await window.updateDailyTotals();
+        await fetchMealHistory();
+    });
+
+    document.getElementById('entry-date')?.addEventListener('change', async () => {
+        const selected = getSelectedDateKey();
+        const today = new Date().toISOString().split('T')[0];
+
+        if (selected > today) {
+            document.getElementById('entry-date').value = today;
+        }
+
+        setDisplayDateLabel();
+        await window.updateDailyTotals();
+        await fetchMealHistory();
     });
 
     window.setTargets = async () => {
+        const user = firebaseAuth.currentUser;
+        if (!user) return;
+
         const newCal = prompt("Daily Calorie Target:", calGoal);
         const newPro = prompt("Daily Protein Target (g):", proGoal);
-        const newWater = prompt("Daily Water Goal (cups):", waterGoal);
+        const newWater = prompt("Daily Water Target (cups):", waterGoal);
 
-        if (newCal && newPro) {
-            await updateDoc(doc(db, "recruiting_profiles", auth.currentUser.uid), {
-                dailyCalorieGoal: Number(newCal),
-                dailyProteinGoal: Number(newPro),
-                dailyWaterGoal: newWater ? Number(newWater) : waterGoal
+        if (newCal === null || newPro === null || newWater === null) return;
+
+        try {
+            await updateDoc(doc(firestore, "recruiting_profiles", user.uid), {
+                dailyCalorieGoal: Number(newCal) || calGoal,
+                dailyProteinGoal: Number(newPro) || proGoal,
+                dailyWaterGoal: Number(newWater) || waterGoal
             });
+        } catch (err) {
+            console.error("Set targets error:", err);
+            alert("Unable to update targets.");
         }
     };
 
     window.saveQuickStats = async () => {
+        const user = firebaseAuth.currentUser;
+        if (!user) return;
+
         const htInput = document.getElementById('quick-height');
         const bwInput = document.getElementById('quick-weight');
-        const user = auth.currentUser;
-        if (!user || (!htInput?.value && !bwInput?.value)) return;
+
+        if (!htInput?.value && !bwInput?.value) return;
 
         const hVal = htInput.value ? Number(htInput.value) : null;
         const wVal = bwInput.value ? Number(bwInput.value) : null;
-
         const syncData = { lastSync: serverTimestamp() };
+
         if (hVal) syncData.height = hVal;
-        if (wVal) {
-            syncData.weight = wVal;
-            syncData.bodyWeight = wVal;
+        if (wVal) syncData.weight = wVal;
+
+        try {
+            await setDoc(doc(firestore, "users", user.uid), syncData, { merge: true });
+            await setDoc(doc(firestore, "recruiting_profiles", user.uid), syncData, { merge: true });
+            alert("Stats Synced!");
+            htInput.value = '';
+            bwInput.value = '';
+        } catch (err) {
+            console.error("Quick stats save error:", err);
+            alert("Unable to sync quick stats.");
         }
-
-        await Promise.all([
-            setDoc(doc(db, "users", user.uid), syncData, { merge: true }),
-            setDoc(doc(db, "recruiting_profiles", user.uid), syncData, { merge: true })
-        ]);
-
-        alert("Stats Synced!");
-        htInput.value = '';
-        bwInput.value = '';
     };
 
     window.addWater = async (cups) => {
-        if (!auth.currentUser) return;
+        const user = firebaseAuth.currentUser;
+        if (!user) return;
 
-        const selectedDate = getSelectedDate();
-        if (!selectedDate) return;
+        const selectedDate = getSelectedDateKey();
+        const today = new Date().toISOString().split('T')[0];
 
-        await addDoc(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), {
-            mealType: 'Water',
-            cups: Number(cups),
-            dateKey: selectedDate,
-            date: getLegacyDisplayDate(selectedDate),
-            timestamp: Date.now()
-        });
+        if (selectedDate > today) {
+            alert("You cannot log water for a future date.");
+            return;
+        }
 
-        window.updateDailyTotals();
-        fetchMealHistory();
+        try {
+            await addDoc(collection(firestore, "recruiting_profiles", user.uid, "meals"), {
+                mealType: 'Water',
+                cups: Number(cups),
+                dateKey: selectedDate,
+                date: selectedDate,
+                timestamp: serverTimestamp()
+            });
+
+            await window.updateDailyTotals();
+            await fetchMealHistory();
+        } catch (err) {
+            console.error("Add water error:", err);
+            alert("Unable to log water.");
+        }
     };
 
     window.undoLastWater = async () => {
-        const user = auth.currentUser;
+        const user = firebaseAuth.currentUser;
         if (!user) return;
+
+        const selectedDate = getSelectedDateKey();
 
         try {
             const q = query(
-                collection(db, "recruiting_profiles", user.uid, "meals"),
+                collection(firestore, "recruiting_profiles", user.uid, "meals"),
                 fbWhere("mealType", "==", "Water"),
+                fbWhere("dateKey", "==", selectedDate),
                 orderBy("timestamp", "desc"),
                 limit(1)
             );
 
             const snap = await getDocs(q);
 
-            if (!snap.empty) {
-                await deleteDoc(doc(db, "recruiting_profiles", user.uid, "meals", snap.docs[0].id));
-                window.updateDailyTotals();
-                fetchMealHistory();
-            } else {
+            if (snap.empty) {
                 alert("No water entries found to undo.");
+                return;
             }
+
+            await deleteDoc(doc(firestore, "recruiting_profiles", user.uid, "meals", snap.docs[0].id));
+            await window.updateDailyTotals();
+            await fetchMealHistory();
         } catch (e) {
             console.error("Undo Water Error:", e);
+            alert("Unable to undo water entry.");
         }
     };
 
     window.saveMeal = async () => {
-        const selectedDate = getSelectedDate();
-        const todayStr = new Date().toISOString().split('T')[0];
+        const user = firebaseAuth.currentUser;
+        if (!user) return;
 
-        if (!selectedDate) return;
-        if (selectedDate > todayStr) {
+        const selectedDate = getSelectedDateKey();
+        const today = new Date().toISOString().split('T')[0];
+
+        if (selectedDate > today) {
             alert("You cannot log fuel for the future. Focus on today's targets!");
             return;
         }
 
         const cVal = Number(document.getElementById('calories').value);
-        if (cVal <= 0) return alert("Enter calories.");
+        if (cVal <= 0) {
+            alert("Enter calories.");
+            return;
+        }
 
-        await addDoc(collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"), {
-            mealType: document.getElementById('meal-type').value,
-            mealName: document.getElementById('meal-desc').value || document.getElementById('meal-type').value,
-            calories: cVal,
-            protein: Number(document.getElementById('protein').value) || 0,
-            carbs: Number(document.getElementById('carbs').value) || 0,
-            fats: Number(document.getElementById('fats').value) || 0,
-            dateKey: selectedDate,
-            date: getLegacyDisplayDate(selectedDate),
-            timestamp: serverTimestamp()
-        });
+        const logBtn = document.getElementById('log-btn');
+        const originalText = logBtn?.innerText || "Record Meal";
 
-        ['calories', 'protein', 'carbs', 'fats', 'meal-desc'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.value = '';
-        });
+        try {
+            if (logBtn) {
+                logBtn.disabled = true;
+                logBtn.innerText = "RECORDING...";
+            }
 
-        window.updateDailyTotals();
-        fetchMealHistory();
+            await addDoc(collection(firestore, "recruiting_profiles", user.uid, "meals"), {
+                mealType: document.getElementById('meal-type').value,
+                calories: cVal,
+                protein: Number(document.getElementById('protein').value) || 0,
+                carbs: Number(document.getElementById('carbs').value) || 0,
+                fats: Number(document.getElementById('fats').value) || 0,
+                mealDesc: document.getElementById('meal-desc').value.trim(),
+                dateKey: selectedDate,
+                date: selectedDate,
+                timestamp: serverTimestamp()
+            });
+
+            clearMealInputs();
+            await window.updateDailyTotals();
+            await fetchMealHistory();
+
+            if (logBtn) {
+                logBtn.innerText = "RECORDED ✓";
+                setTimeout(() => {
+                    logBtn.disabled = false;
+                    logBtn.innerText = originalText;
+                }, 1200);
+            }
+        } catch (err) {
+            console.error("Save meal error:", err);
+            alert("Unable to record meal.");
+            if (logBtn) {
+                logBtn.disabled = false;
+                logBtn.innerText = originalText;
+            }
+        }
     };
 
     window.updateDailyTotals = async () => {
-        const user = auth.currentUser;
+        const user = firebaseAuth.currentUser;
         if (!user) return;
 
-        const selectedDate = getSelectedDate();
+        const selectedDate = getSelectedDateKey();
         if (!selectedDate) return;
 
-        const q = query(
-            collection(db, "recruiting_profiles", user.uid, "meals"),
-            fbWhere("dateKey", "==", selectedDate)
-        );
+        try {
+            const q = query(
+                collection(firestore, "recruiting_profiles", user.uid, "meals"),
+                fbWhere("dateKey", "==", selectedDate)
+            );
 
-        const snap = await getDocs(q);
+            const snap = await getDocs(q);
 
-        let c = 0, p = 0, carb = 0, fat = 0, water = 0;
+            let c = 0;
+            let p = 0;
+            let carb = 0;
+            let fat = 0;
+            let water = 0;
 
-        snap.forEach(d => {
-            const m = d.data();
-            if (m.mealType === 'Water') {
-                water += Number(m.cups || 0);
-            } else {
-                c += Number(m.calories || 0);
-                p += Number(m.protein || 0);
-                carb += Number(m.carbs || 0);
-                fat += Number(m.fats || 0);
-            }
-        });
+            snap.forEach(d => {
+                const m = d.data();
+                if (m.mealType === 'Water') {
+                    water += Number(m.cups || 0);
+                } else {
+                    c += Number(m.calories || 0);
+                    p += Number(m.protein || 0);
+                    carb += Number(m.carbs || 0);
+                    fat += Number(m.fats || 0);
+                }
+            });
 
-        safeText('day-cal', c);
-        safeText('day-pro', `${p}g`);
-        safeText('day-carb', `${carb}g`);
-        safeText('day-fat', `${fat}g`);
-        safeText('day-water', `${water} Cups`);
+            safeSetText('day-cal', c);
+            safeSetText('day-pro', `${p}g`);
+            safeSetText('day-carb', `${carb}g`);
+            safeSetText('day-fat', `${fat}g`);
+            safeSetText('day-water', `${water} Cups`);
 
-        const calFill = document.getElementById('cal-fill');
-        const proFill = document.getElementById('pro-fill');
+            const calPct = calGoal > 0 ? Math.min((c / calGoal) * 100, 100) : 0;
+            const proPct = proGoal > 0 ? Math.min((p / proGoal) * 100, 100) : 0;
+            const waterPct = waterGoal > 0 ? Math.min((water / waterGoal) * 100, 100) : 0;
 
-        if (calGoal > 0 && calFill) calFill.style.width = `${Math.min((c / calGoal) * 100, 100)}%`;
-        if (proGoal > 0 && proFill) proFill.style.width = `${Math.min((p / proGoal) * 100, 100)}%`;
+            const calFill = document.getElementById('cal-fill');
+            const proFill = document.getElementById('pro-fill');
+            const waterFill = document.getElementById('water-progress-bar');
 
-        updateWaterBar(water);
-
-        const displayDate = new Date(selectedDate + 'T00:00:00');
-        safeText('display-date-label', displayDate.toLocaleDateString([], {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-        }));
+            if (calFill) calFill.style.width = `${calPct}%`;
+            if (proFill) proFill.style.width = `${proPct}%`;
+            if (waterFill) waterFill.style.width = `${waterPct}%`;
+        } catch (err) {
+            console.error("Daily totals error:", err);
+        }
     };
 
     async function fetchMealHistory() {
         const container = document.getElementById('history-list');
-        if (!container || !auth.currentUser) return;
+        const user = firebaseAuth.currentUser;
+        const selectedDate = getSelectedDateKey();
 
-        const selectedDate = getSelectedDate();
-        if (!selectedDate) return;
+        if (!container || !user || !selectedDate) return;
 
-        const q = query(
-            collection(db, "recruiting_profiles", auth.currentUser.uid, "meals"),
-            fbWhere("dateKey", "==", selectedDate),
-            orderBy("timestamp", "desc"),
-            limit(10)
-        );
+        container.innerHTML = '<p class="text-[10px] text-gray-600 italic text-center py-4">Loading history...</p>';
 
-        const snap = await getDocs(q);
-        container.innerHTML = '';
+        try {
+            const mealsRef = collection(firestore, "recruiting_profiles", user.uid, "meals");
+            const q = query(
+                mealsRef,
+                fbWhere("dateKey", "==", selectedDate),
+                orderBy("timestamp", "desc"),
+                limit(10)
+            );
 
-        if (snap.empty) {
-            container.innerHTML = '<p class="text-[10px] text-gray-600 italic text-center py-4">No entries for this date.</p>';
-            return;
+            const snap = await getDocs(q);
+
+            container.innerHTML = '';
+
+            if (snap.empty) {
+                container.innerHTML = '<p class="text-[10px] text-gray-600 italic text-center py-4">No entries for this date.</p>';
+                return;
+            }
+
+            snap.forEach(docSnap => {
+                const m = docSnap.data();
+
+                const primaryValue = m.mealType === 'Water'
+                    ? `${Number(m.cups || 0)} Cups`
+                    : `${Number(m.calories || 0)} CAL`;
+
+                const secondaryValue = m.mealType === 'Water'
+                    ? 'Hydration'
+                    : `${Number(m.protein || 0)}G PROTEIN`;
+
+                const desc = m.mealDesc || '';
+
+                const div = document.createElement('div');
+                div.className = "bg-zinc-900 p-3 rounded flex justify-between items-center text-[10px] border border-zinc-800";
+                div.innerHTML = `
+                    <div class="pr-3">
+                        <div class="text-white font-bold uppercase">${m.mealType || 'Entry'}</div>
+                        <div class="text-gray-500">${desc}</div>
+                    </div>
+                    <div class="text-right font-black shrink-0">
+                        <div class="text-white">${primaryValue}</div>
+                        <div class="text-gray-500">${secondaryValue}</div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        } catch (error) {
+            console.error("Meal history load error:", error);
+            container.innerHTML = '<p class="text-[10px] text-red-500 italic text-center py-4">Unable to load history.</p>';
         }
-
-        snap.forEach(docSnap => {
-            const m = docSnap.data();
-            const div = document.createElement('div');
-            div.className = "bg-zinc-900 p-3 rounded flex justify-between items-center text-xs border border-zinc-800";
-            div.innerHTML = `
-                <div>
-                    <div class="font-black uppercase text-white">${m.mealType || 'Entry'}</div>
-                    <div class="text-gray-500 text-[10px]">${m.mealName || ''}</div>
-                </div>
-                <div class="font-bold text-gray-300">
-                    ${m.mealType === 'Water' ? `${m.cups || 0} Cups` : `${m.calories || 0} CAL`}
-                </div>
-            `;
-            container.appendChild(div);
-        });
     }
 
     window.showWeeklySummary = async () => {
-        const user = auth.currentUser;
+        const user = firebaseAuth.currentUser;
         if (!user) return;
 
         document.getElementById('weekly-modal').classList.remove('hidden');
@@ -586,34 +712,38 @@
 
         try {
             const q = query(
-                collection(db, "recruiting_profiles", user.uid, "meals"),
+                collection(firestore, "recruiting_profiles", user.uid, "meals"),
                 orderBy("timestamp", "desc"),
                 limit(100)
             );
 
             const snap = await getDocs(q);
 
-            let tCals = 0, tPro = 0, tCarb = 0, tFat = 0, tWater = 0;
+            let tCals = 0;
+            let tPro = 0;
+            let tCarb = 0;
+            let tFat = 0;
+            let tWater = 0;
             const daysActive = new Set();
 
             snap.forEach(docSnap => {
                 const d = docSnap.data();
-                const entryDate = d.timestamp?.seconds
+                const ts = d.timestamp?.seconds
                     ? new Date(d.timestamp.seconds * 1000)
-                    : new Date(d.timestamp);
+                    : (d.timestamp?.toDate ? d.timestamp.toDate() : null);
 
-                if (entryDate >= startOfRange) {
-                    const dayKey = d.dateKey || d.date;
-                    if (dayKey) daysActive.add(dayKey);
+                if (!ts || ts < startOfRange) return;
 
-                    if (d.mealType === 'Water') {
-                        tWater += Number(d.cups || 0);
-                    } else {
-                        tCals += Number(d.calories || 0);
-                        tPro += Number(d.protein || 0);
-                        tCarb += Number(d.carbs || 0);
-                        tFat += Number(d.fats || 0);
-                    }
+                const dateKey = d.dateKey || '';
+                if (dateKey) daysActive.add(dateKey);
+
+                if (d.mealType === 'Water') {
+                    tWater += Number(d.cups || 0);
+                } else {
+                    tCals += Number(d.calories || 0);
+                    tPro += Number(d.protein || 0);
+                    tCarb += Number(d.carbs || 0);
+                    tFat += Number(d.fats || 0);
                 }
             });
 
@@ -623,39 +753,45 @@
             const avgCarb = Math.round(tCarb / dayCount);
             const avgFat = Math.round(tFat / dayCount);
 
-            safeText('avg-cal-val', avgCal);
-            safeText('avg-pro-val', `${avgPro}g`);
-            safeText('total-water-val', `${tWater} Cups`);
+            safeSetText('avg-cal-val', avgCal);
+            safeSetText('avg-pro-val', `${avgPro}g`);
+            safeSetText('total-water-val', `${tWater} Cups`);
 
-            document.getElementById('avg-cal-bar').style.width = `${Math.min((avgCal / (calGoal || 2500)) * 100, 100)}%`;
-            document.getElementById('avg-pro-bar').style.width = `${Math.min((avgPro / (proGoal || 150)) * 100, 100)}%`;
+            const avgCalBar = document.getElementById('avg-cal-bar');
+            const avgProBar = document.getElementById('avg-pro-bar');
+
+            if (avgCalBar) avgCalBar.style.width = `${Math.min((avgCal / (calGoal || 2500)) * 100, 100)}%`;
+            if (avgProBar) avgProBar.style.width = `${Math.min((avgPro / (proGoal || 150)) * 100, 100)}%`;
 
             const totalGrams = avgPro + avgCarb + avgFat || 1;
             const pPct = Math.round((avgPro / totalGrams) * 100);
             const cPct = Math.round((avgCarb / totalGrams) * 100);
             const fPct = Math.max(0, 100 - pPct - cPct);
 
-            safeText('pie-pro-pct', `${pPct}%`);
-            safeText('pie-carb-pct', `${cPct}%`);
-            safeText('pie-fat-pct', `${fPct}%`);
+            safeSetText('pie-pro-pct', `${pPct}%`);
+            safeSetText('pie-carb-pct', `${cPct}%`);
+            safeSetText('pie-fat-pct', `${fPct}%`);
 
             const pie = document.getElementById('macro-pie');
             if (pie) {
                 pie.style.background = `conic-gradient(#f43f5e 0% ${pPct}%, #38bdf8 ${pPct}% ${pPct + cPct}%, #fbbf24 ${pPct + cPct}% 100%)`;
             }
 
-            const insightText = document.getElementById('insight-text');
-            if (insightText) {
-                if (avgCal >= calGoal * 0.9 && avgPro >= proGoal * 0.9) {
-                    insightText.innerText = "Strong consistency. You are staying close to your nutrition targets and building a solid recovery foundation.";
-                } else if (avgPro < proGoal * 0.7) {
-                    insightText.innerText = "Protein intake is trailing your goal. Tighten that up to support recovery and muscle growth.";
-                } else if (avgCal < calGoal * 0.7) {
-                    insightText.innerText = "Calories are coming in low this week. You may be under-fueling performance and recovery.";
+            const insight = document.getElementById('insight-text');
+            if (insight) {
+                if (avgPro >= proGoal && avgCal >= calGoal) {
+                    insight.innerText = "You're consistently hitting both calorie and protein targets. Keep stacking disciplined days.";
+                } else if (avgPro < proGoal) {
+                    insight.innerText = "Protein is trailing your target. Focus on getting a quality protein source into each meal.";
+                } else if (avgCal < calGoal) {
+                    insight.innerText = "Calories are below target. Add more total fuel to support growth and recovery.";
                 } else {
-                    insightText.innerText = "Your week shows some positive habits, but there is room for more consistency across calories, protein, and hydration.";
+                    insight.innerText = "Your weekly habits are building. Stay consistent with meals, water, and recovery.";
                 }
             }
+
+            safeSetText('avg-weight-val', '-- lbs');
+            safeSetText('pb-streak-display', `PB: ${daysActive.size}`);
         } catch (e) {
             console.error("Weekly Stats Error:", e);
         }
@@ -664,8 +800,6 @@
     window.closeWeekly = () => {
         document.getElementById('weekly-modal').classList.add('hidden');
     };
-
-    window.fetchMealHistory = fetchMealHistory;
 </script>
 </body>
 </html>
