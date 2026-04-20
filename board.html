@@ -344,14 +344,29 @@
             scores.sort((a, b) => b.displayScore - a.displayScore);
             grid.innerHTML = '';
 
-            const start = Number(school.club_start) || 1000;
-            const scoringLiftLabel = boardSettings.scoring_lifts.length
-                ? boardSettings.scoring_lifts.map(l => l.replace(/_/g, ' ')).join(' + ').toUpperCase()
+            const minimumClub = Number(school.club_start) || 50;
+            const scoringLiftLabel = scoringLifts.length
+                ? scoringLifts.map(l => l.replace(/_/g, ' ')).join(' + ').toUpperCase()
                 : 'NO SCORING LIFTS';
 
-            for (let level = start; level >= 50; level -= 50) {
-                const qualifiers = scores.filter(s => !s.placed && s.displayScore >= level);
-                qualifiers.forEach(s => { s.placed = true; });
+            const highestScore = scores.length
+                ? Math.max(...scores.map(s => Number(s.displayScore) || 0))
+                : 0;
+
+            const topClubLevel = Math.max(
+                minimumClub,
+                Math.floor(highestScore / 50) * 50
+            );
+
+            for (let level = topClubLevel; level >= minimumClub; level -= 50) {
+                const qualifiers = scores.filter(s =>
+                    !s.placed &&
+                    (Number(s.displayScore) || 0) >= level
+                );
+
+                qualifiers.forEach(s => {
+                    s.placed = true;
+                });
 
                 if (qualifiers.length > 0) {
                     grid.innerHTML += `
@@ -369,6 +384,14 @@
                         </div>
                     `;
                 }
+            }
+
+            if (!grid.innerHTML.trim()) {
+                grid.innerHTML = `
+                    <p class="text-center text-xs text-gray-500 font-black uppercase py-10">
+                        No athletes currently qualify for a lifting club.
+                    </p>
+                `;
             }
         }
     };
