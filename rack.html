@@ -44,7 +44,11 @@
             width: 100%; 
             transition: border-color 0.2s;
         }
-        input:focus { border-color: var(--school-primary) !important; outline: none; }
+
+        input:focus {
+            border-color: var(--school-primary) !important;
+            outline: none;
+        }
 
         .btn-primary {
             width: 100%;
@@ -58,12 +62,30 @@
             transition: all 0.2s;
             box-shadow: 0 4px 15px rgba(185, 28, 28, 0.3);
         }
-        .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
 
-        label { font-size: 9px; font-weight: 800; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.05em; margin-bottom: 4px; display: block; }
+        .btn-primary:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+
+        label {
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #94a3b8;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+            display: block;
+        }
         
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
     </style>
 </head>
 <body class="font-sans pb-32">
@@ -132,58 +154,18 @@
         import { doc, setDoc, getDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { applyTheme } from './js/theme.js';
+        import {
+            slugify,
+            buildBoardScoreSettings,
+            calculateBoardScore,
+            getLiftValue,
+            buildLiftWritebacks
+        } from './js/board-score.js';
 
         let teamSettings = null;
         let unsubscribe = null;
 
-        const slugify = (text) => String(text || "").toLowerCase().replace(/\s+/g, '_').replace(/[^\w-]+/g, '');
         const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
-
-        function normalizeLiftArray(value, fallback = []) {
-            if (!value) return [...fallback];
-
-            if (Array.isArray(value)) {
-                return value
-                    .flatMap(item => {
-                        if (typeof item === 'string') return item.split(',');
-                        return [];
-                    })
-                    .map(item => slugify(item.trim()))
-                    .filter(Boolean);
-            }
-
-            if (typeof value === 'string') {
-                return value
-                    .split(',')
-                    .map(item => slugify(item.trim()))
-                    .filter(Boolean);
-            }
-
-            return [...fallback];
-        }
-
-        function getLiftValue(data, liftKey) {
-            const normalized = slugify(liftKey);
-
-            const aliases = {
-                bench: ['bench', 'bench_press'],
-                squat: ['squat', 'back_squat'],
-                clean: ['clean', 'power_clean'],
-                deadlift: ['deadlift'],
-                push_press: ['push_press', 'pushPress', 'pushpress']
-            };
-
-            const keysToTry = aliases[normalized] || [normalized];
-
-            for (const key of keysToTry) {
-                const raw = data[key];
-                if (raw !== undefined && raw !== null && raw !== '') {
-                    return Number(raw) || 0;
-                }
-            }
-
-            return 0;
-        }
 
         onAuthStateChanged(auth, async (user) => {
             if (!user) {
@@ -215,26 +197,7 @@
         });
 
         function setupDynamicRack(settings) {
-            const trackedLifts = normalizeLiftArray(
-                settings.trackedLifts || settings.activeLifts,
-                ["bench", "squat", "clean"]
-            );
-
-            const scoringLifts = normalizeLiftArray(
-                settings.scoring_lifts || settings.scoringLifts,
-                trackedLifts
-            );
-
-            const formulaType = settings.formula_type === "straight_calculation"
-                ? "straight_total"
-                : (settings.formula_type || "power_index");
-
-            teamSettings = {
-                tracked_lifts: trackedLifts,
-                display_names: trackedLifts.map(l => String(l).replace(/_/g, ' ').toUpperCase()),
-                formula_type: formulaType,
-                scoring_lifts: scoringLifts.length ? scoringLifts : trackedLifts
-            };
+            teamSettings = buildBoardScoreSettings(settings);
 
             const container = document.getElementById('dynamic-inputs');
             container.innerHTML = teamSettings.tracked_lifts.map((liftKey, index) => {
@@ -244,7 +207,8 @@
                     <div class="animate-fade-in">
                         <label>${labelName}</label>
                         <input id="input-${normalizedLiftKey}" type="number" placeholder="Lbs" data-lift-key="${normalizedLiftKey}">
-                    </div>`;
+                    </div>
+                `;
             }).join('');
         }
 
@@ -264,16 +228,9 @@
         function renderValues(data) {
             if (!teamSettings) return;
 
-            let totalForBoard = 0;
-            const scoringLiftCount = teamSettings.scoring_lifts.length;
-
             teamSettings.tracked_lifts.forEach(liftKey => {
                 const normalizedLiftKey = slugify(liftKey);
                 const val = getLiftValue(data, normalizedLiftKey);
-
-                if (teamSettings.scoring_lifts.includes(normalizedLiftKey)) {
-                    totalForBoard += val;
-                }
 
                 const inputField = document.querySelector(`[data-lift-key="${normalizedLiftKey}"]`);
                 if (inputField && !inputField.matches(':focus')) {
@@ -281,28 +238,26 @@
                 }
             });
 
-            const bw = Number(data.bodyWeight || data.weight || 0);
+            const bw = Number(data.bodyWeight || data.body_weight || data.weight || 0);
             const bwInput = document.getElementById('bodyWeight');
             if (bwInput && !bwInput.matches(':focus')) {
                 bwInput.value = bw === 0 ? "" : bw;
             }
 
-            let finalScore = totalForBoard;
+            const result = calculateBoardScore({
+                data,
+                formulaType: teamSettings.formula_type,
+                scoringLifts: teamSettings.scoring_lifts
+            });
+
+            document.getElementById('view-total').innerText = result.score;
 
             if (teamSettings.formula_type === "power_index") {
-                const bwAdj = Math.min(bw, 200);
-                finalScore = totalForBoard - (bwAdj * scoringLiftCount);
-            }
-
-            document.getElementById('view-total').innerText = Math.round(finalScore);
-
-            if (teamSettings.formula_type === "power_index") {
-                const bwAdj = Math.min(bw, 200);
                 document.getElementById('formula-detail').innerText =
-                    `TOTAL: ${totalForBoard} — (${bwAdj} × ${scoringLiftCount}) = ${Math.round(finalScore)}`;
+                    `TOTAL: ${result.total} — (${result.bwAdj} × ${result.liftCount}) = ${result.score}`;
             } else {
                 document.getElementById('formula-detail').innerText =
-                    `TOTAL STRENGTH: ${totalForBoard}`;
+                    `TOTAL STRENGTH: ${result.total}`;
             }
 
             if (data.lastUpdated) {
@@ -325,48 +280,33 @@
 
             try {
                 const bw = Number(document.getElementById('bodyWeight').value) || 0;
+
                 const updateObj = {
                     lastUpdated: serverTimestamp(),
                     bodyWeight: bw,
+                    body_weight: bw,
                     weight: bw
                 };
-
-                let scoringSum = 0;
-                const scoringLiftCount = teamSettings.scoring_lifts.length;
 
                 teamSettings.tracked_lifts.forEach(liftKey => {
                     const normalizedLiftKey = slugify(liftKey);
                     const input = document.querySelector(`[data-lift-key="${normalizedLiftKey}"]`);
                     const val = Number(input?.value) || 0;
 
-                    updateObj[normalizedLiftKey] = val;
-
-                    if (normalizedLiftKey === "bench") updateObj.bench_press = val;
-                    if (normalizedLiftKey === "clean") updateObj.power_clean = val;
-                    if (normalizedLiftKey === "push_press") {
-                        updateObj.pushPress = val;
-                        updateObj.pushpress = val;
-                    }
-
-                    if (teamSettings.scoring_lifts.includes(normalizedLiftKey)) {
-                        scoringSum += val;
-                    }
+                    Object.assign(updateObj, buildLiftWritebacks(normalizedLiftKey, val));
                 });
 
-                let boardScore = scoringSum;
-
-                if (teamSettings.formula_type === "power_index") {
-                    const bwAdj = Math.min(bw, 200);
-                    boardScore = scoringSum - (bwAdj * scoringLiftCount);
-                }
-
-                const roundedScore = Math.round(boardScore);
+                const result = calculateBoardScore({
+                    data: updateObj,
+                    formulaType: teamSettings.formula_type,
+                    scoringLifts: teamSettings.scoring_lifts
+                });
 
                 await Promise.all([
                     setDoc(doc(db, "recruiting_profiles", user.uid, "maxes", "latest"), updateObj, { merge: true }),
                     setDoc(doc(db, "recruiting_profiles", user.uid), {
                         ...updateObj,
-                        boardScore: roundedScore
+                        boardScore: result.score
                     }, { merge: true }),
                     setDoc(doc(db, "users", user.uid), {
                         weight: bw

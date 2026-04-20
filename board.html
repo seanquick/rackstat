@@ -89,16 +89,28 @@
 <script type="module">
     import { db, auth } from "./js/firebase-config.js";
     import { applyTheme } from "./js/theme.js";
-    import { getDoc, doc, collection, query, where, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import {
+        buildBoardScoreSettings,
+        calculateBoardScore,
+        getLiftValue
+    } from "./js/board-score.js";
+    import {
+        getDoc,
+        doc,
+        collection,
+        query,
+        where,
+        getDocs,
+        setDoc
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-    // --- GLOBAL STATE ---
     let isCoachMode = false;
     let currentSchoolId = null;
     let currentUserRole = null;
 
     const weightClasses = [125, 135, 145, 155, 165, 175, 185, 195, 210, 225, 250, "UNLIMITED"];
-    
+
     const getWeightClass = (bw) => {
         const numericBw = Number(bw) || 0;
         if (!numericBw || numericBw > 250) return "UNLIMITED";
@@ -117,7 +129,9 @@
         return combined || "Unknown Athlete";
     };
 
-    // --- AUTH OBSERVER ---
+    const getFormulaDisplayText = (formulaType = "power_index") =>
+        String(formulaType || "power_index").replaceAll("_", " ").toUpperCase();
+
     onAuthStateChanged(auth, async (user) => {
         if (!user) {
             window.location.href = 'index.html';
@@ -149,7 +163,6 @@
         }
     });
 
-    // --- BOARD LOADING ENGINE ---
     window.loadBoard = async function(schoolId) {
         if (!schoolId) return;
 
@@ -172,30 +185,22 @@
         }
 
         if (!schoolSnap || !schoolSnap.exists()) return;
-        
+
         const school = schoolSnap.data();
         const manualRecords = manualSnap.exists() ? manualSnap.data() : {};
-        const formulaSettingRaw = school.formula_type || "power_index";
-        const formulaDisplayText = String(formulaSettingRaw).toLowerCase().replaceAll("_", " ");
+        const boardSettings = buildBoardScoreSettings(school);
 
         if (schoolTag) {
             schoolTag.innerText = `${school.name || "School"} Weightroom`.toUpperCase();
         }
+
         if (formulaDisplay) {
-            formulaDisplay.innerText = formulaDisplayText.toUpperCase();
+            formulaDisplay.innerText = getFormulaDisplayText(boardSettings.formula_type);
         }
 
-        const scoringLifts = Array.isArray(school.trackedLifts) && school.trackedLifts.length
-            ? school.trackedLifts
-            : (Array.isArray(school.activeLifts) && school.activeLifts.length
-                ? school.activeLifts
-                : ["bench", "squat", "clean", "deadlift"]);
-
-        // 2. Process athletes
         let athleteQuery = query(collection(db, "recruiting_profiles"), where("schoolId", "==", schoolId));
         let pSnap = await getDocs(athleteQuery);
 
-        // Legacy fallback
         if (pSnap.empty) {
             athleteQuery = query(collection(db, "recruiting_profiles"), where("school_id", "==", schoolId));
             pSnap = await getDocs(athleteQuery);
@@ -220,6 +225,7 @@
 
         for (const athleteDoc of pSnap.docs) {
             const athleteProfile = athleteDoc.data();
+
             const [userSnap, latestMaxSnap] = await Promise.all([
                 getDoc(doc(db, "users", athleteDoc.id)),
                 getDoc(doc(db, "recruiting_profiles", athleteDoc.id, "maxes", "latest"))
@@ -229,27 +235,25 @@
 
             const userData = userSnap.exists() ? userSnap.data() : {};
             const athleteData = { ...userData, ...athleteProfile };
-            const m = latestMaxSnap.data();
+            const maxes = latestMaxSnap.data();
 
-            const totalLifts = scoringLifts.reduce((acc, lift) => {
-                const normalizedLift = String(lift).trim().toLowerCase();
-                let value = Number(m[normalizedLift]) || 0;
+            const athleteBW = Number(
+                maxes.bodyWeight ||
+                maxes.body_weight ||
+                athleteData.bodyWeight ||
+                athleteData.weight ||
+                0
+            );
 
-                if (!value) {
-                    if (normalizedLift === "bench") value = Number(m.bench_press) || 0;
-                    if (normalizedLift === "clean") value = Number(m.power_clean) || 0;
-                    if (normalizedLift === "push_press") value = Number(m.pushPress) || Number(m.push_press) || 0;
-                }
-
-                return acc + value;
-            }, 0);
-
-            const athleteBW = Number(m.bodyWeight || m.body_weight || athleteData.bodyWeight || athleteData.weight || 0);
             const currentWC = getWeightClass(athleteBW);
             const fullName = getDisplayName(athleteData);
 
             const checkMax = (liftKey, possibleKeys) => {
-                const val = possibleKeys.reduce((found, key) => found || Number(m[key]) || Number(athleteData[key]) || 0, 0);
+                let val = 0;
+                for (const key of possibleKeys) {
+                    const candidate = Number(maxes[key]) || Number(athleteData[key]) || 0;
+                    if (candidate > val) val = candidate;
+                }
                 if (val > classRecords[currentWC][liftKey].val) {
                     classRecords[currentWC][liftKey] = { val, name: fullName };
                 }
@@ -258,7 +262,7 @@
             const checkMin = (liftKey, possibleKeys) => {
                 let val = 99.9;
                 for (const key of possibleKeys) {
-                    const candidate = parseFloat(m[key] || athleteData[key]);
+                    const candidate = parseFloat(maxes[key] || athleteData[key]);
                     if (candidate > 0) {
                         val = candidate;
                         break;
@@ -275,18 +279,22 @@
             checkMax('deadlift', ['deadlift']);
             checkMin('dash', ['forty', 'forty_yard_dash']);
 
-            const displayScore = (formulaDisplayText === "power index")
-                ? totalLifts - (Math.min(athleteBW, 200) * 4)
-                : totalLifts;
+            const scoreResult = calculateBoardScore({
+                data: {
+                    ...athleteData,
+                    ...maxes
+                },
+                formulaType: boardSettings.formula_type,
+                scoringLifts: boardSettings.scoring_lifts
+            });
 
             scores.push({
                 name: fullName,
-                displayScore: Math.round(displayScore),
+                displayScore: scoreResult.score,
                 placed: false
             });
         }
 
-        // 3. Render Records Table
         if (recordBody) {
             recordBody.innerHTML = '';
 
@@ -332,12 +340,14 @@
             }
         }
 
-        // 4. Render clubs
         if (grid) {
             scores.sort((a, b) => b.displayScore - a.displayScore);
             grid.innerHTML = '';
 
-            const start = school.club_start || 1000;
+            const start = Number(school.club_start) || 1000;
+            const scoringLiftLabel = boardSettings.scoring_lifts.length
+                ? boardSettings.scoring_lifts.map(l => l.replace(/_/g, ' ')).join(' + ').toUpperCase()
+                : 'NO SCORING LIFTS';
 
             for (let level = start; level >= 50; level -= 50) {
                 const qualifiers = scores.filter(s => !s.placed && s.displayScore >= level);
@@ -348,7 +358,7 @@
                         <div class="club-card border-l-4 mb-4" style="border-color: var(--school-primary)">
                             <div class="flex justify-between items-end border-b border-gray-800 mb-3 pb-1">
                                 <p class="font-black italic text-lg uppercase" style="color: var(--school-primary)">${level} LB CLUB</p>
-                                <p class="text-[8px] text-white font-black uppercase italic">${scoringLifts.join(' + ').toUpperCase()}</p>
+                                <p class="text-[8px] text-white font-black uppercase italic">${scoringLiftLabel}</p>
                             </div>
                             ${qualifiers.map(q => `
                                 <div class="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
@@ -376,7 +386,6 @@
         }
     }
 
-    // --- BUTTON LISTENERS ---
     const coachBtn = document.getElementById('coach-edit-btn');
     if (coachBtn) {
         coachBtn.addEventListener('click', (e) => {
