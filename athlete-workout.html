@@ -40,7 +40,7 @@
                 <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-10 w-auto">
             </div>
         </div>
-        <div class="w-1/4"></div>
+        <div class="w-1/4"></div> 
     </div>
 </header>
 
@@ -82,6 +82,7 @@
 <script type="module">
     import { db, auth } from "./js/firebase-config.js";
     import { applyTheme } from "./js/theme.js";
+    import { buildLiftWritebacks, getLiftValue, slugify } from "./js/board-score.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -90,27 +91,53 @@
     let activeWorkoutData = null;
     let currentMaxes = {};
 
-    const slugify = (text) => String(text || "").toLowerCase().trim().replace(/\s+/g, '_').replace(/[^\w-]+/g, '');
     const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
 
-    function getLiftValue(data = {}, liftKey = "") {
-        const normalized = slugify(liftKey);
-
-        if (normalized === "bench") {
-            return Number(data.bench ?? data.bench_press ?? 0) || 0;
-        }
-        if (normalized === "squat") {
-            return Number(data.squat ?? data.back_squat ?? 0) || 0;
-        }
-        if (normalized === "clean") {
-            return Number(data.clean ?? data.power_clean ?? 0) || 0;
-        }
-        if (normalized === "push_press") {
-            return Number(data.push_press ?? data.pushPress ?? data.pushpress ?? 0) || 0;
-        }
-
-        return Number(data[normalized] ?? 0) || 0;
+    function getWorkoutMaxReference(exerciseName = "", maxes = {}) {
+        return getLiftValue(maxes, slugify(exerciseName));
     }
+
+    function getDisplayPct(set = {}) {
+        const pct = parseFloat(set.pct ?? set.percent) || 0;
+        return pct;
+    }
+
+    function getRoundedWorkingWeight(maxReference, pct) {
+        if (!pct || pct <= 0) return "BW";
+        return Math.round((maxReference * (pct / 100)) / 5) * 5;
+    }
+
+    function getWorkoutCompletionState(buttonElement) {
+        return buttonElement?.dataset.completed === "true";
+    }
+
+    function toggleCompletionState(container, buttonElement) {
+        if (!container || !buttonElement) return;
+
+        const nextState = !getWorkoutCompletionState(buttonElement);
+        buttonElement.dataset.completed = nextState ? "true" : "false";
+
+        container.classList.toggle('border-green-500', nextState);
+        container.classList.toggle('border-gray-800', !nextState);
+
+        const icon = buttonElement.querySelector('svg');
+        if (icon) {
+            icon.classList.toggle('text-green-500', nextState);
+            icon.classList.toggle('text-gray-700', !nextState);
+        }
+    }
+
+    window.toggleSetComplete = (setId) => {
+        const container = document.getElementById(`container-${setId}`);
+        const button = document.getElementById(`toggle-${setId}`);
+        toggleCompletionState(container, button);
+    };
+
+    window.toggleCircuitRoundComplete = (roundId) => {
+        const container = document.getElementById(`container-${roundId}`);
+        const button = document.getElementById(`toggle-${roundId}`);
+        toggleCompletionState(container, button);
+    };
 
     onAuthStateChanged(auth, async (user) => {
         if (!user) {
@@ -189,10 +216,9 @@
     }
 
     async function loadWorkoutDetails(workoutId) {
-        const [workoutSnap, maxSnap] = await Promise.all([
-            getDoc(doc(db, "workouts", workoutId)),
-            getDoc(doc(db, "recruiting_profiles", currentAthleteId, "maxes", "latest"))
-        ]);
+        const workoutSnap = await getDoc(doc(db, "workouts", workoutId));
+        const maxesRef = doc(db, "recruiting_profiles", currentAthleteId, "maxes", "latest");
+        const maxSnap = await getDoc(maxesRef);
 
         if (!workoutSnap.exists()) return;
 
@@ -204,49 +230,130 @@
         document.getElementById('display-title').innerText = activeWorkoutData.name || 'WORKOUT';
         document.getElementById('display-week').innerText = activeWorkoutData.date || 'ACTIVE SESSION';
 
+        renderWorkoutExercises();
+    }
+
+    function renderWorkoutExercises() {
         const list = document.getElementById('athlete-exercise-list');
         list.innerHTML = '';
 
-        if (Array.isArray(activeWorkoutData.exercises)) {
-            activeWorkoutData.exercises.forEach((ex, exIndex) => {
-                const exerciseId = slugify(ex.name);
-                const athleteCurrentMax = getLiftValue(currentMaxes, exerciseId);
+        if (!Array.isArray(activeWorkoutData?.exercises) || !activeWorkoutData.exercises.length) {
+            list.innerHTML = `
+                <div class="text-red-500 text-[10px] text-center uppercase py-10 font-black">
+                    No exercises found for this workout.
+                </div>
+            `;
+            return;
+        }
 
-                const setsHtml = (ex.sets || []).map((s, i) => {
-                    const pct = parseFloat(s.pct ?? s.percent) || 0;
-                    const weight = pct > 0 ? Math.round((athleteCurrentMax * (pct / 100)) / 5) * 5 : "BW";
-                    const setId = `set-${exIndex}-${i}`;
+        activeWorkoutData.exercises.forEach((ex, exIndex) => {
+            const isCircuit = !!ex.isCircuit;
+            const exerciseName = ex.name || "Exercise";
+            const exerciseId = slugify(exerciseName);
+            const athleteCurrentMax = getWorkoutMaxReference(exerciseName, currentMaxes);
 
+            if (isCircuit) {
+                const circuitExercises = Array.isArray(ex.circuitExercises) && ex.circuitExercises.length
+                    ? ex.circuitExercises.filter(item => String(item || "").trim())
+                    : [exerciseName];
+
+                const cycles = Number(ex.circuitConfig?.cycles) || 0;
+                const workSeconds = Number(ex.circuitConfig?.work) || 0;
+                const restSeconds = Number(ex.circuitConfig?.rest) || 0;
+
+                const roundsHtml = Array.from({ length: cycles || 1 }, (_, roundIndex) => {
+                    const roundId = `circuit-${exIndex}-${roundIndex}`;
                     return `
-                        <div id="container-${setId}" class="flex justify-between items-center bg-black p-4 rounded-lg mb-2 border border-gray-800 transition-all">
+                        <div id="container-${roundId}" class="flex justify-between items-center bg-black p-4 rounded-lg mb-2 border border-gray-800 transition-all">
                             <div class="flex flex-col">
-                                <span class="text-[8px] text-gray-600 font-black uppercase">Set ${i + 1} — ${pct}%</span>
-                                <input type="number" value="${weight === "BW" ? 0 : weight}" class="bg-transparent text-red-500 font-black text-xl italic w-24 outline-none">
+                                <span class="text-[8px] text-gray-600 font-black uppercase">Round ${roundIndex + 1}</span>
+                                <span class="text-red-500 font-black text-lg italic">${workSeconds}s WORK</span>
                             </div>
                             <div class="text-center">
-                                <p class="text-[8px] text-gray-700 uppercase font-black">Reps</p>
-                                <p class="text-white font-black text-lg">${s.reps ?? ""}</p>
+                                <p class="text-[8px] text-gray-700 uppercase font-black">Rest</p>
+                                <p class="text-white font-black text-lg">${restSeconds}s</p>
                             </div>
-                            <button onclick="this.parentElement.classList.toggle('border-green-500'); this.parentElement.classList.toggle('border-gray-800'); this.querySelector('svg').classList.toggle('text-green-500')" class="bg-[#1a1a1c] p-3 rounded-full text-gray-700 border border-gray-800 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path d="M5 13l4 4L19 7" /></svg>
+                            <button id="toggle-${roundId}" data-completed="false" onclick="toggleCircuitRoundComplete('${roundId}')" class="bg-[#1a1a1c] p-3 rounded-full text-gray-700 border border-gray-800 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path d="M5 13l4 4L19 7" /></svg>
                             </button>
-                        </div>`;
+                        </div>
+                    `;
                 }).join('');
 
                 const card = document.createElement('div');
                 card.className = "bg-[#111113] border-l-4 border-red-600 p-5 rounded-r-xl mb-4 shadow-xl";
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-4">
-                        <h3 class="text-white font-black uppercase text-sm italic">${ex.name || "Exercise"}</h3>
+                        <div>
+                            <h3 class="text-white font-black uppercase text-sm italic">${exerciseName}</h3>
+                            <p class="text-[9px] text-blue-400 font-black uppercase tracking-widest mt-1">Circuit</p>
+                        </div>
                         <div class="text-right">
-                            <p class="text-[8px] text-gray-600 font-black uppercase">Max Ref</p>
-                            <p class="text-xs text-white font-black">${athleteCurrentMax} LBS</p>
+                            <p class="text-[8px] text-gray-600 font-black uppercase">Format</p>
+                            <p class="text-xs text-white font-black">${cycles || 1} ROUNDS</p>
                         </div>
                     </div>
-                    ${setsHtml}`;
+
+                    <div class="bg-black/40 border border-gray-800 rounded-xl p-4 mb-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <p class="text-[9px] font-black uppercase text-gray-500">Circuit Exercises</p>
+                            <p class="text-[9px] font-black uppercase text-gray-500">${workSeconds}s / ${restSeconds}s</p>
+                        </div>
+                        <div class="space-y-2">
+                            ${circuitExercises.map((movement, idx) => `
+                                <div class="flex justify-between items-center border-b border-white/5 last:border-0 pb-2 last:pb-0">
+                                    <span class="text-white font-black uppercase text-xs">${movement}</span>
+                                    <span class="text-gray-500 text-[9px] font-black uppercase">Move ${idx + 1}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <p class="text-[9px] font-black uppercase text-gray-500 mb-2">Round Tracking</p>
+                        ${roundsHtml}
+                    </div>
+                `;
                 list.appendChild(card);
-            });
-        }
+                return;
+            }
+
+            const setsHtml = (Array.isArray(ex.sets) ? ex.sets : []).map((s, i) => {
+                const pct = getDisplayPct(s);
+                const weight = getRoundedWorkingWeight(athleteCurrentMax, pct);
+                const setId = `set-${exIndex}-${i}`;
+
+                return `
+                    <div id="container-${setId}" class="flex justify-between items-center bg-black p-4 rounded-lg mb-2 border border-gray-800 transition-all">
+                        <div class="flex flex-col">
+                            <span class="text-[8px] text-gray-600 font-black uppercase">Set ${i + 1} — ${pct}%</span>
+                            <input type="number" value="${weight === "BW" ? 0 : weight}" class="bg-transparent text-red-500 font-black text-xl italic w-24 outline-none">
+                        </div>
+                        <div class="text-center">
+                            <p class="text-[8px] text-gray-700 uppercase font-black">Reps</p>
+                            <p class="text-white font-black text-lg">${s.reps ?? ""}</p>
+                        </div>
+                        <button id="toggle-${setId}" data-completed="false" onclick="toggleSetComplete('${setId}')" class="bg-[#1a1a1c] p-3 rounded-full text-gray-700 border border-gray-800 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path d="M5 13l4 4L19 7" /></svg>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+
+            const card = document.createElement('div');
+            card.className = "bg-[#111113] border-l-4 border-red-600 p-5 rounded-r-xl mb-4 shadow-xl";
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-white font-black uppercase text-sm italic">${exerciseName}</h3>
+                    <div class="text-right">
+                        <p class="text-[8px] text-gray-600 font-black uppercase">Max Ref</p>
+                        <p class="text-xs text-white font-black">${athleteCurrentMax} LBS</p>
+                    </div>
+                </div>
+                ${setsHtml}
+            `;
+            list.appendChild(card);
+        });
     }
 
     document.getElementById('finish-workout-btn').onclick = async () => {
@@ -261,21 +368,57 @@
 
             const workoutExercises = (activeWorkoutData.exercises || []).map((ex, exIndex) => {
                 const exId = slugify(ex.name);
+                const isCircuit = !!ex.isCircuit;
+
+                if (isCircuit) {
+                    const cycles = Number(ex.circuitConfig?.cycles) || 0;
+                    const work = Number(ex.circuitConfig?.work) || 0;
+                    const rest = Number(ex.circuitConfig?.rest) || 0;
+                    const circuitExercises = Array.isArray(ex.circuitExercises) ? ex.circuitExercises : [];
+
+                    const rounds = Array.from({ length: cycles || 1 }, (_, roundIndex) => {
+                        const roundId = `circuit-${exIndex}-${roundIndex}`;
+                        const roundButton = document.getElementById(`toggle-${roundId}`);
+                        return {
+                            round: roundIndex + 1,
+                            completed: getWorkoutCompletionState(roundButton),
+                            workSeconds: work,
+                            restSeconds: rest
+                        };
+                    });
+
+                    return {
+                        name: ex.name,
+                        id: exId,
+                        isCircuit: true,
+                        circuitExercises,
+                        circuitConfig: {
+                            cycles: cycles || 1,
+                            work,
+                            rest
+                        },
+                        rounds
+                    };
+                }
+
                 const setContainers = document.querySelectorAll(`[id^="container-set-${exIndex}-"]`);
 
                 const completedSets = Array.from(setContainers).map(container => {
                     const weightInput = container.querySelector('input');
                     const repsDisplay = container.querySelector('.text-lg');
-                    const isCompleted = container.classList.contains('border-green-500');
-                    const weightVal = parseFloat(weightInput.value) || 0;
+                    const button = container.querySelector('button[id^="toggle-set-"]');
+                    const isCompleted = getWorkoutCompletionState(button);
+                    const weightVal = parseFloat(weightInput?.value) || 0;
 
-                    const currentKnownMax =
-                        (newMaxesToUpdate[exId] ?? getLiftValue(newMaxesToUpdate, exId)) ||
-                        getLiftValue(currentMaxes, exId) ||
-                        0;
+                    const currentKnownMax = (
+                        newMaxesToUpdate[exId] ??
+                        getLiftValue(newMaxesToUpdate, exId) ??
+                        getLiftValue(currentMaxes, exId) ??
+                        0
+                    );
 
                     if (isCompleted && weightVal > currentKnownMax) {
-                        newMaxesToUpdate[exId] = weightVal;
+                        Object.assign(newMaxesToUpdate, buildLiftWritebacks(exId, weightVal));
                     }
 
                     return {
@@ -301,12 +444,16 @@
                 profileSnap = await getDoc(doc(db, "recruiting_profiles", currentAthleteId));
             }
 
-            const athleteName = profileSnap.exists()
-                ? (profileSnap.data().fullName || profileSnap.data().name || "Athlete")
-                : "Athlete";
+            const profileData = profileSnap.exists() ? profileSnap.data() : {};
+            const athleteName =
+                profileData.fullName ||
+                profileData.name ||
+                `${profileData.firstName || ""} ${profileData.lastName || ""}`.trim() ||
+                "Athlete";
 
             const completionDoc = {
                 athleteId: currentAthleteId,
+                uid: currentAthleteId,
                 athleteName,
                 schoolId: currentSchoolId,
                 workoutId: activeWorkoutData.id,
