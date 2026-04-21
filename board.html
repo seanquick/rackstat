@@ -21,7 +21,7 @@
 
 <header class="bg-black border-b-2 border-red-700 p-4">
     <div class="flex justify-between items-center max-w-6xl mx-auto">
-        
+
         <div class="w-1/4 flex justify-start">
             <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1 rounded text-gray-300 hover:text-white transition-colors">← Lobby</button>
         </div>
@@ -46,7 +46,7 @@
             </div>
         </div>
 
-        <div class="w-1/4"></div> 
+        <div class="w-1/4"></div>
     </div>
 </header>
 
@@ -239,6 +239,7 @@
             const athleteBW = Number(
                 maxes.bodyWeight ||
                 maxes.body_weight ||
+                maxes.weight ||
                 athleteData.bodyWeight ||
                 athleteData.weight ||
                 0
@@ -298,9 +299,16 @@
 
             weightClasses.forEach(wc => {
                 const getLiftData = (lift) => {
-                    return (manualRecords[wc] && manualRecords[wc][lift])
+                    const autoData = classRecords[wc][lift];
+                    const manualData = manualRecords[wc] && manualRecords[wc][lift]
                         ? manualRecords[wc][lift]
-                        : classRecords[wc][lift];
+                        : null;
+
+                    if (isCoachMode && currentUserRole === 'coach' && manualData) {
+                        return manualData;
+                    }
+
+                    return autoData;
                 };
 
                 const row = `
@@ -308,13 +316,18 @@
                         <td class="bg-gray-900/50 font-black text-[var(--school-primary)]">${wc}</td>
                         ${['bench', 'squat', 'clean', 'deadlift', 'dash'].map(lift => {
                             const data = getLiftData(lift);
+                            const numericVal = Number(data?.val);
+                            const displayVal = lift === 'dash'
+                                ? ((data?.val !== undefined && data?.val !== null && numericVal > 0 && numericVal !== 99.9) ? data.val : '-')
+                                : (numericVal > 0 ? data.val : '-');
+
                             return `
                                 <td contenteditable="${isCoachMode && currentUserRole === 'coach'}"
                                     class="record-cell ${isCoachMode && currentUserRole === 'coach' ? 'bg-[var(--school-primary)]/10 outline outline-1 outline-[var(--school-primary)]/30' : ''}"
                                     data-wc="${wc}"
                                     data-lift="${lift}">
-                                    <span class="record-name">${data.name || '-'}</span>
-                                    <span class="record-value">${data.val || 0}${lift === 'dash' ? 's' : ''}</span>
+                                    <span class="record-name">${data?.name || '-'}</span>
+                                    <span class="record-value">${displayVal}${lift === 'dash' && displayVal !== '-' ? 's' : ''}</span>
                                 </td>
                             `;
                         }).join('')}
