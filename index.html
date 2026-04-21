@@ -61,6 +61,25 @@
     </div>
 </header>
 
+<!-- Athlete global announcement banner -->
+<div id="global-alert-banner" class="hidden max-w-4xl mx-auto mt-6 px-6">
+    <div class="bg-blue-600/10 border border-blue-500/30 p-4 rounded-xl flex items-start justify-between gap-4">
+        <div class="flex items-start gap-3 min-w-0">
+            <span class="relative flex h-3 w-3 mt-1 shrink-0">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+            </span>
+            <p class="text-sm text-blue-100 leading-relaxed">
+                <span class="font-black text-blue-400 uppercase text-[10px] tracking-widest mr-2">System Notice</span>
+                <span id="alert-text"></span>
+            </p>
+        </div>
+        <button id="dismiss-alert-btn" class="shrink-0 text-[10px] font-black uppercase tracking-widest text-blue-300 hover:text-white transition-colors">
+            Dismiss
+        </button>
+    </div>
+</div>
+
 <!-- Main page container for login state or authenticated athlete menu -->
 <div class="container mx-auto max-w-md px-6 pb-20">
     <!-- Login form shown when no user is authenticated -->
@@ -186,7 +205,16 @@
 <script type="module">
     // Firebase app services and project-specific theme logic
     import { db, auth } from './js/firebase-config.js';
-    import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import {
+        doc,
+        getDoc,
+        collection,
+        query,
+        where,
+        orderBy,
+        limit,
+        onSnapshot
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { applyTheme } from './js/theme.js';
 
@@ -195,10 +223,17 @@
     const mainMenu = document.getElementById('main-menu');
     const welcomeMsg = document.getElementById('welcome-msg');
     const recruitingBtn = document.getElementById('btn-recruiting-card');
+    const globalAlertBanner = document.getElementById('global-alert-banner');
+    const alertText = document.getElementById('alert-text');
+    const dismissAlertBtn = document.getElementById('dismiss-alert-btn');
 
     // Modal references for privacy policy and terms dialogs
     const pModal = document.getElementById('privacy-modal');
     const tModal = document.getElementById('terms-modal');
+
+    let announcementUnsubscribe = null;
+    let currentAnnouncementId = null;
+    let currentAnnouncementMessage = "";
 
     // Opens privacy modal
     document.getElementById('open-privacy').onclick = () => pModal.classList.remove('hidden');
@@ -212,6 +247,95 @@
     // Closes terms modal from all matching close buttons
     document.querySelectorAll('.close-t').forEach(el => el.onclick = () => tModal.classList.add('hidden'));
 
+    function getAnnouncementDismissKey(uid, announcementId) {
+        return `rackstat_dismissed_announcement_${uid}_${announcementId}`;
+    }
+
+    function isAnnouncementDismissed(uid, announcementId) {
+        if (!uid || !announcementId) return false;
+        return localStorage.getItem(getAnnouncementDismissKey(uid, announcementId)) === 'true';
+    }
+
+    function dismissAnnouncement(uid, announcementId) {
+        if (!uid || !announcementId) return;
+        localStorage.setItem(getAnnouncementDismissKey(uid, announcementId), 'true');
+    }
+
+    function hideAnnouncementBanner() {
+        currentAnnouncementId = null;
+        currentAnnouncementMessage = "";
+        if (globalAlertBanner) globalAlertBanner.classList.add('hidden');
+        if (alertText) alertText.innerText = "";
+    }
+
+    function subscribeToSystemAnnouncement(user) {
+        if (!user) {
+            hideAnnouncementBanner();
+            return;
+        }
+
+        if (announcementUnsubscribe) {
+            announcementUnsubscribe();
+            announcementUnsubscribe = null;
+        }
+
+        const announcementsQuery = query(
+            collection(db, "system_announcements"),
+            where("active", "==", true),
+            orderBy("timestamp", "desc"),
+            limit(5)
+        );
+
+        announcementUnsubscribe = onSnapshot(announcementsQuery, (snapshot) => {
+            if (!globalAlertBanner || !alertText) return;
+
+            const now = new Date();
+
+            const activeAnnouncement = snapshot.docs.find((docSnap) => {
+                const data = docSnap.data();
+
+                if (!data.active) return false;
+
+                if (data.expiresAt) {
+                    const expiresDate = data.expiresAt.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt);
+                    if (Number.isNaN(expiresDate.getTime()) || expiresDate < now) {
+                        return false;
+                    }
+                }
+
+                if (isAnnouncementDismissed(user.uid, docSnap.id)) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            if (!activeAnnouncement) {
+                hideAnnouncementBanner();
+                return;
+            }
+
+            currentAnnouncementId = activeAnnouncement.id;
+            currentAnnouncementMessage = activeAnnouncement.data().message || "";
+
+            alertText.innerText = currentAnnouncementMessage;
+            globalAlertBanner.classList.remove('hidden');
+        }, (err) => {
+            console.error("Announcement subscription error:", err);
+            hideAnnouncementBanner();
+        });
+    }
+
+    if (dismissAlertBtn) {
+        dismissAlertBtn.addEventListener('click', () => {
+            const user = auth.currentUser;
+            if (!user || !currentAnnouncementId) return;
+
+            dismissAnnouncement(user.uid, currentAnnouncementId);
+            hideAnnouncementBanner();
+        });
+    }
+
     // Handles email/password login through Firebase Auth
     const handleLogin = async () => {
         const email = document.getElementById('email').value.trim();
@@ -219,18 +343,18 @@
 
         // Require both login fields before attempting authentication
         if (!email || !pass) return alert("Please fill in all fields.");
-        
-        try { 
+
+        try {
             // Sign in user with Firebase Auth
             const userCredential = await signInWithEmailAndPassword(auth, email, pass);
             const user = userCredential.user;
 
             // Load the app-specific user profile from Firestore
             const userDoc = await getDoc(doc(db, "users", user.uid));
-            
+
             if (userDoc.exists()) {
                 const userData = userDoc.data();
-                
+
                 // Route users to the correct lobby based on their stored role
                 if (userData.role === 'admin') {
                     window.location.href = 'admin-lobby.html';
@@ -245,15 +369,20 @@
                 // Auth account exists but Firestore profile is missing
                 alert("Profile document not found. Please contact support.");
             }
-        } catch (e) { 
+        } catch (e) {
             // Displays login failure message
-            alert("Login failed: " + e.message); 
+            alert("Login failed: " + e.message);
         }
     };
 
     // Signs the current user out and reloads the page to reset UI state
     const handleLogout = async () => {
         try {
+            if (announcementUnsubscribe) {
+                announcementUnsubscribe();
+                announcementUnsubscribe = null;
+            }
+
             await signOut(auth);
             window.location.reload();
         } catch (error) {
@@ -325,7 +454,9 @@
                             const displayName = getDisplayName(userData);
                             welcomeMsg.innerText = `Welcome, ${displayName}`;
                         }
-                        
+
+                        subscribeToSystemAnnouncement(user);
+
                         // Show athlete menu and hide login form
                         authSection.classList.add('hidden');
                         mainMenu.classList.remove('hidden');
@@ -339,7 +470,14 @@
             // No authenticated user: show login form and hide athlete menu
             authSection.classList.remove('hidden');
             mainMenu.classList.add('hidden');
-            
+
+            if (announcementUnsubscribe) {
+                announcementUnsubscribe();
+                announcementUnsubscribe = null;
+            }
+
+            hideAnnouncementBanner();
+
             // Clear any stale welcome text from a previous session
             if (welcomeMsg) welcomeMsg.innerText = '';
         }

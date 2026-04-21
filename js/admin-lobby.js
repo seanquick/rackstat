@@ -3,19 +3,20 @@
 import { db, auth } from './firebase-config.js';
 
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { 
-    collection, 
-    query, 
-    where, 
-    count, 
+import {
+    collection,
+    query,
+    where,
+    count,
     getAggregateFromServer,
     doc,
     getDoc,
     getDocs,
     orderBy,
     limit,
-    addDoc, 
-    serverTimestamp 
+    addDoc,
+    Timestamp,
+    serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // Auth guard for the admin lobby
@@ -41,6 +42,13 @@ onAuthStateChanged(auth, async (user) => {
         renderMetrics();
         getRecentPulse();
         loadSchoolActivity();
+
+        // Set announcement expiration minimum to today
+        const expirationInput = document.getElementById('announcement-expiration');
+        if (expirationInput) {
+            const today = new Date().toISOString().split('T')[0];
+            expirationInput.min = today;
+        }
     } catch (error) {
         console.error("Auth Error:", error);
     }
@@ -73,7 +81,7 @@ async function renderMetrics() {
         } catch (e) {
             console.warn("Meals empty");
         }
-        
+
         // Update dashboard activity totals
         document.getElementById('count-workouts').innerText = workoutCount;
         document.getElementById('count-meals').innerText = mealCount;
@@ -88,11 +96,11 @@ async function renderMetrics() {
 async function getRecentPulse() {
     try {
         const q = query(
-            collection(db, "completed_workouts"), 
-            orderBy("timestamp", "desc"), 
+            collection(db, "completed_workouts"),
+            orderBy("timestamp", "desc"),
             limit(5)
         );
-        
+
         const snap = await getDocs(q);
         const listEl = document.getElementById('pulse-list');
         if (!listEl) return;
@@ -111,7 +119,7 @@ async function getRecentPulse() {
             const time = data.timestamp
                 ? data.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 : "Recent";
-            
+
             const item = document.createElement('div');
             item.className = "flex justify-between items-center p-3 border-b border-white/5 text-xs";
             item.innerHTML = `
@@ -177,22 +185,45 @@ document.addEventListener('click', async (e) => {
     // Handles posting a new system-wide announcement
     if (e.target && e.target.id === 'post-announcement') {
         const input = document.getElementById('announcement-text');
-        const text = input.value.trim();
+        const expirationInput = document.getElementById('announcement-expiration');
 
-        if (!text) return alert("Please enter a message.");
+        const text = input?.value.trim() || "";
+        const expirationDate = expirationInput?.value || "";
+
+        if (!text) {
+            alert("Please enter a message.");
+            return;
+        }
+
+        let expiresAt = null;
+
+        if (expirationDate) {
+            const parsed = new Date(`${expirationDate}T23:59:59`);
+
+            if (Number.isNaN(parsed.getTime())) {
+                alert("Please enter a valid expiration date.");
+                return;
+            }
+
+            expiresAt = Timestamp.fromDate(parsed);
+        }
 
         try {
             await addDoc(collection(db, "system_announcements"), {
                 message: text,
                 timestamp: serverTimestamp(),
                 postedBy: auth.currentUser.uid,
-                active: true
+                active: true,
+                expiresAt
             });
 
-            input.value = '';
+            if (input) input.value = '';
+            if (expirationInput) expirationInput.value = '';
+
             alert("Announcement published successfully!");
         } catch (err) {
             console.error("Announcement Error:", err);
+            alert("Unable to publish announcement.");
         }
     }
 });

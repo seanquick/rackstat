@@ -37,15 +37,20 @@
     </header>
 
     <main class="max-w-6xl mx-auto px-6 py-12">
-        <div id="global-alert-banner" class="hidden bg-blue-600/10 border border-blue-500/30 p-4 mb-8 rounded-xl flex items-center gap-3">
-            <span class="relative flex h-3 w-3">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
-            </span>
-            <p class="text-sm text-blue-100">
-                <span class="font-black text-blue-400 uppercase text-[10px] tracking-widest mr-2">System Notice</span>
-                <span id="alert-text"></span>
-            </p>
+        <div id="global-alert-banner" class="hidden bg-blue-600/10 border border-blue-500/30 p-4 mb-8 rounded-xl flex items-start justify-between gap-4">
+            <div class="flex items-start gap-3 min-w-0">
+                <span class="relative flex h-3 w-3 mt-1 shrink-0">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                </span>
+                <p class="text-sm text-blue-100 leading-relaxed">
+                    <span class="font-black text-blue-400 uppercase text-[10px] tracking-widest mr-2">System Notice</span>
+                    <span id="alert-text"></span>
+                </p>
+            </div>
+            <button id="dismiss-alert-btn" class="shrink-0 text-[10px] font-black uppercase tracking-widest text-blue-300 hover:text-white transition-colors">
+                Dismiss
+            </button>
         </div>
 
         <div class="mb-12">
@@ -105,10 +110,8 @@
         import { doc, getDoc, collection, query, where, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { applyTheme } from './js/theme.js';
 
-        // Returns school ID regardless of legacy underscore/camelCase naming
         const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
 
-        // Builds a coach greeting from available user fields
         const getCoachGreeting = (userData = {}) => {
             const lastName = String(userData.lastName || "").trim();
             if (lastName) return `Welcome, Coach ${lastName}`;
@@ -123,22 +126,117 @@
             return "Welcome, Coach";
         };
 
-        // Logout handler exposed for inline button click
+        let announcementUnsubscribe = null;
+        let currentAnnouncementId = null;
+
+        const banner = document.getElementById('global-alert-banner');
+        const alertText = document.getElementById('alert-text');
+        const dismissAlertBtn = document.getElementById('dismiss-alert-btn');
+
+        function getAnnouncementDismissKey(uid, announcementId) {
+            return `rackstat_dismissed_announcement_${uid}_${announcementId}`;
+        }
+
+        function isAnnouncementDismissed(uid, announcementId) {
+            if (!uid || !announcementId) return false;
+            return localStorage.getItem(getAnnouncementDismissKey(uid, announcementId)) === 'true';
+        }
+
+        function dismissAnnouncement(uid, announcementId) {
+            if (!uid || !announcementId) return;
+            localStorage.setItem(getAnnouncementDismissKey(uid, announcementId), 'true');
+        }
+
+        function hideAnnouncementBanner() {
+            currentAnnouncementId = null;
+            if (banner) banner.classList.add('hidden');
+            if (alertText) alertText.innerText = '';
+        }
+
+        function subscribeToSystemAnnouncement(user) {
+            if (!user) {
+                hideAnnouncementBanner();
+                return;
+            }
+
+            if (announcementUnsubscribe) {
+                announcementUnsubscribe();
+                announcementUnsubscribe = null;
+            }
+
+            const announcementsQuery = query(
+                collection(db, "system_announcements"),
+                where("active", "==", true),
+                orderBy("timestamp", "desc"),
+                limit(5)
+            );
+
+            announcementUnsubscribe = onSnapshot(announcementsQuery, (snapshot) => {
+                if (!banner || !alertText) return;
+
+                const now = new Date();
+
+                const activeAnnouncement = snapshot.docs.find((docSnap) => {
+                    const data = docSnap.data();
+
+                    if (!data.active) return false;
+
+                    if (data.expiresAt) {
+                        const expiresDate = data.expiresAt.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt);
+                        if (Number.isNaN(expiresDate.getTime()) || expiresDate < now) {
+                            return false;
+                        }
+                    }
+
+                    if (isAnnouncementDismissed(user.uid, docSnap.id)) {
+                        return false;
+                    }
+
+                    return true;
+                });
+
+                if (!activeAnnouncement) {
+                    hideAnnouncementBanner();
+                    return;
+                }
+
+                currentAnnouncementId = activeAnnouncement.id;
+                alertText.innerText = activeAnnouncement.data().message || "";
+                banner.classList.remove('hidden');
+            }, (err) => {
+                console.error("Announcement subscription error:", err);
+                hideAnnouncementBanner();
+            });
+        }
+
+        if (dismissAlertBtn) {
+            dismissAlertBtn.addEventListener('click', () => {
+                const user = auth.currentUser;
+                if (!user || !currentAnnouncementId) return;
+
+                dismissAnnouncement(user.uid, currentAnnouncementId);
+                hideAnnouncementBanner();
+            });
+        }
+
         window.handleLogout = async (e) => {
             if (e) e.preventDefault();
 
             try {
+                if (announcementUnsubscribe) {
+                    announcementUnsubscribe();
+                    announcementUnsubscribe = null;
+                }
+
                 await signOut(auth);
             } catch (err) {
                 console.warn("Firebase signout failed, clearing local session state.", err);
             }
 
-            localStorage.clear();
             sessionStorage.clear();
             window.location.href = 'index.html';
         };
 
-        // Starts coach lobby after auth is verified
         async function initDashboard() {
             onAuthStateChanged(auth, async (user) => {
                 if (!user) {
@@ -156,36 +254,13 @@
 
                     const userData = userDoc.data();
 
-                    // Update coach greeting from available profile fields
                     const greetingEl = document.getElementById('coach-greeting');
                     if (greetingEl) {
                         greetingEl.innerText = getCoachGreeting(userData);
                     }
 
-                    // Subscribe to latest active system announcement
-                    const announcementsQuery = query(
-                        collection(db, "system_announcements"),
-                        where("active", "==", true),
-                        orderBy("timestamp", "desc"),
-                        limit(1)
-                    );
+                    subscribeToSystemAnnouncement(user);
 
-                    onSnapshot(announcementsQuery, (snapshot) => {
-                        const banner = document.getElementById('global-alert-banner');
-                        const alertText = document.getElementById('alert-text');
-
-                        if (!banner || !alertText) return;
-
-                        if (snapshot.empty) {
-                            banner.classList.add('hidden');
-                            return;
-                        }
-
-                        alertText.innerText = snapshot.docs[0].data().message || "";
-                        banner.classList.remove('hidden');
-                    });
-
-                    // Apply school branding/theme
                     const schoolId = getSchoolIdFromData(userData);
 
                     if (schoolId) {
