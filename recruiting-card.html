@@ -373,6 +373,22 @@
         return raw === "" ? "" : Number(raw);
     }
 
+    function recruitingFeatureEnabled(schoolData = {}) {
+        if (schoolData.hasRecruitingCard !== undefined) {
+            return schoolData.hasRecruitingCard !== false;
+        }
+        if (schoolData.recruitingEnabled !== undefined) {
+            return schoolData.recruitingEnabled !== false;
+        }
+        return true;
+    }
+
+    function redirectRecruitingDisabled(viewerRole) {
+        if (viewerRole === 'coach' || viewerRole === 'admin') return false;
+        window.location.href = 'rack.html';
+        return true;
+    }
+
     window.exportSocial = () => {
         document.body.classList.add('social-export');
         window.print();
@@ -420,8 +436,15 @@
             const merged = { ...u, ...d };
 
             const schoolId = getSchoolIdFromData(merged) || getSchoolIdFromData(viewerData);
+            let schoolData = null;
+
             if (schoolId) {
-                const schoolData = await applyTheme(db, schoolId);
+                schoolData = await applyTheme(db, schoolId);
+
+                if (!recruitingFeatureEnabled(schoolData || {})) {
+                    if (redirectRecruitingDisabled(viewerRole)) return;
+                }
+
                 const logoEl = document.getElementById('disp-logo');
                 if (logoEl) {
                     const logoPath = schoolData?.logo_primary || schoolData?.logo_url || schoolData?.logo || d.logo_primary || "";
