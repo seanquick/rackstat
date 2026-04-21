@@ -9,7 +9,6 @@
     <style>
         body { background-color: #0a0a0b; color: white; }
         .hide-scroll::-webkit-scrollbar { display: none; }
-
         .pr-badge {
             background-color: var(--school-primary);
             box-shadow: 0 0 12px var(--school-primary);
@@ -61,11 +60,24 @@
 
 <script type="module">
     import { db, auth } from "./js/firebase-config.js";
-    import { doc, getDoc, collection, query, where, getDocs, orderBy, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import {
+        doc,
+        getDoc,
+        collection,
+        query,
+        where,
+        getDocs,
+        orderBy,
+        setDoc,
+        serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { applyTheme } from './js/theme.js';
+    import { getLiftValue, buildLiftWritebacks, slugify } from "./js/board-score.js";
 
     let currentSchoolId = null;
+    let currentWorkoutId = null;
+    let currentWorkoutName = "";
 
     function getSchoolIdFromData(data = {}) {
         return data.schoolId || data.school_id || "";
@@ -84,12 +96,30 @@
     }
 
     function buildExerciseKeyVariations(name = "") {
-        const cleanName = String(name).toLowerCase().trim();
-        return [
-            cleanName.replace(/\s+/g, '_'),
-            cleanName,
-            cleanName.replace(/\s+/g, '')
-        ];
+        const normalized = slugify(name);
+        const compact = normalized.replace(/_/g, "");
+        const spaced = String(name).toLowerCase().trim();
+
+        return [...new Set([
+            normalized,
+            spaced,
+            compact
+        ].filter(Boolean))];
+    }
+
+    function getExerciseReviewKey(name = "") {
+        const normalized = slugify(name);
+        const allowed = new Set(["bench", "squat", "clean", "deadlift", "push_press", "forty"]);
+        return allowed.has(normalized) ? normalized : normalized;
+    }
+
+    function escapeAttr(value = "") {
+        return String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
     }
 
     onAuthStateChanged(auth, async (user) => {
@@ -169,7 +199,7 @@
                 const data = docSnap.data();
                 const btn = document.createElement('button');
                 btn.className = "w-full text-left p-4 rounded-xl bg-[#1a1a1c] border border-transparent transition-all group hover:border-[var(--school-primary)] mb-2";
-                btn.onclick = () => window.loadPerformance(docSnap.id, data.name);
+                btn.onclick = () => window.loadPerformance(docSnap.id, data.name || "Workout");
                 btn.innerHTML = `
                     <p class="text-[10px] font-black uppercase mb-1" style="color: var(--school-primary)">${data.date || 'No Date'}</p>
                     <p class="text-white font-black uppercase text-sm italic group-hover:translate-x-1 transition-transform">${data.name || 'UNTITLED WORKOUT'}</p>
@@ -183,29 +213,20 @@
     }
 
     window.loadPerformance = async function(workoutId, workoutName) {
+        currentWorkoutId = workoutId;
+        currentWorkoutName = workoutName || "Workout";
+
         const feed = document.getElementById('performance-feed');
         feed.innerHTML = '<div class="text-center py-10 animate-pulse uppercase text-xs font-black text-gray-500 tracking-widest">Retrieving Athlete Logs...</div>';
 
         try {
-            let q = query(
+            const q = query(
                 collection(db, "completed_workouts"),
                 where("workoutId", "==", workoutId),
-                where("schoolId", "==", currentSchoolId),
                 orderBy("timestamp", "desc")
             );
 
-            let snap = await getDocs(q);
-
-            if (snap.empty) {
-                q = query(
-                    collection(db, "completed_workouts"),
-                    where("workoutId", "==", workoutId),
-                    where("school_id", "==", currentSchoolId),
-                    orderBy("timestamp", "desc")
-                );
-
-                snap = await getDocs(q);
-            }
+            const snap = await getDocs(q);
 
             document.getElementById('stat-count').innerText = `${snap.size} Athletes`;
             document.getElementById('stats-header').classList.remove('hidden');
@@ -249,7 +270,26 @@
 
                 const sourceData = log.exercises || log.performance || [];
 
-                const exerciseRows = sourceData.map(ex => {
+                let exerciseRows = sourceData.map(ex => {
+                    if (ex.isCircuit) {
+                        const movements = Array.isArray(ex.completedMovements) ? ex.completedMovements : [];
+                        const completedCount = movements.filter(m => m.completed).length;
+                        const totalCount = movements.length;
+                        return `
+                            <div class="py-3 border-b border-white/5 last:border-0">
+                                <div class="flex justify-between items-center">
+                                    <div class="flex flex-col">
+                                        <span class="text-white font-bold text-xs uppercase tracking-wider">${ex.name || 'Circuit'}</span>
+                                        <span class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">${completedCount}/${totalCount} Movements Complete</span>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-[9px] text-red-500 font-black uppercase">Circuit</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
                     const sets = Array.isArray(ex.sets) ? ex.sets : [];
                     const completedSets = sets.filter(s => s.completed).length;
                     const totalSets = sets.length;
@@ -258,17 +298,22 @@
 
                     const variations = buildExerciseKeyVariations(ex.name);
                     let previousMax = 0;
-                    let matchedKey = variations[0];
 
                     for (const key of variations) {
-                        if (currentMaxes[key] !== undefined) {
-                            previousMax = parseFloat(currentMaxes[key]) || 0;
-                            matchedKey = key;
+                        const found = getLiftValue(currentMaxes, key);
+                        if (found > 0) {
+                            previousMax = found;
                             break;
                         }
                     }
 
-                    const isPR = topWeight > previousMax && previousMax > 0;
+                    const exerciseKey = getExerciseReviewKey(ex.name);
+                    const needsReview = topWeight > previousMax;
+                    const encodedAthleteId = escapeAttr(athleteId);
+                    const encodedExerciseKey = escapeAttr(exerciseKey);
+                    const encodedWorkoutId = escapeAttr(currentWorkoutId || "");
+                    const encodedWorkoutName = escapeAttr(currentWorkoutName || "");
+                    const encodedExerciseName = escapeAttr(ex.name || "Exercise");
 
                     return `
                         <div class="flex justify-between items-center py-3 border-b border-white/5 last:border-0">
@@ -279,11 +324,23 @@
                                 </div>
 
                                 <div class="flex items-center gap-2 ml-4">
-                                    ${isPR ? `<span class="bg-red-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full animate-pulse uppercase">NEW PR</span>` : ''}
-                                    <button onclick="window.approvePR('${athleteId}', '${matchedKey}', ${topWeight}, this)"
+                                    ${needsReview ? `<span class="bg-red-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full animate-pulse uppercase">Needs Review</span>` : ''}
+                                    ${needsReview ? `
+                                        <button
+                                            onclick="window.approvePR('${encodedAthleteId}', '${encodedExerciseKey}', '${encodedExerciseName}', ${topWeight}, '${encodedWorkoutId}', '${encodedWorkoutName}', this)"
+                                            class="bg-white/5 hover:bg-green-700 border border-white/10 text-[8px] font-black px-3 py-1 rounded-md text-white transition-all uppercase tracking-tighter">
+                                            Verify Lift
+                                        </button>
+                                        <button
+                                            onclick="window.rejectPR('${encodedAthleteId}', '${encodedExerciseKey}', '${encodedExerciseName}', ${topWeight}, '${encodedWorkoutId}', '${encodedWorkoutName}', this)"
                                             class="bg-white/5 hover:bg-red-700 border border-white/10 text-[8px] font-black px-3 py-1 rounded-md text-white transition-all uppercase tracking-tighter">
-                                        Verify Lift
-                                    </button>
+                                            Reject
+                                        </button>
+                                    ` : `
+                                        <span class="bg-white/5 border border-white/10 text-[8px] font-black px-3 py-1 rounded-md text-gray-400 uppercase tracking-tighter">
+                                            No Review Needed
+                                        </span>
+                                    `}
                                 </div>
                             </div>
                             <div class="text-right">
@@ -317,29 +374,78 @@
         }
     };
 
-    window.approvePR = async function(athleteId, exerciseKey, newWeight, btnElement) {
+    window.approvePR = async function(athleteId, exerciseKey, exerciseName, newWeight, workoutId, workoutName, btnElement) {
         const originalText = btnElement.innerText;
         btnElement.innerText = "SAVING...";
         btnElement.disabled = true;
 
+        const siblingReject = btnElement.parentElement?.querySelector('button:nth-child(3)');
+        if (siblingReject) siblingReject.disabled = true;
+
         try {
             const maxRef = doc(db, "recruiting_profiles", athleteId, "maxes", "latest");
+            const writebacks = buildLiftWritebacks(exerciseKey, newWeight);
 
             await setDoc(maxRef, {
-                [exerciseKey]: parseFloat(newWeight),
+                ...writebacks,
                 lastUpdated: serverTimestamp()
             }, { merge: true });
 
             btnElement.innerText = "VERIFIED ✓";
-            btnElement.classList.replace('bg-white/5', 'bg-green-600');
-            btnElement.classList.remove('hover:bg-red-700');
+            btnElement.classList.remove('hover:bg-green-700', 'bg-white/5');
+            btnElement.classList.add('bg-green-600');
 
-            console.log(`Successfully verified ${exerciseKey} at ${newWeight}lbs`);
+            if (siblingReject) {
+                siblingReject.innerText = "LOCKED";
+                siblingReject.classList.remove('hover:bg-red-700');
+                siblingReject.classList.add('opacity-50');
+            }
         } catch (err) {
             console.error("Error approving PR:", err);
             alert("Failed to verify lift. Check console for details.");
             btnElement.innerText = originalText;
             btnElement.disabled = false;
+            if (siblingReject) siblingReject.disabled = false;
+        }
+    };
+
+    window.rejectPR = async function(athleteId, exerciseKey, exerciseName, attemptedWeight, workoutId, workoutName, btnElement) {
+        const originalText = btnElement.innerText;
+        btnElement.innerText = "REJECTING...";
+        btnElement.disabled = true;
+
+        const siblingApprove = btnElement.parentElement?.querySelector('button:nth-child(2)');
+        if (siblingApprove) siblingApprove.disabled = true;
+
+        try {
+            await addDoc(collection(db, "rejected_max_reviews"), {
+                athleteId,
+                schoolId: currentSchoolId,
+                workoutId: workoutId || null,
+                workoutName: workoutName || null,
+                exerciseKey,
+                exerciseName,
+                attemptedWeight: Number(attemptedWeight) || 0,
+                reviewedAt: serverTimestamp(),
+                reviewedBy: auth.currentUser?.uid || null,
+                decision: "rejected"
+            });
+
+            btnElement.innerText = "REJECTED ✓";
+            btnElement.classList.remove('hover:bg-red-700', 'bg-white/5');
+            btnElement.classList.add('bg-red-600');
+
+            if (siblingApprove) {
+                siblingApprove.innerText = "DECLINED";
+                siblingApprove.classList.remove('hover:bg-green-700');
+                siblingApprove.classList.add('opacity-50');
+            }
+        } catch (err) {
+            console.error("Error rejecting PR:", err);
+            alert("Failed to reject lift. Check console for details.");
+            btnElement.innerText = originalText;
+            btnElement.disabled = false;
+            if (siblingApprove) siblingApprove.disabled = false;
         }
     };
 </script>

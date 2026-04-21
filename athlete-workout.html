@@ -82,9 +82,9 @@
 <script type="module">
     import { db, auth } from "./js/firebase-config.js";
     import { applyTheme } from "./js/theme.js";
-    import { buildLiftWritebacks, getLiftValue, slugify } from "./js/board-score.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { slugify, getLiftValue } from "./js/board-score.js";
 
     let currentAthleteId = null;
     let currentSchoolId = null;
@@ -92,52 +92,6 @@
     let currentMaxes = {};
 
     const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
-
-    function getWorkoutMaxReference(exerciseName = "", maxes = {}) {
-        return getLiftValue(maxes, slugify(exerciseName));
-    }
-
-    function getDisplayPct(set = {}) {
-        const pct = parseFloat(set.pct ?? set.percent) || 0;
-        return pct;
-    }
-
-    function getRoundedWorkingWeight(maxReference, pct) {
-        if (!pct || pct <= 0) return "BW";
-        return Math.round((maxReference * (pct / 100)) / 5) * 5;
-    }
-
-    function getWorkoutCompletionState(buttonElement) {
-        return buttonElement?.dataset.completed === "true";
-    }
-
-    function toggleCompletionState(container, buttonElement) {
-        if (!container || !buttonElement) return;
-
-        const nextState = !getWorkoutCompletionState(buttonElement);
-        buttonElement.dataset.completed = nextState ? "true" : "false";
-
-        container.classList.toggle('border-green-500', nextState);
-        container.classList.toggle('border-gray-800', !nextState);
-
-        const icon = buttonElement.querySelector('svg');
-        if (icon) {
-            icon.classList.toggle('text-green-500', nextState);
-            icon.classList.toggle('text-gray-700', !nextState);
-        }
-    }
-
-    window.toggleSetComplete = (setId) => {
-        const container = document.getElementById(`container-${setId}`);
-        const button = document.getElementById(`toggle-${setId}`);
-        toggleCompletionState(container, button);
-    };
-
-    window.toggleCircuitRoundComplete = (roundId) => {
-        const container = document.getElementById(`container-${roundId}`);
-        const button = document.getElementById(`toggle-${roundId}`);
-        toggleCompletionState(container, button);
-    };
 
     onAuthStateChanged(auth, async (user) => {
         if (!user) {
@@ -215,10 +169,110 @@
         }
     }
 
+    function getExerciseCurrentMax(exerciseName = "", maxes = {}) {
+        return getLiftValue(maxes, slugify(exerciseName));
+    }
+
+    function renderStandardExerciseCard(ex, exIndex, athleteCurrentMax) {
+        const setsHtml = (ex.sets || []).map((s, i) => {
+            const pct = parseFloat(s.pct ?? s.percent) || 0;
+            const weight = pct > 0 ? Math.round((athleteCurrentMax * (pct / 100)) / 5) * 5 : "BW";
+            const setId = `set-${exIndex}-${i}`;
+
+            return `
+                <div id="container-${setId}" class="flex justify-between items-center bg-black p-4 rounded-lg mb-2 border border-gray-800 transition-all">
+                    <div class="flex flex-col">
+                        <span class="text-[8px] text-gray-600 font-black uppercase">Set ${i + 1} — ${pct}%</span>
+                        <input type="number" value="${weight === "BW" ? 0 : weight}" class="bg-transparent text-red-500 font-black text-xl italic w-24 outline-none">
+                    </div>
+                    <div class="text-center">
+                        <p class="text-[8px] text-gray-700 uppercase font-black">Reps</p>
+                        <p class="text-white font-black text-lg">${s.reps ?? ""}</p>
+                    </div>
+                    <button onclick="this.parentElement.classList.toggle('border-green-500'); this.parentElement.classList.toggle('border-gray-800'); this.querySelector('svg').classList.toggle('text-green-500')" class="bg-[#1a1a1c] p-3 rounded-full text-gray-700 border border-gray-800 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path d="M5 13l4 4L19 7" /></svg>
+                    </button>
+                </div>`;
+        }).join('');
+
+        const card = document.createElement('div');
+        card.className = "bg-[#111113] border-l-4 border-red-600 p-5 rounded-r-xl mb-4 shadow-xl";
+        card.innerHTML = `
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="text-white font-black uppercase text-sm italic">${ex.name || "Exercise"}</h3>
+                <div class="text-right">
+                    <p class="text-[8px] text-gray-600 font-black uppercase">Max Ref</p>
+                    <p class="text-xs text-white font-black">${athleteCurrentMax} LBS</p>
+                </div>
+            </div>
+            ${setsHtml}
+        `;
+        return card;
+    }
+
+    function renderCircuitExerciseCard(ex, exIndex) {
+        const circuitExercises = Array.isArray(ex.circuitExercises) ? ex.circuitExercises.filter(Boolean) : [];
+        const cycles = Number(ex.circuitConfig?.cycles || 0);
+        const work = Number(ex.circuitConfig?.work || 0);
+        const rest = Number(ex.circuitConfig?.rest || 0);
+
+        const movementRows = circuitExercises.length
+            ? circuitExercises.map((movement, movementIndex) => `
+                <div class="bg-black rounded-lg border border-gray-800 p-4">
+                    <div class="flex justify-between items-start gap-3">
+                        <div>
+                            <p class="text-[8px] text-gray-600 font-black uppercase tracking-widest">Exercise ${movementIndex + 1}</p>
+                            <p class="text-sm text-white font-black uppercase italic mt-1">${movement}</p>
+                        </div>
+                        <button onclick="this.closest('.bg-black').classList.toggle('border-green-500'); this.closest('.bg-black').classList.toggle('border-gray-800'); this.querySelector('svg').classList.toggle('text-green-500')" class="bg-[#1a1a1c] p-3 rounded-full text-gray-700 border border-gray-800 transition-colors shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path d="M5 13l4 4L19 7" /></svg>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 mt-4 text-center">
+                        <div class="bg-[#111113] rounded-lg p-3 border border-gray-800">
+                            <p class="text-[8px] text-gray-600 font-black uppercase">Sets</p>
+                            <p class="text-sm text-white font-black">${cycles}</p>
+                        </div>
+                        <div class="bg-[#111113] rounded-lg p-3 border border-gray-800">
+                            <p class="text-[8px] text-gray-600 font-black uppercase">Work</p>
+                            <p class="text-sm text-white font-black">${work}s</p>
+                        </div>
+                        <div class="bg-[#111113] rounded-lg p-3 border border-gray-800">
+                            <p class="text-[8px] text-gray-600 font-black uppercase">Rest</p>
+                            <p class="text-sm text-white font-black">${rest}s</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('')
+            : `
+                <div class="bg-black rounded-lg border border-gray-800 p-4">
+                    <p class="text-[10px] text-gray-500 font-black uppercase text-center">No circuit exercises configured.</p>
+                </div>
+            `;
+
+        const card = document.createElement('div');
+        card.className = "bg-[#111113] border-l-4 border-red-600 p-5 rounded-r-xl mb-4 shadow-xl";
+        card.innerHTML = `
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h3 class="text-white font-black uppercase text-sm italic">${ex.name || "Circuit"}</h3>
+                    <p class="text-[8px] text-red-500 font-black uppercase tracking-[0.2em] mt-1">Circuit Block</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-[8px] text-gray-600 font-black uppercase">Sequence</p>
+                    <p class="text-xs text-white font-black">${circuitExercises.length} Exercises</p>
+                </div>
+            </div>
+            <div class="space-y-3">${movementRows}</div>
+        `;
+        return card;
+    }
+
     async function loadWorkoutDetails(workoutId) {
-        const workoutSnap = await getDoc(doc(db, "workouts", workoutId));
-        const maxesRef = doc(db, "recruiting_profiles", currentAthleteId, "maxes", "latest");
-        const maxSnap = await getDoc(maxesRef);
+        const [workoutSnap, maxSnap] = await Promise.all([
+            getDoc(doc(db, "workouts", workoutId)),
+            getDoc(doc(db, "recruiting_profiles", currentAthleteId, "maxes", "latest"))
+        ]);
 
         if (!workoutSnap.exists()) return;
 
@@ -230,130 +284,20 @@
         document.getElementById('display-title').innerText = activeWorkoutData.name || 'WORKOUT';
         document.getElementById('display-week').innerText = activeWorkoutData.date || 'ACTIVE SESSION';
 
-        renderWorkoutExercises();
-    }
-
-    function renderWorkoutExercises() {
         const list = document.getElementById('athlete-exercise-list');
         list.innerHTML = '';
 
-        if (!Array.isArray(activeWorkoutData?.exercises) || !activeWorkoutData.exercises.length) {
-            list.innerHTML = `
-                <div class="text-red-500 text-[10px] text-center uppercase py-10 font-black">
-                    No exercises found for this workout.
-                </div>
-            `;
-            return;
+        if (Array.isArray(activeWorkoutData.exercises)) {
+            activeWorkoutData.exercises.forEach((ex, exIndex) => {
+                if (ex.isCircuit) {
+                    list.appendChild(renderCircuitExerciseCard(ex, exIndex));
+                    return;
+                }
+
+                const athleteCurrentMax = getExerciseCurrentMax(ex.name, currentMaxes);
+                list.appendChild(renderStandardExerciseCard(ex, exIndex, athleteCurrentMax));
+            });
         }
-
-        activeWorkoutData.exercises.forEach((ex, exIndex) => {
-            const isCircuit = !!ex.isCircuit;
-            const exerciseName = ex.name || "Exercise";
-            const exerciseId = slugify(exerciseName);
-            const athleteCurrentMax = getWorkoutMaxReference(exerciseName, currentMaxes);
-
-            if (isCircuit) {
-                const circuitExercises = Array.isArray(ex.circuitExercises) && ex.circuitExercises.length
-                    ? ex.circuitExercises.filter(item => String(item || "").trim())
-                    : [exerciseName];
-
-                const cycles = Number(ex.circuitConfig?.cycles) || 0;
-                const workSeconds = Number(ex.circuitConfig?.work) || 0;
-                const restSeconds = Number(ex.circuitConfig?.rest) || 0;
-
-                const roundsHtml = Array.from({ length: cycles || 1 }, (_, roundIndex) => {
-                    const roundId = `circuit-${exIndex}-${roundIndex}`;
-                    return `
-                        <div id="container-${roundId}" class="flex justify-between items-center bg-black p-4 rounded-lg mb-2 border border-gray-800 transition-all">
-                            <div class="flex flex-col">
-                                <span class="text-[8px] text-gray-600 font-black uppercase">Round ${roundIndex + 1}</span>
-                                <span class="text-red-500 font-black text-lg italic">${workSeconds}s WORK</span>
-                            </div>
-                            <div class="text-center">
-                                <p class="text-[8px] text-gray-700 uppercase font-black">Rest</p>
-                                <p class="text-white font-black text-lg">${restSeconds}s</p>
-                            </div>
-                            <button id="toggle-${roundId}" data-completed="false" onclick="toggleCircuitRoundComplete('${roundId}')" class="bg-[#1a1a1c] p-3 rounded-full text-gray-700 border border-gray-800 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path d="M5 13l4 4L19 7" /></svg>
-                            </button>
-                        </div>
-                    `;
-                }).join('');
-
-                const card = document.createElement('div');
-                card.className = "bg-[#111113] border-l-4 border-red-600 p-5 rounded-r-xl mb-4 shadow-xl";
-                card.innerHTML = `
-                    <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <h3 class="text-white font-black uppercase text-sm italic">${exerciseName}</h3>
-                            <p class="text-[9px] text-blue-400 font-black uppercase tracking-widest mt-1">Circuit</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-[8px] text-gray-600 font-black uppercase">Format</p>
-                            <p class="text-xs text-white font-black">${cycles || 1} ROUNDS</p>
-                        </div>
-                    </div>
-
-                    <div class="bg-black/40 border border-gray-800 rounded-xl p-4 mb-4">
-                        <div class="flex justify-between items-center mb-3">
-                            <p class="text-[9px] font-black uppercase text-gray-500">Circuit Exercises</p>
-                            <p class="text-[9px] font-black uppercase text-gray-500">${workSeconds}s / ${restSeconds}s</p>
-                        </div>
-                        <div class="space-y-2">
-                            ${circuitExercises.map((movement, idx) => `
-                                <div class="flex justify-between items-center border-b border-white/5 last:border-0 pb-2 last:pb-0">
-                                    <span class="text-white font-black uppercase text-xs">${movement}</span>
-                                    <span class="text-gray-500 text-[9px] font-black uppercase">Move ${idx + 1}</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <p class="text-[9px] font-black uppercase text-gray-500 mb-2">Round Tracking</p>
-                        ${roundsHtml}
-                    </div>
-                `;
-                list.appendChild(card);
-                return;
-            }
-
-            const setsHtml = (Array.isArray(ex.sets) ? ex.sets : []).map((s, i) => {
-                const pct = getDisplayPct(s);
-                const weight = getRoundedWorkingWeight(athleteCurrentMax, pct);
-                const setId = `set-${exIndex}-${i}`;
-
-                return `
-                    <div id="container-${setId}" class="flex justify-between items-center bg-black p-4 rounded-lg mb-2 border border-gray-800 transition-all">
-                        <div class="flex flex-col">
-                            <span class="text-[8px] text-gray-600 font-black uppercase">Set ${i + 1} — ${pct}%</span>
-                            <input type="number" value="${weight === "BW" ? 0 : weight}" class="bg-transparent text-red-500 font-black text-xl italic w-24 outline-none">
-                        </div>
-                        <div class="text-center">
-                            <p class="text-[8px] text-gray-700 uppercase font-black">Reps</p>
-                            <p class="text-white font-black text-lg">${s.reps ?? ""}</p>
-                        </div>
-                        <button id="toggle-${setId}" data-completed="false" onclick="toggleSetComplete('${setId}')" class="bg-[#1a1a1c] p-3 rounded-full text-gray-700 border border-gray-800 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path d="M5 13l4 4L19 7" /></svg>
-                        </button>
-                    </div>
-                `;
-            }).join('');
-
-            const card = document.createElement('div');
-            card.className = "bg-[#111113] border-l-4 border-red-600 p-5 rounded-r-xl mb-4 shadow-xl";
-            card.innerHTML = `
-                <div class="flex justify-between items-start mb-4">
-                    <h3 class="text-white font-black uppercase text-sm italic">${exerciseName}</h3>
-                    <div class="text-right">
-                        <p class="text-[8px] text-gray-600 font-black uppercase">Max Ref</p>
-                        <p class="text-xs text-white font-black">${athleteCurrentMax} LBS</p>
-                    </div>
-                </div>
-                ${setsHtml}
-            `;
-            list.appendChild(card);
-        });
     }
 
     document.getElementById('finish-workout-btn').onclick = async () => {
@@ -364,62 +308,36 @@
         btn.innerText = "SYNCING TO BOARD...";
 
         try {
-            const newMaxesToUpdate = {};
-
             const workoutExercises = (activeWorkoutData.exercises || []).map((ex, exIndex) => {
-                const exId = slugify(ex.name);
-                const isCircuit = !!ex.isCircuit;
-
-                if (isCircuit) {
-                    const cycles = Number(ex.circuitConfig?.cycles) || 0;
-                    const work = Number(ex.circuitConfig?.work) || 0;
-                    const rest = Number(ex.circuitConfig?.rest) || 0;
-                    const circuitExercises = Array.isArray(ex.circuitExercises) ? ex.circuitExercises : [];
-
-                    const rounds = Array.from({ length: cycles || 1 }, (_, roundIndex) => {
-                        const roundId = `circuit-${exIndex}-${roundIndex}`;
-                        const roundButton = document.getElementById(`toggle-${roundId}`);
+                if (ex.isCircuit) {
+                    const movementCards = document.querySelectorAll('#athlete-exercise-list .bg-black');
+                    const completedMovements = Array.from(movementCards).map(card => {
+                        const movementName = card.querySelector('.text-sm.text-white.font-black.uppercase.italic')?.innerText || "Exercise";
+                        const isCompleted = card.classList.contains('border-green-500');
                         return {
-                            round: roundIndex + 1,
-                            completed: getWorkoutCompletionState(roundButton),
-                            workSeconds: work,
-                            restSeconds: rest
+                            name: movementName,
+                            completed: isCompleted
                         };
                     });
 
                     return {
-                        name: ex.name,
-                        id: exId,
+                        name: ex.name || "Circuit",
+                        id: slugify(ex.name || `circuit-${exIndex}`),
                         isCircuit: true,
-                        circuitExercises,
-                        circuitConfig: {
-                            cycles: cycles || 1,
-                            work,
-                            rest
-                        },
-                        rounds
+                        circuitExercises: Array.isArray(ex.circuitExercises) ? ex.circuitExercises : [],
+                        circuitConfig: ex.circuitConfig || { cycles: 0, work: 0, rest: 0 },
+                        completedMovements
                     };
                 }
 
+                const exId = slugify(ex.name);
                 const setContainers = document.querySelectorAll(`[id^="container-set-${exIndex}-"]`);
 
                 const completedSets = Array.from(setContainers).map(container => {
                     const weightInput = container.querySelector('input');
                     const repsDisplay = container.querySelector('.text-lg');
-                    const button = container.querySelector('button[id^="toggle-set-"]');
-                    const isCompleted = getWorkoutCompletionState(button);
-                    const weightVal = parseFloat(weightInput?.value) || 0;
-
-                    const currentKnownMax = (
-                        newMaxesToUpdate[exId] ??
-                        getLiftValue(newMaxesToUpdate, exId) ??
-                        getLiftValue(currentMaxes, exId) ??
-                        0
-                    );
-
-                    if (isCompleted && weightVal > currentKnownMax) {
-                        Object.assign(newMaxesToUpdate, buildLiftWritebacks(exId, weightVal));
-                    }
+                    const isCompleted = container.classList.contains('border-green-500');
+                    const weightVal = parseFloat(weightInput.value) || 0;
 
                     return {
                         weight: weightVal.toString(),
@@ -431,29 +349,17 @@
                 return { name: ex.name, id: exId, sets: completedSets };
             });
 
-            if (Object.keys(newMaxesToUpdate).length > 0) {
-                const maxesRef = doc(db, "recruiting_profiles", currentAthleteId, "maxes", "latest");
-                await setDoc(maxesRef, {
-                    ...newMaxesToUpdate,
-                    lastUpdated: serverTimestamp()
-                }, { merge: true });
-            }
-
             let profileSnap = await getDoc(doc(db, "users", currentAthleteId));
             if (!profileSnap.exists()) {
                 profileSnap = await getDoc(doc(db, "recruiting_profiles", currentAthleteId));
             }
 
-            const profileData = profileSnap.exists() ? profileSnap.data() : {};
-            const athleteName =
-                profileData.fullName ||
-                profileData.name ||
-                `${profileData.firstName || ""} ${profileData.lastName || ""}`.trim() ||
-                "Athlete";
+            const athleteName = profileSnap.exists()
+                ? (profileSnap.data().fullName || profileSnap.data().name || "Athlete")
+                : "Athlete";
 
             const completionDoc = {
                 athleteId: currentAthleteId,
-                uid: currentAthleteId,
                 athleteName,
                 schoolId: currentSchoolId,
                 workoutId: activeWorkoutData.id,
@@ -465,7 +371,7 @@
             };
 
             await addDoc(collection(db, "completed_workouts"), completionDoc);
-            alert("WORKOUT SYNCED & MAXES UPDATED!");
+            alert("WORKOUT SYNCED!");
             location.reload();
         } catch (err) {
             console.error("Sync Error:", err);
