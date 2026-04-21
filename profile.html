@@ -214,6 +214,7 @@
     let currentGoals = [];
     let viewedUid = null;
     let currentUserRole = null;
+    let recruitingFeatureIsEnabled = true;
 
     const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
 
@@ -265,6 +266,24 @@
         }
     }
 
+    function isRecruitingFeatureEnabled(schoolData = {}) {
+        if (schoolData.hasRecruitingCard !== undefined) {
+            return schoolData.hasRecruitingCard !== false;
+        }
+        if (schoolData.recruitingEnabled !== undefined) {
+            return schoolData.recruitingEnabled !== false;
+        }
+        return true;
+    }
+
+    function updateRecruitingCardButtonVisibility() {
+        const btn = document.getElementById('btn-view-card');
+        if (!btn) return;
+
+        const canShow = recruitingFeatureIsEnabled || currentUserRole === 'coach' || currentUserRole === 'admin';
+        btn.classList.toggle('hidden', !canShow);
+    }
+
     const safeSet = (id, val) => {
         const el = document.getElementById(id);
         if (el) el.value = val ?? "";
@@ -299,7 +318,6 @@
             const currentUserData = currentUserSnap.data();
             currentUserRole = (currentUserData.role || "").toLowerCase();
 
-            // Prevent athletes from editing someone else's profile
             if (targetUID !== user.uid && currentUserRole !== 'coach' && currentUserRole !== 'admin') {
                 window.location.href = 'profile.html';
                 return;
@@ -313,6 +331,9 @@
 
             if (schoolId) {
                 const themeData = await applyTheme(db, schoolId);
+
+                recruitingFeatureIsEnabled = isRecruitingFeatureEnabled(themeData || {});
+                updateRecruitingCardButtonVisibility();
 
                 if (themeData?.logo_primary) {
                     const logoEl = document.getElementById('school-logo');
@@ -331,6 +352,9 @@
                 if (themeData?.name) {
                     document.getElementById('school-name').innerText = themeData.name;
                 }
+            } else {
+                recruitingFeatureIsEnabled = true;
+                updateRecruitingCardButtonVisibility();
             }
 
             safeSet('full-name', mergedData.fullName);
@@ -433,7 +457,6 @@
 
             await setDoc(doc(db, "recruiting_profiles", viewedUid), profilePayload, { merge: true });
 
-            // Keep key profile fields in users synced when editing own profile or coach-editing athlete profile
             await setDoc(doc(db, "users", viewedUid), {
                 fullName,
                 weight
@@ -465,6 +488,7 @@
     document.getElementById('save-btn').onclick = window.saveProfile;
     document.getElementById('save-goal-btn').onclick = window.saveClubGoal;
     document.getElementById('btn-view-card').onclick = () => { 
+        if (!recruitingFeatureIsEnabled && currentUserRole !== 'coach' && currentUserRole !== 'admin') return;
         if (viewedUid) window.location.href = `recruiting-card.html?uid=${viewedUid}`;
     };
 </script>
