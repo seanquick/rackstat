@@ -69,6 +69,7 @@
         getDocs,
         orderBy,
         setDoc,
+        addDoc,
         serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -108,9 +109,7 @@
     }
 
     function getExerciseReviewKey(name = "") {
-        const normalized = slugify(name);
-        const allowed = new Set(["bench", "squat", "clean", "deadlift", "push_press", "forty"]);
-        return allowed.has(normalized) ? normalized : normalized;
+        return slugify(name);
     }
 
     function escapeAttr(value = "") {
@@ -275,6 +274,7 @@
                         const movements = Array.isArray(ex.completedMovements) ? ex.completedMovements : [];
                         const completedCount = movements.filter(m => m.completed).length;
                         const totalCount = movements.length;
+
                         return `
                             <div class="py-3 border-b border-white/5 last:border-0">
                                 <div class="flex justify-between items-center">
@@ -379,7 +379,7 @@
         btnElement.innerText = "SAVING...";
         btnElement.disabled = true;
 
-        const siblingReject = btnElement.parentElement?.querySelector('button:nth-child(3)');
+        const siblingReject = btnElement.parentElement?.querySelector('button:nth-of-type(2)');
         if (siblingReject) siblingReject.disabled = true;
 
         try {
@@ -414,7 +414,7 @@
         btnElement.innerText = "REJECTING...";
         btnElement.disabled = true;
 
-        const siblingApprove = btnElement.parentElement?.querySelector('button:nth-child(2)');
+        const siblingApprove = btnElement.parentElement?.querySelector('button:nth-of-type(1)');
         if (siblingApprove) siblingApprove.disabled = true;
 
         try {
