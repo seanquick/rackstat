@@ -151,20 +151,75 @@
 
     <script type="module">
         import { db, auth } from './js/firebase-config.js';
-        import { doc, setDoc, getDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import {
+            doc,
+            setDoc,
+            getDoc,
+            onSnapshot,
+            serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { applyTheme } from './js/theme.js';
         import {
             buildBoardScoreSettings,
             calculateBoardScore,
-            getLiftValue
+            getLiftValue,
+            buildLiftWritebacks
         } from './js/board-score.js';
 
         let teamSettings = null;
-        let unsubscribe = null;
+        let unsubscribeMaxes = null;
+        let unsubscribeProfile = null;
+        let unsubscribeUser = null;
 
-        const slugify = (text) => String(text || "").toLowerCase().trim().replace(/\s+/g, '_').replace(/[^\w-]+/g, '');
+        let latestMaxesData = {};
+        let latestProfileData = {};
+        let latestUserData = {};
+
+        const slugify = (text) => String(text || "").toLowerCase().replace(/\s+/g, '_').replace(/[^\w-]+/g, '');
         const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
+
+        function getMergedRackData() {
+            return {
+                ...latestUserData,
+                ...latestProfileData,
+                ...latestMaxesData
+            };
+        }
+
+        function getResolvedBodyweight() {
+            const profileTimestamp = latestProfileData.lastUpdated
+                ? (latestProfileData.lastUpdated.toDate ? latestProfileData.lastUpdated.toDate().getTime() : new Date(latestProfileData.lastUpdated).getTime())
+                : 0;
+
+            const userTimestamp = latestUserData.lastSync
+                ? (latestUserData.lastSync.toDate ? latestUserData.lastSync.toDate().getTime() : new Date(latestUserData.lastSync).getTime())
+                : 0;
+
+            const maxesTimestamp = latestMaxesData.lastUpdated
+                ? (latestMaxesData.lastUpdated.toDate ? latestMaxesData.lastUpdated.toDate().getTime() : new Date(latestMaxesData.lastUpdated).getTime())
+                : 0;
+
+            const weightCandidates = [
+                {
+                    weight: Number(latestUserData.weight ?? 0) || 0,
+                    ts: Number.isFinite(userTimestamp) ? userTimestamp : 0
+                },
+                {
+                    weight: Number(latestProfileData.weight ?? latestProfileData.bodyWeight ?? 0) || 0,
+                    ts: Number.isFinite(profileTimestamp) ? profileTimestamp : 0
+                },
+                {
+                    weight: Number(latestMaxesData.weight ?? latestMaxesData.bodyWeight ?? latestMaxesData.body_weight ?? 0) || 0,
+                    ts: Number.isFinite(maxesTimestamp) ? maxesTimestamp : 0
+                }
+            ].filter(item => item.weight > 0);
+
+            if (!weightCandidates.length) return 0;
+
+            weightCandidates.sort((a, b) => b.ts - a.ts);
+            return weightCandidates[0].weight;
+        }
 
         onAuthStateChanged(auth, async (user) => {
             if (!user) {
@@ -211,20 +266,34 @@
         }
 
         function startRealtimeSync(uid) {
-            if (unsubscribe) unsubscribe();
+            if (unsubscribeMaxes) unsubscribeMaxes();
+            if (unsubscribeProfile) unsubscribeProfile();
+            if (unsubscribeUser) unsubscribeUser();
 
             const latestDocRef = doc(db, "recruiting_profiles", uid, "maxes", "latest");
-            unsubscribe = onSnapshot(latestDocRef, (snap) => {
-                if (snap.exists()) {
-                    renderValues(snap.data());
-                } else {
-                    renderValues({});
-                }
+            const profileRef = doc(db, "recruiting_profiles", uid);
+            const userRef = doc(db, "users", uid);
+
+            unsubscribeMaxes = onSnapshot(latestDocRef, (snap) => {
+                latestMaxesData = snap.exists() ? snap.data() : {};
+                renderValues();
+            });
+
+            unsubscribeProfile = onSnapshot(profileRef, (snap) => {
+                latestProfileData = snap.exists() ? snap.data() : {};
+                renderValues();
+            });
+
+            unsubscribeUser = onSnapshot(userRef, (snap) => {
+                latestUserData = snap.exists() ? snap.data() : {};
+                renderValues();
             });
         }
 
-        function renderValues(data = {}) {
+        function renderValues() {
             if (!teamSettings) return;
+
+            const data = getMergedRackData();
 
             teamSettings.tracked_lifts.forEach(liftKey => {
                 const normalizedLiftKey = slugify(liftKey);
@@ -236,14 +305,20 @@
                 }
             });
 
-            const bw = Number(data.bodyWeight || data.body_weight || data.weight || 0);
+            const bw = getResolvedBodyweight();
+
             const bwInput = document.getElementById('bodyWeight');
             if (bwInput && !bwInput.matches(':focus')) {
                 bwInput.value = bw === 0 ? "" : bw;
             }
 
             const result = calculateBoardScore({
-                data,
+                data: {
+                    ...data,
+                    bodyWeight: bw,
+                    body_weight: bw,
+                    weight: bw
+                },
                 formulaType: teamSettings.formula_type,
                 scoringLifts: teamSettings.scoring_lifts
             });
@@ -258,10 +333,22 @@
                     `TOTAL STRENGTH: ${result.total}`;
             }
 
-            if (data.lastUpdated) {
-                const d = data.lastUpdated.toDate ? data.lastUpdated.toDate() : new Date(data.lastUpdated);
-                document.getElementById('sync-timestamp').innerText =
-                    `Last Sync: ${d.toLocaleDateString()} @ ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            const lastSyncSource =
+                latestMaxesData.lastUpdated ||
+                latestMaxesData.updatedAt ||
+                latestMaxesData.createdAt ||
+                latestProfileData.lastUpdated ||
+                latestUserData.lastSync ||
+                null;
+
+            if (lastSyncSource) {
+                const d = lastSyncSource.toDate ? lastSyncSource.toDate() : new Date(lastSyncSource);
+                if (!Number.isNaN(d.getTime())) {
+                    document.getElementById('sync-timestamp').innerText =
+                        `Last Sync: ${d.toLocaleDateString()} @ ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                } else {
+                    document.getElementById('sync-timestamp').innerText = 'Last Sync: --';
+                }
             } else {
                 document.getElementById('sync-timestamp').innerText = 'Last Sync: --';
             }
@@ -279,41 +366,38 @@
             try {
                 const bw = Number(document.getElementById('bodyWeight').value) || 0;
 
-                const maxesUpdate = {
+                const updateObj = {
                     lastUpdated: serverTimestamp(),
-                    bodyWeight: bw
+                    bodyWeight: bw,
+                    body_weight: bw,
+                    weight: bw
                 };
 
                 teamSettings.tracked_lifts.forEach(liftKey => {
                     const normalizedLiftKey = slugify(liftKey);
                     const input = document.querySelector(`[data-lift-key="${normalizedLiftKey}"]`);
                     const val = Number(input?.value) || 0;
-                    maxesUpdate[normalizedLiftKey] = val;
-                });
 
-                const profileWriteback = {
-                    bodyWeight: bw
-                };
-
-                teamSettings.tracked_lifts.forEach(liftKey => {
-                    const normalizedLiftKey = slugify(liftKey);
-                    profileWriteback[normalizedLiftKey] = maxesUpdate[normalizedLiftKey] || 0;
+                    Object.assign(updateObj, buildLiftWritebacks(normalizedLiftKey, val));
                 });
 
                 const previewResult = calculateBoardScore({
-                    data: maxesUpdate,
+                    data: updateObj,
                     formulaType: teamSettings.formula_type,
                     scoringLifts: teamSettings.scoring_lifts
                 });
 
                 await Promise.all([
-                    setDoc(doc(db, "recruiting_profiles", user.uid, "maxes", "latest"), maxesUpdate, { merge: true }),
+                    setDoc(doc(db, "recruiting_profiles", user.uid, "maxes", "latest"), updateObj, { merge: true }),
                     setDoc(doc(db, "recruiting_profiles", user.uid), {
-                        ...profileWriteback,
-                        boardScore: previewResult.score
+                        boardScore: previewResult.score,
+                        bodyWeight: bw,
+                        weight: bw,
+                        lastUpdated: serverTimestamp()
                     }, { merge: true }),
                     setDoc(doc(db, "users", user.uid), {
-                        weight: bw
+                        weight: bw,
+                        lastSync: serverTimestamp()
                     }, { merge: true })
                 ]);
 

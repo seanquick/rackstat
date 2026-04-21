@@ -210,11 +210,15 @@
     import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { applyTheme } from './js/theme.js';
+    import { buildBoardScoreSettings, calculateBoardScore } from './js/board-score.js';
 
     let currentGoals = [];
     let viewedUid = null;
     let currentUserRole = null;
     let recruitingFeatureEnabled = true;
+    let currentBoardSettings = null;
+    let latestMergedProfileData = {};
+    let latestMaxesData = {};
 
     const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
 
@@ -238,16 +242,48 @@
         `).join('');
     }
 
-    function syncGoalDisplay(pData) {
-        const rawScore = Number(pData.boardScore || 0);
-        const currentScore = Math.max(0, rawScore);
-        const targetGoal = Number(pData.clubGoal || 0);
+    function getResolvedWeight(data = {}, maxes = {}) {
+        return Number(
+            maxes.weight ??
+            maxes.bodyWeight ??
+            maxes.body_weight ??
+            data.weight ??
+            data.bodyWeight ??
+            0
+        ) || 0;
+    }
+
+    function getLiveBoardScore(profileData = {}, maxesData = {}, boardSettings = null) {
+        if (!boardSettings) {
+            return Math.max(0, Number(profileData.boardScore || 0));
+        }
+
+        const resolvedWeight = getResolvedWeight(profileData, maxesData);
+
+        const result = calculateBoardScore({
+            data: {
+                ...profileData,
+                ...maxesData,
+                weight: resolvedWeight,
+                bodyWeight: resolvedWeight,
+                body_weight: resolvedWeight
+            },
+            formulaType: boardSettings.formula_type,
+            scoringLifts: boardSettings.scoring_lifts
+        });
+
+        return Math.max(0, Number(result.score) || 0);
+    }
+
+    function syncGoalDisplay(profileData = {}, maxesData = {}, boardSettings = null) {
+        const currentScore = getLiveBoardScore(profileData, maxesData, boardSettings);
+        const targetGoal = Number(profileData.clubGoal || 0);
         const progressBar = document.getElementById('goal-progress-bar');
         const goalMsg = document.getElementById('goal-message');
         const lastUpdatedDate = document.getElementById('last-updated-date');
 
-        if (lastUpdatedDate && pData.lastUpdated) {
-            const d = new Date(pData.lastUpdated);
+        if (lastUpdatedDate && profileData.lastUpdated) {
+            const d = new Date(profileData.lastUpdated);
             if (!Number.isNaN(d.getTime())) {
                 lastUpdatedDate.innerText = d.toLocaleDateString();
             }
@@ -258,11 +294,7 @@
             progressBar.style.width = `${percent}%`;
 
             if (goalMsg) {
-                if (currentScore <= 0) {
-                    goalMsg.innerText = `0% to ${targetGoal} Club (0 / ${targetGoal})`;
-                } else {
-                    goalMsg.innerText = `${Math.round(percent)}% to ${targetGoal} Club (${currentScore} / ${targetGoal})`;
-                }
+                goalMsg.innerText = `${Math.round(percent)}% to ${targetGoal} Club (${currentScore} / ${targetGoal})`;
             }
         } else if (progressBar) {
             progressBar.style.width = "0%";
@@ -276,7 +308,9 @@
         const btn = document.getElementById('btn-view-card');
         if (!btn) return;
 
-        const isAthleteSelfView = viewedUid === auth.currentUser?.uid && currentUserRole === 'player';
+        const currentAuthUid = auth.currentUser?.uid || null;
+        const isAthleteRole = currentUserRole === 'player' || currentUserRole === 'athlete';
+        const isAthleteSelfView = viewedUid === currentAuthUid && isAthleteRole;
 
         if (!recruitingFeatureEnabled && isAthleteSelfView) {
             btn.classList.add('hidden');
@@ -304,12 +338,14 @@
         const currentUserRef = doc(db, "users", user.uid);
         const targetUserRef = doc(db, "users", targetUID);
         const targetProfileRef = doc(db, "recruiting_profiles", targetUID);
+        const targetMaxesRef = doc(db, "recruiting_profiles", targetUID, "maxes", "latest");
 
         try {
-            const [currentUserSnap, targetUserSnap, profileSnap] = await Promise.all([
+            const [currentUserSnap, targetUserSnap, profileSnap, maxesSnap] = await Promise.all([
                 getDoc(currentUserRef),
                 getDoc(targetUserRef),
-                getDoc(targetProfileRef)
+                getDoc(targetProfileRef),
+                getDoc(targetMaxesRef)
             ]);
 
             if (!currentUserSnap.exists()) {
@@ -327,7 +363,11 @@
 
             const targetUserData = targetUserSnap.exists() ? targetUserSnap.data() : {};
             const profileData = profileSnap.exists() ? profileSnap.data() : {};
+            const maxesData = maxesSnap.exists() ? maxesSnap.data() : {};
             const mergedData = { ...targetUserData, ...profileData };
+
+            latestMergedProfileData = mergedData;
+            latestMaxesData = maxesData;
 
             const schoolId = getSchoolIdFromData(mergedData) || getSchoolIdFromData(currentUserData);
 
@@ -335,6 +375,7 @@
                 const themeData = await applyTheme(db, schoolId);
 
                 recruitingFeatureEnabled = themeData?.hasRecruitingCard !== false;
+                currentBoardSettings = buildBoardScoreSettings(themeData || {});
 
                 if (themeData?.logo_primary) {
                     const logoEl = document.getElementById('school-logo');
@@ -357,7 +398,7 @@
 
             safeSet('full-name', mergedData.fullName);
             safeSet('height', mergedData.height);
-            safeSet('weight', mergedData.weight);
+            safeSet('weight', getResolvedWeight(mergedData, maxesData));
             safeSet('off-primary', mergedData.offPrimary);
             safeSet('off-secondary', mergedData.offSecondary);
             safeSet('def-primary', mergedData.defPrimary);
@@ -378,7 +419,7 @@
 
             currentGoals = mergedData.goals || [];
             renderGoals(targetUID, currentGoals);
-            syncGoalDisplay(mergedData);
+            syncGoalDisplay(latestMergedProfileData, latestMaxesData, currentBoardSettings);
             applyRecruitingButtonVisibility();
 
         } catch (err) {
@@ -400,13 +441,12 @@
                 clubGoal: Number(goalValue)
             }, { merge: true });
 
+            latestMergedProfileData.clubGoal = Number(goalValue);
+
             btn.innerText = "GOAL SET!";
             btn.style.backgroundColor = "#059669";
 
-            const profileSnap = await getDoc(doc(db, "recruiting_profiles", viewedUid));
-            if (profileSnap.exists()) {
-                syncGoalDisplay(profileSnap.data());
-            }
+            syncGoalDisplay(latestMergedProfileData, latestMaxesData, currentBoardSettings);
 
             setTimeout(() => {
                 btn.innerText = "Set Target Club";
@@ -438,6 +478,7 @@
         try {
             const fullName = getVal('full-name');
             const weight = getVal('weight', true);
+
             const profilePayload = {
                 fullName,
                 height: getVal('height', true),
@@ -454,11 +495,21 @@
                 lastUpdated: new Date().toISOString()
             };
 
+            const recalculatedBoardScore = getLiveBoardScore(
+                { ...latestMergedProfileData, ...profilePayload },
+                { ...latestMaxesData, weight, bodyWeight: weight, body_weight: weight },
+                currentBoardSettings
+            );
+
             await Promise.all([
-                setDoc(doc(db, "recruiting_profiles", viewedUid), profilePayload, { merge: true }),
+                setDoc(doc(db, "recruiting_profiles", viewedUid), {
+                    ...profilePayload,
+                    boardScore: recalculatedBoardScore
+                }, { merge: true }),
                 setDoc(doc(db, "users", viewedUid), {
                     fullName,
-                    weight
+                    weight,
+                    lastSync: serverTimestamp()
                 }, { merge: true }),
                 setDoc(doc(db, "recruiting_profiles", viewedUid, "maxes", "latest"), {
                     weight,
@@ -467,6 +518,21 @@
                     lastUpdated: serverTimestamp()
                 }, { merge: true })
             ]);
+
+            latestMergedProfileData = {
+                ...latestMergedProfileData,
+                ...profilePayload,
+                boardScore: recalculatedBoardScore
+            };
+
+            latestMaxesData = {
+                ...latestMaxesData,
+                weight,
+                bodyWeight: weight,
+                body_weight: weight
+            };
+
+            syncGoalDisplay(latestMergedProfileData, latestMaxesData, currentBoardSettings);
 
             btn.innerText = "PROFILE SAVED!";
             btn.style.backgroundColor = "#059669";
