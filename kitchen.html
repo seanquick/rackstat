@@ -78,7 +78,7 @@
             </div>
             <div class="stat-card border-red-900/50">
                 <p class="text-[9px] text-red-500 uppercase font-bold">Protein</p>
-                <p class="text-xl font-black"><span id="day-pro">0</span><span class="text-[10px] text-gray-500"> / <span id="target-pro-display">0</span>g</span></p>
+                <p class="text-xl font-black"><span id="day-pro">0g</span><span class="text-[10px] text-gray-500"> / <span id="target-pro-display">0</span>g</span></p>
                 <div class="progress-container"><div id="pro-fill" class="fill-red"></div></div>
             </div>
         </div>
@@ -289,7 +289,7 @@
         getDocs,
         onSnapshot,
         updateDoc,
-        where as fbWhere
+        where
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { applyTheme } from './js/theme.js';
@@ -341,55 +341,25 @@
         });
     }
 
-    async function getUserSchoolId(uid) {
-        const userSnap = await getDoc(doc(db, "users", uid));
-        if (!userSnap.exists()) return "";
-        const userData = userSnap.data();
-        return userData.schoolId || userData.school_id || "";
-    }
+    async function syncBodyweightAcrossApp(uid, weightValue) {
+        const numericWeight = Number(weightValue) || 0;
+        if (!numericWeight) return;
 
-    async function getMealsForDate(uid, dateKey) {
-        let snap = await getDocs(query(
-            collection(db, "meals"),
-            fbWhere("uid", "==", uid),
-            fbWhere("dateKey", "==", dateKey),
-            orderBy("timestamp", "desc"),
-            limit(50)
-        ));
-
-        if (!snap.empty) {
-            return snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data(), __path: "meals" }));
-        }
-
-        const legacySnap = await getDocs(query(
-            collection(db, "recruiting_profiles", uid, "meals"),
-            fbWhere("dateKey", "==", dateKey),
-            orderBy("timestamp", "desc"),
-            limit(50)
-        ));
-
-        return legacySnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data(), __path: "legacy_meals" }));
-    }
-
-    async function getMealDocsForRange(uid, limitCount = 100) {
-        let snap = await getDocs(query(
-            collection(db, "meals"),
-            fbWhere("uid", "==", uid),
-            orderBy("timestamp", "desc"),
-            limit(limitCount)
-        ));
-
-        if (!snap.empty) {
-            return snap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data(), __path: "meals" }));
-        }
-
-        const legacySnap = await getDocs(query(
-            collection(db, "recruiting_profiles", uid, "meals"),
-            orderBy("timestamp", "desc"),
-            limit(limitCount)
-        ));
-
-        return legacySnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data(), __path: "legacy_meals" }));
+        await Promise.all([
+            setDoc(doc(db, "users", uid), {
+                weight: numericWeight
+            }, { merge: true }),
+            setDoc(doc(db, "recruiting_profiles", uid), {
+                weight: numericWeight,
+                bodyWeight: numericWeight
+            }, { merge: true }),
+            setDoc(doc(db, "recruiting_profiles", uid, "maxes", "latest"), {
+                weight: numericWeight,
+                bodyWeight: numericWeight,
+                body_weight: numericWeight,
+                lastUpdated: serverTimestamp()
+            }, { merge: true })
+        ]);
     }
 
     onAuthStateChanged(auth, async (user) => {
@@ -430,8 +400,8 @@
             safeSetText('target-cal-display', calGoal);
             safeSetText('target-pro-display', proGoal);
 
-            if (data.weight) {
-                safeSetText('last-weight-display', `${data.weight} lbs`);
+            if (data.weight || data.bodyWeight) {
+                safeSetText('last-weight-display', `${Number(data.weight || data.bodyWeight)} lbs`);
             }
             if (data.height) {
                 safeSetText('last-height-display', `${data.height} in`);
@@ -492,14 +462,28 @@
 
         const hVal = htInput.value ? Number(htInput.value) : null;
         const wVal = bwInput.value ? Number(bwInput.value) : null;
-        const syncData = { lastSync: serverTimestamp() };
 
-        if (hVal) syncData.height = hVal;
-        if (wVal) syncData.weight = wVal;
+        const userPayload = { lastSync: serverTimestamp() };
+        const profilePayload = { lastSync: serverTimestamp() };
+
+        if (hVal) {
+            userPayload.height = hVal;
+            profilePayload.height = hVal;
+        }
+
+        if (wVal) {
+            userPayload.weight = wVal;
+            profilePayload.weight = wVal;
+            profilePayload.bodyWeight = wVal;
+        }
 
         try {
-            await setDoc(doc(db, "users", user.uid), syncData, { merge: true });
-            await setDoc(doc(db, "recruiting_profiles", user.uid), syncData, { merge: true });
+            await Promise.all([
+                setDoc(doc(db, "users", user.uid), userPayload, { merge: true }),
+                setDoc(doc(db, "recruiting_profiles", user.uid), profilePayload, { merge: true }),
+                wVal ? syncBodyweightAcrossApp(user.uid, wVal) : Promise.resolve()
+            ]);
+
             alert("Stats Synced!");
             htInput.value = '';
             bwInput.value = '';
@@ -522,19 +506,11 @@
         }
 
         try {
-            const schoolId = await getUserSchoolId(user.uid);
-
-            await addDoc(collection(db, "meals"), {
-                uid: user.uid,
-                schoolId,
+            await addDoc(collection(db, "recruiting_profiles", user.uid, "meals"), {
                 mealType: 'Water',
                 cups: Number(cups),
-                calories: 0,
-                protein: 0,
-                carbs: 0,
-                fats: 0,
-                mealDesc: '',
                 dateKey: selectedDate,
+                date: selectedDate,
                 timestamp: serverTimestamp()
             });
 
@@ -553,29 +529,15 @@
         const selectedDate = getSelectedDateKey();
 
         try {
-            let snap = await getDocs(query(
-                collection(db, "meals"),
-                fbWhere("uid", "==", user.uid),
-                fbWhere("mealType", "==", "Water"),
-                fbWhere("dateKey", "==", selectedDate),
-                orderBy("timestamp", "desc"),
-                limit(1)
-            ));
-
-            if (!snap.empty) {
-                await deleteDoc(doc(db, "meals", snap.docs[0].id));
-                await window.updateDailyTotals();
-                await fetchMealHistory();
-                return;
-            }
-
-            snap = await getDocs(query(
+            const q = query(
                 collection(db, "recruiting_profiles", user.uid, "meals"),
-                fbWhere("mealType", "==", "Water"),
-                fbWhere("dateKey", "==", selectedDate),
+                where("mealType", "==", "Water"),
+                where("dateKey", "==", selectedDate),
                 orderBy("timestamp", "desc"),
                 limit(1)
-            ));
+            );
+
+            const snap = await getDocs(q);
 
             if (snap.empty) {
                 alert("No water entries found to undo.");
@@ -618,19 +580,15 @@
                 logBtn.innerText = "RECORDING...";
             }
 
-            const schoolId = await getUserSchoolId(user.uid);
-
-            await addDoc(collection(db, "meals"), {
-                uid: user.uid,
-                schoolId,
+            await addDoc(collection(db, "recruiting_profiles", user.uid, "meals"), {
                 mealType: document.getElementById('meal-type').value,
                 calories: cVal,
                 protein: Number(document.getElementById('protein').value) || 0,
                 carbs: Number(document.getElementById('carbs').value) || 0,
                 fats: Number(document.getElementById('fats').value) || 0,
                 mealDesc: document.getElementById('meal-desc').value.trim(),
-                cups: 0,
                 dateKey: selectedDate,
+                date: selectedDate,
                 timestamp: serverTimestamp()
             });
 
@@ -663,7 +621,12 @@
         if (!selectedDate) return;
 
         try {
-            const entries = await getMealsForDate(user.uid, selectedDate);
+            const q = query(
+                collection(db, "recruiting_profiles", user.uid, "meals"),
+                where("dateKey", "==", selectedDate)
+            );
+
+            const snap = await getDocs(q);
 
             let c = 0;
             let p = 0;
@@ -671,7 +634,8 @@
             let fat = 0;
             let water = 0;
 
-            entries.forEach(m => {
+            snap.forEach(d => {
+                const m = d.data();
                 if (m.mealType === 'Water') {
                     water += Number(m.cups || 0);
                 } else {
@@ -683,7 +647,7 @@
             });
 
             safeSetText('day-cal', c);
-            safeSetText('day-pro', p);
+            safeSetText('day-pro', `${p}g`);
             safeSetText('day-carb', `${carb}g`);
             safeSetText('day-fat', `${fat}g`);
             safeSetText('day-water', `${water} Cups`);
@@ -714,16 +678,26 @@
         container.innerHTML = '<p class="text-[10px] text-gray-600 italic text-center py-4">Loading history...</p>';
 
         try {
-            const entries = await getMealsForDate(user.uid, selectedDate);
+            const mealsRef = collection(db, "recruiting_profiles", user.uid, "meals");
+            const q = query(
+                mealsRef,
+                where("dateKey", "==", selectedDate),
+                orderBy("timestamp", "desc"),
+                limit(10)
+            );
+
+            const snap = await getDocs(q);
 
             container.innerHTML = '';
 
-            if (!entries.length) {
+            if (snap.empty) {
                 container.innerHTML = '<p class="text-[10px] text-gray-600 italic text-center py-4">No entries for this date.</p>';
                 return;
             }
 
-            entries.slice(0, 10).forEach(m => {
+            snap.forEach(docSnap => {
+                const m = docSnap.data();
+
                 const primaryValue = m.mealType === 'Water'
                     ? `${Number(m.cups || 0)} Cups`
                     : `${Number(m.calories || 0)} CAL`;
@@ -766,16 +740,26 @@
         startOfRange.setHours(0, 0, 0, 0);
 
         try {
-            const entries = await getMealDocsForRange(user.uid, 100);
+            const q = query(
+                collection(db, "recruiting_profiles", user.uid, "meals"),
+                orderBy("timestamp", "desc"),
+                limit(100)
+            );
+
+            const snap = await getDocs(q);
 
             let tCals = 0;
             let tPro = 0;
             let tCarb = 0;
             let tFat = 0;
             let tWater = 0;
+            let weightSum = 0;
+            let weightDays = 0;
+            const dailyWeights = {};
             const daysActive = new Set();
 
-            entries.forEach(d => {
+            snap.forEach(docSnap => {
+                const d = docSnap.data();
                 const ts = d.timestamp?.seconds
                     ? new Date(d.timestamp.seconds * 1000)
                     : (d.timestamp?.toDate ? d.timestamp.toDate() : null);
@@ -795,15 +779,40 @@
                 }
             });
 
+            const maxesSnap = await getDoc(doc(db, "recruiting_profiles", user.uid, "maxes", "latest"));
+            const profileSnap = await getDoc(doc(db, "recruiting_profiles", user.uid));
+            const userSnap = await getDoc(doc(db, "users", user.uid));
+
+            const maxesData = maxesSnap.exists() ? maxesSnap.data() : {};
+            const profileData = profileSnap.exists() ? profileSnap.data() : {};
+            const userData = userSnap.exists() ? userSnap.data() : {};
+
+            const latestWeight = Number(
+                maxesData.bodyWeight ||
+                maxesData.body_weight ||
+                maxesData.weight ||
+                profileData.bodyWeight ||
+                profileData.weight ||
+                userData.weight ||
+                0
+            ) || 0;
+
+            if (latestWeight > 0) {
+                weightSum += latestWeight;
+                weightDays += 1;
+            }
+
             const dayCount = daysActive.size || 1;
             const avgCal = Math.round(tCals / dayCount);
             const avgPro = Math.round(tPro / dayCount);
             const avgCarb = Math.round(tCarb / dayCount);
             const avgFat = Math.round(tFat / dayCount);
+            const avgWeight = weightDays > 0 ? Math.round((weightSum / weightDays) * 10) / 10 : 0;
 
             safeSetText('avg-cal-val', avgCal);
             safeSetText('avg-pro-val', `${avgPro}g`);
             safeSetText('total-water-val', `${tWater} Cups`);
+            safeSetText('avg-weight-val', avgWeight > 0 ? `${avgWeight} lbs` : '-- lbs');
 
             const avgCalBar = document.getElementById('avg-cal-bar');
             const avgProBar = document.getElementById('avg-pro-bar');
@@ -838,7 +847,6 @@
                 }
             }
 
-            safeSetText('avg-weight-val', '-- lbs');
             safeSetText('pb-streak-display', `PB: ${daysActive.size}`);
         } catch (e) {
             console.error("Weekly Stats Error:", e);

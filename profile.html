@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MY PROFILE | RACKSTAT</title>
-    
+
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <style>
         :root {
             --rackstat-black: #0a0a0a;
@@ -17,49 +17,49 @@
         }
 
         body { background-color: var(--rackstat-black); color: white; font-family: sans-serif; }
-        
-        .profile-card { 
-            background: var(--rackstat-gray); 
-            border-radius: 12px; 
-            padding: 1.5rem; 
-            border: 1px solid var(--rackstat-border); 
+
+        .profile-card {
+            background: var(--rackstat-gray);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--rackstat-border);
             box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
 
         .goal-progress { background: #000; border-radius: 10px; height: 12px; width: 100%; overflow: hidden; margin-top: 8px; border: 1px solid #333; }
-        .progress-fill { 
-            background: linear-gradient(90deg, #b91c1c 0%, #ef4444 100%); 
-            height: 100%; 
-            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); 
+        .progress-fill {
+            background: linear-gradient(90deg, #b91c1c 0%, #ef4444 100%);
+            height: 100%;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: 0 0 10px rgba(185, 28, 28, 0.4);
         }
 
-        input, select, textarea { 
-            background: #000 !important; 
-            border: 1px solid var(--rackstat-border) !important; 
-            color: white !important; 
-            padding: 0.6rem !important; 
-            border-radius: 4px !important; 
-            width: 100%; 
+        input, select, textarea {
+            background: #000 !important;
+            border: 1px solid var(--rackstat-border) !important;
+            color: white !important;
+            padding: 0.6rem !important;
+            border-radius: 4px !important;
+            width: 100%;
             font-size: 14px;
             transition: border-color 0.2s;
         }
         input:focus, textarea:focus { border-color: var(--rackstat-red) !important; outline: none; }
 
-        label { 
-            font-size: 9px; 
-            font-weight: 800; 
-            text-transform: uppercase; 
-            color: #94a3b8; 
-            margin-left: 2px; 
-            margin-bottom: 4px; 
-            display: block; 
+        label {
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #94a3b8;
+            margin-left: 2px;
+            margin-bottom: 4px;
+            display: block;
             letter-spacing: 0.05em;
         }
-        
+
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
-        
+
         .btn-primary {
             background: var(--rackstat-red);
             font-weight: 900;
@@ -107,7 +107,7 @@
                 <img src="images/rackstat-logo.png" alt="RACKSTAT" class="rackstat-logo-header">
             </div>
         </div>
-        <div class="w-1/4"></div> 
+        <div class="w-1/4"></div>
     </div>
 </header>
 
@@ -207,14 +207,14 @@
 
 <script type="module">
     import { db, auth } from './js/firebase-config.js';
-    import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { applyTheme } from './js/theme.js';
 
     let currentGoals = [];
     let viewedUid = null;
     let currentUserRole = null;
-    let recruitingFeatureIsEnabled = true;
+    let recruitingFeatureEnabled = true;
 
     const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
 
@@ -239,7 +239,8 @@
     }
 
     function syncGoalDisplay(pData) {
-        const currentScore = Number(pData.boardScore || 0);
+        const rawScore = Number(pData.boardScore || 0);
+        const currentScore = Math.max(0, rawScore);
         const targetGoal = Number(pData.clubGoal || 0);
         const progressBar = document.getElementById('goal-progress-bar');
         const goalMsg = document.getElementById('goal-message');
@@ -253,10 +254,15 @@
         }
 
         if (targetGoal > 0 && progressBar) {
-            const percent = Math.min((currentScore / targetGoal) * 100, 100);
+            const percent = Math.min(Math.max((currentScore / targetGoal) * 100, 0), 100);
             progressBar.style.width = `${percent}%`;
+
             if (goalMsg) {
-                goalMsg.innerText = `${Math.round(percent)}% to ${targetGoal} Club (${currentScore} / ${targetGoal})`;
+                if (currentScore <= 0) {
+                    goalMsg.innerText = `0% to ${targetGoal} Club (0 / ${targetGoal})`;
+                } else {
+                    goalMsg.innerText = `${Math.round(percent)}% to ${targetGoal} Club (${currentScore} / ${targetGoal})`;
+                }
             }
         } else if (progressBar) {
             progressBar.style.width = "0%";
@@ -266,22 +272,18 @@
         }
     }
 
-    function isRecruitingFeatureEnabled(schoolData = {}) {
-        if (schoolData.hasRecruitingCard !== undefined) {
-            return schoolData.hasRecruitingCard !== false;
-        }
-        if (schoolData.recruitingEnabled !== undefined) {
-            return schoolData.recruitingEnabled !== false;
-        }
-        return true;
-    }
-
-    function updateRecruitingCardButtonVisibility() {
+    function applyRecruitingButtonVisibility() {
         const btn = document.getElementById('btn-view-card');
         if (!btn) return;
 
-        const canShow = recruitingFeatureIsEnabled || currentUserRole === 'coach' || currentUserRole === 'admin';
-        btn.classList.toggle('hidden', !canShow);
+        const isAthleteSelfView = viewedUid === auth.currentUser?.uid && currentUserRole === 'player';
+
+        if (!recruitingFeatureEnabled && isAthleteSelfView) {
+            btn.classList.add('hidden');
+            return;
+        }
+
+        btn.classList.remove('hidden');
     }
 
     const safeSet = (id, val) => {
@@ -332,8 +334,7 @@
             if (schoolId) {
                 const themeData = await applyTheme(db, schoolId);
 
-                recruitingFeatureIsEnabled = isRecruitingFeatureEnabled(themeData || {});
-                updateRecruitingCardButtonVisibility();
+                recruitingFeatureEnabled = themeData?.hasRecruitingCard !== false;
 
                 if (themeData?.logo_primary) {
                     const logoEl = document.getElementById('school-logo');
@@ -352,9 +353,6 @@
                 if (themeData?.name) {
                     document.getElementById('school-name').innerText = themeData.name;
                 }
-            } else {
-                recruitingFeatureIsEnabled = true;
-                updateRecruitingCardButtonVisibility();
             }
 
             safeSet('full-name', mergedData.fullName);
@@ -381,6 +379,7 @@
             currentGoals = mergedData.goals || [];
             renderGoals(targetUID, currentGoals);
             syncGoalDisplay(mergedData);
+            applyRecruitingButtonVisibility();
 
         } catch (err) {
             console.error("❌ Profile Loading Error:", err);
@@ -400,7 +399,7 @@
             await setDoc(doc(db, "recruiting_profiles", viewedUid), {
                 clubGoal: Number(goalValue)
             }, { merge: true });
-            
+
             btn.innerText = "GOAL SET!";
             btn.style.backgroundColor = "#059669";
 
@@ -425,7 +424,7 @@
     window.saveProfile = async () => {
         const user = auth.currentUser;
         if (!user || !viewedUid) return;
-        
+
         const btn = document.getElementById('save-btn');
         btn.innerText = "UPDATING...";
         btn.disabled = true;
@@ -455,21 +454,28 @@
                 lastUpdated: new Date().toISOString()
             };
 
-            await setDoc(doc(db, "recruiting_profiles", viewedUid), profilePayload, { merge: true });
-
-            await setDoc(doc(db, "users", viewedUid), {
-                fullName,
-                weight
-            }, { merge: true });
+            await Promise.all([
+                setDoc(doc(db, "recruiting_profiles", viewedUid), profilePayload, { merge: true }),
+                setDoc(doc(db, "users", viewedUid), {
+                    fullName,
+                    weight
+                }, { merge: true }),
+                setDoc(doc(db, "recruiting_profiles", viewedUid, "maxes", "latest"), {
+                    weight,
+                    bodyWeight: weight,
+                    body_weight: weight,
+                    lastUpdated: serverTimestamp()
+                }, { merge: true })
+            ]);
 
             btn.innerText = "PROFILE SAVED!";
             btn.style.backgroundColor = "#059669";
-        } catch (e) { 
+        } catch (e) {
             console.error("Profile save error:", e);
             btn.innerText = "ERROR SAVING";
         } finally {
-            setTimeout(() => { 
-                btn.innerText = "Save Profile"; 
+            setTimeout(() => {
+                btn.innerText = "Save Profile";
                 btn.disabled = false;
                 btn.style.backgroundColor = "";
             }, 2000);
@@ -487,8 +493,7 @@
 
     document.getElementById('save-btn').onclick = window.saveProfile;
     document.getElementById('save-goal-btn').onclick = window.saveClubGoal;
-    document.getElementById('btn-view-card').onclick = () => { 
-        if (!recruitingFeatureIsEnabled && currentUserRole !== 'coach' && currentUserRole !== 'admin') return;
+    document.getElementById('btn-view-card').onclick = () => {
         if (viewedUid) window.location.href = `recruiting-card.html?uid=${viewedUid}`;
     };
 </script>
