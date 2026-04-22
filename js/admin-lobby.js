@@ -1,5 +1,3 @@
-// Import shared Firebase services from the local js folder
-// Since this file is already inside /js, the correct relative path is ./firebase-config.js
 import { db, auth } from './firebase-config.js';
 
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -15,12 +13,13 @@ import {
     orderBy,
     limit,
     addDoc,
-    Timestamp,
+    setDoc,
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+let currentAdminUid = null;
+
 // Auth guard for the admin lobby
-// Ensures only signed-in users with admin role can access this page
 onAuthStateChanged(auth, async (user) => {
     if (!user) {
         window.location.replace('index.html');
@@ -28,27 +27,20 @@ onAuthStateChanged(auth, async (user) => {
     }
 
     try {
-        // Load the signed-in user's Firestore profile
         const userSnap = await getDoc(doc(db, "users", user.uid));
 
-        // Redirect if the account is missing or not an admin
         if (!userSnap.exists() || userSnap.data().role !== 'admin') {
             console.warn("Unauthorized Access Attempt");
             window.location.replace('index.html');
             return;
         }
 
-        // Initialize all dashboard modules after successful admin verification
+        currentAdminUid = user.uid;
+
         renderMetrics();
         getRecentPulse();
         loadSchoolActivity();
-
-        // Set announcement expiration minimum to today
-        const expirationInput = document.getElementById('announcement-expiration');
-        if (expirationInput) {
-            const today = new Date().toISOString().split('T')[0];
-            expirationInput.min = today;
-        }
+        bindAdminActions();
     } catch (error) {
         console.error("Auth Error:", error);
     }
@@ -57,18 +49,17 @@ onAuthStateChanged(auth, async (user) => {
 // Loads aggregate counts for users and app activity
 async function renderMetrics() {
     try {
-        // Count athlete and coach user records
         const athleteCount = await getCount(query(collection(db, "users"), where("role", "==", "player")));
         const coachCount = await getCount(query(collection(db, "users"), where("role", "==", "coach")));
 
-        // Update top-level user metrics in the dashboard
         document.getElementById('count-athletes').innerText = athleteCount;
         document.getElementById('count-coaches').innerText = coachCount;
         document.getElementById('total-users').innerText = athleteCount + coachCount;
 
-        // Count activity collections
         let workoutCount = 0;
         let mealCount = 0;
+        let profileCount = 0;
+        let metricCount = 0;
 
         try {
             workoutCount = await getCount(collection(db, "completed_workouts"));
@@ -79,14 +70,28 @@ async function renderMetrics() {
         try {
             mealCount = await getCount(collection(db, "meals"));
         } catch (e) {
-            console.warn("Meals empty");
+            console.warn("Top-level meals empty");
         }
 
-        // Update dashboard activity totals
+        try {
+            profileCount = await getCount(collection(db, "recruiting_profiles"));
+        } catch (e) {
+            console.warn("Recruiting profiles empty");
+        }
+
+        try {
+            metricCount = await getCount(collection(db, "metrics"));
+        } catch (e) {
+            console.warn("Metrics empty");
+        }
+
         document.getElementById('count-workouts').innerText = workoutCount;
         document.getElementById('count-meals').innerText = mealCount;
         document.getElementById('total-activity').innerText = workoutCount + mealCount;
 
+        document.getElementById('count-profiles').innerText = profileCount;
+        document.getElementById('count-metrics').innerText = metricCount;
+        document.getElementById('total-profiles').innerText = profileCount;
     } catch (err) {
         console.error("Metric Load Error:", err);
     }
@@ -107,13 +112,11 @@ async function getRecentPulse() {
 
         listEl.innerHTML = '';
 
-        // Empty state for no recent activity
         if (snap.empty) {
             listEl.innerHTML = '<p class="p-6 text-xs text-gray-600 italic text-center">No recent activity.</p>';
             return;
         }
 
-        // Render the latest workout activity items
         snap.forEach(docSnap => {
             const data = docSnap.data();
             const time = data.timestamp
@@ -142,13 +145,11 @@ async function loadSchoolActivity() {
 
         container.innerHTML = '';
 
-        // Empty state if no schools exist
         if (snap.empty) {
             container.innerHTML = '<p class="p-6 text-xs text-gray-600 italic text-center">No schools registered.</p>';
             return;
         }
 
-        // Render school summary cards/rows
         snap.forEach(docSnap => {
             const school = docSnap.data();
             const row = document.createElement('div');
@@ -156,7 +157,7 @@ async function loadSchoolActivity() {
             row.innerHTML = `
                 <div>
                     <p class="font-bold text-sm">${school.name || 'Unnamed School'}</p>
-                    <p class="text-[10px] text-gray-500 uppercase">${school.city || 'Unknown'}, ${school.state || '--'}</p>
+                    <p class="text-[10px] text-gray-500 uppercase">${docSnap.id}</p>
                 </div>
                 <div class="text-right">
                     <span class="text-[10px] bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20 uppercase font-bold">Active</span>
@@ -169,67 +170,300 @@ async function loadSchoolActivity() {
     }
 }
 
-// Centralized click handling for admin actions
-document.addEventListener('click', async (e) => {
-    // Handles admin sign-out action
-    if (e.target && e.target.id === 'admin-logout-btn') {
-        e.preventDefault();
-        try {
-            await signOut(auth);
-            window.location.replace('index.html');
-        } catch (err) {
-            console.error("Logout failed:", err);
-        }
+function bindAdminActions() {
+    const logoutBtn = document.getElementById('admin-logout-btn');
+    const announcementBtn = document.getElementById('post-announcement');
+    const createSchoolBtn = document.getElementById('create-school-btn');
+    const resetSchoolFormBtn = document.getElementById('reset-school-form-btn');
+
+    if (logoutBtn && !logoutBtn.dataset.bound) {
+        logoutBtn.dataset.bound = 'true';
+        logoutBtn.addEventListener('click', handleLogout);
     }
 
-    // Handles posting a new system-wide announcement
-    if (e.target && e.target.id === 'post-announcement') {
-        const input = document.getElementById('announcement-text');
-        const expirationInput = document.getElementById('announcement-expiration');
+    if (announcementBtn && !announcementBtn.dataset.bound) {
+        announcementBtn.dataset.bound = 'true';
+        announcementBtn.addEventListener('click', handleAnnouncementPost);
+    }
 
-        const text = input?.value.trim() || "";
-        const expirationDate = expirationInput?.value || "";
+    if (createSchoolBtn && !createSchoolBtn.dataset.bound) {
+        createSchoolBtn.dataset.bound = 'true';
+        createSchoolBtn.addEventListener('click', handleCreateSchool);
+    }
 
-        if (!text) {
-            alert("Please enter a message.");
-            return;
-        }
+    if (resetSchoolFormBtn && !resetSchoolFormBtn.dataset.bound) {
+        resetSchoolFormBtn.dataset.bound = 'true';
+        resetSchoolFormBtn.addEventListener('click', resetSchoolForm);
+    }
+}
 
-        let expiresAt = null;
+async function handleLogout(e) {
+    e.preventDefault();
+    try {
+        await signOut(auth);
+        window.location.replace('index.html');
+    } catch (err) {
+        console.error("Logout failed:", err);
+    }
+}
 
-        if (expirationDate) {
-            const parsed = new Date(`${expirationDate}T23:59:59`);
+async function handleAnnouncementPost() {
+    const input = document.getElementById('announcement-text');
+    const expirationInput = document.getElementById('announcement-expiration');
 
-            if (Number.isNaN(parsed.getTime())) {
-                alert("Please enter a valid expiration date.");
-                return;
+    const text = input?.value.trim() || "";
+    const expirationValue = expirationInput?.value || "";
+
+    if (!text) {
+        alert("Please enter a message.");
+        return;
+    }
+
+    try {
+        const payload = {
+            message: text,
+            timestamp: serverTimestamp(),
+            postedBy: auth.currentUser?.uid || null,
+            active: true
+        };
+
+        if (expirationValue) {
+            const expiresAt = new Date(`${expirationValue}T23:59:59`);
+            if (!Number.isNaN(expiresAt.getTime())) {
+                payload.expiresAt = expiresAt;
             }
-
-            expiresAt = Timestamp.fromDate(parsed);
         }
 
-        try {
-            await addDoc(collection(db, "system_announcements"), {
-                message: text,
-                timestamp: serverTimestamp(),
-                postedBy: auth.currentUser.uid,
-                active: true,
-                expiresAt
-            });
+        await addDoc(collection(db, "system_announcements"), payload);
 
-            if (input) input.value = '';
-            if (expirationInput) expirationInput.value = '';
+        if (input) input.value = '';
+        if (expirationInput) expirationInput.value = '';
 
-            alert("Announcement published successfully!");
-        } catch (err) {
-            console.error("Announcement Error:", err);
-            alert("Unable to publish announcement.");
+        alert("Announcement published successfully!");
+    } catch (err) {
+        console.error("Announcement Error:", err);
+        alert("Unable to publish announcement.");
+    }
+}
+
+function slugifySchoolName(text = "") {
+    return String(text)
+        .toLowerCase()
+        .trim()
+        .replace(/&/g, 'and')
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+}
+
+function randomCode(length = 8) {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let out = "";
+    for (let i = 0; i < length; i += 1) {
+        out += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return out;
+}
+
+async function generateUniqueRegistrationCode(fieldName) {
+    for (let i = 0; i < 20; i += 1) {
+        const code = randomCode(8);
+        const existing = await getDocs(query(collection(db, "schools"), where(fieldName, "==", code), limit(1)));
+        if (existing.empty) {
+            return code;
         }
     }
-});
+
+    throw new Error(`Unable to generate unique ${fieldName}. Please try again.`);
+}
+
+function getCheckedValues(selector) {
+    return Array.from(document.querySelectorAll(selector))
+        .filter(el => el.checked)
+        .map(el => String(el.value || "").trim())
+        .filter(Boolean);
+}
+
+function setSchoolCreateStatus(text, tone = "neutral") {
+    const statusEl = document.getElementById('school-create-status');
+    if (!statusEl) return;
+
+    statusEl.innerText = text;
+    statusEl.className = "text-[11px] font-bold uppercase tracking-widest";
+
+    if (tone === "success") {
+        statusEl.classList.add("text-emerald-400");
+    } else if (tone === "error") {
+        statusEl.classList.add("text-red-400");
+    } else if (tone === "warn") {
+        statusEl.classList.add("text-yellow-300");
+    } else {
+        statusEl.classList.add("text-gray-500");
+    }
+}
+
+function showCreatedSchoolResult({ schoolId, name, coachCode, playerCode }) {
+    const wrapper = document.getElementById('created-school-result');
+    if (!wrapper) return;
+
+    wrapper.classList.remove('hidden');
+    document.getElementById('result-school-id').innerText = schoolId;
+    document.getElementById('result-school-name').innerText = name;
+    document.getElementById('result-coach-code').innerText = coachCode;
+    document.getElementById('result-player-code').innerText = playerCode;
+}
+
+function resetSchoolForm() {
+    const nameInput = document.getElementById('new-school-name');
+    const primaryColorInput = document.getElementById('new-school-primary-color');
+    const logoUrlInput = document.getElementById('new-school-logo-url');
+    const formulaInput = document.getElementById('new-school-formula');
+    const clubStartInput = document.getElementById('new-school-club-start');
+    const recruitingInput = document.getElementById('new-school-recruiting-enabled');
+    const resultBox = document.getElementById('created-school-result');
+
+    if (nameInput) nameInput.value = "";
+    if (primaryColorInput) primaryColorInput.value = "#b91c1c";
+    if (logoUrlInput) logoUrlInput.value = "";
+    if (formulaInput) formulaInput.value = "power_index";
+    if (clubStartInput) clubStartInput.value = "50";
+    if (recruitingInput) recruitingInput.checked = true;
+
+    document.querySelectorAll('.new-school-tracked-lift').forEach(el => {
+        el.checked = ["bench", "squat", "clean"].includes(el.value);
+    });
+
+    document.querySelectorAll('.new-school-scoring-lift').forEach(el => {
+        el.checked = ["bench", "squat", "clean"].includes(el.value);
+    });
+
+    if (resultBox) resultBox.classList.add('hidden');
+
+    setSchoolCreateStatus("Ready");
+}
+
+async function generateUniqueSchoolId(baseName) {
+    const baseSlug = slugifySchoolName(baseName) || "school";
+    let candidate = baseSlug;
+    let counter = 1;
+
+    while (true) {
+        const existing = await getDoc(doc(db, "schools", candidate));
+        if (!existing.exists()) {
+            return candidate;
+        }
+        counter += 1;
+        candidate = `${baseSlug}-${counter}`;
+    }
+}
+
+async function handleCreateSchool() {
+    const createBtn = document.getElementById('create-school-btn');
+    const schoolNameInput = document.getElementById('new-school-name');
+    const primaryColorInput = document.getElementById('new-school-primary-color');
+    const logoUrlInput = document.getElementById('new-school-logo-url');
+    const formulaInput = document.getElementById('new-school-formula');
+    const clubStartInput = document.getElementById('new-school-club-start');
+    const recruitingInput = document.getElementById('new-school-recruiting-enabled');
+
+    const schoolName = schoolNameInput?.value.trim() || "";
+    const primaryColor = primaryColorInput?.value || "#b91c1c";
+    const logoUrl = logoUrlInput?.value.trim() || "";
+    const formulaType = formulaInput?.value || "power_index";
+    const clubStart = Number(clubStartInput?.value || 50) || 50;
+    const hasRecruitingCard = !!recruitingInput?.checked;
+
+    const trackedLifts = getCheckedValues('.new-school-tracked-lift');
+    const scoringLiftsRaw = getCheckedValues('.new-school-scoring-lift');
+
+    if (!schoolName) {
+        alert("Please enter a school name.");
+        return;
+    }
+
+    if (!trackedLifts.length) {
+        alert("Please select at least one tracked lift.");
+        return;
+    }
+
+    const scoringLifts = scoringLiftsRaw.filter(lift => trackedLifts.includes(lift));
+
+    if (!scoringLifts.length) {
+        alert("Please select at least one scoring lift that is also tracked.");
+        return;
+    }
+
+    const originalText = createBtn?.innerText || "Create School";
+
+    try {
+        if (createBtn) {
+            createBtn.disabled = true;
+            createBtn.innerText = "Creating...";
+        }
+
+        setSchoolCreateStatus("Generating Codes...", "warn");
+
+        const [schoolId, coachCode] = await Promise.all([
+            generateUniqueSchoolId(schoolName),
+            generateUniqueRegistrationCode("coach_code")
+        ]);
+
+        let playerCode = await generateUniqueRegistrationCode("player_code");
+        while (playerCode === coachCode) {
+            playerCode = await generateUniqueRegistrationCode("player_code");
+        }
+
+        setSchoolCreateStatus("Saving School...", "warn");
+
+        const payload = {
+            name: schoolName,
+            primaryColor,
+            "colors.primary": primaryColor,
+            logo_url: logoUrl,
+            logo_primary: logoUrl,
+            formula_type: formulaType,
+            scoring_lifts: scoringLifts,
+            trackedLifts,
+            club_start: clubStart,
+            hasRecruitingCard,
+            coach_code: coachCode,
+            player_code: playerCode,
+            createdAt: serverTimestamp(),
+            createdBy: currentAdminUid,
+            active: true
+        };
+
+        await setDoc(doc(db, "schools", schoolId), payload, { merge: true });
+
+        showCreatedSchoolResult({
+            schoolId,
+            name: schoolName,
+            coachCode,
+            playerCode
+        });
+
+        setSchoolCreateStatus("School Created", "success");
+
+        alert(`School created successfully!\n\nSchool ID: ${schoolId}\nCoach Code: ${coachCode}\nAthlete Code: ${playerCode}`);
+
+        await Promise.all([
+            loadSchoolActivity(),
+            renderMetrics()
+        ]);
+    } catch (err) {
+        console.error("Create school error:", err);
+        setSchoolCreateStatus("Create Failed", "error");
+        alert("Unable to create school. Check console for details.");
+    } finally {
+        if (createBtn) {
+            createBtn.disabled = false;
+            createBtn.innerText = originalText;
+        }
+    }
+}
 
 // Utility helper for Firestore aggregate counts
-// Accepts either a collection reference or a query
 async function getCount(queryOrColl) {
     try {
         const snap = await getAggregateFromServer(queryOrColl, { total: count() });

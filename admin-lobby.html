@@ -114,6 +114,173 @@
             </div>
         </div>
 
+        <!-- Create school -->
+        <div class="mt-12 p-8 bg-emerald-600/5 border border-emerald-500/20 rounded-2xl">
+            <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
+                <div>
+                    <h3 class="font-bold text-lg">Create New School</h3>
+                    <p class="text-sm text-gray-400">Provision a new organization with required defaults and auto-generated registration codes.</p>
+                </div>
+                <div id="school-create-status" class="text-[11px] font-bold uppercase tracking-widest text-gray-500">
+                    Ready
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="md:col-span-2">
+                    <label for="new-school-name" class="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
+                        School Name
+                    </label>
+                    <input
+                        type="text"
+                        id="new-school-name"
+                        placeholder="Test High School"
+                        class="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-emerald-500"
+                    >
+                </div>
+
+                <div>
+                    <label for="new-school-primary-color" class="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
+                        Primary Color
+                    </label>
+                    <input
+                        type="color"
+                        id="new-school-primary-color"
+                        value="#b91c1c"
+                        class="w-full h-[50px] bg-black/20 border border-white/10 rounded-lg px-2 py-2 cursor-pointer"
+                    >
+                </div>
+
+                <div>
+                    <label for="new-school-logo-url" class="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
+                        Logo URL
+                    </label>
+                    <input
+                        type="text"
+                        id="new-school-logo-url"
+                        placeholder="https://example.com/logo.png"
+                        class="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-emerald-500"
+                    >
+                </div>
+
+                <div>
+                    <label for="new-school-formula" class="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
+                        Formula Type
+                    </label>
+                    <select
+                        id="new-school-formula"
+                        class="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-emerald-500"
+                    >
+                        <option value="power_index">Power Index</option>
+                        <option value="straight_total">Straight Total</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="new-school-club-start" class="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
+                        Club Start
+                    </label>
+                    <input
+                        type="number"
+                        id="new-school-club-start"
+                        value="50"
+                        min="1"
+                        class="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-emerald-500"
+                    >
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
+                        Tracked Lifts
+                    </label>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+                        <label class="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg px-3 py-3">
+                            <input type="checkbox" class="new-school-tracked-lift accent-emerald-500" value="bench" checked>
+                            <span>Bench</span>
+                        </label>
+                        <label class="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg px-3 py-3">
+                            <input type="checkbox" class="new-school-tracked-lift accent-emerald-500" value="squat" checked>
+                            <span>Squat</span>
+                        </label>
+                        <label class="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg px-3 py-3">
+                            <input type="checkbox" class="new-school-tracked-lift accent-emerald-500" value="clean" checked>
+                            <span>Clean</span>
+                        </label>
+                        <label class="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg px-3 py-3">
+                            <input type="checkbox" class="new-school-tracked-lift accent-emerald-500" value="deadlift">
+                            <span>Deadlift</span>
+                        </label>
+                        <label class="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg px-3 py-3">
+                            <input type="checkbox" class="new-school-tracked-lift accent-emerald-500" value="push_press">
+                            <span>Push Press</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
+                        Scoring Lifts
+                    </label>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+                        <label class="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg px-3 py-3">
+                            <input type="checkbox" class="new-school-scoring-lift accent-blue-500" value="bench" checked>
+                            <span>Bench</span>
+                        </label>
+                        <label class="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg px-3 py-3">
+                            <input type="checkbox" class="new-school-scoring-lift accent-blue-500" value="squat" checked>
+                            <span>Squat</span>
+                        </label>
+                        <label class="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg px-3 py-3">
+                            <input type="checkbox" class="new-school-scoring-lift accent-blue-500" value="clean" checked>
+                            <span>Clean</span>
+                        </label>
+                        <label class="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg px-3 py-3">
+                            <input type="checkbox" class="new-school-scoring-lift accent-blue-500" value="deadlift">
+                            <span>Deadlift</span>
+                        </label>
+                        <label class="flex items-center gap-2 bg-black/20 border border-white/10 rounded-lg px-3 py-3">
+                            <input type="checkbox" class="new-school-scoring-lift accent-blue-500" value="push_press">
+                            <span>Push Press</span>
+                        </label>
+                    </div>
+                    <p class="mt-2 text-[11px] text-gray-500">Scoring lifts must also be included in tracked lifts.</p>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="flex items-center gap-3 bg-black/20 border border-white/10 rounded-lg px-4 py-4">
+                        <input type="checkbox" id="new-school-recruiting-enabled" class="accent-emerald-500" checked>
+                        <span class="text-sm">Enable Recruiting Card for new athletes</span>
+                    </label>
+                </div>
+
+                <div class="md:col-span-2 flex flex-col sm:flex-row gap-3 pt-2">
+                    <button
+                        id="create-school-btn"
+                        class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg text-sm font-bold transition uppercase tracking-wider"
+                    >
+                        Create School
+                    </button>
+                    <button
+                        id="reset-school-form-btn"
+                        type="button"
+                        class="bg-white/5 hover:bg-white/10 text-white px-6 py-3 rounded-lg text-sm font-bold transition uppercase tracking-wider"
+                    >
+                        Reset Form
+                    </button>
+                </div>
+            </div>
+
+            <div id="created-school-result" class="hidden mt-6 bg-black/20 border border-white/10 rounded-xl p-5">
+                <h4 class="text-sm font-black uppercase tracking-widest text-emerald-400 mb-3">School Created</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <div><span class="text-gray-500 uppercase text-[10px] font-bold">School ID</span><p id="result-school-id" class="font-mono text-white break-all">--</p></div>
+                    <div><span class="text-gray-500 uppercase text-[10px] font-bold">School Name</span><p id="result-school-name" class="text-white">--</p></div>
+                    <div><span class="text-gray-500 uppercase text-[10px] font-bold">Coach Code</span><p id="result-coach-code" class="font-mono text-green-400">--</p></div>
+                    <div><span class="text-gray-500 uppercase text-[10px] font-bold">Athlete Code</span><p id="result-player-code" class="font-mono text-blue-400">--</p></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Admin announcement composer for system-wide notices -->
         <div class="mt-12 p-8 bg-blue-600/5 border border-blue-500/20 rounded-2xl">
             <h3 class="font-bold text-lg mb-2">Global Announcement</h3>
