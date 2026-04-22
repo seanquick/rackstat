@@ -371,149 +371,166 @@
 
             for (const logDoc of snap.docs) {
                 const log = logDoc.data();
-                const athleteId = log.athleteId || log.uid;
 
-                const [userSnap, athleteSnap, maxSnap] = await Promise.all([
-                    getDoc(doc(db, "users", athleteId)),
-                    getDoc(doc(db, "recruiting_profiles", athleteId)),
-                    getDoc(doc(db, "recruiting_profiles", athleteId, "maxes", "latest"))
-                ]);
+                try {
+                    const athleteId = log.athleteId || log.uid;
 
-                const userData = userSnap.exists() ? userSnap.data() : {};
-                const aData = athleteSnap.exists() ? athleteSnap.data() : {};
-                const mergedAthlete = { ...userData, ...aData };
-
-                const athleteName = log.athleteName || getDisplayName(mergedAthlete);
-                const currentMaxes = maxSnap.exists() ? maxSnap.data() : {};
-
-                let timeString = "Recently";
-                if (log.timestamp) {
-                    const dateObj = log.timestamp.toDate ? log.timestamp.toDate() : new Date(log.timestamp);
-                    if (!Number.isNaN(dateObj.getTime())) {
-                        timeString = dateObj.toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' });
-                    }
-                }
-
-                const sourceData = Array.isArray(log.exercises || log.performance) ? (log.exercises || log.performance) : [];
-
-                const exerciseRows = await Promise.all(sourceData.map(async (ex) => {
-                    if (ex.isCircuit) {
-                        const movements = Array.isArray(ex.completedMovements) ? ex.completedMovements : [];
-                        const completedCount = movements.filter(m => m.completed).length;
-                        const totalCount = movements.length;
-
-                        return `
-                            <div class="py-3 border-b border-white/5 last:border-0">
-                                <div class="flex justify-between items-center">
-                                    <div class="flex flex-col">
-                                        <span class="text-white font-bold text-xs uppercase tracking-wider">${ex.name || 'Circuit'}</span>
-                                        <span class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">${completedCount}/${totalCount} Movements Complete</span>
-                                    </div>
-                                    <div class="text-right">
-                                        <span class="text-[9px] text-red-500 font-black uppercase">Circuit</span>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
+                    if (!athleteId) {
+                        console.warn("Completed workout log missing athlete ID:", logDoc.id, log);
+                        continue;
                     }
 
-                    const sets = Array.isArray(ex.sets) ? ex.sets : [];
-                    const completedSets = sets.filter(s => s.completed).length;
-                    const totalSets = sets.length;
-                    const weights = sets.map(s => parseFloat(s.weight) || 0);
-                    const topWeight = weights.length > 0 ? Math.max(...weights) : 0;
+                    const [athleteSnap, maxSnap] = await Promise.all([
+                        getDoc(doc(db, "recruiting_profiles", athleteId)),
+                        getDoc(doc(db, "recruiting_profiles", athleteId, "maxes", "latest"))
+                    ]);
 
-                    const variations = buildExerciseKeyVariations(ex.name);
-                    let previousMax = 0;
+                    const aData = athleteSnap.exists() ? athleteSnap.data() : {};
 
-                    for (const key of variations) {
-                        const found = getLiftValue(currentMaxes, key);
-                        if (found > 0) {
-                            previousMax = found;
-                            break;
+                    const athleteName =
+                        log.athleteName ||
+                        getDisplayName(aData) ||
+                        "Unknown Athlete";
+
+                    const currentMaxes = maxSnap.exists() ? maxSnap.data() : {};
+
+                    let timeString = "Recently";
+                    if (log.timestamp) {
+                        const dateObj = log.timestamp.toDate ? log.timestamp.toDate() : new Date(log.timestamp);
+                        if (!Number.isNaN(dateObj.getTime())) {
+                            timeString = dateObj.toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' });
                         }
                     }
 
-                    const exerciseKey = getExerciseReviewKey(ex.name);
-                    const needsReview = topWeight > previousMax && topWeight > 0;
-                    const priorDecision = needsReview
-                        ? await getReviewDecision(athleteId, currentWorkoutId || null, exerciseKey, topWeight)
-                        : null;
+                    const sourceData = Array.isArray(log.exercises || log.performance) ? (log.exercises || log.performance) : [];
 
-                    const encodedAthleteId = escapeAttr(athleteId);
-                    const encodedExerciseKey = escapeAttr(exerciseKey);
-                    const encodedWorkoutId = escapeAttr(currentWorkoutId || "");
-                    const encodedWorkoutName = escapeAttr(currentWorkoutName || "");
-                    const encodedExerciseName = escapeAttr(ex.name || "Exercise");
+                    const exerciseRows = await Promise.all(sourceData.map(async (ex) => {
+                        if (ex.isCircuit) {
+                            const movements = Array.isArray(ex.completedMovements) ? ex.completedMovements : [];
+                            const completedCount = movements.filter(m => m.completed).length;
+                            const totalCount = movements.length;
 
-                    let reviewActions = `
-                        <span class="bg-white/5 border border-white/10 text-[8px] font-black px-3 py-1 rounded-md text-gray-400 uppercase tracking-tighter">
-                            No Review Needed
-                        </span>
-                    `;
+                            return `
+                                <div class="py-3 border-b border-white/5 last:border-0">
+                                    <div class="flex justify-between items-center">
+                                        <div class="flex flex-col">
+                                            <span class="text-white font-bold text-xs uppercase tracking-wider">${ex.name || 'Circuit'}</span>
+                                            <span class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">${completedCount}/${totalCount} Movements Complete</span>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="text-[9px] text-red-500 font-black uppercase">Circuit</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
 
-                    if (needsReview && priorDecision === "approved") {
-                        reviewActions = `
-                            <span class="bg-green-600/20 border border-green-500/30 text-[8px] font-black px-3 py-1 rounded-md text-green-300 uppercase tracking-tighter">
-                                Verified
+                        const sets = Array.isArray(ex.sets) ? ex.sets : [];
+                        const completedSets = sets.filter(s => s.completed).length;
+                        const totalSets = sets.length;
+                        const weights = sets.map(s => parseFloat(s.weight) || 0);
+                        const topWeight = weights.length > 0 ? Math.max(...weights) : 0;
+
+                        const variations = buildExerciseKeyVariations(ex.name);
+                        let previousMax = 0;
+
+                        for (const key of variations) {
+                            const found = getLiftValue(currentMaxes, key);
+                            if (found > 0) {
+                                previousMax = found;
+                                break;
+                            }
+                        }
+
+                        const exerciseKey = getExerciseReviewKey(ex.name);
+                        const needsReview = topWeight > previousMax && topWeight > 0;
+                        const priorDecision = needsReview
+                            ? await getReviewDecision(athleteId, currentWorkoutId || null, exerciseKey, topWeight)
+                            : null;
+
+                        const encodedAthleteId = escapeAttr(athleteId);
+                        const encodedExerciseKey = escapeAttr(exerciseKey);
+                        const encodedWorkoutId = escapeAttr(currentWorkoutId || "");
+                        const encodedWorkoutName = escapeAttr(currentWorkoutName || "");
+                        const encodedExerciseName = escapeAttr(ex.name || "Exercise");
+
+                        let reviewActions = `
+                            <span class="bg-white/5 border border-white/10 text-[8px] font-black px-3 py-1 rounded-md text-gray-400 uppercase tracking-tighter">
+                                No Review Needed
                             </span>
                         `;
-                    } else if (needsReview && priorDecision === "rejected") {
-                        reviewActions = `
-                            <span class="bg-red-600/20 border border-red-500/30 text-[8px] font-black px-3 py-1 rounded-md text-red-300 uppercase tracking-tighter">
-                                Rejected
-                            </span>
-                        `;
-                    } else if (needsReview) {
-                        reviewActions = `
-                            <span class="bg-red-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full animate-pulse uppercase">Needs Review</span>
-                            <button
-                                onclick="window.approvePR('${encodedAthleteId}', '${encodedExerciseKey}', '${encodedExerciseName}', ${topWeight}, '${encodedWorkoutId}', '${encodedWorkoutName}', this)"
-                                class="bg-white/5 hover:bg-green-700 border border-white/10 text-[8px] font-black px-3 py-1 rounded-md text-white transition-all uppercase tracking-tighter">
-                                Verify Lift
-                            </button>
-                            <button
-                                onclick="window.rejectPR('${encodedAthleteId}', '${encodedExerciseKey}', '${encodedExerciseName}', ${topWeight}, '${encodedWorkoutId}', '${encodedWorkoutName}', this)"
-                                class="bg-white/5 hover:bg-red-700 border border-white/10 text-[8px] font-black px-3 py-1 rounded-md text-white transition-all uppercase tracking-tighter">
-                                Reject
-                            </button>
-                        `;
-                    }
 
-                    return `
-                        <div class="flex justify-between items-center py-3 border-b border-white/5 last:border-0 gap-4">
-                            <div class="flex items-center gap-3 flex-wrap">
-                                <div class="flex flex-col">
-                                    <span class="text-white font-bold text-xs uppercase tracking-wider">${ex.name || 'Exercise'}</span>
-                                    <span class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">${completedSets}/${totalSets} Sets</span>
+                        if (needsReview && priorDecision === "approved") {
+                            reviewActions = `
+                                <span class="bg-green-600/20 border border-green-500/30 text-[8px] font-black px-3 py-1 rounded-md text-green-300 uppercase tracking-tighter">
+                                    Verified
+                                </span>
+                            `;
+                        } else if (needsReview && priorDecision === "rejected") {
+                            reviewActions = `
+                                <span class="bg-red-600/20 border border-red-500/30 text-[8px] font-black px-3 py-1 rounded-md text-red-300 uppercase tracking-tighter">
+                                    Rejected
+                                </span>
+                            `;
+                        } else if (needsReview) {
+                            reviewActions = `
+                                <span class="bg-red-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full animate-pulse uppercase">Needs Review</span>
+                                <button
+                                    onclick="window.approvePR('${encodedAthleteId}', '${encodedExerciseKey}', '${encodedExerciseName}', ${topWeight}, '${encodedWorkoutId}', '${encodedWorkoutName}', this)"
+                                    class="bg-white/5 hover:bg-green-700 border border-white/10 text-[8px] font-black px-3 py-1 rounded-md text-white transition-all uppercase tracking-tighter">
+                                    Verify Lift
+                                </button>
+                                <button
+                                    onclick="window.rejectPR('${encodedAthleteId}', '${encodedExerciseKey}', '${encodedExerciseName}', ${topWeight}, '${encodedWorkoutId}', '${encodedWorkoutName}', this)"
+                                    class="bg-white/5 hover:bg-red-700 border border-white/10 text-[8px] font-black px-3 py-1 rounded-md text-white transition-all uppercase tracking-tighter">
+                                    Reject
+                                </button>
+                            `;
+                        }
+
+                        return `
+                            <div class="flex justify-between items-center py-3 border-b border-white/5 last:border-0 gap-4">
+                                <div class="flex items-center gap-3 flex-wrap">
+                                    <div class="flex flex-col">
+                                        <span class="text-white font-bold text-xs uppercase tracking-wider">${ex.name || 'Exercise'}</span>
+                                        <span class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">${completedSets}/${totalSets} Sets</span>
+                                    </div>
+
+                                    <div class="flex items-center gap-2 ml-4 flex-wrap">
+                                        ${reviewActions}
+                                    </div>
                                 </div>
-
-                                <div class="flex items-center gap-2 ml-4 flex-wrap">
-                                    ${reviewActions}
+                                <div class="text-right shrink-0">
+                                    <span class="text-white font-black italic text-lg">${topWeight > 0 ? topWeight : 'BW'}</span>
+                                    <span class="text-[9px] text-gray-600 font-bold uppercase ml-1">${topWeight > 0 ? 'LBS' : ''}</span>
+                                    <p class="text-[8px] text-gray-500 font-bold uppercase mt-[-4px]">Current: ${previousMax}</p>
                                 </div>
                             </div>
-                            <div class="text-right shrink-0">
-                                <span class="text-white font-black italic text-lg">${topWeight > 0 ? topWeight : 'BW'}</span>
-                                <span class="text-[9px] text-gray-600 font-bold uppercase ml-1">${topWeight > 0 ? 'LBS' : ''}</span>
-                                <p class="text-[8px] text-gray-500 font-bold uppercase mt-[-4px]">Current: ${previousMax}</p>
+                        `;
+                    }));
+
+                    const card = document.createElement('div');
+                    card.className = "bg-[#111113] border border-[#2a2a2c] rounded-2xl overflow-hidden mb-6 shadow-2xl";
+                    card.innerHTML = `
+                        <div class="bg-[#1a1a1c] p-4 flex justify-between items-center border-b border-[#2a2a2c] gap-4 flex-wrap">
+                            <h4 class="font-black text-white uppercase italic tracking-tighter text-lg">${athleteName}</h4>
+                            <div class="text-right">
+                                <span class="text-[9px] font-black text-gray-500 uppercase block leading-none mb-1">Logged At</span>
+                                <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">${timeString}</span>
                             </div>
                         </div>
+                        <div class="p-4 bg-black/20">${exerciseRows.join('')}</div>
                     `;
-                }));
+                    performanceFeed.appendChild(card);
+                } catch (cardErr) {
+                    console.error("Failed loading athlete review card:", logDoc.id, cardErr);
+                }
+            }
 
-                const card = document.createElement('div');
-                card.className = "bg-[#111113] border border-[#2a2a2c] rounded-2xl overflow-hidden mb-6 shadow-2xl";
-                card.innerHTML = `
-                    <div class="bg-[#1a1a1c] p-4 flex justify-between items-center border-b border-[#2a2a2c] gap-4 flex-wrap">
-                        <h4 class="font-black text-white uppercase italic tracking-tighter text-lg">${athleteName}</h4>
-                        <div class="text-right">
-                            <span class="text-[9px] font-black text-gray-500 uppercase block leading-none mb-1">Logged At</span>
-                            <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">${timeString}</span>
-                        </div>
-                    </div>
-                    <div class="p-4 bg-black/20">${exerciseRows.join('')}</div>
-                `;
-                performanceFeed.appendChild(card);
+            if (!performanceFeed.children.length) {
+                renderFeedMessage("No reviewable athlete logs could be loaded for this workout.", "warn");
+                setReviewStatus("Partial Load", "warn");
+                return;
             }
 
             setReviewStatus("Session Loaded", "success");
