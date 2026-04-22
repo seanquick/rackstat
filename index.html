@@ -15,40 +15,34 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
-        /* Default dynamic theme color used before school theme is applied */
-        :root { --school-primary: #dc2626; } /* Default Red */
+        :root { --school-primary: #dc2626; }
 
-        /* Primary action button style that responds to school theme color */
         .btn-primary-dynamic {
             background-color: var(--school-primary);
             border-bottom: 4px solid rgba(0,0,0,0.3);
         }
 
-        /* Subtle hover emphasis for dynamically themed buttons */
         .btn-primary-dynamic:hover { filter: brightness(1.1); }
 
-        /* Ensures header logos remain contained and aligned */
         .header-logo-container img { height: 40px; width: auto; object-fit: contain; }
     </style>
 </head>
 <body class="bg-black text-white font-sans antialiased">
 
-<!-- Top header with school branding and RACKSTAT logo -->
-<header class="bg-black border-b-2 border-red-700 p-4">
+<header class="bg-black border-b-2 border-red-700 p-4 sticky top-0 z-40">
     <div class="flex justify-between items-center max-w-6xl mx-auto">
-        <!-- Left-side lobby button -->
         <div class="w-1/4 flex justify-start">
             <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1 rounded text-gray-300 hover:text-white transition-colors">← Lobby</button>
         </div>
 
-        <!-- Center branding area for school logo, school tag, and platform logo -->
         <div class="flex items-center gap-6 justify-center flex-1">
             <div class="header-logo-container">
                 <img id="school-logo" src="images/rackstat-logo.png" alt="School Logo" onerror="this.src='images/rackstat-logo.png'">
             </div>
             <div class="h-10 w-[1px] bg-gray-700"></div>
             <div class="flex flex-col items-center min-w-[140px]">
-                <span id="school-tag" class="text-sm font-black italic uppercase tracking-widest text-white leading-tight text-center"></span>
+                <span id="school-tag" class="text-sm font-black italic uppercase tracking-widest text-white leading-tight text-center">ATHLETE LOBBY</span>
+                <span id="lobby-status" class="text-[8px] font-bold text-gray-500 uppercase tracking-widest mt-1">Awaiting Sign In...</span>
             </div>
             <div class="h-10 w-[1px] bg-gray-700"></div>
             <div class="header-logo-container">
@@ -56,12 +50,14 @@
             </div>
         </div>
 
-        <!-- Right spacer used to keep header centered -->
-        <div class="w-1/4"></div> 
+        <div class="w-1/4"></div>
     </div>
 </header>
 
-<!-- Athlete global announcement banner -->
+<div id="page-message" class="hidden max-w-4xl mx-auto mt-6 px-6">
+    <div id="page-message-box" class="rounded-xl border p-4 text-xs font-bold uppercase tracking-wider"></div>
+</div>
+
 <div id="global-alert-banner" class="hidden max-w-4xl mx-auto mt-6 px-6">
     <div class="bg-blue-600/10 border border-blue-500/30 p-4 rounded-xl flex items-start justify-between gap-4">
         <div class="flex items-start gap-3 min-w-0">
@@ -80,31 +76,25 @@
     </div>
 </div>
 
-<!-- Main page container for login state or authenticated athlete menu -->
 <div class="container mx-auto max-w-md px-6 pb-20">
-    <!-- Login form shown when no user is authenticated -->
     <div id="auth-section" class="hidden pt-12">
         <h2 class="text-center font-black uppercase tracking-widest text-xs mb-8 text-gray-500">Athlete Login</h2>
         <div class="space-y-4">
-            <!-- Email input -->
             <div class="form-group bg-[#111] p-4 rounded-xl border border-gray-800 focus-within:border-[var(--school-primary)]">
                 <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Email Address</label>
                 <input type="email" id="email" placeholder="email" class="w-full bg-transparent text-white outline-none">
             </div>
 
-            <!-- Password input -->
             <div class="form-group bg-[#111] p-4 rounded-xl border border-gray-800 focus-within:border-[var(--school-primary)]">
                 <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Password</label>
                 <input type="password" id="password" placeholder="••••••••" class="w-full bg-transparent text-white outline-none">
             </div>
 
-            <!-- Login action button -->
             <button type="button" id="login-btn" class="w-full bg-[var(--school-primary)] hover:brightness-110 text-white font-black py-4 rounded-xl uppercase tracking-widest transition-all shadow-lg">
                 Login to Rackstat
             </button>
         </div>
 
-        <!-- Signup link for new athletes -->
         <div class="mt-10 text-center">
             <p class="text-gray-600 text-[10px] font-black uppercase tracking-widest">
                 New Athlete? <a href="signup.html" class="text-white hover:underline">Create Account</a>
@@ -112,11 +102,9 @@
         </div>
     </div>
 
-    <!-- Main athlete navigation shown after successful authentication -->
     <div id="main-menu" class="hidden space-y-4 pt-12">
         <h2 id="welcome-msg" class="text-2xl font-black italic uppercase text-center mb-8 text-white tracking-tight"></h2>
 
-        <!-- Primary athlete destination buttons -->
         <div class="grid grid-cols-1 gap-4">
             <button onclick="location.href='board.html'" class="btn-primary-dynamic py-6 rounded-2xl">
                 <span class="text-2xl font-black italic uppercase">THE BOARD</span>
@@ -139,13 +127,11 @@
             </button>
         </div>
 
-        <!-- Logout action for switching users or ending session -->
         <button id="logout-btn" class="w-full mt-12 text-[10px] font-black uppercase text-gray-600 hover:text-white tracking-[0.3em]">
             Sign Out / Switch User
         </button>
     </div>
 
-    <!-- Footer links for legal/policy modals -->
     <div class="mt-12 text-center space-x-4">
         <button id="open-privacy" class="text-[9px] text-gray-600 uppercase tracking-[0.2em] hover:text-white transition-colors">Privacy Policy & SB29</button>
         <span class="text-gray-800">|</span>
@@ -153,16 +139,13 @@
     </div>
 </div>
 
-<!-- Privacy policy modal -->
 <div id="privacy-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-black/95">
     <div class="bg-zinc-900 w-full max-w-2xl max-h-[80vh] rounded-2xl border border-zinc-800 flex flex-col">
-        <!-- Privacy modal header -->
         <div class="p-6 border-b border-zinc-800 flex justify-between items-center">
             <h3 class="text-xl font-black italic uppercase tracking-tight">Privacy Policy</h3>
             <button class="close-p text-gray-500 hover:text-white text-2xl">&times;</button>
         </div>
 
-        <!-- Privacy modal content -->
         <div class="p-6 overflow-y-auto text-sm leading-relaxed text-gray-300 space-y-6">
             <p class="font-bold text-white">Effective Date: April 2026</p>
             <p>This application is designed to support student-athletes in accordance with Ohio Senate Bill 29. We collect name, school affiliation, athletic metrics, and nutritional data strictly for performance development.</p>
@@ -172,30 +155,25 @@
             </div>
         </div>
 
-        <!-- Privacy modal footer -->
         <div class="p-4 border-t border-zinc-800 text-center">
             <button class="close-p px-8 py-2 bg-white text-black font-black uppercase text-xs rounded-full">Close</button>
         </div>
     </div>
 </div>
 
-<!-- Terms and conditions modal -->
 <div id="terms-modal" class="fixed inset-0 z-[101] hidden flex items-center justify-center p-4 bg-black/95">
     <div class="bg-zinc-900 w-full max-w-2xl max-h-[80vh] rounded-2xl border border-zinc-800 flex flex-col">
-        <!-- Terms modal header -->
         <div class="p-6 border-b border-zinc-800 flex justify-between items-center">
             <h3 class="text-xl font-black italic uppercase tracking-tight text-white">Terms & Conditions</h3>
             <button class="close-t text-gray-500 hover:text-white text-2xl">&times;</button>
         </div>
 
-        <!-- Terms modal content -->
         <div class="p-6 overflow-y-auto text-sm leading-relaxed text-gray-300 space-y-6">
             <p class="font-bold text-white">Effective Date: April 9, 2026</p>
             <p><strong>Assumption of Risk:</strong> Participation in athletics involves inherent risks. By using this App, you assume full responsibility for any injuries that may occur.</p>
             <p><strong>Acceptable Use:</strong> Users agree not to enter false data or use the App to harass others. Violation may result in account termination.</p>
         </div>
 
-        <!-- Terms modal footer -->
         <div class="p-4 border-t border-zinc-800 text-center">
             <button class="close-t px-8 py-2 bg-white text-black font-black uppercase text-xs rounded-full">Close</button>
         </div>
@@ -203,7 +181,6 @@
 </div>
 
 <script type="module">
-    // Firebase app services and project-specific theme logic
     import { db, auth } from './js/firebase-config.js';
     import {
         doc,
@@ -218,7 +195,6 @@
     import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { applyTheme } from './js/theme.js';
 
-    // Core DOM references used to switch between login and authenticated views
     const authSection = document.getElementById('auth-section');
     const mainMenu = document.getElementById('main-menu');
     const welcomeMsg = document.getElementById('welcome-msg');
@@ -226,26 +202,59 @@
     const globalAlertBanner = document.getElementById('global-alert-banner');
     const alertText = document.getElementById('alert-text');
     const dismissAlertBtn = document.getElementById('dismiss-alert-btn');
+    const schoolTag = document.getElementById('school-tag');
+    const lobbyStatus = document.getElementById('lobby-status');
+    const schoolLogo = document.getElementById('school-logo');
 
-    // Modal references for privacy policy and terms dialogs
     const pModal = document.getElementById('privacy-modal');
     const tModal = document.getElementById('terms-modal');
+    const pageMessage = document.getElementById('page-message');
+    const pageMessageBox = document.getElementById('page-message-box');
 
     let announcementUnsubscribe = null;
     let currentAnnouncementId = null;
-    let currentAnnouncementMessage = "";
 
-    // Opens privacy modal
     document.getElementById('open-privacy').onclick = () => pModal.classList.remove('hidden');
-
-    // Opens terms modal
     document.getElementById('open-terms').onclick = () => tModal.classList.remove('hidden');
-
-    // Closes privacy modal from all matching close buttons
     document.querySelectorAll('.close-p').forEach(el => el.onclick = () => pModal.classList.add('hidden'));
-
-    // Closes terms modal from all matching close buttons
     document.querySelectorAll('.close-t').forEach(el => el.onclick = () => tModal.classList.add('hidden'));
+
+    function setLobbyStatus(text, tone = 'default') {
+        if (!lobbyStatus) return;
+        lobbyStatus.innerText = text;
+        lobbyStatus.className = 'text-[8px] font-bold uppercase tracking-widest mt-1';
+
+        if (tone === 'error') lobbyStatus.classList.add('text-red-400');
+        else if (tone === 'success') lobbyStatus.classList.add('text-green-400');
+        else if (tone === 'warn') lobbyStatus.classList.add('text-yellow-300');
+        else lobbyStatus.classList.add('text-gray-500');
+    }
+
+    function showPageMessage(message, tone = 'warn') {
+        if (!pageMessage || !pageMessageBox) return;
+        pageMessage.classList.remove('hidden');
+        pageMessageBox.innerText = message;
+        pageMessageBox.className = 'rounded-xl border p-4 text-xs font-bold uppercase tracking-wider';
+
+        if (tone === 'error') {
+            pageMessageBox.classList.add('bg-red-500/10', 'border-red-500/20', 'text-red-300');
+        } else if (tone === 'success') {
+            pageMessageBox.classList.add('bg-green-500/10', 'border-green-500/20', 'text-green-300');
+        } else {
+            pageMessageBox.classList.add('bg-yellow-500/10', 'border-yellow-500/20', 'text-yellow-300');
+        }
+    }
+
+    function hidePageMessage() {
+        if (!pageMessage || !pageMessageBox) return;
+        pageMessage.classList.add('hidden');
+        pageMessageBox.innerText = '';
+    }
+
+    function resetLobbyBranding() {
+        if (schoolTag) schoolTag.innerText = 'ATHLETE LOBBY';
+        if (schoolLogo) schoolLogo.src = 'images/rackstat-logo.png';
+    }
 
     function getAnnouncementDismissKey(uid, announcementId) {
         return `rackstat_dismissed_announcement_${uid}_${announcementId}`;
@@ -263,7 +272,6 @@
 
     function hideAnnouncementBanner() {
         currentAnnouncementId = null;
-        currentAnnouncementMessage = "";
         if (globalAlertBanner) globalAlertBanner.classList.add('hidden');
         if (alertText) alertText.innerText = "";
     }
@@ -316,9 +324,7 @@
             }
 
             currentAnnouncementId = activeAnnouncement.id;
-            currentAnnouncementMessage = activeAnnouncement.data().message || "";
-
-            alertText.innerText = currentAnnouncementMessage;
+            alertText.innerText = activeAnnouncement.data().message || "";
             globalAlertBanner.classList.remove('hidden');
         }, (err) => {
             console.error("Announcement subscription error:", err);
@@ -336,46 +342,51 @@
         });
     }
 
-    // Handles email/password login through Firebase Auth
     const handleLogin = async () => {
         const email = document.getElementById('email').value.trim();
         const pass = document.getElementById('password').value;
+        const loginBtn = document.getElementById('login-btn');
 
-        // Require both login fields before attempting authentication
-        if (!email || !pass) return alert("Please fill in all fields.");
+        if (!email || !pass) {
+            showPageMessage("Please fill in all login fields.", "warn");
+            return;
+        }
+
+        hidePageMessage();
+        setLobbyStatus("Signing In...");
+        loginBtn.disabled = true;
+        loginBtn.innerText = "Signing In...";
 
         try {
-            // Sign in user with Firebase Auth
             const userCredential = await signInWithEmailAndPassword(auth, email, pass);
             const user = userCredential.user;
-
-            // Load the app-specific user profile from Firestore
             const userDoc = await getDoc(doc(db, "users", user.uid));
 
             if (userDoc.exists()) {
                 const userData = userDoc.data();
 
-                // Route users to the correct lobby based on their stored role
                 if (userData.role === 'admin') {
                     window.location.href = 'admin-lobby.html';
                 } else if (userData.role === 'coach') {
                     window.location.href = 'coach-lobby.html';
                 } else {
-                    // Athlete users remain on this page and see the athlete menu
                     authSection.classList.add('hidden');
                     mainMenu.classList.remove('hidden');
+                    setLobbyStatus("Signed In", "success");
                 }
             } else {
-                // Auth account exists but Firestore profile is missing
-                alert("Profile document not found. Please contact support.");
+                showPageMessage("Profile document not found. Please contact support.", "error");
+                setLobbyStatus("Profile Missing", "error");
             }
         } catch (e) {
-            // Displays login failure message
-            alert("Login failed: " + e.message);
+            showPageMessage(`Login failed: ${e.message}`, "error");
+            setLobbyStatus("Login Failed", "error");
+        } finally {
+            loginBtn.disabled = false;
+            loginBtn.innerText = "Login to Rackstat";
         }
     };
 
-    // Signs the current user out and reloads the page to reset UI state
     const handleLogout = async () => {
         try {
             if (announcementUnsubscribe) {
@@ -387,14 +398,13 @@
             window.location.reload();
         } catch (error) {
             console.error("Logout Error:", error);
+            showPageMessage("Unable to sign out right now. Please try again.", "error");
         }
     };
 
-    // Attach click events for login and logout buttons
     document.getElementById('login-btn').addEventListener('click', handleLogin);
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
 
-    // Builds a friendly welcome name from available profile fields
     const getDisplayName = (userData = {}) => {
         if (userData.firstName && String(userData.firstName).trim()) {
             return String(userData.firstName).trim();
@@ -407,67 +417,88 @@
         return 'Athlete';
     };
 
-    // Watches authentication state and updates the page automatically
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             try {
-                // Load the authenticated user's Firestore profile
+                setLobbyStatus("Loading Profile...");
+                hidePageMessage();
+
                 const userSnap = await getDoc(doc(db, "users", user.uid));
-                if (userSnap.exists()) {
-                    const userData = userSnap.data();
-                    const role = userData.role?.toLowerCase();
+                if (!userSnap.exists()) {
+                    showPageMessage("Your account profile could not be found. Please contact support.", "error");
+                    authSection.classList.remove('hidden');
+                    mainMenu.classList.add('hidden');
+                    setLobbyStatus("Profile Missing", "error");
+                    resetLobbyBranding();
+                    return;
+                }
 
-                    // Determine whether this is the login page before redirecting
-                    // This avoids sending users in a redirect loop
-                    const isLoginPage = window.location.pathname.endsWith('index.html') || window.location.pathname === '/';
+                const userData = userSnap.data();
+                const role = userData.role?.toLowerCase();
+                const isLoginPage = window.location.pathname.endsWith('index.html') || window.location.pathname === '/';
 
-                    // Redirect admins away from athlete lobby
-                    if (role === 'admin' && isLoginPage) {
-                        window.location.href = 'admin-lobby.html';
-                        return;
-                    }
+                if (role === 'admin' && isLoginPage) {
+                    window.location.href = 'admin-lobby.html';
+                    return;
+                }
 
-                    // Redirect coaches away from athlete lobby
-                    if (role === 'coach' && isLoginPage) {
-                        window.location.href = 'coach-lobby.html';
-                        return;
-                    }
+                if (role === 'coach' && isLoginPage) {
+                    window.location.href = 'coach-lobby.html';
+                    return;
+                }
 
-                    // Configure athlete/player experience on this page
-                    if (role === 'player' || role === 'athlete') {
-                        const schoolId = userData.schoolId || userData.school_id;
+                if (role === 'player' || role === 'athlete') {
+                    const schoolId = userData.schoolId || userData.school_id;
 
-                        // Apply school-specific theme colors, branding, and related UI updates
-                        const schoolData = await applyTheme(db, schoolId);
+                    if (!schoolId) {
+                        showPageMessage("Your athlete profile is missing a school link. Please contact your coach.", "error");
+                        setLobbyStatus("Missing School", "error");
+                        resetLobbyBranding();
+                    } else {
+                        try {
+                            const schoolData = await applyTheme(db, schoolId);
 
-                        // Optionally hide recruiting button if school has it disabled
-                        if (schoolData && recruitingBtn) {
-                            if (schoolData.hasRecruitingCard === false) {
-                                recruitingBtn.classList.add('hidden');
-                            } else {
-                                recruitingBtn.classList.remove('hidden');
+                            if (schoolData && recruitingBtn) {
+                                if (schoolData.hasRecruitingCard === false) {
+                                    recruitingBtn.classList.add('hidden');
+                                } else {
+                                    recruitingBtn.classList.remove('hidden');
+                                }
                             }
+
+                            if (schoolTag) {
+                                schoolTag.innerText = (schoolData?.name || "Athlete Lobby").toUpperCase();
+                            }
+
+                            setLobbyStatus("Ready", "success");
+                        } catch (themeErr) {
+                            console.error("Theme/apply error:", themeErr);
+                            resetLobbyBranding();
+                            setLobbyStatus("Theme Limited", "warn");
+                            showPageMessage("Your school branding could not be fully loaded, but your lobby is still available.", "warn");
                         }
-
-                        // Populate welcome message using available user profile data
-                        if (welcomeMsg) {
-                            const displayName = getDisplayName(userData);
-                            welcomeMsg.innerText = `Welcome, ${displayName}`;
-                        }
-
-                        subscribeToSystemAnnouncement(user);
-
-                        // Show athlete menu and hide login form
-                        authSection.classList.add('hidden');
-                        mainMenu.classList.remove('hidden');
                     }
+
+                    if (welcomeMsg) {
+                        const displayName = getDisplayName(userData);
+                        welcomeMsg.innerText = `Welcome, ${displayName}`;
+                    }
+
+                    subscribeToSystemAnnouncement(user);
+                    authSection.classList.add('hidden');
+                    mainMenu.classList.remove('hidden');
+                } else {
+                    showPageMessage("This account does not have athlete lobby access.", "error");
+                    setLobbyStatus("Access Restricted", "error");
+                    authSection.classList.remove('hidden');
+                    mainMenu.classList.add('hidden');
                 }
             } catch (err) {
-                // Logs auth observer/profile loading issues
                 console.error("Observer Error:", err);
+                showPageMessage("Your lobby could not be loaded right now. Please refresh and try again.", "error");
+                setLobbyStatus("Load Failed", "error");
             }
         } else {
-            // No authenticated user: show login form and hide athlete menu
             authSection.classList.remove('hidden');
             mainMenu.classList.add('hidden');
 
@@ -477,12 +508,13 @@
             }
 
             hideAnnouncementBanner();
+            hidePageMessage();
+            resetLobbyBranding();
+            setLobbyStatus("Awaiting Sign In...");
 
-            // Clear any stale welcome text from a previous session
             if (welcomeMsg) welcomeMsg.innerText = '';
         }
     });
-
 </script>
 </body>
 </html>

@@ -19,14 +19,14 @@
 </head>
 <body class="pb-24">
 
-<header class="bg-black border-b-2 border-red-700 p-4">
-    <div class="flex justify-between items-center max-w-6xl mx-auto">
-        
+<header class="bg-black border-b-2 border-red-700 p-4 sticky top-0 z-40">
+    <div class="flex justify-between items-center max-w-6xl mx-auto gap-4">
+
         <div class="w-1/4 flex justify-start">
             <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1 rounded text-gray-300 hover:text-white transition-colors">← Lobby</button>
         </div>
 
-        <div class="flex items-center gap-6 justify-center flex-1">
+        <div class="flex items-center gap-6 justify-center flex-1 min-w-0">
             <div class="header-logo-container">
                 <img id="school-logo" src="images/rackstat-logo.png" alt="School Logo" onerror="this.src='images/rackstat-logo.png'">
             </div>
@@ -34,9 +34,9 @@
             <div class="h-10 w-[1px] bg-gray-700"></div>
 
             <div class="flex flex-col items-center min-w-[140px]">
-                <span id="school-tag" class="text-sm font-black italic uppercase tracking-widest text-white leading-tight text-center">LOADING...</span>
-                <span id="athlete-count" class="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">Updating...</span>
-                <span id="formula-display" class="mt-1 text-[7px] font-black text-red-500 bg-red-500/10 border border-red-900/30 px-2 py-0.5 rounded italic tracking-widest uppercase text-center">Syncing...</span>
+                <span id="school-tag" class="text-sm font-black italic uppercase tracking-widest text-white leading-tight text-center">THE BOARD</span>
+                <span id="athlete-count" class="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">Awaiting Sync...</span>
+                <span id="formula-display" class="mt-1 text-[7px] font-black text-red-500 bg-red-500/10 border border-red-900/30 px-2 py-0.5 rounded italic tracking-widest uppercase text-center">Not Loaded</span>
             </div>
 
             <div class="h-10 w-[1px] bg-gray-700"></div>
@@ -46,11 +46,17 @@
             </div>
         </div>
 
-        <div class="w-1/4"></div> 
+        <div class="w-1/4 flex justify-end">
+            <div id="board-status" class="text-[9px] font-bold uppercase tracking-widest text-gray-500 text-right">
+                Initializing...
+            </div>
+        </div>
     </div>
 </header>
 
 <main class="max-w-4xl mx-auto px-4 py-6">
+    <div id="board-page-message" class="hidden mb-6 rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-wider"></div>
+
     <h2 class="text-red-600 font-black italic text-xs uppercase mb-4 tracking-tighter">Lifting Clubs</h2>
     <div id="player-club-grid">
         <p class="text-center text-xs animate-pulse text-red-600 font-black uppercase py-10">Syncing Lifts...</p>
@@ -59,7 +65,7 @@
     <div class="mt-10">
         <div class="flex justify-between items-end mb-4">
             <h2 class="text-red-600 font-black italic text-xs uppercase tracking-tighter">Weight Class Records</h2>
-            <button id="coach-edit-btn" class="text-[8px] bg-gray-900 border border-gray-700 px-2 py-1 rounded text-gray-500 font-bold uppercase hover:text-white transition-all">Coach Mode: OFF</button>
+            <button id="coach-edit-btn" class="hidden text-[8px] bg-gray-900 border border-gray-700 px-2 py-1 rounded text-gray-500 font-bold uppercase hover:text-white transition-all">Coach Mode: OFF</button>
         </div>
         <div class="overflow-x-auto no-scrollbar rounded-lg border border-gray-800 shadow-2xl">
             <table class="record-table" id="weight-class-table">
@@ -73,7 +79,11 @@
                         <th>40 YD DASH</th>
                     </tr>
                 </thead>
-                <tbody id="record-rows"></tbody>
+                <tbody id="record-rows">
+                    <tr>
+                        <td colspan="6" class="text-center text-xs text-gray-500 italic py-8">Waiting for board records...</td>
+                    </tr>
+                </tbody>
             </table>
         </div>
     </div>
@@ -81,9 +91,9 @@
 
 <nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-red-900/30 px-6 py-4 flex justify-between items-center z-50">
     <button onclick="location.href='board.html'" class="text-red-600 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Board</span></button>
-    <button onclick="location.href='rack.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">The Rack</span></button>
-    <button onclick="location.href='kitchen.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Kitchen</span></button>
-    <button onclick="location.href='profile.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
+    <button onclick="location.href='rack.html'" class="text-gray-500 hover:text-white flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">The Rack</span></button>
+    <button onclick="location.href='kitchen.html'" class="text-gray-500 hover:text-white flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Kitchen</span></button>
+    <button onclick="location.href='profile.html'" class="text-gray-500 hover:text-white flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
 </nav>
 
 <script type="module">
@@ -110,6 +120,15 @@
 
     const weightClasses = [125, 135, 145, 155, 165, 175, 185, 195, 210, 225, 250, "UNLIMITED"];
 
+    const pageMessage = document.getElementById('board-page-message');
+    const boardStatus = document.getElementById('board-status');
+    const schoolTag = document.getElementById('school-tag');
+    const athleteCountDisplay = document.getElementById('athlete-count');
+    const formulaDisplay = document.getElementById('formula-display');
+    const grid = document.getElementById('player-club-grid');
+    const recordBody = document.getElementById('record-rows');
+    const coachBtn = document.getElementById('coach-edit-btn');
+
     const getWeightClass = (bw) => {
         const numericBw = Number(bw) || 0;
         if (!numericBw || numericBw > 250) return "UNLIMITED";
@@ -130,6 +149,76 @@
 
     const getFormulaDisplayText = (formulaType = "power_index") =>
         String(formulaType || "power_index").replaceAll("_", " ").toUpperCase();
+
+    function setBoardStatus(text, tone = "default") {
+        if (!boardStatus) return;
+        boardStatus.innerText = text;
+        boardStatus.className = "text-[9px] font-bold uppercase tracking-widest text-right";
+
+        if (tone === "error") boardStatus.classList.add("text-red-400");
+        else if (tone === "success") boardStatus.classList.add("text-green-400");
+        else if (tone === "warn") boardStatus.classList.add("text-yellow-300");
+        else boardStatus.classList.add("text-gray-500");
+    }
+
+    function showPageMessage(message, tone = "warn") {
+        if (!pageMessage) return;
+        pageMessage.innerText = message;
+        pageMessage.classList.remove('hidden');
+        pageMessage.className = "mb-6 rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-wider";
+
+        if (tone === "error") {
+            pageMessage.classList.add("bg-red-500/10", "border", "border-red-500/20", "text-red-300");
+        } else if (tone === "success") {
+            pageMessage.classList.add("bg-green-500/10", "border", "border-green-500/20", "text-green-300");
+        } else {
+            pageMessage.classList.add("bg-yellow-500/10", "border", "border-yellow-500/20", "text-yellow-300");
+        }
+    }
+
+    function hidePageMessage() {
+        if (!pageMessage) return;
+        pageMessage.classList.add('hidden');
+        pageMessage.innerText = '';
+    }
+
+    function renderGridMessage(message, tone = "muted") {
+        if (!grid) return;
+        const toneClass = tone === "error"
+            ? "text-red-400"
+            : tone === "warn"
+                ? "text-yellow-300"
+                : "text-gray-500";
+
+        grid.innerHTML = `
+            <p class="text-center text-xs ${toneClass} font-black uppercase py-10">
+                ${message}
+            </p>
+        `;
+    }
+
+    function renderRecordTableMessage(message, tone = "muted") {
+        if (!recordBody) return;
+        const toneClass = tone === "error"
+            ? "text-red-400"
+            : tone === "warn"
+                ? "text-yellow-300"
+                : "text-gray-500";
+
+        recordBody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center text-xs ${toneClass} italic py-8">${message}</td>
+            </tr>
+        `;
+    }
+
+    function resetBoardShell() {
+        if (schoolTag) schoolTag.innerText = "THE BOARD";
+        if (athleteCountDisplay) athleteCountDisplay.innerText = "Awaiting Sync...";
+        if (formulaDisplay) formulaDisplay.innerText = "Not Loaded";
+        renderGridMessage("Syncing Lifts...", "warn");
+        renderRecordTableMessage("Waiting for board records...");
+    }
 
     function normalizeRecordEntry(entry, dashDefault = false) {
         if (!entry || typeof entry !== "object") {
@@ -170,7 +259,23 @@
         return normalizeRecordEntry(autoEntry, lift === 'dash');
     }
 
+    function getNumericBodyweight(maxes = {}, athleteData = {}) {
+        return Number(
+            maxes.bodyWeight ??
+            maxes.body_weight ??
+            maxes.weight ??
+            athleteData.bodyWeight ??
+            athleteData.body_weight ??
+            athleteData.weight ??
+            0
+        ) || 0;
+    }
+
     onAuthStateChanged(auth, async (user) => {
+        resetBoardShell();
+        hidePageMessage();
+        setBoardStatus("Checking Access...");
+
         if (!user) {
             window.location.href = 'index.html';
             return;
@@ -189,28 +294,49 @@
             currentSchoolId = getSchoolIdFromData(mergedUser);
             currentUserRole = (mergedUser.role || "").toLowerCase();
 
+            if (coachBtn) {
+                if (currentUserRole === 'coach') coachBtn.classList.remove('hidden');
+                else coachBtn.classList.add('hidden');
+            }
+
             if (!currentSchoolId) {
-                console.error("Board Init Error: Missing school ID.");
+                setBoardStatus("Missing School", "error");
+                showPageMessage("Unable to load The Board because your account is not linked to a school.", "error");
+                renderGridMessage("Board Unavailable", "error");
+                renderRecordTableMessage("No school is linked to this account.", "error");
                 return;
             }
 
-            await applyTheme(db, currentSchoolId);
+            try {
+                const schoolTheme = await applyTheme(db, currentSchoolId);
+                if (schoolTag && schoolTheme?.name) {
+                    schoolTag.innerText = `${schoolTheme.name} WEIGHTROOM`.toUpperCase();
+                }
+            } catch (themeErr) {
+                console.error("Theme load failed:", themeErr);
+            }
+
             await window.loadBoard(currentSchoolId);
         } catch (err) {
             console.error("Board Init Error:", err);
+            setBoardStatus("Load Failed", "error");
+            showPageMessage("The Board could not be loaded right now. Please refresh and try again.", "error");
+            renderGridMessage("Unable To Load Board", "error");
+            renderRecordTableMessage("Unable to load records right now.", "error");
         }
     });
 
     window.loadBoard = async function(schoolId) {
-        if (!schoolId) return;
+        if (!schoolId) {
+            setBoardStatus("Missing School", "error");
+            return;
+        }
 
-        const grid = document.getElementById('player-club-grid');
-        const recordBody = document.getElementById('record-rows');
-        const schoolTag = document.getElementById('school-tag');
-        const formulaDisplay = document.getElementById('formula-display');
-        const athleteCountDisplay = document.getElementById('athlete-count');
+        hidePageMessage();
+        setBoardStatus("Loading Board...");
 
-        let schoolSnap, manualSnap;
+        let schoolSnap;
+        let manualSnap;
 
         try {
             [schoolSnap, manualSnap] = await Promise.all([
@@ -218,11 +344,20 @@
                 getDoc(doc(db, "schools", schoolId, "settings", "manual_records"))
             ]);
         } catch (err) {
-            console.warn("Manual records missing or restricted.");
+            console.warn("Board settings load error:", err);
             manualSnap = { exists: () => false };
         }
 
-        if (!schoolSnap || !schoolSnap.exists()) return;
+        if (!schoolSnap || !schoolSnap.exists()) {
+            setBoardStatus("School Missing", "error");
+            showPageMessage("This school's board settings could not be found.", "error");
+            renderGridMessage("No School Board Found", "error");
+            renderRecordTableMessage("School settings could not be loaded.", "error");
+            if (schoolTag) schoolTag.innerText = "BOARD UNAVAILABLE";
+            if (formulaDisplay) formulaDisplay.innerText = "Unavailable";
+            if (athleteCountDisplay) athleteCountDisplay.innerText = "0 Athletes";
+            return;
+        }
 
         const school = schoolSnap.data();
         const manualRecords = manualSnap.exists() ? manualSnap.data() : {};
@@ -245,7 +380,7 @@
         }
 
         if (athleteCountDisplay) {
-            athleteCountDisplay.innerText = `${pSnap.size} Athletes Logged`;
+            athleteCountDisplay.innerText = `${pSnap.size} Athlete${pSnap.size === 1 ? '' : 's'} Logged`;
         }
 
         const classRecords = {};
@@ -260,76 +395,78 @@
         });
 
         const scores = [];
+        let athletesWithMaxes = 0;
 
         for (const athleteDoc of pSnap.docs) {
             const athleteProfile = athleteDoc.data();
 
-            const [userSnap, latestMaxSnap] = await Promise.all([
-                getDoc(doc(db, "users", athleteDoc.id)),
-                getDoc(doc(db, "recruiting_profiles", athleteDoc.id, "maxes", "latest"))
-            ]);
+            try {
+                const [userSnap, latestMaxSnap] = await Promise.all([
+                    getDoc(doc(db, "users", athleteDoc.id)),
+                    getDoc(doc(db, "recruiting_profiles", athleteDoc.id, "maxes", "latest"))
+                ]);
 
-            if (!latestMaxSnap.exists()) continue;
+                if (!latestMaxSnap.exists()) continue;
 
-            const userData = userSnap.exists() ? userSnap.data() : {};
-            const athleteData = { ...userData, ...athleteProfile };
-            const maxes = latestMaxSnap.data();
+                athletesWithMaxes += 1;
 
-            const athleteBW = Number(
-                maxes.bodyWeight ||
-                maxes.body_weight ||
-                maxes.weight ||
-                athleteData.bodyWeight ||
-                athleteData.weight ||
-                0
-            );
+                const userData = userSnap.exists() ? userSnap.data() : {};
+                const athleteData = { ...userData, ...athleteProfile };
+                const maxes = latestMaxSnap.data();
 
-            const currentWC = getWeightClass(athleteBW);
-            const fullName = getDisplayName(athleteData);
+                const athleteBW = getNumericBodyweight(maxes, athleteData);
+                const currentWC = getWeightClass(athleteBW);
+                const fullName = getDisplayName(athleteData);
 
-            const checkMax = (liftKey, possibleKeys) => {
-                let val = 0;
-                for (const key of possibleKeys) {
-                    const candidate = Number(maxes[key]) || Number(athleteData[key]) || 0;
-                    if (candidate > val) val = candidate;
-                }
-                if (val > classRecords[currentWC][liftKey].val) {
-                    classRecords[currentWC][liftKey] = { val, name: fullName };
-                }
-            };
-
-            const checkMin = (liftKey, possibleKeys) => {
-                let best = 99.9;
-                for (const key of possibleKeys) {
-                    const candidate = parseFloat(maxes[key] || athleteData[key]);
-                    if (candidate > 0 && candidate < best) {
-                        best = candidate;
+                const checkMax = (liftKey, possibleKeys) => {
+                    let val = 0;
+                    for (const key of possibleKeys) {
+                        const candidate = Number(maxes[key]) || Number(athleteData[key]) || 0;
+                        if (candidate > val) val = candidate;
                     }
-                }
-                if (best > 0 && best < classRecords[currentWC][liftKey].val) {
-                    classRecords[currentWC][liftKey] = { val: best, name: fullName };
-                }
-            };
+                    if (val > classRecords[currentWC][liftKey].val) {
+                        classRecords[currentWC][liftKey] = { val, name: fullName };
+                    }
+                };
 
-            checkMax('bench', ['bench', 'bench_press']);
-            checkMax('squat', ['squat', 'back_squat']);
-            checkMax('clean', ['clean', 'power_clean']);
-            checkMax('deadlift', ['deadlift']);
-            checkMin('dash', ['forty', 'forty_yard_dash']);
+                const checkMin = (liftKey, possibleKeys) => {
+                    let best = 99.9;
+                    for (const key of possibleKeys) {
+                        const candidate = parseFloat(maxes[key] || athleteData[key]);
+                        if (candidate > 0 && candidate < best) {
+                            best = candidate;
+                        }
+                    }
+                    if (best > 0 && best < classRecords[currentWC][liftKey].val) {
+                        classRecords[currentWC][liftKey] = { val: best, name: fullName };
+                    }
+                };
 
-            const scoreResult = calculateBoardScore({
-                data: {
-                    ...athleteData,
-                    ...maxes
-                },
-                formulaType: boardSettings.formula_type,
-                scoringLifts: boardSettings.scoring_lifts
-            });
+                checkMax('bench', ['bench', 'bench_press']);
+                checkMax('squat', ['squat', 'back_squat']);
+                checkMax('clean', ['clean', 'power_clean']);
+                checkMax('deadlift', ['deadlift']);
+                checkMin('dash', ['forty', 'forty_yard_dash']);
 
-            scores.push({
-                name: fullName,
-                displayScore: Number(scoreResult.score) || 0
-            });
+                const scoreResult = calculateBoardScore({
+                    data: {
+                        ...athleteData,
+                        ...maxes,
+                        bodyWeight: athleteBW,
+                        body_weight: athleteBW,
+                        weight: athleteBW
+                    },
+                    formulaType: boardSettings.formula_type,
+                    scoringLifts: boardSettings.scoring_lifts
+                });
+
+                scores.push({
+                    name: fullName,
+                    displayScore: Number(scoreResult.score) || 0
+                });
+            } catch (athleteErr) {
+                console.warn(`Failed to process athlete ${athleteDoc.id}:`, athleteErr);
+            }
         }
 
         if (recordBody) {
@@ -396,11 +533,9 @@
 
             scores.forEach((athlete) => {
                 const score = Number(athlete.displayScore) || 0;
-
                 if (score < minimumClub) return;
 
                 const clubLevel = Math.floor(score / 50) * 50;
-
                 if (clubLevel < minimumClub) return;
 
                 if (!clubMap.has(clubLevel)) {
@@ -412,12 +547,12 @@
 
             const sortedClubLevels = Array.from(clubMap.keys()).sort((a, b) => b - a);
 
-            if (!sortedClubLevels.length) {
-                grid.innerHTML = `
-                    <p class="text-center text-xs text-gray-500 font-black uppercase py-10">
-                        No athletes currently qualify for a lifting club.
-                    </p>
-                `;
+            if (!pSnap.size) {
+                renderGridMessage("No Athletes Found For This School.");
+            } else if (!athletesWithMaxes) {
+                renderGridMessage("No Approved Max Records Logged Yet.");
+            } else if (!sortedClubLevels.length) {
+                renderGridMessage("No Athletes Currently Qualify For A Lifting Club.");
             } else {
                 sortedClubLevels.forEach((level) => {
                     const qualifiers = clubMap.get(level).sort((a, b) => b.displayScore - a.displayScore);
@@ -439,6 +574,21 @@
                 });
             }
         }
+
+        if (!pSnap.size) {
+            renderRecordTableMessage("No athletes were found for this school.");
+            showPageMessage("No athlete profiles are currently linked to this school.", "warn");
+            setBoardStatus("No Athletes", "warn");
+            return;
+        }
+
+        if (!athletesWithMaxes) {
+            showPageMessage("Athletes are linked to this school, but no approved max records are available yet.", "warn");
+            setBoardStatus("No Max Records", "warn");
+            return;
+        }
+
+        setBoardStatus("Board Synced", "success");
     };
 
     async function saveManualRecord(wc, lift, val, name) {
@@ -449,12 +599,14 @@
             await setDoc(recordRef, {
                 [wc]: { [lift]: { val: Number(val) || 0, name } }
             }, { merge: true });
+            setBoardStatus("Manual Record Saved", "success");
         } catch (err) {
+            console.error("Manual record save error:", err);
+            setBoardStatus("Save Failed", "error");
             alert("Permission Denied: Coaches only.");
         }
     }
 
-    const coachBtn = document.getElementById('coach-edit-btn');
     if (coachBtn) {
         coachBtn.addEventListener('click', (e) => {
             if (currentUserRole !== 'coach') {
@@ -468,9 +620,11 @@
             if (isCoachMode) {
                 e.target.style.color = 'var(--school-primary)';
                 e.target.style.borderColor = 'var(--school-primary)';
+                setBoardStatus("Coach Edit Mode", "warn");
             } else {
                 e.target.style.color = '';
                 e.target.style.borderColor = '';
+                setBoardStatus("Board Synced", "success");
             }
 
             if (currentSchoolId) {

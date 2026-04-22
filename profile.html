@@ -86,21 +86,21 @@
 </head>
 <body class="pb-24">
 <header class="bg-black border-b-2 border-red-700 p-4 sticky top-0 z-50">
-    <div class="flex justify-between items-center max-w-6xl mx-auto">
+    <div class="flex justify-between items-center max-w-6xl mx-auto gap-4">
         <div class="w-1/4 flex justify-start">
             <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1.5 rounded text-gray-400 hover:text-white transition-all">
                 ← Lobby
             </button>
         </div>
 
-        <div class="flex items-center gap-6 justify-center flex-1">
+        <div class="flex items-center gap-6 justify-center flex-1 min-w-0">
             <div class="header-logo-container">
                 <img id="school-logo" src="images/rackstat-logo.png" alt="School Logo" onerror="this.src='images/rackstat-logo.png'">
             </div>
             <div class="h-10 w-[1px] bg-gray-700"></div>
             <div class="flex flex-col items-center text-center min-w-[180px]">
-                <span id="school-name" class="text-sm md:text-base font-black italic uppercase tracking-widest text-white leading-tight">LOADING...</span>
-                <span class="text-[10px] md:text-[11px] font-black italic uppercase tracking-[0.2em] text-red-600 mt-1">ATHLETE PROFILE</span>
+                <span id="school-name" class="text-sm md:text-base font-black italic uppercase tracking-widest text-white leading-tight">MY PROFILE</span>
+                <span id="profile-status" class="text-[10px] md:text-[11px] font-black italic uppercase tracking-[0.2em] text-red-600 mt-1">Loading Profile</span>
             </div>
             <div class="h-10 w-[1px] bg-gray-700"></div>
             <div class="header-logo-container">
@@ -110,6 +110,10 @@
         <div class="w-1/4"></div>
     </div>
 </header>
+
+<div id="profile-page-message" class="hidden max-w-md mx-auto px-4 pt-6">
+    <div id="profile-page-message-box" class="rounded-xl border p-4 text-xs font-bold uppercase tracking-wider"></div>
+</div>
 
 <div class="max-w-md mx-auto px-4 py-6 space-y-6">
     <section class="profile-card border-l-4 border-green-600">
@@ -220,7 +224,64 @@
     let latestMergedProfileData = {};
     let latestMaxesData = {};
 
+    const profileStatus = document.getElementById('profile-status');
+    const profilePageMessage = document.getElementById('profile-page-message');
+    const profilePageMessageBox = document.getElementById('profile-page-message-box');
+
     const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
+
+    function setProfileStatus(text, tone = 'default') {
+        if (!profileStatus) return;
+        profileStatus.innerText = text;
+        profileStatus.className = "text-[10px] md:text-[11px] font-black italic uppercase tracking-[0.2em] mt-1";
+
+        if (tone === 'error') profileStatus.classList.add('text-red-400');
+        else if (tone === 'success') profileStatus.classList.add('text-green-400');
+        else if (tone === 'warn') profileStatus.classList.add('text-yellow-300');
+        else profileStatus.classList.add('text-red-600');
+    }
+
+    function showPageMessage(message, tone = 'warn') {
+        if (!profilePageMessage || !profilePageMessageBox) return;
+
+        profilePageMessage.classList.remove('hidden');
+        profilePageMessageBox.innerText = message;
+        profilePageMessageBox.className = 'rounded-xl border p-4 text-xs font-bold uppercase tracking-wider';
+
+        if (tone === 'error') {
+            profilePageMessageBox.classList.add('bg-red-500/10', 'border-red-500/20', 'text-red-300');
+        } else if (tone === 'success') {
+            profilePageMessageBox.classList.add('bg-green-500/10', 'border-green-500/20', 'text-green-300');
+        } else {
+            profilePageMessageBox.classList.add('bg-yellow-500/10', 'border-yellow-500/20', 'text-yellow-300');
+        }
+    }
+
+    function hidePageMessage() {
+        if (!profilePageMessage || !profilePageMessageBox) return;
+        profilePageMessage.classList.add('hidden');
+        profilePageMessageBox.innerText = '';
+    }
+
+    function resetProfileShell() {
+        document.getElementById('school-name').innerText = 'MY PROFILE';
+        document.getElementById('last-updated-date').innerText = '';
+        document.getElementById('goal-progress-bar').style.width = '0%';
+        document.getElementById('goal-message').innerText = 'Update stats in the RACK to see progress';
+        document.getElementById('goals-container').innerHTML = '';
+        safeSet('full-name', '');
+        safeSet('height', '');
+        safeSet('weight', '');
+        safeSet('off-primary', '');
+        safeSet('off-secondary', '');
+        safeSet('def-primary', '');
+        safeSet('def-secondary', '');
+        safeSet('gpa', '');
+        safeSet('sat', '');
+        safeSet('act', '');
+        safeSet('character-statement', '');
+        document.getElementById('height-display').innerText = '';
+    }
 
     function formatHeight(totalInches) {
         const numeric = Number(totalInches);
@@ -232,7 +293,10 @@
 
     function renderGoals(uid, goals) {
         const container = document.getElementById('goals-container');
-        if (!container || !goals) return;
+        if (!container || !goals?.length) {
+            if (container) container.innerHTML = '';
+            return;
+        }
 
         container.innerHTML = goals.map(goal => `
             <div class="animate-fade-in profile-card mb-4">
@@ -283,9 +347,11 @@
         const lastUpdatedDate = document.getElementById('last-updated-date');
 
         if (lastUpdatedDate && profileData.lastUpdated) {
-            const d = new Date(profileData.lastUpdated);
-            if (!Number.isNaN(d.getTime())) {
-                lastUpdatedDate.innerText = d.toLocaleDateString();
+            const rawDate = profileData.lastUpdated?.toDate ? profileData.lastUpdated.toDate() : new Date(profileData.lastUpdated);
+            if (!Number.isNaN(rawDate.getTime())) {
+                lastUpdatedDate.innerText = rawDate.toLocaleDateString();
+            } else {
+                lastUpdatedDate.innerText = '';
             }
         }
 
@@ -326,6 +392,10 @@
     };
 
     onAuthStateChanged(auth, async (user) => {
+        resetProfileShell();
+        hidePageMessage();
+        setProfileStatus('Loading Profile');
+
         if (!user) {
             window.location.href = 'index.html';
             return;
@@ -349,7 +419,8 @@
             ]);
 
             if (!currentUserSnap.exists()) {
-                window.location.href = 'index.html';
+                showPageMessage("Your account profile could not be found. Please contact support.", "error");
+                setProfileStatus('Profile Missing', 'error');
                 return;
             }
 
@@ -371,28 +442,35 @@
 
             const schoolId = getSchoolIdFromData(mergedData) || getSchoolIdFromData(currentUserData);
 
-            if (schoolId) {
-                const themeData = await applyTheme(db, schoolId);
+            if (!schoolId) {
+                showPageMessage("This profile is not connected to a school yet. Some branding and recruiting features may be unavailable.", "warn");
+                document.getElementById('school-name').innerText = 'ATHLETE PROFILE';
+                currentBoardSettings = null;
+            } else {
+                try {
+                    const themeData = await applyTheme(db, schoolId);
 
-                recruitingFeatureEnabled = themeData?.hasRecruitingCard !== false;
-                currentBoardSettings = buildBoardScoreSettings(themeData || {});
+                    recruitingFeatureEnabled = themeData?.hasRecruitingCard !== false;
+                    currentBoardSettings = buildBoardScoreSettings(themeData || {});
 
-                if (themeData?.logo_primary) {
                     const logoEl = document.getElementById('school-logo');
-                    logoEl.src = themeData.logo_primary;
-                    logoEl.onerror = () => {
-                        logoEl.src = 'images/rackstat-logo.png';
-                    };
-                } else if (themeData?.logo_url || themeData?.logo) {
-                    const logoEl = document.getElementById('school-logo');
-                    logoEl.src = themeData.logo_url || themeData.logo;
-                    logoEl.onerror = () => {
-                        logoEl.src = 'images/rackstat-logo.png';
-                    };
-                }
+                    if (themeData?.logo_primary) {
+                        logoEl.src = themeData.logo_primary;
+                        logoEl.onerror = () => { logoEl.src = 'images/rackstat-logo.png'; };
+                    } else if (themeData?.logo_url || themeData?.logo) {
+                        logoEl.src = themeData.logo_url || themeData.logo;
+                        logoEl.onerror = () => { logoEl.src = 'images/rackstat-logo.png'; };
+                    }
 
-                if (themeData?.name) {
-                    document.getElementById('school-name').innerText = themeData.name;
+                    if (themeData?.name) {
+                        document.getElementById('school-name').innerText = themeData.name;
+                    } else {
+                        document.getElementById('school-name').innerText = 'ATHLETE PROFILE';
+                    }
+                } catch (themeErr) {
+                    console.error("Theme load error:", themeErr);
+                    document.getElementById('school-name').innerText = 'ATHLETE PROFILE';
+                    showPageMessage("School branding could not be fully loaded, but your profile is still available.", "warn");
                 }
             }
 
@@ -422,8 +500,11 @@
             syncGoalDisplay(latestMergedProfileData, latestMaxesData, currentBoardSettings);
             applyRecruitingButtonVisibility();
 
+            setProfileStatus('Profile Ready', 'success');
         } catch (err) {
             console.error("❌ Profile Loading Error:", err);
+            showPageMessage("This profile could not be loaded right now. Please refresh and try again.", "error");
+            setProfileStatus('Load Failed', 'error');
         }
     });
 
@@ -445,6 +526,8 @@
 
             btn.innerText = "GOAL SET!";
             btn.style.backgroundColor = "#059669";
+            setProfileStatus('Goal Updated', 'success');
+            showPageMessage("Club goal updated successfully.", "success");
 
             syncGoalDisplay(latestMergedProfileData, latestMaxesData, currentBoardSettings);
 
@@ -458,6 +541,8 @@
             console.error("Club goal save error:", err);
             btn.innerText = "SAVE ERROR";
             btn.disabled = false;
+            setProfileStatus('Goal Save Failed', 'error');
+            showPageMessage("Unable to save your club goal right now.", "error");
         }
     };
 
@@ -536,9 +621,13 @@
 
             btn.innerText = "PROFILE SAVED!";
             btn.style.backgroundColor = "#059669";
+            setProfileStatus('Profile Saved', 'success');
+            showPageMessage("Profile updated successfully.", "success");
         } catch (e) {
             console.error("Profile save error:", e);
             btn.innerText = "ERROR SAVING";
+            setProfileStatus('Save Failed', 'error');
+            showPageMessage("Unable to save your profile right now.", "error");
         } finally {
             setTimeout(() => {
                 btn.innerText = "Save Profile";

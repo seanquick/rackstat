@@ -9,17 +9,23 @@
 </head>
 <body class="bg-[#0d1117] text-white font-sans antialiased pb-24">
 
-    <header class="p-6 flex justify-between items-center border-b border-gray-800">
-        <div class="flex items-center gap-4">
-            <a href="coach-lobby.html" class="text-gray-400 hover:text-white transition">← Back to Office</a>
-            <h1 id="program-title" class="text-xl font-black italic uppercase tracking-tighter text-red-500">Program Settings</h1>
-        </div>
-        <div class="flex gap-3">
-            <span id="player-count" class="bg-gray-800 px-3 py-2 rounded text-xs font-bold self-center uppercase">0 Athletes</span>
+    <header class="bg-black border-b-2 border-red-700 p-4 sticky top-0 z-40">
+        <div class="flex justify-between items-center max-w-6xl mx-auto gap-4">
+            <div class="flex items-center gap-4 min-w-0">
+                <a href="coach-lobby.html" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1 rounded text-gray-300 hover:text-white transition-colors shrink-0">← Back to Office</a>
+                <div class="min-w-0">
+                    <h1 id="program-title" class="text-xl font-black italic uppercase tracking-tighter text-red-500">Program Settings</h1>
+                    <p id="settings-status" class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Loading Program Configuration...</p>
+                </div>
+            </div>
+            <div class="flex gap-3 items-center">
+                <span id="player-count" class="bg-gray-800 px-3 py-2 rounded text-xs font-bold uppercase">0 Athletes</span>
+            </div>
         </div>
     </header>
 
     <main class="max-w-4xl mx-auto px-6 py-12">
+        <div id="page-message" class="hidden mb-6 rounded-xl border px-4 py-3 text-xs font-bold uppercase tracking-wider"></div>
 
         <section class="bg-gray-900 border border-gray-700 p-8 rounded-xl mb-10 shadow-2xl">
             <h2 class="text-2xl font-black text-white uppercase mb-2 italic">Program Branding & Logic</h2>
@@ -137,7 +143,7 @@
         </section>
 
         <div class="fixed bottom-0 left-0 right-0 p-6 bg-[#0d1117]/90 backdrop-blur-md border-t border-gray-800 flex justify-center z-50">
-            <button onclick="saveAllSettings()" id="master-save-btn" class="bg-red-600 hover:bg-red-700 text-white px-16 py-4 rounded-full font-black uppercase tracking-widest transition-all shadow-lg hover:scale-105 active:scale-95">
+            <button onclick="saveAllSettings()" id="master-save-btn" class="bg-red-600 hover:bg-red-700 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed text-white px-16 py-4 rounded-full font-black uppercase tracking-widest transition-all shadow-lg hover:scale-105 active:scale-95">
                 Save All Changes
             </button>
         </div>
@@ -150,8 +156,14 @@
         import { doc, getDoc, updateDoc, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         let schoolId = null;
+        let pageLoaded = false;
 
         const STANDARD_LIFT_IDS = ["bench", "squat", "clean", "deadlift", "push_press"];
+
+        const pageMessage = document.getElementById('page-message');
+        const statusEl = document.getElementById('settings-status');
+        const saveBtn = document.getElementById('master-save-btn');
+        const playerCountBadge = document.getElementById('player-count');
 
         const slugify = (text) =>
             String(text || "")
@@ -161,6 +173,38 @@
                 .replace(/[^\w-]+/g, '');
 
         const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
+
+        function setStatus(text, tone = 'default') {
+            if (!statusEl) return;
+            statusEl.innerText = text;
+            statusEl.className = 'text-[10px] font-bold uppercase tracking-widest';
+
+            if (tone === 'error') statusEl.classList.add('text-red-400');
+            else if (tone === 'success') statusEl.classList.add('text-green-400');
+            else if (tone === 'warn') statusEl.classList.add('text-yellow-300');
+            else statusEl.classList.add('text-gray-500');
+        }
+
+        function showPageMessage(message, tone = 'warn') {
+            if (!pageMessage) return;
+            pageMessage.classList.remove('hidden');
+            pageMessage.innerText = message;
+            pageMessage.className = 'mb-6 rounded-xl border px-4 py-3 text-xs font-bold uppercase tracking-wider';
+
+            if (tone === 'error') {
+                pageMessage.classList.add('bg-red-500/10', 'border-red-500/20', 'text-red-300');
+            } else if (tone === 'success') {
+                pageMessage.classList.add('bg-green-500/10', 'border-green-500/20', 'text-green-300');
+            } else {
+                pageMessage.classList.add('bg-yellow-500/10', 'border-yellow-500/20', 'text-yellow-300');
+            }
+        }
+
+        function hidePageMessage() {
+            if (!pageMessage) return;
+            pageMessage.classList.add('hidden');
+            pageMessage.innerText = '';
+        }
 
         function normalizeFormulaType(value) {
             return value === 'straight_calculation' ? 'straight_total' : (value || 'power_index');
@@ -254,16 +298,16 @@
 
         function renderNewLiftCheckbox(name, id, checked) {
             const container = document.getElementById('core-lifts-container');
-            if (!container) return;
+            if (!container) return false;
 
             const normalizedId = slugify(id);
             const normalizedName = String(name || "").trim();
-            if (!normalizedId || !normalizedName) return;
+            if (!normalizedId || !normalizedName) return false;
 
             const existing = Array.from(container.querySelectorAll('.lift-checkbox')).find(cb => cb.value === normalizedId);
             if (existing) {
                 existing.checked = checked;
-                return;
+                return false;
             }
 
             const label = document.createElement('label');
@@ -273,16 +317,24 @@
                 <span class="group-hover:text-white text-yellow-500">${normalizedName}</span>
             `;
             container.appendChild(label);
+            return true;
         }
 
         async function loadSettings() {
             if (!schoolId) return;
 
+            setStatus("Loading Settings...");
+            hidePageMessage();
+
             try {
                 const schoolRef = doc(db, "schools", schoolId);
                 const snap = await getDoc(schoolRef);
 
-                if (!snap.exists()) return;
+                if (!snap.exists()) {
+                    showPageMessage("This school record could not be found. Program settings cannot be loaded.", "error");
+                    setStatus("School Not Found", "error");
+                    return;
+                }
 
                 const data = snap.data();
 
@@ -315,16 +367,20 @@
                 bindTrackedLiftListeners();
                 renderScoringLiftCheckboxes(scoringLifts);
                 updateFormulaHelp();
+
+                pageLoaded = true;
+                setStatus("Settings Ready", "success");
             } catch (err) {
                 console.error("Error loading settings:", err);
+                showPageMessage("Program settings could not be loaded right now. Please refresh and try again.", "error");
+                setStatus("Load Failed", "error");
             }
         }
 
         async function fetchPlayerCount() {
             if (!schoolId) return;
 
-            const badge = document.getElementById('player-count');
-            if (!badge) return;
+            if (playerCountBadge) playerCountBadge.innerText = "Loading...";
 
             try {
                 let snap = await getDocs(query(
@@ -342,33 +398,54 @@
                 }
 
                 const count = snap.size;
-                badge.innerText = `${count} Athlete${count === 1 ? '' : 's'}`;
+                playerCountBadge.innerText = `${count} Athlete${count === 1 ? '' : 's'}`;
             } catch (err) {
                 console.error("Error fetching athlete count:", err);
-                badge.innerText = "0 Athletes";
+                playerCountBadge.innerText = "Athletes Unavailable";
             }
         }
 
         window.addCustomLiftToUI = () => {
             const input = document.getElementById('custom-lift-input');
             const liftName = input.value.trim();
-            if (!liftName) return;
+
+            if (!liftName) {
+                showPageMessage("Enter a custom lift name before adding it.", "warn");
+                return;
+            }
 
             const liftId = slugify(liftName);
-            if (!liftId) return;
+            if (!liftId) {
+                showPageMessage("That lift name could not be converted into a valid lift ID.", "warn");
+                return;
+            }
 
-            renderNewLiftCheckbox(liftName, liftId, true);
+            const created = renderNewLiftCheckbox(liftName, liftId, true);
+
+            if (!created) {
+                showPageMessage("That lift already exists and has been checked for you.", "warn");
+            } else {
+                hidePageMessage();
+                setStatus("Custom Lift Added", "success");
+            }
+
             input.value = "";
             bindTrackedLiftListeners();
             refreshScoringLiftOptions();
         };
 
         window.saveAllSettings = async () => {
-            if (!schoolId) return;
+            if (!schoolId) {
+                showPageMessage("This coach account is missing a school link. Settings cannot be saved.", "error");
+                setStatus("Missing School", "error");
+                return;
+            }
 
             const btn = document.getElementById('master-save-btn');
             btn.innerText = "SAVING CHANGES...";
             btn.disabled = true;
+            hidePageMessage();
+            setStatus("Saving Settings...");
 
             const trackedLifts = [];
             const customLifts = [];
@@ -394,14 +471,16 @@
             )];
 
             if (dedupedTrackedLifts.length === 0) {
-                alert("Please select at least one tracked lift.");
+                showPageMessage("Please select at least one tracked lift.", "warn");
+                setStatus("Validation Required", "warn");
                 btn.innerText = "Save All Changes";
                 btn.disabled = false;
                 return;
             }
 
             if (scoringLifts.length === 0) {
-                alert("Please select at least one lift to use in the Board Score calculation.");
+                showPageMessage("Please select at least one lift to use in the Board Score calculation.", "warn");
+                setStatus("Validation Required", "warn");
                 btn.innerText = "Save All Changes";
                 btn.disabled = false;
                 return;
@@ -426,10 +505,12 @@
                     lastUpdated: new Date()
                 });
 
-                alert("Settings Saved!");
+                showPageMessage("Program settings saved successfully.", "success");
+                setStatus("Settings Saved", "success");
             } catch (err) {
-                alert("Save Error: Check console.");
-                console.error(err);
+                console.error("Settings save error:", err);
+                showPageMessage("Program settings could not be saved right now. Please try again.", "error");
+                setStatus("Save Failed", "error");
             } finally {
                 btn.innerText = "Save All Changes";
                 btn.disabled = false;
@@ -437,6 +518,8 @@
         };
 
         onAuthStateChanged(auth, async (user) => {
+            setStatus("Checking Coach Access...");
+
             if (!user) {
                 window.location.href = 'index.html';
                 return;
@@ -453,8 +536,10 @@
                 schoolId = getSchoolIdFromData(userDoc.data());
 
                 if (!schoolId) {
-                    alert("Coach profile is missing a school ID.");
-                    window.location.href = 'index.html';
+                    showPageMessage("Coach profile is missing a school ID. Program settings are unavailable.", "error");
+                    setStatus("Missing School", "error");
+                    saveBtn.disabled = true;
+                    saveBtn.innerText = "School Link Required";
                     return;
                 }
 
@@ -462,7 +547,8 @@
                 await fetchPlayerCount();
             } catch (err) {
                 console.error("Error loading team settings auth context:", err);
-                window.location.href = 'index.html';
+                showPageMessage("Program settings could not be initialized. Please refresh and try again.", "error");
+                setStatus("Initialization Failed", "error");
             }
         });
 

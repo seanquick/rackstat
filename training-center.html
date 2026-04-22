@@ -32,11 +32,14 @@
 <body class="bg-[#0d1117] text-white font-sans antialiased min-h-screen pb-20">
 
     <header class="p-6 flex justify-between items-center border-b border-gray-800 bg-[#0d1117]/80 backdrop-blur-md sticky top-0 z-50">
-        <div class="flex items-center gap-6">
+        <div class="flex items-center gap-6 min-w-0">
             <a href="coach-lobby.html" class="group flex items-center gap-2 text-xs font-black tracking-widest uppercase text-gray-500 hover:text-white transition-all">
                 <span class="group-hover:-translate-x-1 transition-transform">←</span> Office
             </a>
-            <h1 class="text-2xl font-black italic uppercase tracking-tighter text-red-600">Training <span class="text-white">Center</span></h1>
+            <div class="min-w-0">
+                <h1 class="text-2xl font-black italic uppercase tracking-tighter text-red-600">Training <span class="text-white">Center</span></h1>
+                <p id="training-status" class="text-[9px] font-bold uppercase tracking-widest text-gray-500 mt-1">Initializing</p>
+            </div>
         </div>
         <button id="save-workout-btn" onclick="saveWorkout()" class="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-md font-black text-xs transition shadow-lg uppercase tracking-widest italic">
             Save Workout
@@ -44,6 +47,10 @@
     </header>
 
     <main class="max-w-4xl mx-auto p-6 space-y-6">
+        <div id="training-page-message" class="hidden">
+            <div id="training-page-message-box" class="rounded-xl border p-4 text-xs font-bold uppercase tracking-wider"></div>
+        </div>
+
         <div class="bg-gray-900/50 p-6 rounded-2xl border border-gray-800 flex flex-wrap gap-6 items-end shadow-2xl">
             <div class="flex-1 min-w-[200px]">
                 <label class="block text-[10px] font-black text-gray-500 mb-2 uppercase tracking-widest">Training Date</label>
@@ -61,19 +68,23 @@
             </div>
         </div>
 
-        <div id="exercises-container" class="space-y-4"></div>
+        <div id="exercises-container" class="space-y-4">
+            <div class="text-gray-600 text-[10px] uppercase font-black tracking-widest p-10 border-2 border-dashed border-white/5 text-center rounded-2xl">
+                Waiting for workout builder...
+            </div>
+        </div>
 
         <button id="add-exercise-btn" onclick="addExerciseBlock()" class="w-full py-6 border-2 border-dashed border-gray-800 text-gray-600 font-black uppercase text-xs tracking-[0.3em] rounded-2xl hover:border-red-600/50 hover:text-white hover:bg-red-600/5 transition-all">
             + Add Exercise Block
         </button>
 
         <section class="mt-20 pt-12 border-t border-gray-800">
-            <div class="flex justify-between items-center mb-8">
+            <div class="flex justify-between items-center mb-8 gap-4 flex-wrap">
                 <div>
                     <h2 class="text-xl font-black italic uppercase tracking-tighter text-gray-400">Workout Archive</h2>
                     <p class="text-xs text-gray-600 font-bold uppercase tracking-widest">Manage previous training sessions</p>
                 </div>
-                <div class="relative w-64">
+                <div class="relative w-64 max-w-full">
                     <input type="text" id="history-search" onkeyup="filterHistory()" placeholder="SEARCH ARCHIVE..."
                         class="w-full bg-gray-900 border border-gray-800 rounded-lg px-4 py-2 text-[10px] font-black text-white focus:outline-none focus:border-red-600 transition-all">
                 </div>
@@ -109,6 +120,13 @@
         let userSchoolId = null;
         let editingWorkoutId = null;
 
+        const trainingStatus = document.getElementById('training-status');
+        const pageMessageWrap = document.getElementById('training-page-message');
+        const pageMessageBox = document.getElementById('training-page-message-box');
+        const historyContainer = document.getElementById('history-container');
+        const exercisesContainer = document.getElementById('exercises-container');
+        const saveButton = document.getElementById('save-workout-btn');
+
         function getSchoolIdFromData(data = {}) {
             return data.schoolId || data.school_id || "";
         }
@@ -121,7 +139,127 @@
             return String(value).replace(/_/g, ' ').toUpperCase();
         }
 
+        function setTrainingStatus(text, tone = 'default') {
+            if (!trainingStatus) return;
+            trainingStatus.innerText = text;
+            trainingStatus.className = "text-[9px] font-bold uppercase tracking-widest mt-1";
+
+            if (tone === 'error') trainingStatus.classList.add('text-red-400');
+            else if (tone === 'success') trainingStatus.classList.add('text-green-400');
+            else if (tone === 'warn') trainingStatus.classList.add('text-yellow-300');
+            else trainingStatus.classList.add('text-gray-500');
+        }
+
+        function showPageMessage(message, tone = 'warn') {
+            if (!pageMessageWrap || !pageMessageBox) return;
+
+            pageMessageWrap.classList.remove('hidden');
+            pageMessageBox.innerText = message;
+            pageMessageBox.className = 'rounded-xl border p-4 text-xs font-bold uppercase tracking-wider';
+
+            if (tone === 'error') {
+                pageMessageBox.classList.add('bg-red-500/10', 'border-red-500/20', 'text-red-300');
+            } else if (tone === 'success') {
+                pageMessageBox.classList.add('bg-green-500/10', 'border-green-500/20', 'text-green-300');
+            } else {
+                pageMessageBox.classList.add('bg-yellow-500/10', 'border-yellow-500/20', 'text-yellow-300');
+            }
+        }
+
+        function hidePageMessage() {
+            if (!pageMessageWrap || !pageMessageBox) return;
+            pageMessageWrap.classList.add('hidden');
+            pageMessageBox.innerText = '';
+        }
+
+        function renderBuilderMessage(message, tone = 'muted') {
+            if (!exercisesContainer) return;
+
+            const toneClass = tone === 'error'
+                ? 'text-red-400 border-red-500/20'
+                : tone === 'warn'
+                    ? 'text-yellow-300 border-yellow-500/20'
+                    : 'text-gray-600 border-white/5';
+
+            exercisesContainer.innerHTML = `
+                <div class="${toneClass} text-[10px] uppercase font-black tracking-widest p-10 border-2 border-dashed text-center rounded-2xl">
+                    ${message}
+                </div>
+            `;
+        }
+
+        function renderHistoryMessage(message, tone = 'muted') {
+            if (!historyContainer) return;
+
+            const toneClass = tone === 'error'
+                ? 'text-red-500 border-red-500/20'
+                : tone === 'warn'
+                    ? 'text-yellow-300 border-yellow-500/20'
+                    : 'text-white/20 border-white/5';
+
+            historyContainer.innerHTML = `
+                <p class="${toneClass} text-[10px] uppercase font-black tracking-widest p-10 border text-center rounded-2xl">
+                    ${message}
+                </p>
+            `;
+        }
+
+        function resetEditorState() {
+            editingWorkoutId = null;
+            document.getElementById('workout-date').value = '';
+            document.getElementById('workout-name').value = '';
+            document.getElementById('save-workout-btn').innerText = 'Save Workout';
+            hidePageMessage();
+        }
+
+        function syncMaxOutVisualState() {
+            const bg = document.getElementById('max-out-indicator');
+            const knob = document.getElementById('max-out-knob');
+            const addBtn = document.getElementById('add-exercise-btn');
+
+            if (isMaxOutMode) {
+                bg.classList.remove('bg-gray-700');
+                bg.classList.add('bg-red-600');
+                knob.classList.add('translate-x-6');
+                addBtn?.classList.add('hidden');
+            } else {
+                bg.classList.remove('bg-red-600');
+                bg.classList.add('bg-gray-700');
+                knob.classList.remove('translate-x-6');
+                addBtn?.classList.remove('hidden');
+            }
+        }
+
+        function sanitizeExercise(ex = {}) {
+            const category = ex.category === 'supplement' ? 'supplement' : 'core';
+            const safeName = String(ex.name || (category === 'core' ? (coreLifts[0] || 'bench') : '')).trim();
+
+            return {
+                id: ex.id || (Date.now() + Math.random()),
+                category,
+                name: safeName,
+                isMaxOut: !!ex.isMaxOut,
+                isCircuit: !!ex.isCircuit,
+                circuitExercises: Array.isArray(ex.circuitExercises) ? ex.circuitExercises : [''],
+                circuitConfig: {
+                    cycles: Number(ex.circuitConfig?.cycles || 3),
+                    work: Number(ex.circuitConfig?.work || 40),
+                    rest: Number(ex.circuitConfig?.rest || 20)
+                },
+                sets: Array.isArray(ex.sets) && ex.sets.length
+                    ? ex.sets.map(set => ({
+                        reps: set?.reps ?? '',
+                        pct: set?.pct ?? ''
+                    }))
+                    : [{ reps: '', pct: '' }]
+            };
+        }
+
         onAuthStateChanged(auth, async (user) => {
+            setTrainingStatus('Checking Access');
+            renderBuilderMessage('Waiting for workout builder...');
+            renderHistoryMessage('Initializing database...');
+
             if (!user) {
                 window.location.href = 'index.html';
                 return;
@@ -143,17 +281,36 @@
                 userSchoolId = getSchoolIdFromData(userData);
 
                 if (!userSchoolId) {
-                    alert("Coach profile is missing a school ID.");
-                    window.location.href = 'index.html';
+                    showPageMessage("Coach profile is missing a school ID, so Training Center cannot be loaded.", "error");
+                    setTrainingStatus('Missing School', 'error');
+                    renderBuilderMessage('No School Assigned', 'error');
+                    renderHistoryMessage('Archive Unavailable', 'error');
                     return;
+                }
+
+                try {
+                    await applyTheme(db, userSchoolId);
+                } catch (themeErr) {
+                    console.error("Theme load failed:", themeErr);
                 }
 
                 await fetchSupplements();
                 await fetchTeamSettings();
+
+                if (!exercises.length && !isMaxOutMode) {
+                    addExerciseBlock();
+                } else {
+                    renderExercises();
+                }
+
                 await loadHistory();
+                setTrainingStatus('Ready', 'success');
             } catch (error) {
                 console.error("Training Center init error:", error);
-                window.location.href = 'index.html';
+                showPageMessage("Training Center could not be initialized. Please refresh and try again.", "error");
+                renderBuilderMessage('Unable To Load Builder', 'error');
+                renderHistoryMessage('Unable To Load Archive', 'error');
+                setTrainingStatus('Load Failed', 'error');
             }
         });
 
@@ -163,20 +320,28 @@
 
                 const schoolDoc = await getDoc(doc(db, "schools", userSchoolId));
 
-                if (!schoolDoc.exists()) return;
+                if (!schoolDoc.exists()) {
+                    showPageMessage("School settings could not be found. Default lifts are being used.", "warn");
+                    coreLifts = ["bench", "squat", "clean"];
+                    updateCoreLiftDropdown(coreLifts);
+                    return;
+                }
 
                 const schoolData = schoolDoc.data();
-
-                await applyTheme(db, userSchoolId);
 
                 const trackedLifts = schoolData.trackedLifts || schoolData.activeLifts || ["bench", "squat", "clean"];
                 if (Array.isArray(trackedLifts) && trackedLifts.length > 0) {
                     coreLifts = trackedLifts.map(normalizeLiftValue);
+                } else {
+                    coreLifts = ["bench", "squat", "clean"];
                 }
 
                 updateCoreLiftDropdown(coreLifts);
             } catch (error) {
                 console.error("Settings Error:", error);
+                coreLifts = ["bench", "squat", "clean"];
+                updateCoreLiftDropdown(coreLifts);
+                showPageMessage("Program settings could not be fully loaded. Default core lifts are being used.", "warn");
             }
         }
 
@@ -213,20 +378,15 @@
                 supplementLibrary = snap.docs.map(docSnap => docSnap.data().name).filter(Boolean);
             } catch (err) {
                 console.error("Library Error", err);
+                supplementLibrary = [];
+                showPageMessage("Supplement library could not be loaded. You can still type exercise names manually.", "warn");
             }
         }
 
         window.toggleMaxOut = () => {
             isMaxOutMode = !isMaxOutMode;
-            const bg = document.getElementById('max-out-indicator');
-            const knob = document.getElementById('max-out-knob');
-            const addBtn = document.getElementById('add-exercise-btn');
 
             if (isMaxOutMode) {
-                bg.classList.replace('bg-gray-700', 'bg-red-600');
-                knob.classList.add('translate-x-6');
-                addBtn?.classList.add('hidden');
-
                 exercises = coreLifts.map(lift => ({
                     id: Date.now() + Math.random(),
                     category: 'core',
@@ -242,13 +402,11 @@
                     ]
                 }));
             } else {
-                bg.classList.replace('bg-red-600', 'bg-gray-700');
-                knob.classList.remove('translate-x-6');
-                addBtn?.classList.remove('hidden');
                 exercises = [];
                 addExerciseBlock();
             }
 
+            syncMaxOutVisualState();
             renderExercises();
         };
 
@@ -314,6 +472,11 @@
             if (!ex) return;
 
             ex.circuitExercises.splice(exIndex, 1);
+
+            if (!ex.circuitExercises.length) {
+                ex.circuitExercises = [''];
+            }
+
             renderExercises();
         };
 
@@ -321,7 +484,7 @@
             const ex = exercises.find(e => e.id === blockId);
             if (!ex) return;
 
-            ex.circuitConfig[field] = value;
+            ex.circuitConfig[field] = Number(value) || 0;
         };
 
         window.addSet = (id) => {
@@ -341,6 +504,12 @@
 
         window.removeExercise = (id) => {
             exercises = exercises.filter(e => e.id !== id);
+
+            if (!exercises.length && !isMaxOutMode) {
+                renderBuilderMessage('No exercise blocks yet. Add one to begin.');
+                return;
+            }
+
             renderExercises();
         };
 
@@ -349,6 +518,11 @@
             if (!ex) return;
 
             ex.sets.splice(setIndex, 1);
+
+            if (!ex.sets.length) {
+                ex.sets.push(ex.category === 'supplement' ? { reps: '' } : { reps: '', pct: '' });
+            }
+
             renderExercises();
         };
 
@@ -356,12 +530,20 @@
             const container = document.getElementById('exercises-container');
             container.innerHTML = '';
 
-            exercises.forEach((ex, index) => {
+            if (!Array.isArray(exercises) || !exercises.length) {
+                renderBuilderMessage('No exercise blocks yet. Add one to begin.');
+                return;
+            }
+
+            exercises.forEach((rawExercise, index) => {
+                const ex = sanitizeExercise(rawExercise);
+                exercises[index] = ex;
+
                 const isCore = ex.category === 'core';
                 let blockHtml = `
                     <div class="bg-gray-900/40 border ${ex.isMaxOut ? 'border-red-600' : 'border-white/10'} rounded-2xl p-6 mb-4 shadow-xl backdrop-blur-sm">
                         <div class="flex justify-between items-center mb-6">
-                            <div class="flex gap-4 items-center flex-1">
+                            <div class="flex gap-4 items-center flex-1 min-w-0">
                                 <span class="text-white/10 font-black text-3xl italic tracking-tighter">#0${index + 1}</span>
                 `;
 
@@ -422,7 +604,7 @@
                         `;
                     });
                     blockHtml += `
-                        <button onclick="addCircuitExercise(${JSON.stringify(ex.id)})" class="text-[10px] font-black text-red-600 uppercase tracking-widest hover:text-white transition-colors py-2">+ ADD MOVEMENT</button>
+                        <button onclick="addCircuitExercise(${JSON.stringify(ex.id)})" class="text-[10px] font-black text-red-600 uppercase tracking-widest hover:text-white transition-colors py-2">+ Add Movement</button>
                         <div class="grid grid-cols-3 gap-4 pt-6 border-t border-white/5">
                             <div class="text-center"><label class="text-[9px] font-black text-white/40 uppercase block mb-2">Cycles</label><input type="number" value="${ex.circuitConfig.cycles}" onchange="updateCircuitConfig(${JSON.stringify(ex.id)}, 'cycles', this.value)" class="w-full bg-black border border-white/10 rounded-lg py-3 text-xs font-black text-center text-white outline-none focus:border-red-600"></div>
                             <div class="text-center"><label class="text-[9px] font-black text-white/40 uppercase block mb-2">Work (s)</label><input type="number" value="${ex.circuitConfig.work}" onchange="updateCircuitConfig(${JSON.stringify(ex.id)}, 'work', this.value)" class="w-full bg-black border border-white/10 rounded-lg py-3 text-xs font-black text-center text-white outline-none focus:border-red-600"></div>
@@ -455,29 +637,43 @@
         window.saveWorkout = async () => {
             const dateInput = document.getElementById('workout-date');
             const nameInput = document.getElementById('workout-name');
-            const saveBtn = document.getElementById('save-workout-btn');
+            const originalText = saveButton.innerText;
 
             if (!userSchoolId) {
                 alert("CRITICAL ERROR: School Profile not loaded. Try refreshing.");
+                showPageMessage("Workout cannot be saved because the coach school profile is missing.", "error");
+                setTrainingStatus('Missing School', 'error');
                 return;
             }
 
             if (!dateInput.value || !nameInput.value.trim()) {
                 alert("SYSTEM ERROR: Date and Name required for upload.");
+                showPageMessage("Workout date and workout name are required.", "warn");
+                setTrainingStatus('Missing Fields', 'warn');
                 return;
             }
 
-            const originalText = saveBtn.innerText;
-            saveBtn.innerText = "UPLOADING...";
-            saveBtn.disabled = true;
+            if (!Array.isArray(exercises) || !exercises.length) {
+                alert("SYSTEM ERROR: Add at least one exercise block.");
+                showPageMessage("Add at least one exercise block before saving.", "warn");
+                setTrainingStatus('No Exercises', 'warn');
+                return;
+            }
+
+            saveButton.innerText = editingWorkoutId ? "UPDATING..." : "UPLOADING...";
+            saveButton.disabled = true;
+            hidePageMessage();
+            setTrainingStatus(editingWorkoutId ? 'Updating Workout...' : 'Saving Workout...');
 
             try {
+                const cleanedExercises = exercises.map(ex => sanitizeExercise(ex));
+
                 const workoutData = {
                     date: dateInput.value,
                     name: nameInput.value.trim().toUpperCase(),
                     schoolId: userSchoolId,
                     isMaxOutMode,
-                    exercises,
+                    exercises: cleanedExercises,
                     updatedAt: serverTimestamp()
                 };
 
@@ -488,19 +684,24 @@
                     await addDoc(collection(db, "workouts"), workoutData);
                 }
 
+                showPageMessage(editingWorkoutId ? "Workout updated successfully." : "Workout saved successfully.", "success");
+                setTrainingStatus('Save Complete', 'success');
                 alert("SYNC COMPLETE: Training data saved.");
                 window.location.reload();
             } catch (err) {
                 console.error("Save Error:", err);
                 alert("SAVE FAILED: Check console for permissions details.");
-                saveBtn.innerText = originalText;
-                saveBtn.disabled = false;
+                showPageMessage("Workout save failed. Check console and Firestore permissions.", "error");
+                setTrainingStatus('Save Failed', 'error');
+                saveButton.innerText = originalText;
+                saveButton.disabled = false;
             }
         };
 
         async function loadHistory() {
-            const container = document.getElementById('history-container');
-            if (!userSchoolId || !container) return;
+            if (!userSchoolId || !historyContainer) return;
+
+            setTrainingStatus('Loading Archive...');
 
             try {
                 let snap = await getDocs(query(collection(db, "workouts"), where("schoolId", "==", userSchoolId)));
@@ -509,16 +710,17 @@
                     snap = await getDocs(query(collection(db, "workouts"), where("school_id", "==", userSchoolId)));
                 }
 
-                container.innerHTML = '';
+                historyContainer.innerHTML = '';
 
                 if (snap.empty) {
-                    container.innerHTML = '<p class="text-white/20 text-[10px] uppercase font-black tracking-widest p-10 border-2 border-dashed border-white/5 text-center rounded-2xl">Archive Empty</p>';
+                    renderHistoryMessage('Archive Empty');
+                    setTrainingStatus('Ready', 'success');
                     return;
                 }
 
                 const docs = snap.docs
                     .map(docSnap => ({ id: docSnap.id, ...docSnap.data() }))
-                    .sort((a, b) => new Date(b.date) - new Date(a.date));
+                    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
                 docs.forEach(workout => {
                     const item = document.createElement('div');
@@ -534,73 +736,75 @@
                             <button onclick="deleteWorkout('${workout.id}')" class="flex-1 bg-white/5 hover:bg-red-600 text-white text-[10px] font-black px-4 py-2 rounded transition-all italic uppercase tracking-tighter">DEL</button>
                         </div>
                     `;
-                    container.appendChild(item);
+                    historyContainer.appendChild(item);
                 });
+
+                setTrainingStatus('Ready', 'success');
             } catch (err) {
                 console.error("History load error:", err);
-                container.innerHTML = '<p class="text-red-500 text-[10px] uppercase font-black tracking-widest p-10 border border-red-500/20 text-center rounded-2xl">Unable To Load Archive</p>';
+                renderHistoryMessage('Unable To Load Archive', 'error');
+                showPageMessage("Workout archive could not be loaded right now.", "error");
+                setTrainingStatus('Archive Error', 'error');
             }
         }
 
         window.editWorkout = async (id) => {
-            const snap = await getDoc(doc(db, "workouts", id));
-            if (!snap.exists()) return;
+            try {
+                const snap = await getDoc(doc(db, "workouts", id));
+                if (!snap.exists()) {
+                    showPageMessage("That workout could not be found for editing.", "error");
+                    return;
+                }
 
-            const data = snap.data();
-            editingWorkoutId = id;
-            document.getElementById('workout-date').value = data.date || '';
-            document.getElementById('workout-name').value = data.name || '';
-            exercises = Array.isArray(data.exercises) ? data.exercises : [];
-            isMaxOutMode = !!data.isMaxOutMode;
+                const data = snap.data();
+                editingWorkoutId = id;
+                document.getElementById('workout-date').value = data.date || '';
+                document.getElementById('workout-name').value = data.name || '';
+                exercises = Array.isArray(data.exercises) ? data.exercises.map(ex => sanitizeExercise(ex)) : [];
+                isMaxOutMode = !!data.isMaxOutMode;
 
-            const bg = document.getElementById('max-out-indicator');
-            const knob = document.getElementById('max-out-knob');
-            const addBtn = document.getElementById('add-exercise-btn');
+                syncMaxOutVisualState();
+                renderExercises();
 
-            if (isMaxOutMode) {
-                bg.classList.replace('bg-gray-700', 'bg-red-600');
-                knob.classList.add('translate-x-6');
-                addBtn?.classList.add('hidden');
-            } else {
-                bg.classList.replace('bg-red-600', 'bg-gray-700');
-                knob.classList.remove('translate-x-6');
-                addBtn?.classList.remove('hidden');
+                document.getElementById('save-workout-btn').innerText = "Update Archive";
+                showPageMessage("Archive workout loaded into editor.", "success");
+                setTrainingStatus('Editing Workout', 'warn');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } catch (err) {
+                console.error("Edit workout error:", err);
+                showPageMessage("Unable to load that workout for editing.", "error");
+                setTrainingStatus('Edit Failed', 'error');
             }
-
-            renderExercises();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            document.getElementById('save-workout-btn').innerText = "Update Archive";
         };
 
         window.duplicateWorkout = async (id) => {
-            const snap = await getDoc(doc(db, "workouts", id));
-            if (!snap.exists()) return;
+            try {
+                const snap = await getDoc(doc(db, "workouts", id));
+                if (!snap.exists()) {
+                    showPageMessage("That workout could not be found for cloning.", "error");
+                    return;
+                }
 
-            const data = snap.data();
-            editingWorkoutId = null;
-            exercises = Array.isArray(data.exercises) ? data.exercises : [];
-            isMaxOutMode = !!data.isMaxOutMode;
+                const data = snap.data();
+                editingWorkoutId = null;
+                exercises = Array.isArray(data.exercises) ? data.exercises.map(ex => sanitizeExercise(ex)) : [];
+                isMaxOutMode = !!data.isMaxOutMode;
 
-            document.getElementById('workout-date').value = '';
-            document.getElementById('workout-name').value = `${data.name || 'WORKOUT'} CLONE`;
+                document.getElementById('workout-date').value = '';
+                document.getElementById('workout-name').value = `${data.name || 'WORKOUT'} CLONE`;
 
-            const bg = document.getElementById('max-out-indicator');
-            const knob = document.getElementById('max-out-knob');
-            const addBtn = document.getElementById('add-exercise-btn');
+                syncMaxOutVisualState();
+                renderExercises();
 
-            if (isMaxOutMode) {
-                bg.classList.replace('bg-gray-700', 'bg-red-600');
-                knob.classList.add('translate-x-6');
-                addBtn?.classList.add('hidden');
-            } else {
-                bg.classList.replace('bg-red-600', 'bg-gray-700');
-                knob.classList.remove('translate-x-6');
-                addBtn?.classList.remove('hidden');
+                document.getElementById('save-workout-btn').innerText = "Save Clone";
+                showPageMessage("Workout cloned into editor. Choose a new date and save.", "success");
+                setTrainingStatus('Clone Ready', 'success');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } catch (err) {
+                console.error("Duplicate workout error:", err);
+                showPageMessage("Unable to clone that workout right now.", "error");
+                setTrainingStatus('Clone Failed', 'error');
             }
-
-            renderExercises();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            document.getElementById('save-workout-btn').innerText = "Save Clone";
         };
 
         window.deleteWorkout = async (id) => {
@@ -608,16 +812,31 @@
 
             try {
                 await deleteDoc(doc(db, "workouts", id));
+
+                if (editingWorkoutId === id) {
+                    resetEditorState();
+                    exercises = [];
+                    isMaxOutMode = false;
+                    syncMaxOutVisualState();
+                    addExerciseBlock();
+                }
+
                 await loadHistory();
+                showPageMessage("Workout deleted from archive.", "success");
+                setTrainingStatus('Deleted', 'success');
             } catch (err) {
                 console.error("Delete workout failed:", err);
                 alert("Unable to delete workout.");
+                showPageMessage("Unable to delete that workout right now.", "error");
+                setTrainingStatus('Delete Failed', 'error');
             }
         };
 
         window.filterHistory = () => {
             const term = document.getElementById('history-search').value.toLowerCase();
-            document.querySelectorAll('#history-container > div').forEach(item => {
+            const items = document.querySelectorAll('#history-container > div');
+
+            items.forEach(item => {
                 item.style.display = item.innerText.toLowerCase().includes(term) ? 'flex' : 'none';
             });
         };

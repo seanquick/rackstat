@@ -26,12 +26,12 @@
 <body class="pb-24">
 
 <header class="bg-black border-b-2 border-red-700 p-4">
-    <div class="flex justify-between items-center max-w-6xl mx-auto">
+    <div class="flex justify-between items-center max-w-6xl mx-auto gap-4">
         <div class="w-1/4 flex justify-start">
             <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1 rounded text-gray-300 hover:text-white transition-colors">← Lobby</button>
         </div>
 
-        <div class="flex items-center gap-6 justify-center flex-1">
+        <div class="flex items-center gap-6 justify-center flex-1 min-w-0">
             <div class="header-logo-container">
                 <img id="school-logo" src="images/rackstat-logo.png" alt="School Logo" onerror="this.src='images/rackstat-logo.png'">
             </div>
@@ -39,8 +39,8 @@
             <div class="h-10 w-[1px] bg-gray-700"></div>
 
             <div class="flex flex-col items-center min-w-[140px]">
-                <span id="school-tag" class="text-sm font-black italic uppercase tracking-widest text-white leading-tight text-center">LOADING...</span>
-                <span class="text-[10px] font-black italic uppercase tracking-widest text-red-600">THE KITCHEN</span>
+                <span id="school-tag" class="text-sm font-black italic uppercase tracking-widest text-white leading-tight text-center">THE KITCHEN</span>
+                <span id="kitchen-status" class="text-[8px] font-bold uppercase tracking-widest text-gray-500 text-center mt-1">Loading Nutrition Data...</span>
             </div>
 
             <div class="h-10 w-[1px] bg-gray-700"></div>
@@ -53,6 +53,10 @@
         <div class="w-1/4"></div>
     </div>
 </header>
+
+<div id="page-message" class="hidden max-w-md mx-auto px-4 pt-6">
+    <div id="page-message-box" class="rounded-xl border p-4 text-xs font-bold uppercase tracking-wider"></div>
+</div>
 
 <div class="max-w-md mx-auto px-4 py-6 space-y-6">
 
@@ -67,7 +71,7 @@
                 <span class="text-[10px] font-black uppercase text-green-500 italic tracking-widest">Macro Command Center</span>
                 <h2 id="display-date-label" class="text-xs font-bold text-gray-400 uppercase">Today</h2>
             </div>
-            <button onclick="setTargets()" class="text-[9px] bg-white text-black px-3 py-1 rounded font-black uppercase hover:bg-gray-200">Set Targets</button>
+            <button onclick="setTargets()" id="set-targets-btn" class="text-[9px] bg-white text-black px-3 py-1 rounded font-black uppercase hover:bg-gray-200">Set Targets</button>
         </div>
 
         <div class="grid grid-cols-2 gap-3 mb-4">
@@ -106,9 +110,9 @@
         <section class="bg-[#1a1a1c] p-4 rounded-2xl border border-blue-900/30">
             <h2 class="text-[10px] font-black uppercase italic text-blue-400 mb-3">Add Water</h2>
             <div class="flex gap-2">
-                <button onclick="addWater(1)" class="flex-1 bg-blue-900/40 border border-blue-500/50 py-2 rounded font-black text-xs">+1</button>
-                <button onclick="addWater(4)" class="flex-1 bg-blue-900/40 border border-blue-500/50 py-2 rounded font-black text-xs">+4</button>
-                <button onclick="undoLastWater()" class="text-red-500 text-[10px] font-black uppercase ml-2 opacity-70 hover:opacity-100">Undo Last</button>
+                <button onclick="addWater(1)" id="add-water-1-btn" class="flex-1 bg-blue-900/40 border border-blue-500/50 py-2 rounded font-black text-xs">+1</button>
+                <button onclick="addWater(4)" id="add-water-4-btn" class="flex-1 bg-blue-900/40 border border-blue-500/50 py-2 rounded font-black text-xs">+4</button>
+                <button onclick="undoLastWater()" id="undo-water-btn" class="text-red-500 text-[10px] font-black uppercase ml-2 opacity-70 hover:opacity-100">Undo Last</button>
             </div>
         </section>
 
@@ -129,7 +133,7 @@
                     <input id="quick-weight" type="number" placeholder="Lbs" class="flex-1 !m-0 !py-2 text-sm text-center bg-black border-gray-800 text-white rounded">
                     <input id="quick-height" type="number" placeholder="Inches" class="flex-1 !m-0 !py-2 text-sm text-center bg-black border-gray-800 text-white rounded">
                 </div>
-                <button onclick="saveQuickStats()" class="w-full bg-white text-black py-2 rounded-lg font-black uppercase text-[10px] tracking-wider shadow-md hover:bg-gray-200 transition-colors">Update</button>
+                <button onclick="saveQuickStats()" id="quick-stats-btn" class="w-full bg-white text-black py-2 rounded-lg font-black uppercase text-[10px] tracking-wider shadow-md hover:bg-gray-200 transition-colors">Update</button>
             </div>
         </section>
     </div>
@@ -183,7 +187,7 @@
     </section>
 
     <div class="max-w-md mx-auto px-4 pb-8">
-        <button onclick="showWeeklySummary()" class="w-full bg-gray-900 border border-gray-700 text-gray-400 py-3 rounded-xl font-black uppercase text-xs hover:text-white transition-all">
+        <button onclick="showWeeklySummary()" id="weekly-summary-btn" class="w-full bg-gray-900 border border-gray-700 text-gray-400 py-3 rounded-xl font-black uppercase text-xs hover:text-white transition-all">
             View 7-Day Performance Report
         </button>
     </div>
@@ -267,9 +271,9 @@
 </div>
 
 <nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-red-900/30 px-6 py-4 flex justify-between items-center z-50">
-    <button onclick="location.href='board.html'" class="text-red-600 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Board</span></button>
+    <button onclick="location.href='board.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Board</span></button>
     <button onclick="location.href='rack.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">The Rack</span></button>
-    <button onclick="location.href='kitchen.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Kitchen</span></button>
+    <button onclick="location.href='kitchen.html'" class="text-red-600 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Kitchen</span></button>
     <button onclick="location.href='profile.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Profile</span></button>
 </nav>
 
@@ -303,9 +307,46 @@
     const entryDateInput = document.getElementById('entry-date');
     const todayKey = new Date().toISOString().split('T')[0];
 
+    const kitchenStatus = document.getElementById('kitchen-status');
+    const pageMessage = document.getElementById('page-message');
+    const pageMessageBox = document.getElementById('page-message-box');
+
     if (entryDateInput) {
         entryDateInput.value = todayKey;
         entryDateInput.max = todayKey;
+    }
+
+    function setKitchenStatus(text, tone = 'default') {
+        if (!kitchenStatus) return;
+        kitchenStatus.innerText = text;
+        kitchenStatus.className = 'text-[8px] font-bold uppercase tracking-widest text-center mt-1';
+
+        if (tone === 'error') kitchenStatus.classList.add('text-red-400');
+        else if (tone === 'success') kitchenStatus.classList.add('text-green-400');
+        else if (tone === 'warn') kitchenStatus.classList.add('text-yellow-300');
+        else kitchenStatus.classList.add('text-gray-500');
+    }
+
+    function showPageMessage(message, tone = 'warn') {
+        if (!pageMessage || !pageMessageBox) return;
+
+        pageMessage.classList.remove('hidden');
+        pageMessageBox.innerText = message;
+        pageMessageBox.className = 'rounded-xl border p-4 text-xs font-bold uppercase tracking-wider';
+
+        if (tone === 'error') {
+            pageMessageBox.classList.add('bg-red-500/10', 'border-red-500/20', 'text-red-300');
+        } else if (tone === 'success') {
+            pageMessageBox.classList.add('bg-green-500/10', 'border-green-500/20', 'text-green-300');
+        } else {
+            pageMessageBox.classList.add('bg-yellow-500/10', 'border-yellow-500/20', 'text-yellow-300');
+        }
+    }
+
+    function hidePageMessage() {
+        if (!pageMessage || !pageMessageBox) return;
+        pageMessage.classList.add('hidden');
+        pageMessageBox.innerText = '';
     }
 
     function getSelectedDateKey() {
@@ -341,17 +382,47 @@
         });
     }
 
+    function resetKitchenUi() {
+        safeSetText('school-tag', 'THE KITCHEN');
+        safeSetText('display-date-label', 'TODAY');
+        safeSetText('day-cal', '0');
+        safeSetText('day-pro', '0g');
+        safeSetText('day-carb', '0g');
+        safeSetText('day-fat', '0g');
+        safeSetText('day-water', '0 Cups');
+        safeSetText('target-cal-display', '0');
+        safeSetText('target-pro-display', '0');
+        safeSetText('last-weight-display', '-- lbs');
+        safeSetText('last-height-display', '-- in');
+        safeSetText('sync-timestamp', '--');
+
+        const calFill = document.getElementById('cal-fill');
+        const proFill = document.getElementById('pro-fill');
+        const waterFill = document.getElementById('water-progress-bar');
+
+        if (calFill) calFill.style.width = '0%';
+        if (proFill) proFill.style.width = '0%';
+        if (waterFill) waterFill.style.width = '0%';
+
+        const history = document.getElementById('history-list');
+        if (history) {
+            history.innerHTML = '<p class="text-[10px] text-gray-600 italic text-center py-4">Loading history...</p>';
+        }
+    }
+
     async function syncBodyweightAcrossApp(uid, weightValue) {
         const numericWeight = Number(weightValue) || 0;
         if (!numericWeight) return;
 
         await Promise.all([
             setDoc(doc(db, "users", uid), {
-                weight: numericWeight
+                weight: numericWeight,
+                lastSync: serverTimestamp()
             }, { merge: true }),
             setDoc(doc(db, "recruiting_profiles", uid), {
                 weight: numericWeight,
-                bodyWeight: numericWeight
+                bodyWeight: numericWeight,
+                lastUpdated: serverTimestamp()
             }, { merge: true }),
             setDoc(doc(db, "recruiting_profiles", uid, "maxes", "latest"), {
                 weight: numericWeight,
@@ -363,6 +434,10 @@
     }
 
     onAuthStateChanged(auth, async (user) => {
+        hidePageMessage();
+        resetKitchenUi();
+        setKitchenStatus("Checking Athlete Access...");
+
         if (!user) {
             location.href = 'index.html';
             return;
@@ -371,49 +446,99 @@
         if (userUnsubscribe) userUnsubscribe();
         if (profileUnsubscribe) profileUnsubscribe();
 
-        userUnsubscribe = onSnapshot(doc(db, "users", user.uid), async (userDoc) => {
-            if (!userDoc.exists()) return;
+        try {
+            const userSnap = await getDoc(doc(db, "users", user.uid));
 
-            const userData = userDoc.data();
+            if (!userSnap.exists()) {
+                showPageMessage("Your athlete profile could not be found. Please contact support.", "error");
+                setKitchenStatus("Profile Missing", "error");
+                return;
+            }
+
+            const userData = userSnap.data();
+            const role = (userData.role || '').toLowerCase();
+
+            if (role !== 'player' && role !== 'athlete') {
+                location.href = 'index.html';
+                return;
+            }
+
             const schoolID = userData.schoolId || userData.school_id;
 
-            if (schoolID) {
-                await applyTheme(db, schoolID);
+            if (!schoolID) {
+                showPageMessage("Your athlete profile is missing a school link. Please contact your coach.", "error");
+                setKitchenStatus("Missing School", "error");
+                return;
             }
 
-            if (userData.weight) {
-                safeSetText('last-weight-display', `${userData.weight} lbs`);
-            }
-            if (userData.height) {
-                safeSetText('last-height-display', `${userData.height} in`);
-            }
-        });
-
-        profileUnsubscribe = onSnapshot(doc(db, "recruiting_profiles", user.uid), async (snap) => {
-            if (!snap.exists()) return;
-
-            const data = snap.data();
-            calGoal = Number(data.dailyCalorieGoal || 2500);
-            proGoal = Number(data.dailyProteinGoal || 150);
-            waterGoal = Number(data.dailyWaterGoal || 16);
-
-            safeSetText('target-cal-display', calGoal);
-            safeSetText('target-pro-display', proGoal);
-
-            if (data.weight || data.bodyWeight) {
-                safeSetText('last-weight-display', `${Number(data.weight || data.bodyWeight)} lbs`);
-            }
-            if (data.height) {
-                safeSetText('last-height-display', `${data.height} in`);
+            try {
+                const schoolData = await applyTheme(db, schoolID);
+                safeSetText('school-tag', (schoolData?.name || 'THE KITCHEN').toUpperCase());
+            } catch (themeErr) {
+                console.error("Theme load failed:", themeErr);
+                safeSetText('school-tag', 'THE KITCHEN');
+                showPageMessage("School branding could not be fully loaded, but your Kitchen is still available.", "warn");
+                setKitchenStatus("Theme Limited", "warn");
             }
 
+            userUnsubscribe = onSnapshot(doc(db, "users", user.uid), async (userDoc) => {
+                if (!userDoc.exists()) return;
+
+                const liveUserData = userDoc.data();
+
+                if (liveUserData.weight) {
+                    safeSetText('last-weight-display', `${liveUserData.weight} lbs`);
+                }
+                if (liveUserData.height) {
+                    safeSetText('last-height-display', `${liveUserData.height} in`);
+                }
+            }, (err) => {
+                console.error("User subscription error:", err);
+            });
+
+            profileUnsubscribe = onSnapshot(doc(db, "recruiting_profiles", user.uid), async (snap) => {
+                if (!snap.exists()) {
+                    calGoal = 2500;
+                    proGoal = 150;
+                    waterGoal = 16;
+                    safeSetText('target-cal-display', calGoal);
+                    safeSetText('target-pro-display', proGoal);
+                    await window.updateDailyTotals();
+                    await fetchMealHistory();
+                    return;
+                }
+
+                const data = snap.data();
+                calGoal = Number(data.dailyCalorieGoal || 2500);
+                proGoal = Number(data.dailyProteinGoal || 150);
+                waterGoal = Number(data.dailyWaterGoal || 16);
+
+                safeSetText('target-cal-display', calGoal);
+                safeSetText('target-pro-display', proGoal);
+
+                if (data.weight || data.bodyWeight) {
+                    safeSetText('last-weight-display', `${Number(data.weight || data.bodyWeight)} lbs`);
+                }
+                if (data.height) {
+                    safeSetText('last-height-display', `${data.height} in`);
+                }
+
+                await window.updateDailyTotals();
+                await fetchMealHistory();
+            }, (err) => {
+                console.error("Profile subscription error:", err);
+            });
+
+            setDisplayDateLabel();
             await window.updateDailyTotals();
             await fetchMealHistory();
-        });
+            setKitchenStatus("Kitchen Ready", "success");
 
-        setDisplayDateLabel();
-        await window.updateDailyTotals();
-        await fetchMealHistory();
+        } catch (err) {
+            console.error("Kitchen init error:", err);
+            showPageMessage("The Kitchen could not be loaded right now. Please refresh and try again.", "error");
+            setKitchenStatus("Load Failed", "error");
+        }
     });
 
     document.getElementById('entry-date')?.addEventListener('change', async () => {
@@ -422,6 +547,9 @@
 
         if (selected > today) {
             document.getElementById('entry-date').value = today;
+            showPageMessage("Future meal logging is not available.", "warn");
+        } else {
+            hidePageMessage();
         }
 
         setDisplayDateLabel();
@@ -433,6 +561,9 @@
         const user = auth.currentUser;
         if (!user) return;
 
+        const btn = document.getElementById('set-targets-btn');
+        const originalText = btn?.innerText || "Set Targets";
+
         const newCal = prompt("Daily Calorie Target:", calGoal);
         const newPro = prompt("Daily Protein Target (g):", proGoal);
         const newWater = prompt("Daily Water Target (cups):", waterGoal);
@@ -440,14 +571,28 @@
         if (newCal === null || newPro === null || newWater === null) return;
 
         try {
+            if (btn) {
+                btn.disabled = true;
+                btn.innerText = "Saving...";
+            }
+
             await updateDoc(doc(db, "recruiting_profiles", user.uid), {
                 dailyCalorieGoal: Number(newCal) || calGoal,
                 dailyProteinGoal: Number(newPro) || proGoal,
                 dailyWaterGoal: Number(newWater) || waterGoal
             });
+
+            showPageMessage("Daily targets updated successfully.", "success");
+            setKitchenStatus("Targets Updated", "success");
         } catch (err) {
             console.error("Set targets error:", err);
-            alert("Unable to update targets.");
+            showPageMessage("Unable to update daily targets right now.", "error");
+            setKitchenStatus("Target Save Failed", "error");
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = originalText;
+            }
         }
     };
 
@@ -457,8 +602,13 @@
 
         const htInput = document.getElementById('quick-height');
         const bwInput = document.getElementById('quick-weight');
+        const btn = document.getElementById('quick-stats-btn');
+        const originalText = btn?.innerText || "Update";
 
-        if (!htInput?.value && !bwInput?.value) return;
+        if (!htInput?.value && !bwInput?.value) {
+            showPageMessage("Enter a weight, a height, or both before updating.", "warn");
+            return;
+        }
 
         const hVal = htInput.value ? Number(htInput.value) : null;
         const wVal = bwInput.value ? Number(bwInput.value) : null;
@@ -478,18 +628,30 @@
         }
 
         try {
+            if (btn) {
+                btn.disabled = true;
+                btn.innerText = "Updating...";
+            }
+
             await Promise.all([
                 setDoc(doc(db, "users", user.uid), userPayload, { merge: true }),
                 setDoc(doc(db, "recruiting_profiles", user.uid), profilePayload, { merge: true }),
                 wVal ? syncBodyweightAcrossApp(user.uid, wVal) : Promise.resolve()
             ]);
 
-            alert("Stats Synced!");
+            showPageMessage("Body stats were synced across your profile, rack, and kitchen.", "success");
+            setKitchenStatus("Stats Synced", "success");
             htInput.value = '';
             bwInput.value = '';
         } catch (err) {
             console.error("Quick stats save error:", err);
-            alert("Unable to sync quick stats.");
+            showPageMessage("Unable to sync body stats right now.", "error");
+            setKitchenStatus("Sync Failed", "error");
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = originalText;
+            }
         }
     };
 
@@ -501,11 +663,19 @@
         const today = new Date().toISOString().split('T')[0];
 
         if (selectedDate > today) {
-            alert("You cannot log water for a future date.");
+            showPageMessage("You cannot log water for a future date.", "warn");
             return;
         }
 
+        const btn1 = document.getElementById('add-water-1-btn');
+        const btn4 = document.getElementById('add-water-4-btn');
+        const undoBtn = document.getElementById('undo-water-btn');
+
         try {
+            if (btn1) btn1.disabled = true;
+            if (btn4) btn4.disabled = true;
+            if (undoBtn) undoBtn.disabled = true;
+
             await addDoc(collection(db, "recruiting_profiles", user.uid, "meals"), {
                 mealType: 'Water',
                 cups: Number(cups),
@@ -516,9 +686,14 @@
 
             await window.updateDailyTotals();
             await fetchMealHistory();
+            showPageMessage(`Logged ${Number(cups)} cup${Number(cups) === 1 ? '' : 's'} of water.`, "success");
         } catch (err) {
             console.error("Add water error:", err);
-            alert("Unable to log water.");
+            showPageMessage("Unable to log water right now.", "error");
+        } finally {
+            if (btn1) btn1.disabled = false;
+            if (btn4) btn4.disabled = false;
+            if (undoBtn) undoBtn.disabled = false;
         }
     };
 
@@ -527,8 +702,15 @@
         if (!user) return;
 
         const selectedDate = getSelectedDateKey();
+        const undoBtn = document.getElementById('undo-water-btn');
+        const originalText = undoBtn?.innerText || "Undo Last";
 
         try {
+            if (undoBtn) {
+                undoBtn.disabled = true;
+                undoBtn.innerText = "Undoing...";
+            }
+
             const q = query(
                 collection(db, "recruiting_profiles", user.uid, "meals"),
                 where("mealType", "==", "Water"),
@@ -540,16 +722,22 @@
             const snap = await getDocs(q);
 
             if (snap.empty) {
-                alert("No water entries found to undo.");
+                showPageMessage("No water entries were found to undo for this date.", "warn");
                 return;
             }
 
             await deleteDoc(doc(db, "recruiting_profiles", user.uid, "meals", snap.docs[0].id));
             await window.updateDailyTotals();
             await fetchMealHistory();
+            showPageMessage("Last water entry was removed.", "success");
         } catch (e) {
             console.error("Undo Water Error:", e);
-            alert("Unable to undo water entry.");
+            showPageMessage("Unable to undo the last water entry.", "error");
+        } finally {
+            if (undoBtn) {
+                undoBtn.disabled = false;
+                undoBtn.innerText = originalText;
+            }
         }
     };
 
@@ -561,13 +749,13 @@
         const today = new Date().toISOString().split('T')[0];
 
         if (selectedDate > today) {
-            alert("You cannot log fuel for the future. Focus on today's targets!");
+            showPageMessage("You cannot log fuel for a future date. Focus on today's targets.", "warn");
             return;
         }
 
         const cVal = Number(document.getElementById('calories').value);
         if (cVal <= 0) {
-            alert("Enter calories.");
+            showPageMessage("Enter calories before recording a meal.", "warn");
             return;
         }
 
@@ -595,6 +783,7 @@
             clearMealInputs();
             await window.updateDailyTotals();
             await fetchMealHistory();
+            showPageMessage("Meal recorded successfully.", "success");
 
             if (logBtn) {
                 logBtn.innerText = "RECORDED ✓";
@@ -605,7 +794,7 @@
             }
         } catch (err) {
             console.error("Save meal error:", err);
-            alert("Unable to record meal.");
+            showPageMessage("Unable to record that meal right now.", "error");
             if (logBtn) {
                 logBtn.disabled = false;
                 logBtn.innerText = originalText;
@@ -665,6 +854,7 @@
             if (waterFill) waterFill.style.width = `${waterPct}%`;
         } catch (err) {
             console.error("Daily totals error:", err);
+            showPageMessage("Daily totals could not be refreshed right now.", "error");
         }
     };
 
@@ -732,14 +922,23 @@
         const user = auth.currentUser;
         if (!user) return;
 
-        document.getElementById('weekly-modal').classList.remove('hidden');
+        const weeklyBtn = document.getElementById('weekly-summary-btn');
+        const weeklyModal = document.getElementById('weekly-modal');
+        const originalText = weeklyBtn?.innerText || "View 7-Day Performance Report";
 
-        const now = new Date();
-        const startOfRange = new Date();
-        startOfRange.setDate(now.getDate() - 7);
-        startOfRange.setHours(0, 0, 0, 0);
+        if (weeklyModal) weeklyModal.classList.remove('hidden');
 
         try {
+            if (weeklyBtn) {
+                weeklyBtn.disabled = true;
+                weeklyBtn.innerText = "Loading Report...";
+            }
+
+            const now = new Date();
+            const startOfRange = new Date();
+            startOfRange.setDate(now.getDate() - 7);
+            startOfRange.setHours(0, 0, 0, 0);
+
             const q = query(
                 collection(db, "recruiting_profiles", user.uid, "meals"),
                 orderBy("timestamp", "desc"),
@@ -755,7 +954,6 @@
             let tWater = 0;
             let weightSum = 0;
             let weightDays = 0;
-            const dailyWeights = {};
             const daysActive = new Set();
 
             snap.forEach(docSnap => {
@@ -836,7 +1034,9 @@
 
             const insight = document.getElementById('insight-text');
             if (insight) {
-                if (avgPro >= proGoal && avgCal >= calGoal) {
+                if (!daysActive.size) {
+                    insight.innerText = "Log meals and hydration this week to unlock your weekly report.";
+                } else if (avgPro >= proGoal && avgCal >= calGoal) {
                     insight.innerText = "You're consistently hitting both calorie and protein targets. Keep stacking disciplined days.";
                 } else if (avgPro < proGoal) {
                     insight.innerText = "Protein is trailing your target. Focus on getting a quality protein source into each meal.";
@@ -850,6 +1050,12 @@
             safeSetText('pb-streak-display', `PB: ${daysActive.size}`);
         } catch (e) {
             console.error("Weekly Stats Error:", e);
+            showPageMessage("Weekly performance data could not be loaded right now.", "error");
+        } finally {
+            if (weeklyBtn) {
+                weeklyBtn.disabled = false;
+                weeklyBtn.innerText = originalText;
+            }
         }
     };
 

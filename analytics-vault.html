@@ -10,19 +10,26 @@
     <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator_midnight.min.css" rel="stylesheet">
     <script type="text/javascript" src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
 </head>
-<body class="bg-[#0d1117] text-white font-sans antialiased">
+<body class="bg-[#0d1117] text-white font-sans antialiased pb-24">
 
-    <header class="p-6 flex justify-between items-center border-b border-gray-800">
-        <div class="flex items-center gap-4">
-            <a href="coach-lobby.html" class="text-gray-400 hover:text-white transition">← Back to Office</a>
-            <h1 class="text-xl font-black italic uppercase tracking-tighter text-red-500">Analytics Vault</h1>
+    <header class="bg-black border-b-2 border-red-700 p-4 sticky top-0 z-40">
+        <div class="flex justify-between items-center max-w-7xl mx-auto gap-4">
+            <div class="flex items-center gap-4 min-w-0">
+                <a href="coach-lobby.html" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1 rounded text-gray-300 hover:text-white transition-colors shrink-0">← Back to Office</a>
+                <div class="min-w-0">
+                    <h1 class="text-xl font-black italic uppercase tracking-tighter text-red-500">Analytics Vault</h1>
+                    <p id="vault-subtitle" class="text-[10px] font-bold uppercase tracking-widest text-gray-500">Awaiting Program Data...</p>
+                </div>
+            </div>
+            <button id="export-btn" onclick="downloadCSV()" class="bg-green-600 hover:bg-green-700 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed text-white px-4 py-2 rounded font-bold text-sm transition shadow-lg uppercase">
+                Export CSV
+            </button>
         </div>
-        <button onclick="downloadCSV()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-bold text-sm transition shadow-lg">
-            EXPORT TO SHEETS
-        </button>
     </header>
 
     <main class="max-w-7xl mx-auto px-6 py-12">
+        <div id="page-message" class="hidden mb-6 rounded-xl border px-4 py-3 text-xs font-bold uppercase tracking-wider"></div>
+
         <div class="mb-8">
             <h2 class="text-3xl font-bold">Team Performance Data</h2>
             <p class="text-gray-400">View weight room maxes and individual meal entries for your school.</p>
@@ -40,6 +47,9 @@
         </div>
 
         <div class="bg-gray-900 rounded-b-xl rounded-tr-xl border border-gray-800 overflow-hidden shadow-2xl">
+            <div id="table-state" class="px-6 py-8 text-center text-xs font-black uppercase tracking-widest text-gray-500">
+                Initializing analytics vault...
+            </div>
             <div id="stats-table"></div>
         </div>
     </main>
@@ -51,6 +61,15 @@
 
         let currentTab = 'rack';
         let coachSchoolId = null;
+        let currentTableData = [];
+        let isReady = false;
+
+        const pageMessage = document.getElementById('page-message');
+        const tableState = document.getElementById('table-state');
+        const exportBtn = document.getElementById('export-btn');
+        const vaultSubtitle = document.getElementById('vault-subtitle');
+        const rackBtn = document.getElementById('btn-rack');
+        const kitchenBtn = document.getElementById('btn-kitchen');
 
         function getSchoolIdFromData(data = {}) {
             return data.schoolId || data.school_id || "";
@@ -65,22 +84,34 @@
             const last = String(data.lastName || "").trim();
             const combined = `${first} ${last}`.trim();
 
-            return combined || "Unnamed";
+            return combined || "Unnamed Athlete";
         }
 
-        const formatFirebaseDate = (timestamp) => {
+        function getBodyWeight(data = {}) {
+            return data.bodyWeight ?? data.body_weight ?? data.weight ?? "--";
+        }
+
+        function normalizeMealType(data = {}) {
+            return data.type || data.mealType || data.mealName || "Meal";
+        }
+
+        function formatFirebaseDate(timestamp) {
             if (!timestamp) return "--";
 
             try {
                 const date = (typeof timestamp.toDate === 'function') ? timestamp.toDate() : new Date(timestamp);
                 if (Number.isNaN(date.getTime())) return "--";
-                return date.toLocaleString('default', { month: 'long', year: 'numeric' });
+                return date.toLocaleDateString('default', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                });
             } catch {
                 return "--";
             }
-        };
+        }
 
-        const formatDateKey = (dateKey) => {
+        function formatDateKey(dateKey) {
             if (!dateKey || typeof dateKey !== "string") return "--";
 
             const parts = dateKey.split("-");
@@ -90,8 +121,64 @@
             const date = new Date(year, (month || 1) - 1, day || 1);
 
             if (Number.isNaN(date.getTime())) return dateKey;
-            return date.toLocaleDateString('default', { month: 'long', day: 'numeric', year: 'numeric' });
-        };
+            return date.toLocaleDateString('default', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        }
+
+        function showPageMessage(message, tone = 'warn') {
+            if (!pageMessage) return;
+
+            pageMessage.classList.remove('hidden');
+            pageMessage.innerText = message;
+            pageMessage.className = 'mb-6 rounded-xl border px-4 py-3 text-xs font-bold uppercase tracking-wider';
+
+            if (tone === 'error') {
+                pageMessage.classList.add('bg-red-500/10', 'border-red-500/20', 'text-red-300');
+            } else if (tone === 'success') {
+                pageMessage.classList.add('bg-green-500/10', 'border-green-500/20', 'text-green-300');
+            } else {
+                pageMessage.classList.add('bg-yellow-500/10', 'border-yellow-500/20', 'text-yellow-300');
+            }
+        }
+
+        function hidePageMessage() {
+            if (!pageMessage) return;
+            pageMessage.classList.add('hidden');
+            pageMessage.innerText = '';
+        }
+
+        function setTableState(message, tone = 'muted') {
+            if (!tableState) return;
+
+            tableState.innerText = message;
+            tableState.className = 'px-6 py-8 text-center text-xs font-black uppercase tracking-widest';
+
+            if (tone === 'error') {
+                tableState.classList.add('text-red-400');
+            } else if (tone === 'warn') {
+                tableState.classList.add('text-yellow-300');
+            } else {
+                tableState.classList.add('text-gray-500');
+            }
+        }
+
+        function updateExportState() {
+            if (!exportBtn) return;
+            exportBtn.disabled = currentTableData.length === 0;
+        }
+
+        function setTabButtons(type) {
+            if (type === 'rack') {
+                rackBtn.className = "px-6 py-3 rounded-t-lg bg-red-600 text-white font-bold transition-all duration-200";
+                kitchenBtn.className = "px-6 py-3 rounded-t-lg bg-gray-800 text-gray-400 hover:bg-gray-700 font-bold transition-all duration-200";
+            } else {
+                kitchenBtn.className = "px-6 py-3 rounded-t-lg bg-red-600 text-white font-bold transition-all duration-200";
+                rackBtn.className = "px-6 py-3 rounded-t-lg bg-gray-800 text-gray-400 hover:bg-gray-700 font-bold transition-all duration-200";
+            }
+        }
 
         const rackColumns = [
             { title: "Athlete", field: "name", widthGrow: 2, headerFilter: "input" },
@@ -118,7 +205,7 @@
             { title: "Athlete", field: "name", widthGrow: 2, headerFilter: "input" },
             { title: "Date", field: "dateGroup", width: 180, headerFilter: "input" },
             { title: "Body Weight", field: "bodyWeight" },
-            { title: "Grad", field: "grad", width: 80 },
+            { title: "Grad", field: "grad", width: 80, headerFilter: "input" },
             {
                 title: "Meal",
                 field: "mealType",
@@ -140,10 +227,16 @@
             responsiveLayout: "collapse",
             pagination: "local",
             paginationSize: 20,
+            placeholder: "No records found for this view.",
             columns: rackColumns
         });
 
+        updateExportState();
+
         onAuthStateChanged(auth, async (user) => {
+            setTableState("Checking coach access...");
+            hidePageMessage();
+
             if (!user) {
                 window.location.href = 'index.html';
                 return;
@@ -166,31 +259,35 @@
                 coachSchoolId = getSchoolIdFromData(userData);
 
                 if (!coachSchoolId) {
-                    console.error("Coach has no assigned school ID.");
-                    window.location.href = 'index.html';
+                    showPageMessage("Coach profile is missing a school link. Analytics Vault cannot load.", "error");
+                    setTableState("Missing school link.", "error");
+                    if (vaultSubtitle) vaultSubtitle.innerText = "School Connection Missing";
                     return;
                 }
 
+                if (vaultSubtitle) {
+                    vaultSubtitle.innerText = `School ID: ${coachSchoolId}`;
+                }
+
+                isReady = true;
                 await loadData('rack');
             } catch (error) {
                 console.error("Analytics vault init error:", error);
-                window.location.href = 'index.html';
+                showPageMessage("Analytics Vault could not be loaded right now. Please refresh and try again.", "error");
+                setTableState("Analytics load failed.", "error");
             }
         });
 
         window.switchTable = async (type) => {
-            currentTab = type;
+            if (!isReady) return;
 
-            const rackBtn = document.getElementById('btn-rack');
-            const kitchenBtn = document.getElementById('btn-kitchen');
+            currentTab = type;
+            hidePageMessage();
+            setTabButtons(type);
 
             if (type === 'rack') {
-                rackBtn.className = "px-6 py-3 rounded-t-lg bg-red-600 text-white font-bold transition-all duration-200";
-                kitchenBtn.className = "px-6 py-3 rounded-t-lg bg-gray-800 text-gray-400 hover:bg-gray-700 font-bold transition-all duration-200";
                 table.setColumns(rackColumns);
             } else {
-                kitchenBtn.className = "px-6 py-3 rounded-t-lg bg-red-600 text-white font-bold transition-all duration-200";
-                rackBtn.className = "px-6 py-3 rounded-t-lg bg-gray-800 text-gray-400 hover:bg-gray-700 font-bold transition-all duration-200";
                 table.setColumns(kitchenColumns);
             }
 
@@ -200,8 +297,10 @@
         async function loadData(type) {
             if (!coachSchoolId) return;
 
+            currentTableData = [];
+            updateExportState();
             table.clearData();
-            const tableData = [];
+            setTableState(type === 'rack' ? "Loading lift data..." : "Loading meal data...");
 
             try {
                 let athletesQuery = query(
@@ -219,86 +318,132 @@
                     athletesSnap = await getDocs(athletesQuery);
                 }
 
+                if (athletesSnap.empty) {
+                    currentTableData = [];
+                    await table.setData([]);
+                    updateExportState();
+                    setTableState("No athlete profiles found for this school.", "warn");
+                    showPageMessage("No athlete profiles are currently linked to this school.", "warn");
+                    return;
+                }
+
+                const tableData = [];
+
                 const dataPromises = athletesSnap.docs.map(async (athleteDoc) => {
                     const profileData = athleteDoc.data();
                     const uid = athleteDoc.id;
 
-                    const userSnap = await getDoc(doc(db, "users", uid));
-                    const userData = userSnap.exists() ? userSnap.data() : {};
-                    const mergedAthlete = { ...userData, ...profileData };
+                    try {
+                        const userSnap = await getDoc(doc(db, "users", uid));
+                        const userData = userSnap.exists() ? userSnap.data() : {};
+                        const mergedAthlete = { ...userData, ...profileData };
 
-                    if (type === 'rack') {
-                        const latestSnap = await getDoc(doc(db, "recruiting_profiles", uid, "maxes", "latest"));
+                        if (type === 'rack') {
+                            const latestSnap = await getDoc(doc(db, "recruiting_profiles", uid, "maxes", "latest"));
 
-                        if (latestSnap.exists()) {
-                            const s = latestSnap.data();
+                            if (latestSnap.exists()) {
+                                const s = latestSnap.data();
 
-                            tableData.push({
-                                name: getDisplayName(mergedAthlete),
-                                grad: mergedAthlete.gradYear || "--",
-                                offPos: mergedAthlete.offPrimary || mergedAthlete.primaryPos || "--",
-                                defPos: mergedAthlete.defPrimary || mergedAthlete.primaryDefPos || "--",
-                                bodyWeight: s.bodyWeight || s.body_weight || s.weight || "--",
-                                dateGroup: formatFirebaseDate(s.timestamp || s.updatedAt || s.createdAt || s.lastUpdated),
-                                bench: s.bench ?? s.bench_press ?? s.benchMax ?? 0,
-                                squat: s.squat ?? 0,
-                                clean: s.clean ?? s.power_clean ?? 0,
-                                deadlift: s.deadlift ?? 0,
-                                pushPress: s.push_press ?? s.pushPress ?? 0
+                                tableData.push({
+                                    name: getDisplayName(mergedAthlete),
+                                    grad: mergedAthlete.gradYear || "--",
+                                    offPos: mergedAthlete.offPrimary || mergedAthlete.primaryPos || "--",
+                                    defPos: mergedAthlete.defPrimary || mergedAthlete.primaryDefPos || "--",
+                                    bodyWeight: getBodyWeight(s),
+                                    dateGroup: formatFirebaseDate(s.timestamp || s.updatedAt || s.createdAt || s.lastUpdated),
+                                    bench: s.bench ?? s.bench_press ?? s.benchMax ?? 0,
+                                    squat: s.squat ?? s.back_squat ?? 0,
+                                    clean: s.clean ?? s.power_clean ?? 0,
+                                    deadlift: s.deadlift ?? 0,
+                                    pushPress: s.push_press ?? s.pushPress ?? 0
+                                });
+
+                                return;
+                            }
+
+                            const subSnap = await getDocs(collection(db, "recruiting_profiles", uid, "maxes"));
+                            subSnap.forEach((subDoc) => {
+                                const s = subDoc.data();
+
+                                tableData.push({
+                                    name: getDisplayName(mergedAthlete),
+                                    grad: mergedAthlete.gradYear || "--",
+                                    offPos: mergedAthlete.offPrimary || mergedAthlete.primaryPos || "--",
+                                    defPos: mergedAthlete.defPrimary || mergedAthlete.primaryDefPos || "--",
+                                    bodyWeight: getBodyWeight(s),
+                                    dateGroup: formatFirebaseDate(s.timestamp || s.updatedAt || s.createdAt || s.lastUpdated),
+                                    bench: s.bench ?? s.bench_press ?? s.benchMax ?? 0,
+                                    squat: s.squat ?? s.back_squat ?? 0,
+                                    clean: s.clean ?? s.power_clean ?? 0,
+                                    deadlift: s.deadlift ?? 0,
+                                    pushPress: s.push_press ?? s.pushPress ?? 0
+                                });
                             });
+                        } else {
+                            const mealsSnap = await getDocs(collection(db, "recruiting_profiles", uid, "meals"));
 
-                            return;
+                            mealsSnap.forEach((mealDoc) => {
+                                const s = mealDoc.data();
+
+                                tableData.push({
+                                    name: getDisplayName(mergedAthlete),
+                                    grad: mergedAthlete.gradYear || "--",
+                                    bodyWeight: mergedAthlete.weight || mergedAthlete.bodyWeight || getBodyWeight(s),
+                                    dateGroup: s.dateKey ? formatDateKey(s.dateKey) : formatFirebaseDate(s.timestamp || s.updatedAt || s.createdAt || s.date),
+                                    mealType: normalizeMealType(s),
+                                    calories: Number(s.calories || 0),
+                                    protein: Number(s.protein || 0),
+                                    carbs: Number(s.carbs || 0),
+                                    fats: Number(s.fats || 0)
+                                });
+                            });
                         }
-
-                        const subSnap = await getDocs(collection(db, "recruiting_profiles", uid, "maxes"));
-                        subSnap.forEach((subDoc) => {
-                            const s = subDoc.data();
-
-                            tableData.push({
-                                name: getDisplayName(mergedAthlete),
-                                grad: mergedAthlete.gradYear || "--",
-                                offPos: mergedAthlete.offPrimary || mergedAthlete.primaryPos || "--",
-                                defPos: mergedAthlete.defPrimary || mergedAthlete.primaryDefPos || "--",
-                                bodyWeight: s.bodyWeight || s.body_weight || s.weight || "--",
-                                dateGroup: formatFirebaseDate(s.timestamp || s.updatedAt || s.createdAt || s.lastUpdated),
-                                bench: s.bench ?? s.bench_press ?? s.benchMax ?? 0,
-                                squat: s.squat ?? 0,
-                                clean: s.clean ?? s.power_clean ?? 0,
-                                deadlift: s.deadlift ?? 0,
-                                pushPress: s.push_press ?? s.pushPress ?? 0
-                            });
-                        });
-                    } else {
-                        const mealsSnap = await getDocs(collection(db, "recruiting_profiles", uid, "meals"));
-
-                        mealsSnap.forEach((mealDoc) => {
-                            const s = mealDoc.data();
-
-                            tableData.push({
-                                name: getDisplayName(mergedAthlete),
-                                grad: mergedAthlete.gradYear || "--",
-                                bodyWeight: mergedAthlete.weight || s.bodyWeight || s.body_weight || "--",
-                                dateGroup: s.dateKey ? formatDateKey(s.dateKey) : formatFirebaseDate(s.timestamp || s.updatedAt || s.createdAt || s.date),
-                                mealType: s.type || s.mealType || s.mealName || "Meal",
-                                calories: s.calories || 0,
-                                protein: s.protein || 0,
-                                carbs: s.carbs || 0,
-                                fats: s.fats || 0
-                            });
-                        });
+                    } catch (athleteErr) {
+                        console.warn(`Analytics load skipped athlete ${uid}:`, athleteErr);
                     }
                 });
 
                 await Promise.all(dataPromises);
 
+                tableData.sort((a, b) => String(b.dateGroup || "").localeCompare(String(a.dateGroup || "")));
+
+                currentTableData = tableData;
                 await table.setData(tableData);
                 table.refreshFilter();
+                updateExportState();
+
+                if (!tableData.length) {
+                    setTableState(type === 'rack'
+                        ? "No lift records found for this school."
+                        : "No meal records found for this school.", "warn");
+                    showPageMessage(type === 'rack'
+                        ? "No approved max records are available yet."
+                        : "No kitchen entries are available yet.", "warn");
+                    return;
+                }
+
+                tableState.className = 'hidden';
+
+                if (vaultSubtitle) {
+                    const label = type === 'rack' ? 'Lift Analytics Active' : 'Kitchen Analytics Active';
+                    vaultSubtitle.innerText = `${label} • ${tableData.length} Record${tableData.length === 1 ? '' : 's'}`;
+                }
             } catch (err) {
                 console.error("Data Load Error:", err);
+                currentTableData = [];
+                updateExportState();
+                await table.setData([]);
+                setTableState("Unable to load analytics data.", "error");
+                showPageMessage("This data could not be loaded right now. Please refresh and try again.", "error");
             }
         }
 
         window.downloadCSV = () => {
+            if (!currentTableData.length) {
+                alert("There is no data to export for this tab.");
+                return;
+            }
+
             const fileName = currentTab === 'rack' ? "Team_Maxes" : "Team_Meals";
             table.download("csv", `${fileName}_${new Date().getFullYear()}.csv`);
         };

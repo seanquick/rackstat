@@ -8,41 +8,56 @@
     <link rel="stylesheet" href="style.css">
     <link rel="icon" href="images/rackstat-logo.png">
     <style>
-        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {
-            -webkit-appearance: none; margin: 0;
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
         }
+
         body { background-color: #0a0a0b; color: white; }
         :root { --school-primary: #b91c1c; }
+
         .loading-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+
         #finish-workout-btn { background-color: var(--school-primary); }
         #finish-workout-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
 </head>
 <body class="bg-[#0a0a0b] text-white antialiased min-h-screen pb-24">
 
-<header class="bg-black border-b-2 border-red-700 p-4">
-    <div class="flex justify-between items-center max-w-6xl mx-auto">
+<header class="bg-black border-b-2 border-red-700 p-4 sticky top-0 z-40">
+    <div class="flex justify-between items-center max-w-6xl mx-auto gap-4">
         <div class="w-1/4 flex justify-start">
             <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1 rounded text-gray-300 hover:text-white transition-colors">← Lobby</button>
         </div>
-        <div class="flex items-center gap-6 justify-center flex-1">
+
+        <div class="flex items-center gap-6 justify-center flex-1 min-w-0">
             <div class="header-logo-container">
-                <img id="school-logo" src="images/rackstat-logo.png" alt="School Logo" class="h-10 w-auto">
+                <img id="school-logo" src="images/rackstat-logo.png" alt="School Logo" class="h-10 w-auto" onerror="this.src='images/rackstat-logo.png'">
             </div>
             <div class="h-10 w-[1px] bg-gray-700"></div>
             <div class="flex flex-col items-center min-w-[140px]">
-                <span id="school-tag" class="text-sm font-black italic uppercase text-white text-center leading-tight">LOADING...</span>
-                <span class="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">Athlete Workout</span>
+                <span id="school-tag" class="text-sm font-black italic uppercase text-white text-center leading-tight">ATHLETE WORKOUT</span>
+                <span id="workout-status" class="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">Loading Session</span>
             </div>
             <div class="h-10 w-[1px] bg-gray-700"></div>
             <div class="header-logo-container">
                 <img src="images/rackstat-logo.png" alt="RACKSTAT" class="h-10 w-auto">
             </div>
         </div>
-        <div class="w-1/4"></div> 
+
+        <div class="w-1/4"></div>
     </div>
 </header>
+
+<div id="workout-page-message" class="hidden max-w-md mx-auto px-4 pt-6">
+    <div id="workout-page-message-box" class="rounded-xl border p-4 text-xs font-bold uppercase tracking-wider"></div>
+</div>
 
 <div id="athlete-dashboard" class="max-w-md mx-auto p-4">
     <div class="mb-8 border-b border-[#2a2a2c] pb-4 mt-4">
@@ -56,15 +71,20 @@
     </div>
 </div>
 
-<div id="athlete-workout-container" class="max-w-md mx-auto p-4" style="display: none;">
+<div id="athlete-workout-container" class="max-w-md mx-auto p-4 hidden">
     <button onclick="location.reload()" class="text-gray-500 text-[10px] uppercase font-bold mb-4 flex items-center gap-1 hover:text-white transition-colors">
         ← Back to List
     </button>
+
     <div class="mb-6">
         <h1 id="display-title" class="text-3xl font-black text-white uppercase tracking-tighter italic">--</h1>
-        <p id="display-week" class="text-red-600 font-black text-sm uppercase tracking-widest">WEEK --</p>
+        <p id="display-week" class="text-red-600 font-black text-sm uppercase tracking-widest">ACTIVE SESSION</p>
     </div>
-    <div id="athlete-exercise-list" class="space-y-4"></div>
+
+    <div id="athlete-exercise-list" class="space-y-4">
+        <div class="text-center text-xs text-gray-500 uppercase font-black py-8">Waiting for workout details...</div>
+    </div>
+
     <div class="py-10">
         <button id="finish-workout-btn" class="w-full text-white font-black py-5 rounded-xl uppercase italic tracking-widest shadow-lg">
             Log Session & Finish
@@ -91,9 +111,95 @@
     let activeWorkoutData = null;
     let currentMaxes = {};
 
+    const availableWorkoutsEl = document.getElementById('available-workouts');
+    const dashboardEl = document.getElementById('athlete-dashboard');
+    const workoutContainerEl = document.getElementById('athlete-workout-container');
+    const workoutStatusEl = document.getElementById('workout-status');
+    const pageMessageWrap = document.getElementById('workout-page-message');
+    const pageMessageBox = document.getElementById('workout-page-message-box');
+    const finishWorkoutBtn = document.getElementById('finish-workout-btn');
+    const exerciseListEl = document.getElementById('athlete-exercise-list');
+
     const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
 
+    function setWorkoutStatus(text, tone = 'default') {
+        if (!workoutStatusEl) return;
+        workoutStatusEl.innerText = text;
+        workoutStatusEl.className = "text-[8px] font-bold uppercase tracking-tighter";
+
+        if (tone === 'error') workoutStatusEl.classList.add('text-red-400');
+        else if (tone === 'success') workoutStatusEl.classList.add('text-green-400');
+        else if (tone === 'warn') workoutStatusEl.classList.add('text-yellow-300');
+        else workoutStatusEl.classList.add('text-gray-400');
+    }
+
+    function showPageMessage(message, tone = 'warn') {
+        if (!pageMessageWrap || !pageMessageBox) return;
+
+        pageMessageWrap.classList.remove('hidden');
+        pageMessageBox.innerText = message;
+        pageMessageBox.className = 'rounded-xl border p-4 text-xs font-bold uppercase tracking-wider';
+
+        if (tone === 'error') {
+            pageMessageBox.classList.add('bg-red-500/10', 'border-red-500/20', 'text-red-300');
+        } else if (tone === 'success') {
+            pageMessageBox.classList.add('bg-green-500/10', 'border-green-500/20', 'text-green-300');
+        } else {
+            pageMessageBox.classList.add('bg-yellow-500/10', 'border-yellow-500/20', 'text-yellow-300');
+        }
+    }
+
+    function hidePageMessage() {
+        if (!pageMessageWrap || !pageMessageBox) return;
+        pageMessageWrap.classList.add('hidden');
+        pageMessageBox.innerText = '';
+    }
+
+    function renderWorkoutListMessage(message, tone = 'muted') {
+        if (!availableWorkoutsEl) return;
+
+        const toneClass = tone === 'error'
+            ? 'text-red-400'
+            : tone === 'warn'
+                ? 'text-yellow-300'
+                : 'text-gray-500';
+
+        availableWorkoutsEl.innerHTML = `
+            <div class="${toneClass} text-xs uppercase font-bold text-center py-10 tracking-widest">
+                ${message}
+            </div>
+        `;
+    }
+
+    function renderExerciseListMessage(message, tone = 'muted') {
+        if (!exerciseListEl) return;
+
+        const toneClass = tone === 'error'
+            ? 'text-red-400'
+            : tone === 'warn'
+                ? 'text-yellow-300'
+                : 'text-gray-500';
+
+        exerciseListEl.innerHTML = `
+            <div class="text-center text-xs ${toneClass} uppercase font-black py-8">
+                ${message}
+            </div>
+        `;
+    }
+
+    function resetWorkoutShell() {
+        document.getElementById('school-tag').innerText = 'ATHLETE WORKOUT';
+        document.getElementById('display-title').innerText = '--';
+        document.getElementById('display-week').innerText = 'ACTIVE SESSION';
+        renderWorkoutListMessage('Syncing training session...');
+        renderExerciseListMessage('Waiting for workout details...');
+        hidePageMessage();
+        setWorkoutStatus('Loading Session');
+    }
+
     onAuthStateChanged(auth, async (user) => {
+        resetWorkoutShell();
+
         if (!user) {
             window.location.href = "index.html";
             return;
@@ -114,21 +220,35 @@
             currentSchoolId = getSchoolIdFromData(mergedData);
 
             if (!currentSchoolId) {
-                throw new Error("Athlete school ID not found.");
+                showPageMessage("Your athlete account is not linked to a school, so workouts cannot be loaded.", "error");
+                renderWorkoutListMessage("No School Assigned", "error");
+                setWorkoutStatus("Missing School", "error");
+                return;
             }
 
-            await applyTheme(db, currentSchoolId);
+            try {
+                const schoolTheme = await applyTheme(db, currentSchoolId);
+                if (schoolTheme?.name) {
+                    document.getElementById('school-tag').innerText = schoolTheme.name.toUpperCase();
+                }
+            } catch (themeErr) {
+                console.error("Theme load error:", themeErr);
+            }
+
             await loadAvailableWorkouts();
         } catch (err) {
             console.error("Auth initialization error:", err);
-            document.getElementById('available-workouts').innerHTML = `
-                <div class="text-red-500 text-[10px] text-center uppercase py-10 font-black">Unable To Load Workouts.</div>
-            `;
+            showPageMessage("Unable to load your workout portal right now. Please refresh and try again.", "error");
+            renderWorkoutListMessage("Unable To Load Workouts", "error");
+            setWorkoutStatus("Load Failed", "error");
         }
     });
 
     async function loadAvailableWorkouts() {
-        const workoutContainer = document.getElementById('available-workouts');
+        if (!availableWorkoutsEl) return;
+
+        setWorkoutStatus("Loading Workouts");
+        hidePageMessage();
 
         try {
             let q = query(collection(db, "workouts"), where("schoolId", "==", currentSchoolId));
@@ -139,10 +259,11 @@
                 querySnapshot = await getDocs(q);
             }
 
-            workoutContainer.innerHTML = '';
+            availableWorkoutsEl.innerHTML = '';
 
             if (querySnapshot.empty) {
-                workoutContainer.innerHTML = `<div class="text-gray-600 text-[10px] uppercase font-bold text-center py-20 tracking-widest">No training sessions found.</div>`;
+                renderWorkoutListMessage("No training sessions found.");
+                setWorkoutStatus("No Workouts", "warn");
                 return;
             }
 
@@ -161,11 +282,15 @@
                     </div>
                     <span class="text-gray-700 group-hover:text-red-600 font-black text-xl">→</span>
                 `;
-                workoutContainer.appendChild(btn);
+                availableWorkoutsEl.appendChild(btn);
             });
+
+            setWorkoutStatus("Workouts Ready", "success");
         } catch (err) {
             console.error("Firestore Error:", err);
-            workoutContainer.innerHTML = `<div class="text-red-500 text-[10px] text-center uppercase py-10 font-black">Connection Error.</div>`;
+            showPageMessage("Workout data could not be loaded from Firestore.", "error");
+            renderWorkoutListMessage("Connection Error", "error");
+            setWorkoutStatus("Connection Error", "error");
         }
     }
 
@@ -173,23 +298,32 @@
         return getLiftValue(maxes, slugify(exerciseName));
     }
 
+    function toggleCompletionState(targetElement) {
+        if (!targetElement) return;
+        targetElement.classList.toggle('border-green-500');
+        targetElement.classList.toggle('border-gray-800');
+
+        const svg = targetElement.querySelector('svg');
+        if (svg) svg.classList.toggle('text-green-500');
+    }
+
     function renderStandardExerciseCard(ex, exIndex, athleteCurrentMax) {
-        const setsHtml = (ex.sets || []).map((s, i) => {
+        const setsHtml = (Array.isArray(ex.sets) ? ex.sets : []).map((s, i) => {
             const pct = parseFloat(s.pct ?? s.percent) || 0;
             const weight = pct > 0 ? Math.round((athleteCurrentMax * (pct / 100)) / 5) * 5 : "BW";
             const setId = `set-${exIndex}-${i}`;
 
             return `
-                <div id="container-${setId}" class="flex justify-between items-center bg-black p-4 rounded-lg mb-2 border border-gray-800 transition-all">
+                <div id="container-${setId}" class="standard-set-row flex justify-between items-center bg-black p-4 rounded-lg mb-2 border border-gray-800 transition-all">
                     <div class="flex flex-col">
                         <span class="text-[8px] text-gray-600 font-black uppercase">Set ${i + 1} — ${pct}%</span>
-                        <input type="number" value="${weight === "BW" ? 0 : weight}" class="bg-transparent text-red-500 font-black text-xl italic w-24 outline-none">
+                        <input type="number" value="${weight === "BW" ? 0 : weight}" class="bg-transparent text-red-500 font-black text-xl italic w-24 outline-none" data-set-weight="${setId}">
                     </div>
                     <div class="text-center">
                         <p class="text-[8px] text-gray-700 uppercase font-black">Reps</p>
                         <p class="text-white font-black text-lg">${s.reps ?? ""}</p>
                     </div>
-                    <button onclick="this.parentElement.classList.toggle('border-green-500'); this.parentElement.classList.toggle('border-gray-800'); this.querySelector('svg').classList.toggle('text-green-500')" class="bg-[#1a1a1c] p-3 rounded-full text-gray-700 border border-gray-800 transition-colors">
+                    <button type="button" class="bg-[#1a1a1c] p-3 rounded-full text-gray-700 border border-gray-800 transition-colors" data-toggle-set="${setId}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path d="M5 13l4 4L19 7" /></svg>
                     </button>
                 </div>`;
@@ -197,6 +331,8 @@
 
         const card = document.createElement('div');
         card.className = "bg-[#111113] border-l-4 border-red-600 p-5 rounded-r-xl mb-4 shadow-xl";
+        card.setAttribute('data-ex-index', String(exIndex));
+        card.setAttribute('data-ex-type', 'standard');
         card.innerHTML = `
             <div class="flex justify-between items-start mb-4">
                 <h3 class="text-white font-black uppercase text-sm italic">${ex.name || "Exercise"}</h3>
@@ -205,8 +341,16 @@
                     <p class="text-xs text-white font-black">${athleteCurrentMax} LBS</p>
                 </div>
             </div>
-            ${setsHtml}
+            ${setsHtml || `<div class="text-[10px] text-gray-500 font-black uppercase text-center py-3">No sets configured.</div>`}
         `;
+
+        card.querySelectorAll('[data-toggle-set]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const row = btn.closest('.standard-set-row');
+                toggleCompletionState(row);
+            });
+        });
+
         return card;
     }
 
@@ -218,13 +362,13 @@
 
         const movementRows = circuitExercises.length
             ? circuitExercises.map((movement, movementIndex) => `
-                <div class="bg-black rounded-lg border border-gray-800 p-4">
+                <div class="circuit-movement-row bg-black rounded-lg border border-gray-800 p-4" data-movement-index="${movementIndex}">
                     <div class="flex justify-between items-start gap-3">
                         <div>
                             <p class="text-[8px] text-gray-600 font-black uppercase tracking-widest">Exercise ${movementIndex + 1}</p>
-                            <p class="text-sm text-white font-black uppercase italic mt-1">${movement}</p>
+                            <p class="circuit-movement-name text-sm text-white font-black uppercase italic mt-1">${movement}</p>
                         </div>
-                        <button onclick="this.closest('.bg-black').classList.toggle('border-green-500'); this.closest('.bg-black').classList.toggle('border-gray-800'); this.querySelector('svg').classList.toggle('text-green-500')" class="bg-[#1a1a1c] p-3 rounded-full text-gray-700 border border-gray-800 transition-colors shrink-0">
+                        <button type="button" class="bg-[#1a1a1c] p-3 rounded-full text-gray-700 border border-gray-800 transition-colors shrink-0" data-toggle-circuit-movement="${movementIndex}">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path d="M5 13l4 4L19 7" /></svg>
                         </button>
                     </div>
@@ -252,6 +396,8 @@
 
         const card = document.createElement('div');
         card.className = "bg-[#111113] border-l-4 border-red-600 p-5 rounded-r-xl mb-4 shadow-xl";
+        card.setAttribute('data-ex-index', String(exIndex));
+        card.setAttribute('data-ex-type', 'circuit');
         card.innerHTML = `
             <div class="flex justify-between items-start mb-4">
                 <div>
@@ -265,55 +411,89 @@
             </div>
             <div class="space-y-3">${movementRows}</div>
         `;
+
+        card.querySelectorAll('[data-toggle-circuit-movement]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const row = btn.closest('.circuit-movement-row');
+                toggleCompletionState(row);
+            });
+        });
+
         return card;
     }
 
     async function loadWorkoutDetails(workoutId) {
-        const [workoutSnap, maxSnap] = await Promise.all([
-            getDoc(doc(db, "workouts", workoutId)),
-            getDoc(doc(db, "recruiting_profiles", currentAthleteId, "maxes", "latest"))
-        ]);
+        hidePageMessage();
+        setWorkoutStatus("Loading Workout...");
+        renderExerciseListMessage("Loading workout details...");
 
-        if (!workoutSnap.exists()) return;
+        try {
+            const [workoutSnap, maxSnap] = await Promise.all([
+                getDoc(doc(db, "workouts", workoutId)),
+                getDoc(doc(db, "recruiting_profiles", currentAthleteId, "maxes", "latest"))
+            ]);
 
-        activeWorkoutData = { id: workoutId, ...workoutSnap.data() };
-        currentMaxes = maxSnap.exists() ? maxSnap.data() : {};
+            if (!workoutSnap.exists()) {
+                showPageMessage("That workout could not be found.", "error");
+                renderExerciseListMessage("Workout Not Found", "error");
+                setWorkoutStatus("Workout Missing", "error");
+                return;
+            }
 
-        document.getElementById('athlete-dashboard').style.display = 'none';
-        document.getElementById('athlete-workout-container').style.display = 'block';
-        document.getElementById('display-title').innerText = activeWorkoutData.name || 'WORKOUT';
-        document.getElementById('display-week').innerText = activeWorkoutData.date || 'ACTIVE SESSION';
+            activeWorkoutData = { id: workoutId, ...workoutSnap.data() };
+            currentMaxes = maxSnap.exists() ? maxSnap.data() : {};
 
-        const list = document.getElementById('athlete-exercise-list');
-        list.innerHTML = '';
+            dashboardEl.classList.add('hidden');
+            workoutContainerEl.classList.remove('hidden');
 
-        if (Array.isArray(activeWorkoutData.exercises)) {
+            document.getElementById('display-title').innerText = activeWorkoutData.name || 'WORKOUT';
+            document.getElementById('display-week').innerText = activeWorkoutData.date || 'ACTIVE SESSION';
+
+            exerciseListEl.innerHTML = '';
+
+            if (!Array.isArray(activeWorkoutData.exercises) || !activeWorkoutData.exercises.length) {
+                renderExerciseListMessage("No exercises were configured for this workout.", "warn");
+                setWorkoutStatus("Workout Ready", "warn");
+                return;
+            }
+
             activeWorkoutData.exercises.forEach((ex, exIndex) => {
                 if (ex.isCircuit) {
-                    list.appendChild(renderCircuitExerciseCard(ex, exIndex));
+                    exerciseListEl.appendChild(renderCircuitExerciseCard(ex, exIndex));
                     return;
                 }
 
                 const athleteCurrentMax = getExerciseCurrentMax(ex.name, currentMaxes);
-                list.appendChild(renderStandardExerciseCard(ex, exIndex, athleteCurrentMax));
+                exerciseListEl.appendChild(renderStandardExerciseCard(ex, exIndex, athleteCurrentMax));
             });
+
+            setWorkoutStatus("Workout Ready", "success");
+        } catch (err) {
+            console.error("Workout detail load error:", err);
+            showPageMessage("Workout details could not be loaded right now.", "error");
+            renderExerciseListMessage("Unable To Load Workout", "error");
+            setWorkoutStatus("Load Failed", "error");
         }
     }
 
-    document.getElementById('finish-workout-btn').onclick = async () => {
-        const btn = document.getElementById('finish-workout-btn');
-        if (btn.disabled || !activeWorkoutData) return;
+    finishWorkoutBtn.onclick = async () => {
+        if (finishWorkoutBtn.disabled || !activeWorkoutData) return;
 
-        btn.disabled = true;
-        btn.innerText = "SYNCING TO BOARD...";
+        finishWorkoutBtn.disabled = true;
+        finishWorkoutBtn.innerText = "SYNCING TO BOARD...";
+        hidePageMessage();
+        setWorkoutStatus("Saving Session...");
 
         try {
-            const workoutExercises = (activeWorkoutData.exercises || []).map((ex, exIndex) => {
+            const workoutExercises = (Array.isArray(activeWorkoutData.exercises) ? activeWorkoutData.exercises : []).map((ex, exIndex) => {
                 if (ex.isCircuit) {
-                    const movementCards = document.querySelectorAll('#athlete-exercise-list .bg-black');
-                    const completedMovements = Array.from(movementCards).map(card => {
-                        const movementName = card.querySelector('.text-sm.text-white.font-black.uppercase.italic')?.innerText || "Exercise";
-                        const isCompleted = card.classList.contains('border-green-500');
+                    const circuitCard = document.querySelector(`[data-ex-index="${exIndex}"][data-ex-type="circuit"]`);
+                    const movementRows = circuitCard ? circuitCard.querySelectorAll('.circuit-movement-row') : [];
+
+                    const completedMovements = Array.from(movementRows).map((row) => {
+                        const movementName = row.querySelector('.circuit-movement-name')?.innerText || "Exercise";
+                        const isCompleted = row.classList.contains('border-green-500');
+
                         return {
                             name: movementName,
                             completed: isCompleted
@@ -330,14 +510,14 @@
                     };
                 }
 
-                const exId = slugify(ex.name);
-                const setContainers = document.querySelectorAll(`[id^="container-set-${exIndex}-"]`);
+                const exId = slugify(ex.name || `exercise-${exIndex}`);
+                const setContainers = document.querySelectorAll(`#container-set-${exIndex}-0, [id^="container-set-${exIndex}-"]`);
 
                 const completedSets = Array.from(setContainers).map(container => {
                     const weightInput = container.querySelector('input');
                     const repsDisplay = container.querySelector('.text-lg');
                     const isCompleted = container.classList.contains('border-green-500');
-                    const weightVal = parseFloat(weightInput.value) || 0;
+                    const weightVal = parseFloat(weightInput?.value) || 0;
 
                     return {
                         weight: weightVal.toString(),
@@ -346,7 +526,7 @@
                     };
                 });
 
-                return { name: ex.name, id: exId, sets: completedSets };
+                return { name: ex.name || "Exercise", id: exId, sets: completedSets };
             });
 
             let profileSnap = await getDoc(doc(db, "users", currentAthleteId));
@@ -360,6 +540,7 @@
 
             const completionDoc = {
                 athleteId: currentAthleteId,
+                uid: currentAthleteId,
                 athleteName,
                 schoolId: currentSchoolId,
                 workoutId: activeWorkoutData.id,
@@ -371,13 +552,18 @@
             };
 
             await addDoc(collection(db, "completed_workouts"), completionDoc);
+
+            setWorkoutStatus("Session Logged", "success");
+            showPageMessage("Workout synced successfully.", "success");
             alert("WORKOUT SYNCED!");
             location.reload();
         } catch (err) {
             console.error("Sync Error:", err);
+            showPageMessage("Failed to sync workout session. Please try again.", "error");
+            setWorkoutStatus("Sync Failed", "error");
             alert("Failed to sync: " + err.message);
-            btn.disabled = false;
-            btn.innerText = "Log Session & Finish";
+            finishWorkoutBtn.disabled = false;
+            finishWorkoutBtn.innerText = "Log Session & Finish";
         }
     };
 </script>

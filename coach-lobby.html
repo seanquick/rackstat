@@ -8,11 +8,13 @@
     <link rel="stylesheet" href="style.css">
     <style>
         :root { --school-primary: #b91c1c; }
+
         .office-card {
             background: #1a1a1c;
             border: 1px solid #2a2a2c;
             transition: all 0.3s ease;
         }
+
         .office-card:hover {
             border-color: var(--school-primary);
             transform: translateY(-4px);
@@ -22,21 +24,26 @@
 </head>
 <body class="font-sans antialiased bg-[#0a0a0b] text-white">
 
-    <header class="p-6 flex justify-between items-center border-b border-gray-800 sticky top-0 bg-[#0a0a0b] z-50">
-        <div class="flex items-center gap-4">
-            <img id="school-logo" src="images/rackstat-logo.png" class="school-logo-primary h-12 w-auto object-contain" alt="Logo" onerror="this.src='images/rackstat-logo.png'">
-            <div class="h-10 w-[1px] bg-gray-800 mx-2"></div>
-            <div>
-                <h1 class="text-xl font-black italic uppercase tracking-tighter leading-none">Coach's Office</h1>
-                <p id="school-name" class="text-[10px] font-black text-[var(--school-primary)] uppercase tracking-widest mt-1">LOADING...</p>
+    <header class="bg-black border-b-2 border-red-700 p-4 sticky top-0 z-50">
+        <div class="flex justify-between items-center max-w-6xl mx-auto gap-4">
+            <div class="flex items-center gap-4 min-w-0">
+                <img id="school-logo" src="images/rackstat-logo.png" class="school-logo-primary h-12 w-auto object-contain" alt="Logo" onerror="this.src='images/rackstat-logo.png'">
+                <div class="h-10 w-[1px] bg-gray-800 mx-2"></div>
+                <div class="min-w-0">
+                    <h1 class="text-xl font-black italic uppercase tracking-tighter leading-none">Coach's Office</h1>
+                    <p id="school-name" class="text-[10px] font-black text-[var(--school-primary)] uppercase tracking-widest mt-1">COACH OFFICE</p>
+                    <p id="office-status" class="text-[8px] font-bold uppercase tracking-widest text-gray-500 mt-1">Checking Coach Access...</p>
+                </div>
             </div>
+            <button onclick="handleLogout(event)" class="relative z-[100] cursor-pointer pointer-events-auto text-xs font-black text-gray-500 hover:text-[var(--school-primary)] transition tracking-widest uppercase px-4 py-2 shrink-0">
+                Logout
+            </button>
         </div>
-        <button onclick="handleLogout(event)" class="relative z-[100] cursor-pointer pointer-events-auto text-xs font-black text-gray-500 hover:text-[var(--school-primary)] transition tracking-widest uppercase px-4 py-2">
-            Logout
-        </button>
     </header>
 
     <main class="max-w-6xl mx-auto px-6 py-12">
+        <div id="page-message" class="hidden mb-6 rounded-xl border px-4 py-3 text-xs font-bold uppercase tracking-wider"></div>
+
         <div id="global-alert-banner" class="hidden bg-blue-600/10 border border-blue-500/30 p-4 mb-8 rounded-xl flex items-start justify-between gap-4">
             <div class="flex items-start gap-3 min-w-0">
                 <span class="relative flex h-3 w-3 mt-1 shrink-0">
@@ -132,6 +139,49 @@
         const banner = document.getElementById('global-alert-banner');
         const alertText = document.getElementById('alert-text');
         const dismissAlertBtn = document.getElementById('dismiss-alert-btn');
+        const pageMessage = document.getElementById('page-message');
+        const officeStatus = document.getElementById('office-status');
+        const schoolNameEl = document.getElementById('school-name');
+        const schoolLogoEl = document.getElementById('school-logo');
+        const greetingEl = document.getElementById('coach-greeting');
+
+        function setOfficeStatus(text, tone = 'default') {
+            if (!officeStatus) return;
+            officeStatus.innerText = text;
+            officeStatus.className = 'text-[8px] font-bold uppercase tracking-widest mt-1';
+
+            if (tone === 'error') officeStatus.classList.add('text-red-400');
+            else if (tone === 'success') officeStatus.classList.add('text-green-400');
+            else if (tone === 'warn') officeStatus.classList.add('text-yellow-300');
+            else officeStatus.classList.add('text-gray-500');
+        }
+
+        function showPageMessage(message, tone = 'warn') {
+            if (!pageMessage) return;
+
+            pageMessage.classList.remove('hidden');
+            pageMessage.innerText = message;
+            pageMessage.className = 'mb-6 rounded-xl border px-4 py-3 text-xs font-bold uppercase tracking-wider';
+
+            if (tone === 'error') {
+                pageMessage.classList.add('bg-red-500/10', 'border-red-500/20', 'text-red-300');
+            } else if (tone === 'success') {
+                pageMessage.classList.add('bg-green-500/10', 'border-green-500/20', 'text-green-300');
+            } else {
+                pageMessage.classList.add('bg-yellow-500/10', 'border-yellow-500/20', 'text-yellow-300');
+            }
+        }
+
+        function hidePageMessage() {
+            if (!pageMessage) return;
+            pageMessage.classList.add('hidden');
+            pageMessage.innerText = '';
+        }
+
+        function resetOfficeBranding() {
+            if (schoolNameEl) schoolNameEl.innerText = "COACH OFFICE";
+            if (schoolLogoEl) schoolLogoEl.src = 'images/rackstat-logo.png';
+        }
 
         function getAnnouncementDismissKey(uid, announcementId) {
             return `rackstat_dismissed_announcement_${uid}_${announcementId}`;
@@ -239,6 +289,9 @@
 
         async function initDashboard() {
             onAuthStateChanged(auth, async (user) => {
+                setOfficeStatus("Checking Coach Access...");
+                hidePageMessage();
+
                 if (!user) {
                     window.location.replace('index.html');
                     return;
@@ -247,14 +300,21 @@
                 try {
                     const userDoc = await getDoc(doc(db, "users", user.uid));
 
-                    if (!userDoc.exists() || userDoc.data().role !== 'coach') {
-                        window.location.replace('index.html');
+                    if (!userDoc.exists()) {
+                        showPageMessage("Coach profile could not be found. Please contact support.", "error");
+                        setOfficeStatus("Profile Missing", "error");
+                        resetOfficeBranding();
                         return;
                     }
 
                     const userData = userDoc.data();
+                    const role = (userData.role || '').toLowerCase();
 
-                    const greetingEl = document.getElementById('coach-greeting');
+                    if (role !== 'coach') {
+                        window.location.replace('index.html');
+                        return;
+                    }
+
                     if (greetingEl) {
                         greetingEl.innerText = getCoachGreeting(userData);
                     }
@@ -263,20 +323,33 @@
 
                     const schoolId = getSchoolIdFromData(userData);
 
-                    if (schoolId) {
-                        try {
-                            await applyTheme(db, schoolId);
-                        } catch (err) {
-                            console.error("Theme load failed:", err);
-                            document.getElementById('school-name').innerText = "COACH OFFICE";
+                    if (!schoolId) {
+                        resetOfficeBranding();
+                        showPageMessage("Coach profile is missing a school link. Some branding and school-specific tools may be limited.", "warn");
+                        setOfficeStatus("Missing School Link", "warn");
+                        return;
+                    }
+
+                    try {
+                        const themeData = await applyTheme(db, schoolId);
+
+                        if (themeData?.name && schoolNameEl) {
+                            schoolNameEl.innerText = themeData.name.toUpperCase();
                         }
-                    } else {
-                        document.getElementById('school-name').innerText = "COACH OFFICE";
+
+                        setOfficeStatus("Office Ready", "success");
+                    } catch (err) {
+                        console.error("Theme load failed:", err);
+                        resetOfficeBranding();
+                        showPageMessage("School branding could not be fully loaded, but the Coach Office is still available.", "warn");
+                        setOfficeStatus("Theme Limited", "warn");
                     }
 
                 } catch (error) {
                     console.error("Dashboard failed to start:", error);
-                    window.location.replace('index.html');
+                    resetOfficeBranding();
+                    showPageMessage("Coach Office could not be loaded right now. Please refresh and try again.", "error");
+                    setOfficeStatus("Load Failed", "error");
                 }
             });
         }

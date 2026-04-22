@@ -68,6 +68,12 @@
             transform: translateY(-1px);
         }
 
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         label {
             font-size: 9px;
             font-weight: 800;
@@ -91,26 +97,35 @@
 <body class="font-sans pb-32">
 
     <header class="bg-black border-b-2 border-red-700 p-4 sticky top-0 z-50">
-        <div class="flex justify-between items-center max-w-5xl mx-auto">
-            <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1.5 rounded text-gray-400 hover:text-white transition-all">
+        <div class="flex justify-between items-center max-w-5xl mx-auto gap-4">
+            <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1.5 rounded text-gray-400 hover:text-white transition-all shrink-0">
                 ← Lobby
             </button>
-            <div class="flex items-center gap-5">
-                <img id="school-logo" src="images/rackstat-logo.png" alt="School" class="h-10 w-auto object-contain">
-                <span id="school-tag" class="text-sm font-black italic uppercase tracking-widest text-white">RACKSTAT</span>
+
+            <div class="flex items-center gap-5 min-w-0">
+                <img id="school-logo" src="images/rackstat-logo.png" alt="School" class="h-10 w-auto object-contain" onerror="this.src='images/rackstat-logo.png'">
+                <div class="min-w-0 text-center">
+                    <span id="school-tag" class="block text-sm font-black italic uppercase tracking-widest text-white">THE RACK</span>
+                    <span id="rack-status" class="block text-[8px] font-bold uppercase tracking-widest text-gray-500 mt-1">Loading Weightroom Data...</span>
+                </div>
             </div>
-            <div class="w-[65px]"></div>
+
+            <div class="w-[65px] shrink-0"></div>
         </div>
     </header>
+
+    <div id="page-message" class="hidden max-w-md mx-auto px-4 mt-6">
+        <div id="page-message-box" class="rounded-xl border p-4 text-xs font-bold uppercase tracking-wider"></div>
+    </div>
 
     <div class="max-w-md mx-auto px-4 mt-8 space-y-8">
 
         <section class="animate-fade-in">
             <div class="max-card board-score-card w-full flex flex-col justify-center items-center py-6 px-6 shadow-2xl">
                 <p class="text-[10px] font-black uppercase text-blue-400 tracking-[0.2em] mb-1">Official Board Score</p>
-                <div id="view-total" class="text-7xl font-black italic tracking-tighter text-white">0</div>
+                <div id="view-total" class="text-7xl font-black italic tracking-tighter text-white">--</div>
                 <div id="formula-detail" class="w-full mt-4 pt-2 border-t border-blue-900/50 text-[9px] font-bold text-gray-500 uppercase tracking-widest text-center">
-                    Aligning with Team Settings...
+                    Loading Team Formula...
                 </div>
             </div>
         </section>
@@ -124,7 +139,11 @@
                     <input id="bodyWeight" type="number" placeholder="Enter Weight">
                 </div>
 
-                <div id="dynamic-inputs" class="grid grid-cols-2 gap-4"></div>
+                <div id="dynamic-inputs" class="grid grid-cols-2 gap-4">
+                    <p id="dynamic-inputs-placeholder" class="col-span-2 text-center text-[10px] font-black uppercase tracking-widest text-gray-500 py-4">
+                        Loading Team Lifts...
+                    </p>
+                </div>
 
                 <button id="save-btn" class="btn-primary mt-4">Update My Stats</button>
                 <p id="sync-timestamp" class="text-[8px] font-bold text-gray-600 uppercase text-center italic mt-2">Last Sync: --</p>
@@ -179,6 +198,67 @@
         const slugify = (text) => String(text || "").toLowerCase().replace(/\s+/g, '_').replace(/[^\w-]+/g, '');
         const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
 
+        const schoolTag = document.getElementById('school-tag');
+        const rackStatus = document.getElementById('rack-status');
+        const pageMessage = document.getElementById('page-message');
+        const pageMessageBox = document.getElementById('page-message-box');
+        const saveBtn = document.getElementById('save-btn');
+        const dynamicInputs = document.getElementById('dynamic-inputs');
+
+        function setRackStatus(text, tone = 'default') {
+            if (!rackStatus) return;
+            rackStatus.innerText = text;
+            rackStatus.className = 'block text-[8px] font-bold uppercase tracking-widest mt-1';
+
+            if (tone === 'error') rackStatus.classList.add('text-red-400');
+            else if (tone === 'success') rackStatus.classList.add('text-green-400');
+            else if (tone === 'warn') rackStatus.classList.add('text-yellow-300');
+            else rackStatus.classList.add('text-gray-500');
+        }
+
+        function showPageMessage(message, tone = 'warn') {
+            if (!pageMessage || !pageMessageBox) return;
+            pageMessage.classList.remove('hidden');
+            pageMessageBox.innerText = message;
+            pageMessageBox.className = 'rounded-xl border p-4 text-xs font-bold uppercase tracking-wider';
+
+            if (tone === 'error') {
+                pageMessageBox.classList.add('bg-red-500/10', 'border-red-500/20', 'text-red-300');
+            } else if (tone === 'success') {
+                pageMessageBox.classList.add('bg-green-500/10', 'border-green-500/20', 'text-green-300');
+            } else {
+                pageMessageBox.classList.add('bg-yellow-500/10', 'border-yellow-500/20', 'text-yellow-300');
+            }
+        }
+
+        function hidePageMessage() {
+            if (!pageMessage || !pageMessageBox) return;
+            pageMessage.classList.add('hidden');
+            pageMessageBox.innerText = '';
+        }
+
+        function resetRackUi() {
+            teamSettings = null;
+            latestMaxesData = {};
+            latestProfileData = {};
+            latestUserData = {};
+
+            document.getElementById('view-total').innerText = '--';
+            document.getElementById('formula-detail').innerText = 'Loading Team Formula...';
+            document.getElementById('sync-timestamp').innerText = 'Last Sync: --';
+            document.getElementById('bodyWeight').value = '';
+
+            if (schoolTag) schoolTag.innerText = 'THE RACK';
+
+            if (dynamicInputs) {
+                dynamicInputs.innerHTML = `
+                    <p id="dynamic-inputs-placeholder" class="col-span-2 text-center text-[10px] font-black uppercase tracking-widest text-gray-500 py-4">
+                        Loading Team Lifts...
+                    </p>
+                `;
+            }
+        }
+
         function getMergedRackData() {
             return {
                 ...latestUserData,
@@ -187,31 +267,43 @@
             };
         }
 
+        function parsePossibleDate(value) {
+            if (!value) return 0;
+
+            try {
+                if (typeof value.toDate === 'function') {
+                    const ts = value.toDate().getTime();
+                    return Number.isFinite(ts) ? ts : 0;
+                }
+
+                const parsed = new Date(value).getTime();
+                return Number.isFinite(parsed) ? parsed : 0;
+            } catch {
+                return 0;
+            }
+        }
+
         function getResolvedBodyweight() {
-            const profileTimestamp = latestProfileData.lastUpdated
-                ? (latestProfileData.lastUpdated.toDate ? latestProfileData.lastUpdated.toDate().getTime() : new Date(latestProfileData.lastUpdated).getTime())
-                : 0;
-
-            const userTimestamp = latestUserData.lastSync
-                ? (latestUserData.lastSync.toDate ? latestUserData.lastSync.toDate().getTime() : new Date(latestUserData.lastSync).getTime())
-                : 0;
-
-            const maxesTimestamp = latestMaxesData.lastUpdated
-                ? (latestMaxesData.lastUpdated.toDate ? latestMaxesData.lastUpdated.toDate().getTime() : new Date(latestMaxesData.lastUpdated).getTime())
-                : 0;
+            const profileTimestamp = parsePossibleDate(latestProfileData.lastUpdated);
+            const userTimestamp = parsePossibleDate(latestUserData.lastSync);
+            const maxesTimestamp = parsePossibleDate(
+                latestMaxesData.lastUpdated ||
+                latestMaxesData.updatedAt ||
+                latestMaxesData.createdAt
+            );
 
             const weightCandidates = [
                 {
                     weight: Number(latestUserData.weight ?? 0) || 0,
-                    ts: Number.isFinite(userTimestamp) ? userTimestamp : 0
+                    ts: userTimestamp
                 },
                 {
                     weight: Number(latestProfileData.weight ?? latestProfileData.bodyWeight ?? 0) || 0,
-                    ts: Number.isFinite(profileTimestamp) ? profileTimestamp : 0
+                    ts: profileTimestamp
                 },
                 {
                     weight: Number(latestMaxesData.weight ?? latestMaxesData.bodyWeight ?? latestMaxesData.body_weight ?? 0) || 0,
-                    ts: Number.isFinite(maxesTimestamp) ? maxesTimestamp : 0
+                    ts: maxesTimestamp
                 }
             ].filter(item => item.weight > 0);
 
@@ -221,42 +313,24 @@
             return weightCandidates[0].weight;
         }
 
-        onAuthStateChanged(auth, async (user) => {
-            if (!user) {
-                window.location.href = 'index.html';
+        function setupDynamicRack(settings) {
+            teamSettings = buildBoardScoreSettings(settings || {});
+            const lifts = Array.isArray(teamSettings.tracked_lifts) ? teamSettings.tracked_lifts : [];
+
+            if (!lifts.length) {
+                dynamicInputs.innerHTML = `
+                    <p class="col-span-2 text-center text-[10px] font-black uppercase tracking-widest text-yellow-300 py-4">
+                        No Team Lifts Configured Yet
+                    </p>
+                `;
+                document.getElementById('formula-detail').innerText = 'Team Settings Need Tracked Lifts';
+                setRackStatus('No Team Lifts Configured', 'warn');
                 return;
             }
 
-            try {
-                const userSnap = await getDoc(doc(db, "users", user.uid));
-                if (!userSnap.exists()) {
-                    window.location.href = 'index.html';
-                    return;
-                }
-
-                const userData = userSnap.data();
-                const schoolId = getSchoolIdFromData(userData);
-
-                if (!schoolId) {
-                    throw new Error("User school ID not found.");
-                }
-
-                const schoolData = await applyTheme(db, schoolId);
-                setupDynamicRack(schoolData || {});
-                startRealtimeSync(user.uid);
-
-            } catch (err) {
-                console.error("Initialization error:", err);
-            }
-        });
-
-        function setupDynamicRack(settings) {
-            teamSettings = buildBoardScoreSettings(settings || {});
-
-            const container = document.getElementById('dynamic-inputs');
-            container.innerHTML = teamSettings.tracked_lifts.map((liftKey, index) => {
+            dynamicInputs.innerHTML = lifts.map((liftKey, index) => {
                 const normalizedLiftKey = slugify(liftKey);
-                const labelName = teamSettings.display_names[index];
+                const labelName = teamSettings.display_names[index] || normalizedLiftKey.replace(/_/g, ' ');
                 return `
                     <div class="animate-fade-in">
                         <label>${labelName}</label>
@@ -277,16 +351,22 @@
             unsubscribeMaxes = onSnapshot(latestDocRef, (snap) => {
                 latestMaxesData = snap.exists() ? snap.data() : {};
                 renderValues();
+            }, (err) => {
+                console.error("Maxes sync error:", err);
             });
 
             unsubscribeProfile = onSnapshot(profileRef, (snap) => {
                 latestProfileData = snap.exists() ? snap.data() : {};
                 renderValues();
+            }, (err) => {
+                console.error("Profile sync error:", err);
             });
 
             unsubscribeUser = onSnapshot(userRef, (snap) => {
                 latestUserData = snap.exists() ? snap.data() : {};
                 renderValues();
+            }, (err) => {
+                console.error("User sync error:", err);
             });
         }
 
@@ -294,8 +374,9 @@
             if (!teamSettings) return;
 
             const data = getMergedRackData();
+            const lifts = Array.isArray(teamSettings.tracked_lifts) ? teamSettings.tracked_lifts : [];
 
-            teamSettings.tracked_lifts.forEach(liftKey => {
+            lifts.forEach(liftKey => {
                 const normalizedLiftKey = slugify(liftKey);
                 const val = getLiftValue(data, normalizedLiftKey);
 
@@ -306,7 +387,6 @@
             });
 
             const bw = getResolvedBodyweight();
-
             const bwInput = document.getElementById('bodyWeight');
             if (bwInput && !bwInput.matches(':focus')) {
                 bwInput.value = bw === 0 ? "" : bw;
@@ -323,7 +403,7 @@
                 scoringLifts: teamSettings.scoring_lifts
             });
 
-            document.getElementById('view-total').innerText = result.score;
+            document.getElementById('view-total').innerText = Number.isFinite(Number(result.score)) ? result.score : '--';
 
             if (teamSettings.formula_type === "power_index") {
                 document.getElementById('formula-detail').innerText =
@@ -356,12 +436,16 @@
 
         document.getElementById('save-btn').onclick = async () => {
             const user = auth.currentUser;
-            const saveBtn = document.getElementById('save-btn');
 
-            if (!user || !teamSettings) return;
+            if (!user || !teamSettings) {
+                showPageMessage("The Rack is not ready yet. Please wait a moment and try again.", "warn");
+                return;
+            }
 
             saveBtn.disabled = true;
             saveBtn.innerText = "SAVING...";
+            hidePageMessage();
+            setRackStatus("Saving Stats...");
 
             try {
                 const bw = Number(document.getElementById('bodyWeight').value) || 0;
@@ -373,7 +457,8 @@
                     weight: bw
                 };
 
-                teamSettings.tracked_lifts.forEach(liftKey => {
+                const lifts = Array.isArray(teamSettings.tracked_lifts) ? teamSettings.tracked_lifts : [];
+                lifts.forEach(liftKey => {
                     const normalizedLiftKey = slugify(liftKey);
                     const input = document.querySelector(`[data-lift-key="${normalizedLiftKey}"]`);
                     const val = Number(input?.value) || 0;
@@ -402,6 +487,9 @@
                 ]);
 
                 saveBtn.innerText = "SUCCESS ✓";
+                setRackStatus("Stats Updated", "success");
+                showPageMessage("Your lifts and bodyweight were synced successfully.", "success");
+
                 setTimeout(() => {
                     saveBtn.innerText = "Update My Stats";
                     saveBtn.disabled = false;
@@ -409,10 +497,71 @@
 
             } catch (e) {
                 console.error("Save Error:", e);
+                showPageMessage("Your stats could not be saved right now. Please try again.", "error");
+                setRackStatus("Save Failed", "error");
                 saveBtn.disabled = false;
                 saveBtn.innerText = "Update My Stats";
             }
         };
+
+        onAuthStateChanged(auth, async (user) => {
+            resetRackUi();
+            setRackStatus("Checking Athlete Access...");
+            hidePageMessage();
+
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            try {
+                const userSnap = await getDoc(doc(db, "users", user.uid));
+                if (!userSnap.exists()) {
+                    showPageMessage("Your athlete profile could not be found. Please contact support.", "error");
+                    setRackStatus("Profile Missing", "error");
+                    return;
+                }
+
+                const userData = userSnap.data();
+                const role = (userData.role || '').toLowerCase();
+
+                if (role !== 'player' && role !== 'athlete') {
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                const schoolId = getSchoolIdFromData(userData);
+
+                if (!schoolId) {
+                    showPageMessage("Your athlete profile is missing a school link. Please contact your coach.", "error");
+                    setRackStatus("Missing School", "error");
+                    return;
+                }
+
+                try {
+                    const schoolData = await applyTheme(db, schoolId);
+                    if (schoolTag) {
+                        schoolTag.innerText = (schoolData?.name || 'THE RACK').toUpperCase();
+                    }
+                    setupDynamicRack(schoolData || {});
+                } catch (themeErr) {
+                    console.error("Theme load error:", themeErr);
+                    setupDynamicRack({});
+                    showPageMessage("School branding could not be fully loaded, but your Rack is still available.", "warn");
+                    setRackStatus("Theme Limited", "warn");
+                }
+
+                startRealtimeSync(user.uid);
+
+                if (teamSettings && Array.isArray(teamSettings.tracked_lifts) && teamSettings.tracked_lifts.length) {
+                    setRackStatus("Rack Ready", "success");
+                }
+            } catch (err) {
+                console.error("Initialization error:", err);
+                showPageMessage("The Rack could not be loaded right now. Please refresh and try again.", "error");
+                setRackStatus("Load Failed", "error");
+            }
+        });
     </script>
 </body>
 </html>

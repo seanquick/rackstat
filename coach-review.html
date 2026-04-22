@@ -18,19 +18,24 @@
 <body class="bg-[#0a0a0b] text-white antialiased min-h-screen">
 
     <div class="max-w-5xl mx-auto p-6">
-        <div class="flex justify-between items-end border-b border-[#2a2a2c] pb-6 mb-8">
-            <div class="flex items-center gap-6">
+        <div class="flex justify-between items-end border-b border-[#2a2a2c] pb-6 mb-8 gap-4 flex-wrap">
+            <div class="flex items-center gap-6 min-w-0">
                 <div class="logo-container-fixed">
                     <img src="" id="coach-school-logo" class="school-logo-primary" alt="Logo" style="display: none;" onerror="this.style.display='none'">
                 </div>
                 <div>
                     <h2 class="text-[10px] font-black text-[var(--school-primary)] uppercase tracking-[0.2em] mb-1">Intelligence</h2>
                     <h1 class="text-4xl font-black uppercase tracking-tighter italic">Session Review</h1>
+                    <p id="review-status" class="text-[9px] font-bold text-gray-500 uppercase tracking-widest mt-2">Initializing</p>
                 </div>
             </div>
             <button onclick="location.href='coach-lobby.html'" class="text-xs font-bold text-gray-500 hover:text-white transition-colors uppercase tracking-widest">
                 ← Coach Lobby
             </button>
+        </div>
+
+        <div id="review-page-message" class="hidden mb-6">
+            <div id="review-page-message-box" class="rounded-xl border p-4 text-xs font-bold uppercase tracking-wider"></div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -80,6 +85,14 @@
     let currentWorkoutId = null;
     let currentWorkoutName = "";
 
+    const workoutList = document.getElementById('workout-list');
+    const performanceFeed = document.getElementById('performance-feed');
+    const statCount = document.getElementById('stat-count');
+    const statsHeader = document.getElementById('stats-header');
+    const reviewStatus = document.getElementById('review-status');
+    const pageMessageWrap = document.getElementById('review-page-message');
+    const pageMessageBox = document.getElementById('review-page-message-box');
+
     function getSchoolIdFromData(data = {}) {
         return data.schoolId || data.school_id || "";
     }
@@ -121,7 +134,112 @@
             .replace(/>/g, "&gt;");
     }
 
+    function setReviewStatus(text, tone = "default") {
+        if (!reviewStatus) return;
+
+        reviewStatus.innerText = text;
+        reviewStatus.className = "text-[9px] font-bold uppercase tracking-widest mt-2";
+
+        if (tone === "error") reviewStatus.classList.add("text-red-400");
+        else if (tone === "success") reviewStatus.classList.add("text-green-400");
+        else if (tone === "warn") reviewStatus.classList.add("text-yellow-300");
+        else reviewStatus.classList.add("text-gray-500");
+    }
+
+    function showPageMessage(message, tone = "warn") {
+        if (!pageMessageWrap || !pageMessageBox) return;
+
+        pageMessageWrap.classList.remove('hidden');
+        pageMessageBox.innerText = message;
+        pageMessageBox.className = "rounded-xl border p-4 text-xs font-bold uppercase tracking-wider";
+
+        if (tone === "error") {
+            pageMessageBox.classList.add("bg-red-500/10", "border-red-500/20", "text-red-300");
+        } else if (tone === "success") {
+            pageMessageBox.classList.add("bg-green-500/10", "border-green-500/20", "text-green-300");
+        } else {
+            pageMessageBox.classList.add("bg-yellow-500/10", "border-yellow-500/20", "text-yellow-300");
+        }
+    }
+
+    function hidePageMessage() {
+        if (!pageMessageWrap || !pageMessageBox) return;
+        pageMessageWrap.classList.add('hidden');
+        pageMessageBox.innerText = '';
+    }
+
+    function renderWorkoutListMessage(message, tone = "muted") {
+        if (!workoutList) return;
+
+        const toneClass = tone === "error"
+            ? "text-red-500"
+            : tone === "warn"
+                ? "text-yellow-300"
+                : "text-gray-600";
+
+        workoutList.innerHTML = `<p class="${toneClass} text-[10px] uppercase p-4 font-bold tracking-widest">${message}</p>`;
+    }
+
+    function renderFeedMessage(message, tone = "muted") {
+        if (!performanceFeed) return;
+
+        const toneClass = tone === "error"
+            ? "text-red-400 border-red-500/20"
+            : tone === "warn"
+                ? "text-yellow-300 border-yellow-500/20"
+                : "text-gray-600 border-[#2a2a2c]";
+
+        performanceFeed.innerHTML = `
+            <div class="text-center py-20 border-2 border-dashed rounded-3xl ${toneClass}">
+                <p class="uppercase text-xs font-bold tracking-widest">${message}</p>
+            </div>
+        `;
+    }
+
+    function setStatsVisible(show) {
+        if (!statsHeader) return;
+        statsHeader.classList.toggle('hidden', !show);
+    }
+
+    async function getReviewDecision(athleteId, workoutId, exerciseKey, attemptedWeight) {
+        const normalizedWeight = Number(attemptedWeight) || 0;
+
+        const approvedQ = query(
+            collection(db, "approved_max_reviews"),
+            where("athleteId", "==", athleteId),
+            where("workoutId", "==", workoutId || null),
+            where("exerciseKey", "==", exerciseKey),
+            where("attemptedWeight", "==", normalizedWeight)
+        );
+
+        const approvedSnap = await getDocs(approvedQ);
+        if (!approvedSnap.empty) {
+            return "approved";
+        }
+
+        const rejectedQ = query(
+            collection(db, "rejected_max_reviews"),
+            where("athleteId", "==", athleteId),
+            where("workoutId", "==", workoutId || null),
+            where("exerciseKey", "==", exerciseKey),
+            where("attemptedWeight", "==", normalizedWeight)
+        );
+
+        const rejectedSnap = await getDocs(rejectedQ);
+        if (!rejectedSnap.empty) {
+            return "rejected";
+        }
+
+        return null;
+    }
+
     onAuthStateChanged(auth, async (user) => {
+        setReviewStatus("Checking Access");
+        hidePageMessage();
+        setStatsVisible(false);
+        renderWorkoutListMessage("Loading workouts...");
+        renderFeedMessage("Select a workout on the left to see results");
+
         if (!user) {
             location.href = 'index.html';
             return;
@@ -146,29 +264,38 @@
 
             if (!currentSchoolId) {
                 console.error("Coach is missing school ID.");
-                location.href = 'index.html';
+                showPageMessage("Coach profile is missing a school ID, so Session Review cannot be loaded.", "error");
+                renderWorkoutListMessage("No School Assigned", "error");
+                renderFeedMessage("Session Review Unavailable", "error");
+                setReviewStatus("Missing School", "error");
                 return;
             }
 
-            await applyTheme(db, currentSchoolId);
+            try {
+                await applyTheme(db, currentSchoolId);
 
-            const primaryLogo = document.getElementById('school-logo');
-            const coachLogo = document.getElementById('coach-school-logo');
-            if (primaryLogo && coachLogo && primaryLogo.src) {
-                coachLogo.src = primaryLogo.src;
-                coachLogo.style.display = 'block';
+                const primaryLogo = document.getElementById('school-logo');
+                const coachLogo = document.getElementById('coach-school-logo');
+                if (primaryLogo && coachLogo && primaryLogo.src) {
+                    coachLogo.src = primaryLogo.src;
+                    coachLogo.style.display = 'block';
+                }
+            } catch (themeErr) {
+                console.error("Theme load error:", themeErr);
             }
 
             await loadWorkouts();
+            setReviewStatus("Ready", "success");
         } catch (err) {
             console.error("Auth/Theme Error:", err);
-            location.href = 'index.html';
+            showPageMessage("Session Review could not be initialized. Please refresh and try again.", "error");
+            renderWorkoutListMessage("Unable To Load Workouts", "error");
+            renderFeedMessage("Unable To Load Review Feed", "error");
+            setReviewStatus("Load Failed", "error");
         }
     });
 
     async function loadWorkouts() {
-        const list = document.getElementById('workout-list');
-
         try {
             let q = query(
                 collection(db, "workouts"),
@@ -187,10 +314,11 @@
                 snap = await getDocs(q);
             }
 
-            list.innerHTML = '';
+            workoutList.innerHTML = '';
 
             if (snap.empty) {
-                list.innerHTML = '<p class="text-[10px] text-gray-600 uppercase p-4">No workouts found.</p>';
+                renderWorkoutListMessage("No workouts found.");
+                setReviewStatus("No Workouts", "warn");
                 return;
             }
 
@@ -203,11 +331,12 @@
                     <p class="text-[10px] font-black uppercase mb-1" style="color: var(--school-primary)">${data.date || 'No Date'}</p>
                     <p class="text-white font-black uppercase text-sm italic group-hover:translate-x-1 transition-transform">${data.name || 'UNTITLED WORKOUT'}</p>
                 `;
-                list.appendChild(btn);
+                workoutList.appendChild(btn);
             });
         } catch (err) {
             console.error("LoadWorkouts Error:", err);
-            list.innerHTML = '<p class="text-red-500 text-[10px] p-4">INDEX REQUIRED. Check Console.</p>';
+            renderWorkoutListMessage("Unable To Load Workouts", "error");
+            setReviewStatus("Workout Load Failed", "error");
         }
     }
 
@@ -215,8 +344,10 @@
         currentWorkoutId = workoutId;
         currentWorkoutName = workoutName || "Workout";
 
-        const feed = document.getElementById('performance-feed');
-        feed.innerHTML = '<div class="text-center py-10 animate-pulse uppercase text-xs font-black text-gray-500 tracking-widest">Retrieving Athlete Logs...</div>';
+        hidePageMessage();
+        setReviewStatus("Loading Session...");
+        setStatsVisible(false);
+        performanceFeed.innerHTML = '<div class="text-center py-10 animate-pulse uppercase text-xs font-black text-gray-500 tracking-widest">Retrieving Athlete Logs...</div>';
 
         try {
             const q = query(
@@ -227,19 +358,16 @@
 
             const snap = await getDocs(q);
 
-            document.getElementById('stat-count').innerText = `${snap.size} Athletes`;
-            document.getElementById('stats-header').classList.remove('hidden');
+            statCount.innerText = `${snap.size} Athletes`;
+            setStatsVisible(true);
 
             if (snap.empty) {
-                feed.innerHTML = `
-                    <div class="text-center py-20 bg-[#1a1a1c] rounded-3xl border border-[#2a2a2c]">
-                        <p class="text-gray-500 text-xs font-bold uppercase tracking-widest">No athletes have logged this session yet.</p>
-                    </div>
-                `;
+                renderFeedMessage("No athletes have logged this session yet.");
+                setReviewStatus("No Logged Sessions", "warn");
                 return;
             }
 
-            feed.innerHTML = '';
+            performanceFeed.innerHTML = '';
 
             for (const logDoc of snap.docs) {
                 const log = logDoc.data();
@@ -261,15 +389,14 @@
                 let timeString = "Recently";
                 if (log.timestamp) {
                     const dateObj = log.timestamp.toDate ? log.timestamp.toDate() : new Date(log.timestamp);
-                    timeString = dateObj.toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' });
+                    if (!Number.isNaN(dateObj.getTime())) {
+                        timeString = dateObj.toLocaleTimeString([], { hour: '2-digit', minute:'2-digit' });
+                    }
                 }
 
-                const card = document.createElement('div');
-                card.className = "bg-[#111113] border border-[#2a2a2c] rounded-2xl overflow-hidden mb-6 shadow-2xl";
+                const sourceData = Array.isArray(log.exercises || log.performance) ? (log.exercises || log.performance) : [];
 
-                const sourceData = log.exercises || log.performance || [];
-
-                let exerciseRows = sourceData.map(ex => {
+                const exerciseRows = await Promise.all(sourceData.map(async (ex) => {
                     if (ex.isCircuit) {
                         const movements = Array.isArray(ex.completedMovements) ? ex.completedMovements : [];
                         const completedCount = movements.filter(m => m.completed).length;
@@ -308,69 +435,93 @@
                     }
 
                     const exerciseKey = getExerciseReviewKey(ex.name);
-                    const needsReview = topWeight > previousMax;
+                    const needsReview = topWeight > previousMax && topWeight > 0;
+                    const priorDecision = needsReview
+                        ? await getReviewDecision(athleteId, currentWorkoutId || null, exerciseKey, topWeight)
+                        : null;
+
                     const encodedAthleteId = escapeAttr(athleteId);
                     const encodedExerciseKey = escapeAttr(exerciseKey);
                     const encodedWorkoutId = escapeAttr(currentWorkoutId || "");
                     const encodedWorkoutName = escapeAttr(currentWorkoutName || "");
                     const encodedExerciseName = escapeAttr(ex.name || "Exercise");
 
+                    let reviewActions = `
+                        <span class="bg-white/5 border border-white/10 text-[8px] font-black px-3 py-1 rounded-md text-gray-400 uppercase tracking-tighter">
+                            No Review Needed
+                        </span>
+                    `;
+
+                    if (needsReview && priorDecision === "approved") {
+                        reviewActions = `
+                            <span class="bg-green-600/20 border border-green-500/30 text-[8px] font-black px-3 py-1 rounded-md text-green-300 uppercase tracking-tighter">
+                                Verified
+                            </span>
+                        `;
+                    } else if (needsReview && priorDecision === "rejected") {
+                        reviewActions = `
+                            <span class="bg-red-600/20 border border-red-500/30 text-[8px] font-black px-3 py-1 rounded-md text-red-300 uppercase tracking-tighter">
+                                Rejected
+                            </span>
+                        `;
+                    } else if (needsReview) {
+                        reviewActions = `
+                            <span class="bg-red-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full animate-pulse uppercase">Needs Review</span>
+                            <button
+                                onclick="window.approvePR('${encodedAthleteId}', '${encodedExerciseKey}', '${encodedExerciseName}', ${topWeight}, '${encodedWorkoutId}', '${encodedWorkoutName}', this)"
+                                class="bg-white/5 hover:bg-green-700 border border-white/10 text-[8px] font-black px-3 py-1 rounded-md text-white transition-all uppercase tracking-tighter">
+                                Verify Lift
+                            </button>
+                            <button
+                                onclick="window.rejectPR('${encodedAthleteId}', '${encodedExerciseKey}', '${encodedExerciseName}', ${topWeight}, '${encodedWorkoutId}', '${encodedWorkoutName}', this)"
+                                class="bg-white/5 hover:bg-red-700 border border-white/10 text-[8px] font-black px-3 py-1 rounded-md text-white transition-all uppercase tracking-tighter">
+                                Reject
+                            </button>
+                        `;
+                    }
+
                     return `
-                        <div class="flex justify-between items-center py-3 border-b border-white/5 last:border-0">
-                            <div class="flex items-center gap-3">
+                        <div class="flex justify-between items-center py-3 border-b border-white/5 last:border-0 gap-4">
+                            <div class="flex items-center gap-3 flex-wrap">
                                 <div class="flex flex-col">
                                     <span class="text-white font-bold text-xs uppercase tracking-wider">${ex.name || 'Exercise'}</span>
                                     <span class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">${completedSets}/${totalSets} Sets</span>
                                 </div>
 
-                                <div class="flex items-center gap-2 ml-4">
-                                    ${needsReview ? `<span class="bg-red-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full animate-pulse uppercase">Needs Review</span>` : ''}
-                                    ${needsReview ? `
-                                        <button
-                                            onclick="window.approvePR('${encodedAthleteId}', '${encodedExerciseKey}', '${encodedExerciseName}', ${topWeight}, '${encodedWorkoutId}', '${encodedWorkoutName}', this)"
-                                            class="bg-white/5 hover:bg-green-700 border border-white/10 text-[8px] font-black px-3 py-1 rounded-md text-white transition-all uppercase tracking-tighter">
-                                            Verify Lift
-                                        </button>
-                                        <button
-                                            onclick="window.rejectPR('${encodedAthleteId}', '${encodedExerciseKey}', '${encodedExerciseName}', ${topWeight}, '${encodedWorkoutId}', '${encodedWorkoutName}', this)"
-                                            class="bg-white/5 hover:bg-red-700 border border-white/10 text-[8px] font-black px-3 py-1 rounded-md text-white transition-all uppercase tracking-tighter">
-                                            Reject
-                                        </button>
-                                    ` : `
-                                        <span class="bg-white/5 border border-white/10 text-[8px] font-black px-3 py-1 rounded-md text-gray-400 uppercase tracking-tighter">
-                                            No Review Needed
-                                        </span>
-                                    `}
+                                <div class="flex items-center gap-2 ml-4 flex-wrap">
+                                    ${reviewActions}
                                 </div>
                             </div>
-                            <div class="text-right">
+                            <div class="text-right shrink-0">
                                 <span class="text-white font-black italic text-lg">${topWeight > 0 ? topWeight : 'BW'}</span>
                                 <span class="text-[9px] text-gray-600 font-bold uppercase ml-1">${topWeight > 0 ? 'LBS' : ''}</span>
                                 <p class="text-[8px] text-gray-500 font-bold uppercase mt-[-4px]">Current: ${previousMax}</p>
                             </div>
                         </div>
                     `;
-                }).join('');
+                }));
 
+                const card = document.createElement('div');
+                card.className = "bg-[#111113] border border-[#2a2a2c] rounded-2xl overflow-hidden mb-6 shadow-2xl";
                 card.innerHTML = `
-                    <div class="bg-[#1a1a1c] p-4 flex justify-between items-center border-b border-[#2a2a2c]">
+                    <div class="bg-[#1a1a1c] p-4 flex justify-between items-center border-b border-[#2a2a2c] gap-4 flex-wrap">
                         <h4 class="font-black text-white uppercase italic tracking-tighter text-lg">${athleteName}</h4>
                         <div class="text-right">
                             <span class="text-[9px] font-black text-gray-500 uppercase block leading-none mb-1">Logged At</span>
                             <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">${timeString}</span>
                         </div>
                     </div>
-                    <div class="p-4 bg-black/20">${exerciseRows}</div>
+                    <div class="p-4 bg-black/20">${exerciseRows.join('')}</div>
                 `;
-                feed.appendChild(card);
+                performanceFeed.appendChild(card);
             }
+
+            setReviewStatus("Session Loaded", "success");
         } catch (err) {
             console.error("LoadPerformance Error:", err);
-            feed.innerHTML = `
-                <div class="p-6 text-red-500 bg-red-900/10 border border-red-900/50 rounded-xl text-xs font-bold uppercase">
-                    Something went wrong. Check console for details.
-                </div>
-            `;
+            renderFeedMessage("Something went wrong while loading workout review data.", "error");
+            showPageMessage("Workout review data could not be loaded. Check console for details.", "error");
+            setReviewStatus("Review Load Failed", "error");
         }
     };
 
@@ -382,14 +533,31 @@
         const siblingReject = btnElement.parentElement?.querySelector('button:nth-of-type(2)');
         if (siblingReject) siblingReject.disabled = true;
 
+        hidePageMessage();
+        setReviewStatus("Saving Approval...");
+
         try {
             const maxRef = doc(db, "recruiting_profiles", athleteId, "maxes", "latest");
             const writebacks = buildLiftWritebacks(exerciseKey, newWeight);
 
-            await setDoc(maxRef, {
-                ...writebacks,
-                lastUpdated: serverTimestamp()
-            }, { merge: true });
+            await Promise.all([
+                setDoc(maxRef, {
+                    ...writebacks,
+                    lastUpdated: serverTimestamp()
+                }, { merge: true }),
+                addDoc(collection(db, "approved_max_reviews"), {
+                    athleteId,
+                    schoolId: currentSchoolId,
+                    workoutId: workoutId || null,
+                    workoutName: workoutName || null,
+                    exerciseKey,
+                    exerciseName,
+                    attemptedWeight: Number(newWeight) || 0,
+                    reviewedAt: serverTimestamp(),
+                    reviewedBy: auth.currentUser?.uid || null,
+                    decision: "approved"
+                })
+            ]);
 
             btnElement.innerText = "VERIFIED ✓";
             btnElement.classList.remove('hover:bg-green-700', 'bg-white/5');
@@ -400,9 +568,14 @@
                 siblingReject.classList.remove('hover:bg-red-700');
                 siblingReject.classList.add('opacity-50');
             }
+
+            showPageMessage(`${exerciseName} verified successfully.`, "success");
+            setReviewStatus("Lift Verified", "success");
         } catch (err) {
             console.error("Error approving PR:", err);
             alert("Failed to verify lift. Check console for details.");
+            showPageMessage("Failed to verify lift. Check Firestore permissions and console details.", "error");
+            setReviewStatus("Approval Failed", "error");
             btnElement.innerText = originalText;
             btnElement.disabled = false;
             if (siblingReject) siblingReject.disabled = false;
@@ -416,6 +589,9 @@
 
         const siblingApprove = btnElement.parentElement?.querySelector('button:nth-of-type(1)');
         if (siblingApprove) siblingApprove.disabled = true;
+
+        hidePageMessage();
+        setReviewStatus("Saving Rejection...");
 
         try {
             await addDoc(collection(db, "rejected_max_reviews"), {
@@ -440,9 +616,14 @@
                 siblingApprove.classList.remove('hover:bg-green-700');
                 siblingApprove.classList.add('opacity-50');
             }
+
+            showPageMessage(`${exerciseName} was rejected successfully.`, "success");
+            setReviewStatus("Lift Rejected", "success");
         } catch (err) {
             console.error("Error rejecting PR:", err);
             alert("Failed to reject lift. Check console for details.");
+            showPageMessage("Failed to reject lift. Check Firestore permissions and console details.", "error");
+            setReviewStatus("Rejection Failed", "error");
             btnElement.innerText = originalText;
             btnElement.disabled = false;
             if (siblingApprove) siblingApprove.disabled = false;
