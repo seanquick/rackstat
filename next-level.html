@@ -302,6 +302,11 @@
         if (el) el.value = val ?? "";
     };
 
+    function isAthleteRole(role = "") {
+        const normalized = String(role).toLowerCase();
+        return normalized === 'player' || normalized === 'athlete';
+    }
+
     onAuthStateChanged(auth, async (user) => {
         if (!user) {
             window.location.href = 'index.html';
@@ -316,18 +321,33 @@
                 getDoc(doc(db, "recruiting_profiles", user.uid))
             ]);
 
-            const userData = userSnap.exists() ? userSnap.data() : {};
+            if (!userSnap.exists()) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const userData = userSnap.data();
+            const userRole = (userData.role || "").toLowerCase();
             const recruitingData = recruitingSnap.exists() ? recruitingSnap.data() : {};
             const merged = { ...userData, ...recruitingData };
 
             const schoolId = getSchoolIdFromData(merged);
 
-            if (schoolId) {
-                await applyTheme(db, schoolId);
-            } else {
-                const tag = document.getElementById('school-tag');
-                if (tag) tag.innerText = "NO SCHOOL LINKED";
+            if (!schoolId) {
+                window.location.href = 'profile.html';
+                return;
             }
+
+            const schoolSnap = await getDoc(doc(db, "schools", schoolId));
+            const schoolData = schoolSnap.exists() ? schoolSnap.data() : {};
+            const recruitingEnabled = schoolData.hasRecruitingCard !== false;
+
+            if (!recruitingEnabled && isAthleteRole(userRole)) {
+                window.location.href = 'profile.html';
+                return;
+            }
+
+            await applyTheme(db, schoolId);
 
             if (userSnap.exists()) {
                 if (!document.getElementById('fullName').value) {
@@ -396,6 +416,7 @@
             }
         } catch (err) {
             console.error("Error loading Next Level profile:", err);
+            window.location.href = 'profile.html';
         }
     });
 
