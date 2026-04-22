@@ -202,10 +202,13 @@
     }
 
     async function getReviewDecision(athleteId, workoutId, exerciseKey, attemptedWeight) {
+        if (!currentSchoolId) return null;
+
         const normalizedWeight = Number(attemptedWeight) || 0;
 
         const approvedQ = query(
             collection(db, "approved_max_reviews"),
+            where("schoolId", "==", currentSchoolId),
             where("athleteId", "==", athleteId),
             where("workoutId", "==", workoutId || null),
             where("exerciseKey", "==", exerciseKey),
@@ -219,6 +222,7 @@
 
         const rejectedQ = query(
             collection(db, "rejected_max_reviews"),
+            where("schoolId", "==", currentSchoolId),
             where("athleteId", "==", athleteId),
             where("workoutId", "==", workoutId || null),
             where("exerciseKey", "==", exerciseKey),
