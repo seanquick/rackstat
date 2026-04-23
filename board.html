@@ -315,42 +315,9 @@
         }
     }
 
-    async function loadCompletedWorkoutWeighInMap(schoolId) {
-        const weighInMap = new Map();
-
-        let completedSnap = await getDocs(query(
-            collection(db, "completed_workouts"),
-            where("schoolId", "==", schoolId)
-        ));
-
-        if (completedSnap.empty) {
-            completedSnap = await getDocs(query(
-                collection(db, "completed_workouts"),
-                where("school_id", "==", schoolId)
-            ));
-        }
-
-        completedSnap.forEach(docSnap => {
-            const data = docSnap.data();
-            const athleteId = data.athleteId || data.uid || "";
-            const workoutId = data.workoutId || "";
-            const weighInWeight = Number(data.weighInWeight || 0) || 0;
-
-            if (!athleteId || !workoutId || !weighInWeight) return;
-
-            const key = `${athleteId}__${workoutId}`;
-            if (!weighInMap.has(key)) {
-                weighInMap.set(key, weighInWeight);
-            }
-        });
-
-        return weighInMap;
-    }
-
     async function buildHistoricalClassRecords(schoolId) {
         const classRecords = createEmptyClassRecords();
         const athleteCache = new Map();
-        const weighInMap = await loadCompletedWorkoutWeighInMap(schoolId);
 
         const approvedSnap = await getDocs(query(
             collection(db, "approved_max_reviews"),
@@ -365,11 +332,13 @@
             try {
                 const review = reviewDoc.data();
                 const athleteId = review.athleteId || "";
-                const workoutId = review.workoutId || "";
                 const liftKey = canonicalLiftKey(review.exerciseKey, review.exerciseName);
                 const attemptedWeight = Number(review.attemptedWeight || 0) || 0;
 
                 if (!athleteId || !liftKey || attemptedWeight <= 0) continue;
+
+                const reviewWeightClass = review.weightClass || getWeightClass(Number(review.weighInWeight || 0));
+                if (!reviewWeightClass) continue;
 
                 let athleteData = athleteCache.get(athleteId);
                 if (!athleteData) {
@@ -384,84 +353,14 @@
                     athleteCache.set(athleteId, athleteData);
                 }
 
-                const historicalWeight = Number(
-                    review.weighInWeight ??
-                    review.bodyWeight ??
-                    review.body_weight ??
-                    review.weightAtApproval ??
-                    review.weightSnapshot ??
-                    review.weight ??
-                    weighInMap.get(`${athleteId}__${workoutId}`) ??
-                    0
-                ) || 0;
-
-                if (!historicalWeight) continue;
-
-                const wc = review.weightClass || getWeightClass(historicalWeight);
                 const athleteName = review.athleteName || getDisplayName(athleteData);
-
-                applyRecordToClassRecords(classRecords, wc, liftKey, attemptedWeight, athleteName);
+                applyRecordToClassRecords(classRecords, reviewWeightClass, liftKey, attemptedWeight, athleteName);
             } catch (reviewErr) {
                 console.warn("Failed to process approved review:", reviewErr);
             }
         }
 
         return { classRecords, approvedCount: approvedSnap.size };
-    }
-
-    async function buildLegacyCurrentWeightClassRecords(pSnap) {
-        const classRecords = createEmptyClassRecords();
-
-        for (const athleteDoc of pSnap.docs) {
-            const athleteProfile = athleteDoc.data();
-
-            try {
-                const [userSnap, latestMaxSnap] = await Promise.all([
-                    getDoc(doc(db, "users", athleteDoc.id)),
-                    getDoc(doc(db, "recruiting_profiles", athleteDoc.id, "maxes", "latest"))
-                ]);
-
-                if (!latestMaxSnap.exists()) continue;
-
-                const userData = userSnap.exists() ? userSnap.data() : {};
-                const athleteData = { ...userData, ...athleteProfile };
-                const maxes = latestMaxSnap.data();
-
-                const athleteBW = getNumericBodyweight(maxes, athleteData);
-                const currentWC = getWeightClass(athleteBW);
-                const fullName = getDisplayName(athleteData);
-
-                const checkMax = (liftKey, possibleKeys) => {
-                    let val = 0;
-                    for (const key of possibleKeys) {
-                        const candidate = Number(maxes[key]) || Number(athleteData[key]) || 0;
-                        if (candidate > val) val = candidate;
-                    }
-                    applyRecordToClassRecords(classRecords, currentWC, liftKey, val, fullName);
-                };
-
-                const checkMin = (liftKey, possibleKeys) => {
-                    let best = 99.9;
-                    for (const key of possibleKeys) {
-                        const candidate = parseFloat(maxes[key] || athleteData[key]);
-                        if (candidate > 0 && candidate < best) {
-                            best = candidate;
-                        }
-                    }
-                    applyRecordToClassRecords(classRecords, currentWC, liftKey, best, fullName);
-                };
-
-                checkMax('bench', ['bench', 'bench_press']);
-                checkMax('squat', ['squat', 'back_squat']);
-                checkMax('clean', ['clean', 'power_clean']);
-                checkMax('deadlift', ['deadlift']);
-                checkMin('dash', ['forty', 'forty_yard_dash']);
-            } catch (athleteErr) {
-                console.warn(`Failed to process athlete ${athleteDoc.id}:`, athleteErr);
-            }
-        }
-
-        return classRecords;
     }
 
     async function buildClubScores(pSnap, boardSettings) {
@@ -633,14 +532,8 @@
             approvedRecordCount = historicalResults.approvedCount || 0;
         } catch (historyErr) {
             console.warn("Historical records load failed:", historyErr);
-        }
-
-        if (!approvedRecordCount) {
-            classRecords = await buildLegacyCurrentWeightClassRecords(pSnap);
-
-            if (pSnap.size) {
-                showPageMessage("Weight class records are using current athlete bodyweight until approved historical review data is available.", "warn");
-            }
+            classRecords = createEmptyClassRecords();
+            approvedRecordCount = 0;
         }
 
         if (recordBody) {
@@ -756,16 +649,14 @@
             return;
         }
 
-        if (!athletesWithMaxes) {
-            if (!approvedRecordCount) {
-                renderRecordTableMessage("No approved historical records found yet.");
-            }
-            showPageMessage("Athletes are linked to this school, but no approved max records are available yet.", "warn");
-            setBoardStatus("No Max Records", "warn");
+        if (!approvedRecordCount) {
+            renderRecordTableMessage("No approved historical records found yet.");
+            showPageMessage("Weight class records will appear after coaches approve athlete max lifts.", "warn");
+            setBoardStatus("No Historical Records", "warn");
             return;
         }
 
-        setBoardStatus(approvedRecordCount ? "Historical Records Active" : "Board Synced", "success");
+        setBoardStatus("Historical Records Active", "success");
     };
 
     async function saveManualRecord(wc, lift, val, name) {
@@ -801,7 +692,7 @@
             } else {
                 e.target.style.color = '';
                 e.target.style.borderColor = '';
-                setBoardStatus("Board Synced", "success");
+                setBoardStatus("Historical Records Active", "success");
             }
 
             if (currentSchoolId) {
