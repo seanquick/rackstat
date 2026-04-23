@@ -616,6 +616,9 @@
         setReviewStatus("Saving Approval...");
 
         try {
+            const numericWeighInWeight = Number(weighInWeight) || 0;
+            const resolvedWeightClass = weightClass || getWeightClass(numericWeighInWeight);
+
             const maxRef = doc(db, "recruiting_profiles", athleteId, "maxes", "latest");
             const writebacks = buildLiftWritebacks(exerciseKey, newWeight);
 
@@ -633,8 +636,8 @@
                     exerciseKey,
                     exerciseName,
                     attemptedWeight: Number(newWeight) || 0,
-                    weighInWeight: Number(weighInWeight) || 0,
-                    weightClass: weightClass || getWeightClass(weighInWeight),
+                    weighInWeight: numericWeighInWeight,
+                    weightClass: resolvedWeightClass,
                     reviewedAt: serverTimestamp(),
                     reviewedBy: auth.currentUser?.uid || null,
                     decision: "approved"
@@ -664,7 +667,7 @@
         }
     };
 
-    window.rejectPR = async function(
+        window.rejectPR = async function(
         athleteId,
         athleteName,
         exerciseKey,
@@ -687,6 +690,9 @@
         setReviewStatus("Saving Rejection...");
 
         try {
+            const numericWeighInWeight = Number(weighInWeight) || 0;
+            const resolvedWeightClass = weightClass || getWeightClass(numericWeighInWeight);
+
             await addDoc(collection(db, "rejected_max_reviews"), {
                 athleteId,
                 athleteName: athleteName || "Unknown Athlete",
@@ -696,8 +702,8 @@
                 exerciseKey,
                 exerciseName,
                 attemptedWeight: Number(attemptedWeight) || 0,
-                weighInWeight: Number(weighInWeight) || 0,
-                weightClass: weightClass || getWeightClass(weighInWeight),
+                weighInWeight: numericWeighInWeight,
+                weightClass: resolvedWeightClass,
                 reviewedAt: serverTimestamp(),
                 reviewedBy: auth.currentUser?.uid || null,
                 decision: "rejected"
