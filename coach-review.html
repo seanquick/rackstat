@@ -40,7 +40,7 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <div class="lg:col-span-1 space-y-4">
-                <h3 class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">Select Workout</h3>
+                <h3 class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">Select Review Queue</h3>
                 <div id="workout-list" class="space-y-2 max-h-[70vh] overflow-y-auto hide-scroll">
                     <div class="animate-pulse bg-[#1a1a1c] h-12 rounded-lg w-full"></div>
                 </div>
@@ -49,14 +49,14 @@
             <div class="lg:col-span-3">
                 <div id="stats-header" class="hidden grid grid-cols-3 gap-4 mb-6">
                     <div class="bg-[#1a1a1c] p-4 rounded-xl border border-[#2a2a2c]">
-                        <span class="block text-[9px] font-black text-gray-500 uppercase">Completion</span>
+                        <span class="block text-[9px] font-black text-gray-500 uppercase">Items</span>
                         <span id="stat-count" class="text-2xl font-black italic">--</span>
                     </div>
                 </div>
 
                 <div id="performance-feed" class="space-y-4">
                     <div class="text-center py-20 border-2 border-dashed border-[#2a2a2c] rounded-3xl">
-                        <p class="text-gray-600 uppercase text-xs font-bold tracking-widest">Select a workout on the left to see results</p>
+                        <p class="text-gray-600 uppercase text-xs font-bold tracking-widest">Select a review queue on the left to see results</p>
                     </div>
                 </div>
             </div>
@@ -75,6 +75,7 @@
         orderBy,
         setDoc,
         addDoc,
+        updateDoc,
         serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -84,6 +85,7 @@
     let currentSchoolId = null;
     let currentWorkoutId = null;
     let currentWorkoutName = "";
+    let currentViewMode = "workout";
 
     const workoutList = document.getElementById('workout-list');
     const performanceFeed = document.getElementById('performance-feed');
@@ -269,12 +271,68 @@
         return null;
     }
 
+    function renderQueueButtons(workouts, pendingCount) {
+        workoutList.innerHTML = '';
+
+        const rackBtn = document.createElement('button');
+        rackBtn.className = `w-full text-left p-4 rounded-xl border transition-all mb-2 ${
+            currentViewMode === 'rack'
+                ? 'bg-[var(--school-primary)]/10 border-[var(--school-primary)]'
+                : 'bg-[#1a1a1c] border-transparent hover:border-[var(--school-primary)]'
+        }`;
+        rackBtn.onclick = () => window.loadPendingRackReviews();
+        rackBtn.innerHTML = `
+            <p class="text-[10px] font-black uppercase mb-1" style="color: var(--school-primary)">Standalone PR Queue</p>
+            <p class="text-white font-black uppercase text-sm italic">The Rack Submissions</p>
+            <p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">${pendingCount} Pending</p>
+        `;
+        workoutList.appendChild(rackBtn);
+
+        if (!workouts.length) {
+            const empty = document.createElement('p');
+            empty.className = 'text-[10px] uppercase p-4 font-bold tracking-widest text-gray-600';
+            empty.innerText = 'No workouts found.';
+            workoutList.appendChild(empty);
+            return;
+        }
+
+        workouts.forEach(({ id, data }) => {
+            const btn = document.createElement('button');
+            btn.className = `w-full text-left p-4 rounded-xl border transition-all group mb-2 ${
+                currentViewMode === 'workout' && currentWorkoutId === id
+                    ? 'bg-[var(--school-primary)]/10 border-[var(--school-primary)]'
+                    : 'bg-[#1a1a1c] border-transparent hover:border-[var(--school-primary)]'
+            }`;
+            btn.onclick = () => window.loadPerformance(id, data.name || "Workout");
+            btn.innerHTML = `
+                <p class="text-[10px] font-black uppercase mb-1" style="color: var(--school-primary)">${data.date || 'No Date'}</p>
+                <p class="text-white font-black uppercase text-sm italic group-hover:translate-x-1 transition-transform">${data.name || 'UNTITLED WORKOUT'}</p>
+            `;
+            workoutList.appendChild(btn);
+        });
+    }
+
+    async function loadPendingRackCount() {
+        try {
+            const q = query(
+                collection(db, "pending_max_reviews"),
+                where("schoolId", "==", currentSchoolId),
+                where("status", "==", "pending")
+            );
+            const snap = await getDocs(q);
+            return snap.size;
+        } catch (err) {
+            console.warn("Unable to count pending rack reviews:", err);
+            return 0;
+        }
+    }
+
     onAuthStateChanged(auth, async (user) => {
         setReviewStatus("Checking Access");
         hidePageMessage();
         setStatsVisible(false);
-        renderWorkoutListMessage("Loading workouts...");
-        renderFeedMessage("Select a workout on the left to see results");
+        renderWorkoutListMessage("Loading review queues...");
+        renderFeedMessage("Select a review queue on the left to see results");
 
         if (!user) {
             location.href = 'index.html';
@@ -325,7 +383,7 @@
         } catch (err) {
             console.error("Auth/Theme Error:", err);
             showPageMessage("Session Review could not be initialized. Please refresh and try again.", "error");
-            renderWorkoutListMessage("Unable To Load Workouts", "error");
+            renderWorkoutListMessage("Unable To Load Review Queues", "error");
             renderFeedMessage("Unable To Load Review Feed", "error");
             setReviewStatus("Load Failed", "error");
         }
@@ -350,35 +408,30 @@
                 snap = await getDocs(q);
             }
 
-            workoutList.innerHTML = '';
+            const workouts = snap.docs.map(docSnap => ({
+                id: docSnap.id,
+                data: docSnap.data()
+            }));
 
-            if (snap.empty) {
-                renderWorkoutListMessage("No workouts found.");
-                setReviewStatus("No Workouts", "warn");
-                return;
+            const pendingCount = await loadPendingRackCount();
+            renderQueueButtons(workouts, pendingCount);
+
+            if (!workouts.length && !pendingCount) {
+                renderWorkoutListMessage("No review queues found.");
+                setReviewStatus("No Review Queues", "warn");
             }
-
-            snap.forEach(docSnap => {
-                const data = docSnap.data();
-                const btn = document.createElement('button');
-                btn.className = "w-full text-left p-4 rounded-xl bg-[#1a1a1c] border border-transparent transition-all group hover:border-[var(--school-primary)] mb-2";
-                btn.onclick = () => window.loadPerformance(docSnap.id, data.name || "Workout");
-                btn.innerHTML = `
-                    <p class="text-[10px] font-black uppercase mb-1" style="color: var(--school-primary)">${data.date || 'No Date'}</p>
-                    <p class="text-white font-black uppercase text-sm italic group-hover:translate-x-1 transition-transform">${data.name || 'UNTITLED WORKOUT'}</p>
-                `;
-                workoutList.appendChild(btn);
-            });
         } catch (err) {
             console.error("LoadWorkouts Error:", err);
-            renderWorkoutListMessage("Unable To Load Workouts", "error");
-            setReviewStatus("Workout Load Failed", "error");
+            renderWorkoutListMessage("Unable To Load Review Queues", "error");
+            setReviewStatus("Queue Load Failed", "error");
         }
     }
 
     window.loadPerformance = async function(workoutId, workoutName) {
         currentWorkoutId = workoutId;
         currentWorkoutName = workoutName || "Workout";
+        currentViewMode = "workout";
+        await loadWorkouts();
 
         hidePageMessage();
         setReviewStatus("Loading Session...");
@@ -593,6 +646,146 @@
         }
     };
 
+    window.loadPendingRackReviews = async function() {
+        currentViewMode = "rack";
+        currentWorkoutId = null;
+        currentWorkoutName = "The Rack";
+        await loadWorkouts();
+
+        hidePageMessage();
+        setReviewStatus("Loading Rack Reviews...");
+        setStatsVisible(false);
+        performanceFeed.innerHTML = '<div class="text-center py-10 animate-pulse uppercase text-xs font-black text-gray-500 tracking-widest">Retrieving Rack submissions...</div>';
+
+        try {
+            const q = query(
+                collection(db, "pending_max_reviews"),
+                where("schoolId", "==", currentSchoolId),
+                where("status", "==", "pending")
+            );
+
+            const snap = await getDocs(q);
+
+            statCount.innerText = `${snap.size} Pending`;
+            setStatsVisible(true);
+
+            if (snap.empty) {
+                renderFeedMessage("No pending Rack lift submissions found.");
+                setReviewStatus("No Pending Reviews", "warn");
+                return;
+            }
+
+            performanceFeed.innerHTML = '';
+
+            for (const pendingDoc of snap.docs) {
+                const pending = pendingDoc.data();
+
+                try {
+                    const athleteId = pending.athleteId;
+                    if (!athleteId) continue;
+
+                    const [athleteSnap, maxSnap] = await Promise.all([
+                        getDoc(doc(db, "recruiting_profiles", athleteId)),
+                        getDoc(doc(db, "recruiting_profiles", athleteId, "maxes", "latest"))
+                    ]);
+
+                    const athleteData = athleteSnap.exists() ? athleteSnap.data() : {};
+                    const currentMaxes = maxSnap.exists() ? maxSnap.data() : {};
+
+                    const athleteName =
+                        pending.athleteName ||
+                        getDisplayName(athleteData) ||
+                        "Unknown Athlete";
+
+                    const exerciseName = pending.exerciseName || pending.exerciseKey || "Exercise";
+                    const exerciseKey = pending.exerciseKey || getExerciseReviewKey(exerciseName);
+                    const attemptedWeight = Number(pending.attemptedWeight || 0) || 0;
+                    const previousMax = Number(getLiftValue(currentMaxes, exerciseKey)) || Number(pending.previousWeight || 0) || 0;
+                    const weighInWeight = Number(pending.weighInWeight || 0) || 0;
+                    const weightClass = pending.weightClass || getWeightClass(weighInWeight);
+
+                    let submittedString = "Recently";
+                    const submittedAt = pending.submittedAt || pending.createdAt || null;
+                    if (submittedAt) {
+                        const d = submittedAt.toDate ? submittedAt.toDate() : new Date(submittedAt);
+                        if (!Number.isNaN(d.getTime())) {
+                            submittedString = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        }
+                    }
+
+                    const encodedPendingId = escapeAttr(pendingDoc.id);
+                    const encodedAthleteId = escapeAttr(athleteId);
+                    const encodedAthleteName = escapeAttr(athleteName);
+                    const encodedExerciseKey = escapeAttr(exerciseKey);
+                    const encodedExerciseName = escapeAttr(exerciseName);
+
+                    const card = document.createElement('div');
+                    card.className = "bg-[#111113] border border-[#2a2a2c] rounded-2xl overflow-hidden mb-6 shadow-2xl";
+                    card.innerHTML = `
+                        <div class="bg-[#1a1a1c] p-4 flex justify-between items-center border-b border-[#2a2a2c] gap-4 flex-wrap">
+                            <div>
+                                <h4 class="font-black text-white uppercase italic tracking-tighter text-lg">${athleteName}</h4>
+                                <p class="text-[8px] text-gray-500 font-bold uppercase tracking-widest mt-1">
+                                    Rack Submission • ${weighInWeight > 0 ? `${weighInWeight} LBS • ${weightClass}` : 'WEIGHT NOT CAPTURED'}
+                                </p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-[9px] font-black text-gray-500 uppercase block leading-none mb-1">Submitted</span>
+                                <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">${submittedString}</span>
+                            </div>
+                        </div>
+
+                        <div class="p-4 bg-black/20">
+                            <div class="flex justify-between items-center py-3 gap-4">
+                                <div class="flex items-center gap-3 flex-wrap">
+                                    <div class="flex flex-col">
+                                        <span class="text-white font-bold text-xs uppercase tracking-wider">${exerciseName}</span>
+                                        <span class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">Standalone Lift Submission</span>
+                                    </div>
+
+                                    <div class="flex items-center gap-2 ml-4 flex-wrap">
+                                        <span class="bg-red-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full animate-pulse uppercase">Needs Review</span>
+                                        <button
+                                            onclick="window.approvePendingRackReview('${encodedPendingId}', '${encodedAthleteId}', '${encodedAthleteName}', '${encodedExerciseKey}', '${encodedExerciseName}', ${attemptedWeight}, ${weighInWeight}, '${weightClass}', this)"
+                                            class="bg-white/5 hover:bg-green-700 border border-white/10 text-[8px] font-black px-3 py-1 rounded-md text-white transition-all uppercase tracking-tighter">
+                                            Verify Lift
+                                        </button>
+                                        <button
+                                            onclick="window.rejectPendingRackReview('${encodedPendingId}', '${encodedAthleteId}', '${encodedAthleteName}', '${encodedExerciseKey}', '${encodedExerciseName}', ${attemptedWeight}, ${weighInWeight}, '${weightClass}', this)"
+                                            class="bg-white/5 hover:bg-red-700 border border-white/10 text-[8px] font-black px-3 py-1 rounded-md text-white transition-all uppercase tracking-tighter">
+                                            Reject
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="text-right shrink-0">
+                                    <span class="text-white font-black italic text-lg">${attemptedWeight > 0 ? attemptedWeight : '-'}</span>
+                                    <span class="text-[9px] text-gray-600 font-bold uppercase ml-1">${attemptedWeight > 0 ? 'LBS' : ''}</span>
+                                    <p class="text-[8px] text-gray-500 font-bold uppercase mt-[-4px]">Current: ${previousMax}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    performanceFeed.appendChild(card);
+                } catch (cardErr) {
+                    console.error("Failed loading pending rack review card:", pendingDoc.id, cardErr);
+                }
+            }
+
+            if (!performanceFeed.children.length) {
+                renderFeedMessage("No pending Rack reviews could be loaded.", "warn");
+                setReviewStatus("Partial Load", "warn");
+                return;
+            }
+
+            setReviewStatus("Rack Reviews Loaded", "success");
+        } catch (err) {
+            console.error("Pending Rack Review Load Error:", err);
+            renderFeedMessage("Something went wrong while loading Rack review data.", "error");
+            showPageMessage("Rack review data could not be loaded. Check console for details.", "error");
+            setReviewStatus("Review Load Failed", "error");
+        }
+    };
+
     window.approvePR = async function(
         athleteId,
         athleteName,
@@ -667,7 +860,7 @@
         }
     };
 
-        window.rejectPR = async function(
+    window.rejectPR = async function(
         athleteId,
         athleteName,
         exerciseKey,
@@ -723,6 +916,162 @@
             setReviewStatus("Lift Rejected", "success");
         } catch (err) {
             console.error("Error rejecting PR:", err);
+            alert("Failed to reject lift. Check console for details.");
+            showPageMessage("Failed to reject lift. Check Firestore permissions and console details.", "error");
+            setReviewStatus("Rejection Failed", "error");
+            btnElement.innerText = originalText;
+            btnElement.disabled = false;
+            if (siblingApprove) siblingApprove.disabled = false;
+        }
+    };
+
+    window.approvePendingRackReview = async function(
+        pendingDocId,
+        athleteId,
+        athleteName,
+        exerciseKey,
+        exerciseName,
+        newWeight,
+        weighInWeight,
+        weightClass,
+        btnElement
+    ) {
+        const originalText = btnElement.innerText;
+        btnElement.innerText = "SAVING...";
+        btnElement.disabled = true;
+
+        const siblingReject = btnElement.parentElement?.querySelector('button:nth-of-type(2)');
+        if (siblingReject) siblingReject.disabled = true;
+
+        hidePageMessage();
+        setReviewStatus("Saving Approval...");
+
+        try {
+            const numericWeighInWeight = Number(weighInWeight) || 0;
+            const resolvedWeightClass = weightClass || getWeightClass(numericWeighInWeight);
+
+            const maxRef = doc(db, "recruiting_profiles", athleteId, "maxes", "latest");
+            const pendingRef = doc(db, "pending_max_reviews", pendingDocId);
+            const writebacks = buildLiftWritebacks(exerciseKey, newWeight);
+
+            await Promise.all([
+                setDoc(maxRef, {
+                    ...writebacks,
+                    lastUpdated: serverTimestamp()
+                }, { merge: true }),
+                addDoc(collection(db, "approved_max_reviews"), {
+                    athleteId,
+                    athleteName: athleteName || "Unknown Athlete",
+                    schoolId: currentSchoolId,
+                    workoutId: null,
+                    workoutName: "The Rack",
+                    exerciseKey,
+                    exerciseName,
+                    attemptedWeight: Number(newWeight) || 0,
+                    weighInWeight: numericWeighInWeight,
+                    weightClass: resolvedWeightClass,
+                    source: "rack",
+                    pendingReviewId: pendingDocId,
+                    reviewedAt: serverTimestamp(),
+                    reviewedBy: auth.currentUser?.uid || null,
+                    decision: "approved"
+                }),
+                updateDoc(pendingRef, {
+                    status: "approved",
+                    reviewedAt: serverTimestamp(),
+                    reviewedBy: auth.currentUser?.uid || null
+                })
+            ]);
+
+            btnElement.innerText = "VERIFIED ✓";
+            btnElement.classList.remove('hover:bg-green-700', 'bg-white/5');
+            btnElement.classList.add('bg-green-600');
+
+            if (siblingReject) {
+                siblingReject.innerText = "LOCKED";
+                siblingReject.classList.remove('hover:bg-red-700');
+                siblingReject.classList.add('opacity-50');
+            }
+
+            showPageMessage(`${exerciseName} verified successfully.`, "success");
+            setReviewStatus("Lift Verified", "success");
+        } catch (err) {
+            console.error("Error approving pending Rack PR:", err);
+            alert("Failed to verify lift. Check console for details.");
+            showPageMessage("Failed to verify lift. Check Firestore permissions and console details.", "error");
+            setReviewStatus("Approval Failed", "error");
+            btnElement.innerText = originalText;
+            btnElement.disabled = false;
+            if (siblingReject) siblingReject.disabled = false;
+        }
+    };
+
+    window.rejectPendingRackReview = async function(
+        pendingDocId,
+        athleteId,
+        athleteName,
+        exerciseKey,
+        exerciseName,
+        attemptedWeight,
+        weighInWeight,
+        weightClass,
+        btnElement
+    ) {
+        const originalText = btnElement.innerText;
+        btnElement.innerText = "REJECTING...";
+        btnElement.disabled = true;
+
+        const siblingApprove = btnElement.parentElement?.querySelector('button:nth-of-type(1)');
+        if (siblingApprove) siblingApprove.disabled = true;
+
+        hidePageMessage();
+        setReviewStatus("Saving Rejection...");
+
+        try {
+            const numericWeighInWeight = Number(weighInWeight) || 0;
+            const resolvedWeightClass = weightClass || getWeightClass(numericWeighInWeight);
+
+            const pendingRef = doc(db, "pending_max_reviews", pendingDocId);
+
+            await Promise.all([
+                addDoc(collection(db, "rejected_max_reviews"), {
+                    athleteId,
+                    athleteName: athleteName || "Unknown Athlete",
+                    schoolId: currentSchoolId,
+                    workoutId: null,
+                    workoutName: "The Rack",
+                    exerciseKey,
+                    exerciseName,
+                    attemptedWeight: Number(attemptedWeight) || 0,
+                    weighInWeight: numericWeighInWeight,
+                    weightClass: resolvedWeightClass,
+                    source: "rack",
+                    pendingReviewId: pendingDocId,
+                    reviewedAt: serverTimestamp(),
+                    reviewedBy: auth.currentUser?.uid || null,
+                    decision: "rejected"
+                }),
+                updateDoc(pendingRef, {
+                    status: "rejected",
+                    reviewedAt: serverTimestamp(),
+                    reviewedBy: auth.currentUser?.uid || null
+                })
+            ]);
+
+            btnElement.innerText = "REJECTED ✓";
+            btnElement.classList.remove('hover:bg-red-700', 'bg-white/5');
+            btnElement.classList.add('bg-red-600');
+
+            if (siblingApprove) {
+                siblingApprove.innerText = "DECLINED";
+                siblingApprove.classList.remove('hover:bg-green-700');
+                siblingApprove.classList.add('opacity-50');
+            }
+
+            showPageMessage(`${exerciseName} was rejected successfully.`, "success");
+            setReviewStatus("Lift Rejected", "success");
+        } catch (err) {
+            console.error("Error rejecting pending Rack PR:", err);
             alert("Failed to reject lift. Check console for details.");
             showPageMessage("Failed to reject lift. Check Firestore permissions and console details.", "error");
             setReviewStatus("Rejection Failed", "error");

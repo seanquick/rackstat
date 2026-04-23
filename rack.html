@@ -174,8 +174,13 @@
             doc,
             setDoc,
             getDoc,
+            getDocs,
+            addDoc,
             onSnapshot,
-            serverTimestamp
+            serverTimestamp,
+            collection,
+            query,
+            where
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { applyTheme } from './js/theme.js';
@@ -311,6 +316,48 @@
 
             weightCandidates.sort((a, b) => b.ts - a.ts);
             return weightCandidates[0].weight;
+        }
+
+        function getDisplayName(data = {}) {
+            if (data.fullName && String(data.fullName).trim()) {
+                return String(data.fullName).trim();
+            }
+
+            const first = String(data.firstName || "").trim();
+            const last = String(data.lastName || "").trim();
+            const combined = `${first} ${last}`.trim();
+
+            return combined || "Athlete";
+        }
+
+        function getWeightClass(bw) {
+            const numericBw = Number(bw) || 0;
+            if (!numericBw || numericBw > 250) return "UNLIMITED";
+
+            const weightClasses = [125, 135, 145, 155, 165, 175, 185, 195, 210, 225, 250];
+            return weightClasses.find(c => numericBw <= c) || "UNLIMITED";
+        }
+
+        function prettifyLiftName(liftKey = "") {
+            return String(liftKey || "").replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        }
+
+        async function pendingReviewAlreadyExists({ athleteId, exerciseKey, attemptedWeight }) {
+            try {
+                const q = query(
+                    collection(db, "pending_max_reviews"),
+                    where("athleteId", "==", athleteId),
+                    where("exerciseKey", "==", exerciseKey),
+                    where("attemptedWeight", "==", Number(attemptedWeight) || 0),
+                    where("status", "==", "pending")
+                );
+
+                const snap = await getDocs(q);
+                return !snap.empty;
+            } catch (err) {
+                console.warn("Pending review lookup failed; continuing without dedupe.", err);
+                return false;
+            }
         }
 
         function setupDynamicRack(settings) {
@@ -449,6 +496,8 @@
 
             try {
                 const bw = Number(document.getElementById('bodyWeight').value) || 0;
+                const athleteName = getDisplayName({ ...latestUserData, ...latestProfileData });
+                const schoolId = getSchoolIdFromData({ ...latestUserData, ...latestProfileData });
 
                 const updateObj = {
                     lastUpdated: serverTimestamp(),
@@ -458,13 +507,25 @@
                 };
 
                 const lifts = Array.isArray(teamSettings.tracked_lifts) ? teamSettings.tracked_lifts : [];
-                lifts.forEach(liftKey => {
+                const higherLiftSubmissions = [];
+
+                for (const liftKey of lifts) {
                     const normalizedLiftKey = slugify(liftKey);
                     const input = document.querySelector(`[data-lift-key="${normalizedLiftKey}"]`);
-                    const val = Number(input?.value) || 0;
+                    const enteredVal = Number(input?.value) || 0;
+                    const previousVal = Number(getLiftValue(latestMaxesData, normalizedLiftKey)) || 0;
 
-                    Object.assign(updateObj, buildLiftWritebacks(normalizedLiftKey, val));
-                });
+                    Object.assign(updateObj, buildLiftWritebacks(normalizedLiftKey, enteredVal));
+
+                    if (enteredVal > previousVal) {
+                        higherLiftSubmissions.push({
+                            exerciseKey: normalizedLiftKey,
+                            exerciseName: prettifyLiftName(normalizedLiftKey),
+                            attemptedWeight: enteredVal,
+                            previousWeight: previousVal
+                        });
+                    }
+                }
 
                 const previewResult = calculateBoardScore({
                     data: updateObj,
@@ -486,9 +547,69 @@
                     }, { merge: true })
                 ]);
 
+                let createdPendingCount = 0;
+                let skippedPendingCount = 0;
+
+                if (schoolId && higherLiftSubmissions.length) {
+                    for (const submission of higherLiftSubmissions) {
+                        if (bw <= 0) {
+                            skippedPendingCount += 1;
+                            continue;
+                        }
+
+                        const alreadyExists = await pendingReviewAlreadyExists({
+                            athleteId: user.uid,
+                            exerciseKey: submission.exerciseKey,
+                            attemptedWeight: submission.attemptedWeight
+                        });
+
+                        if (alreadyExists) {
+                            continue;
+                        }
+
+                        await addDoc(collection(db, "pending_max_reviews"), {
+                            athleteId: user.uid,
+                            athleteName,
+                            schoolId,
+                            source: "rack",
+                            exerciseKey: submission.exerciseKey,
+                            exerciseName: submission.exerciseName,
+                            attemptedWeight: Number(submission.attemptedWeight) || 0,
+                            previousWeight: Number(submission.previousWeight) || 0,
+                            weighInWeight: bw,
+                            weightClass: getWeightClass(bw),
+                            status: "pending",
+                            createdAt: serverTimestamp(),
+                            submittedAt: serverTimestamp(),
+                            reviewedAt: null,
+                            reviewedBy: null
+                        });
+
+                        createdPendingCount += 1;
+                    }
+                }
+
                 saveBtn.innerText = "SUCCESS ✓";
                 setRackStatus("Stats Updated", "success");
-                showPageMessage("Your lifts and bodyweight were synced successfully.", "success");
+
+                if (createdPendingCount > 0 && skippedPendingCount > 0) {
+                    showPageMessage(
+                        `Stats saved. ${createdPendingCount} new lift review request(s) sent to your coach. Some higher lifts were not submitted because bodyweight is required.`,
+                        "warn"
+                    );
+                } else if (createdPendingCount > 0) {
+                    showPageMessage(
+                        `Stats saved. ${createdPendingCount} new lift review request(s) sent to your coach.`,
+                        "success"
+                    );
+                } else if (skippedPendingCount > 0) {
+                    showPageMessage(
+                        "Stats saved, but new board-review submissions were skipped because bodyweight is required.",
+                        "warn"
+                    );
+                } else {
+                    showPageMessage("Your lifts and bodyweight were synced successfully.", "success");
+                }
 
                 setTimeout(() => {
                     saveBtn.innerText = "Update My Stats";
