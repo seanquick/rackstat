@@ -80,12 +80,14 @@
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { applyTheme } from './js/theme.js';
-    import { getLiftValue, buildLiftWritebacks, slugify } from "./js/board-score.js";
+    import { buildLiftWritebacks, slugify } from "./js/board-score.js";
 
     let currentSchoolId = null;
     let currentWorkoutId = null;
     let currentWorkoutName = "";
     let currentViewMode = "workout";
+
+    const officialMaxCache = new Map();
 
     const workoutList = document.getElementById('workout-list');
     const performanceFeed = document.getElementById('performance-feed');
@@ -269,6 +271,55 @@
         }
 
         return null;
+    }
+
+    async function getOfficialApprovedMax(athleteId, exerciseKey, exerciseName = "") {
+        if (!athleteId || !currentSchoolId) return 0;
+
+        const variations = [...new Set([
+            exerciseKey,
+            ...buildExerciseKeyVariations(exerciseName),
+            ...buildExerciseKeyVariations(exerciseKey)
+        ].filter(Boolean))];
+
+        const cacheKey = `${athleteId}__${variations.sort().join('|')}`;
+        if (officialMaxCache.has(cacheKey)) {
+            return officialMaxCache.get(cacheKey);
+        }
+
+        let best = 0;
+
+        for (const key of variations) {
+            try {
+                const q = query(
+                    collection(db, "approved_max_reviews"),
+                    where("schoolId", "==", currentSchoolId),
+                    where("athleteId", "==", athleteId),
+                    where("exerciseKey", "==", key)
+                );
+
+                const snap = await getDocs(q);
+                snap.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    const candidate = Number(data.attemptedWeight || 0) || 0;
+                    if (candidate > best) best = candidate;
+                });
+            } catch (err) {
+                console.warn("Approved max lookup skipped:", athleteId, key, err);
+            }
+        }
+
+        officialMaxCache.set(cacheKey, best);
+        return best;
+    }
+
+    function clearAthleteOfficialMaxCache(athleteId) {
+        const prefix = `${athleteId}__`;
+        for (const key of officialMaxCache.keys()) {
+            if (key.startsWith(prefix)) {
+                officialMaxCache.delete(key);
+            }
+        }
     }
 
     function renderQueueButtons(workouts, pendingCount) {
@@ -475,14 +526,14 @@
                     ]);
 
                     const aData = athleteSnap.exists() ? athleteSnap.data() : {};
+                    const latestMaxes = maxSnap.exists() ? maxSnap.data() : {};
 
                     const athleteName =
                         log.athleteName ||
                         getDisplayName(aData) ||
                         "Unknown Athlete";
 
-                    const currentMaxes = maxSnap.exists() ? maxSnap.data() : {};
-                    const reviewBodyWeight = getNumericBodyweight(currentMaxes, aData, log);
+                    const reviewBodyWeight = getNumericBodyweight(latestMaxes, aData, log);
                     const reviewWeightClass = getWeightClass(reviewBodyWeight);
 
                     let timeString = "Recently";
@@ -522,18 +573,8 @@
                         const weights = sets.map(s => parseFloat(s.weight) || 0);
                         const topWeight = weights.length > 0 ? Math.max(...weights) : 0;
 
-                        const variations = buildExerciseKeyVariations(ex.name);
-                        let previousMax = 0;
-
-                        for (const key of variations) {
-                            const found = getLiftValue(currentMaxes, key);
-                            if (found > 0) {
-                                previousMax = found;
-                                break;
-                            }
-                        }
-
                         const exerciseKey = getExerciseReviewKey(ex.name);
+                        const previousMax = await getOfficialApprovedMax(athleteId, exerciseKey, ex.name);
                         const needsReview = topWeight > previousMax && topWeight > 0;
 
                         let priorDecision = null;
@@ -602,7 +643,7 @@
                                 <div class="text-right shrink-0">
                                     <span class="text-white font-black italic text-lg">${topWeight > 0 ? topWeight : 'BW'}</span>
                                     <span class="text-[9px] text-gray-600 font-bold uppercase ml-1">${topWeight > 0 ? 'LBS' : ''}</span>
-                                    <p class="text-[8px] text-gray-500 font-bold uppercase mt-[-4px]">Current: ${previousMax}</p>
+                                    <p class="text-[8px] text-gray-500 font-bold uppercase mt-[-4px]">Official: ${previousMax}</p>
                                 </div>
                             </div>
                         `;
@@ -684,13 +725,8 @@
                     const athleteId = pending.athleteId;
                     if (!athleteId) continue;
 
-                    const [athleteSnap, maxSnap] = await Promise.all([
-                        getDoc(doc(db, "recruiting_profiles", athleteId)),
-                        getDoc(doc(db, "recruiting_profiles", athleteId, "maxes", "latest"))
-                    ]);
-
+                    const athleteSnap = await getDoc(doc(db, "recruiting_profiles", athleteId));
                     const athleteData = athleteSnap.exists() ? athleteSnap.data() : {};
-                    const currentMaxes = maxSnap.exists() ? maxSnap.data() : {};
 
                     const athleteName =
                         pending.athleteName ||
@@ -700,7 +736,7 @@
                     const exerciseName = pending.exerciseName || pending.exerciseKey || "Exercise";
                     const exerciseKey = pending.exerciseKey || getExerciseReviewKey(exerciseName);
                     const attemptedWeight = Number(pending.attemptedWeight || 0) || 0;
-                    const previousMax = Number(getLiftValue(currentMaxes, exerciseKey)) || Number(pending.previousWeight || 0) || 0;
+                    const previousMax = await getOfficialApprovedMax(athleteId, exerciseKey, exerciseName);
                     const weighInWeight = Number(pending.weighInWeight || 0) || 0;
                     const weightClass = pending.weightClass || getWeightClass(weighInWeight);
 
@@ -760,7 +796,7 @@
                                 <div class="text-right shrink-0">
                                     <span class="text-white font-black italic text-lg">${attemptedWeight > 0 ? attemptedWeight : '-'}</span>
                                     <span class="text-[9px] text-gray-600 font-bold uppercase ml-1">${attemptedWeight > 0 ? 'LBS' : ''}</span>
-                                    <p class="text-[8px] text-gray-500 font-bold uppercase mt-[-4px]">Current: ${previousMax}</p>
+                                    <p class="text-[8px] text-gray-500 font-bold uppercase mt-[-4px]">Official: ${previousMax}</p>
                                 </div>
                             </div>
                         </div>
@@ -836,6 +872,8 @@
                     decision: "approved"
                 })
             ]);
+
+            clearAthleteOfficialMaxCache(athleteId);
 
             btnElement.innerText = "VERIFIED ✓";
             btnElement.classList.remove('hover:bg-green-700', 'bg-white/5');
@@ -982,6 +1020,8 @@
                     reviewedBy: auth.currentUser?.uid || null
                 })
             ]);
+
+            clearAthleteOfficialMaxCache(athleteId);
 
             btnElement.innerText = "VERIFIED ✓";
             btnElement.classList.remove('hover:bg-green-700', 'bg-white/5');

@@ -125,7 +125,7 @@
                 <p class="text-[10px] font-black uppercase text-blue-400 tracking-[0.2em] mb-1">Official Board Score</p>
                 <div id="view-total" class="text-7xl font-black italic tracking-tighter text-white">--</div>
                 <div id="formula-detail" class="w-full mt-4 pt-2 border-t border-blue-900/50 text-[9px] font-bold text-gray-500 uppercase tracking-widest text-center">
-                    Loading Team Formula...
+                    Loading Official Score...
                 </div>
             </div>
         </section>
@@ -186,7 +186,6 @@
         import { applyTheme } from './js/theme.js';
         import {
             buildBoardScoreSettings,
-            calculateBoardScore,
             getLiftValue,
             buildLiftWritebacks
         } from './js/board-score.js';
@@ -249,7 +248,7 @@
             latestUserData = {};
 
             document.getElementById('view-total').innerText = '--';
-            document.getElementById('formula-detail').innerText = 'Loading Team Formula...';
+            document.getElementById('formula-detail').innerText = 'Loading Official Score...';
             document.getElementById('sync-timestamp').innerText = 'Last Sync: --';
             document.getElementById('bodyWeight').value = '';
 
@@ -370,7 +369,7 @@
                         No Team Lifts Configured Yet
                     </p>
                 `;
-                document.getElementById('formula-detail').innerText = 'Team Settings Need Tracked Lifts';
+                document.getElementById('formula-detail').innerText = 'Official Score Waiting On Team Settings';
                 setRackStatus('No Team Lifts Configured', 'warn');
                 return;
             }
@@ -439,25 +438,20 @@
                 bwInput.value = bw === 0 ? "" : bw;
             }
 
-            const result = calculateBoardScore({
-                data: {
-                    ...data,
-                    bodyWeight: bw,
-                    body_weight: bw,
-                    weight: bw
-                },
-                formulaType: teamSettings.formula_type,
-                scoringLifts: teamSettings.scoring_lifts
-            });
+            const officialBoardScore = Number(
+                latestProfileData.boardScore ??
+                latestUserData.boardScore ??
+                0
+            ) || 0;
 
-            document.getElementById('view-total').innerText = Number.isFinite(Number(result.score)) ? result.score : '--';
+            document.getElementById('view-total').innerText = officialBoardScore;
 
-            if (teamSettings.formula_type === "power_index") {
+            if (officialBoardScore > 0) {
                 document.getElementById('formula-detail').innerText =
-                    `TOTAL: ${result.total} — (${result.bwAdj} × ${result.liftCount}) = ${result.score}`;
+                    `OFFICIAL COACH-VERIFIED SCORE: ${officialBoardScore}`;
             } else {
                 document.getElementById('formula-detail').innerText =
-                    `TOTAL STRENGTH: ${result.total}`;
+                    'OFFICIAL SCORE UPDATES AFTER COACH VERIFICATION';
             }
 
             const lastSyncSource =
@@ -498,6 +492,11 @@
                 const bw = Number(document.getElementById('bodyWeight').value) || 0;
                 const athleteName = getDisplayName({ ...latestUserData, ...latestProfileData });
                 const schoolId = getSchoolIdFromData({ ...latestUserData, ...latestProfileData });
+                const currentApprovedData = {
+                    ...latestUserData,
+                    ...latestProfileData,
+                    ...latestMaxesData
+                };
 
                 const updateObj = {
                     lastUpdated: serverTimestamp(),
@@ -513,30 +512,23 @@
                     const normalizedLiftKey = slugify(liftKey);
                     const input = document.querySelector(`[data-lift-key="${normalizedLiftKey}"]`);
                     const enteredVal = Number(input?.value) || 0;
-                    const previousVal = Number(getLiftValue(latestMaxesData, normalizedLiftKey)) || 0;
+                    const previousApprovedVal = Number(getLiftValue(currentApprovedData, normalizedLiftKey)) || 0;
 
                     Object.assign(updateObj, buildLiftWritebacks(normalizedLiftKey, enteredVal));
 
-                    if (enteredVal > previousVal) {
+                    if (enteredVal > previousApprovedVal) {
                         higherLiftSubmissions.push({
                             exerciseKey: normalizedLiftKey,
                             exerciseName: prettifyLiftName(normalizedLiftKey),
                             attemptedWeight: enteredVal,
-                            previousWeight: previousVal
+                            previousWeight: previousApprovedVal
                         });
                     }
                 }
 
-                const previewResult = calculateBoardScore({
-                    data: updateObj,
-                    formulaType: teamSettings.formula_type,
-                    scoringLifts: teamSettings.scoring_lifts
-                });
-
                 await Promise.all([
                     setDoc(doc(db, "recruiting_profiles", user.uid, "maxes", "latest"), updateObj, { merge: true }),
                     setDoc(doc(db, "recruiting_profiles", user.uid), {
-                        boardScore: previewResult.score,
                         bodyWeight: bw,
                         weight: bw,
                         lastUpdated: serverTimestamp()
@@ -599,7 +591,7 @@
                     );
                 } else if (createdPendingCount > 0) {
                     showPageMessage(
-                        `Stats saved. ${createdPendingCount} new lift review request(s) sent to your coach.`,
+                        `Stats saved. ${createdPendingCount} new lift review request(s) sent to your coach. Official Board Score will not change until coach verification.`,
                         "success"
                     );
                 } else if (skippedPendingCount > 0) {
@@ -608,7 +600,7 @@
                         "warn"
                     );
                 } else {
-                    showPageMessage("Your lifts and bodyweight were synced successfully.", "success");
+                    showPageMessage("Your lifts and bodyweight were synced successfully. Official Board Score remains coach-verified.", "success");
                 }
 
                 setTimeout(() => {
