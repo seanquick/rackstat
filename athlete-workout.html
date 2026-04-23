@@ -81,6 +81,43 @@
         <p id="display-week" class="text-red-600 font-black text-sm uppercase tracking-widest">ACTIVE SESSION</p>
     </div>
 
+    <section id="max-weighin-panel" class="hidden bg-[#111113] border border-yellow-500/20 rounded-2xl p-5 mb-6 shadow-xl">
+        <div class="flex justify-between items-start gap-4">
+            <div>
+                <h2 class="text-sm font-black uppercase italic text-yellow-300">Max Out Weigh-In Required</h2>
+                <p class="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-2">
+                    Enter today's body weight before starting this max workout.
+                </p>
+            </div>
+            <div class="text-right">
+                <p class="text-[8px] text-gray-600 font-black uppercase">Current Saved</p>
+                <p id="current-saved-weight" class="text-sm font-black text-white">-- lbs</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-[1fr_auto] gap-3 mt-4">
+            <input
+                id="max-weighin-input"
+                type="number"
+                min="1"
+                step="0.1"
+                placeholder="Enter today's weight"
+                class="w-full bg-black border border-gray-800 rounded-lg px-4 py-3 text-white font-black outline-none focus:border-yellow-400"
+            >
+            <button
+                id="save-weighin-btn"
+                type="button"
+                class="bg-yellow-500 hover:bg-yellow-400 text-black font-black uppercase text-[10px] tracking-widest px-4 py-3 rounded-lg transition-all"
+            >
+                Save Weigh-In
+            </button>
+        </div>
+
+        <p id="max-weighin-status" class="text-[10px] text-yellow-300 font-bold uppercase tracking-widest mt-3">
+            Weigh-in required before workout can begin.
+        </p>
+    </section>
+
     <div id="athlete-exercise-list" class="space-y-4">
         <div class="text-center text-xs text-gray-500 uppercase font-black py-8">Waiting for workout details...</div>
     </div>
@@ -103,13 +140,26 @@
     import { db, auth } from "./js/firebase-config.js";
     import { applyTheme } from "./js/theme.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import {
+        doc,
+        getDoc,
+        collection,
+        query,
+        where,
+        getDocs,
+        addDoc,
+        setDoc,
+        serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { slugify, getLiftValue } from "./js/board-score.js";
 
     let currentAthleteId = null;
     let currentSchoolId = null;
     let activeWorkoutData = null;
     let currentMaxes = {};
+    let latestProfileData = {};
+    let latestUserData = {};
+    let weighInCompletedForActiveWorkout = false;
 
     const availableWorkoutsEl = document.getElementById('available-workouts');
     const dashboardEl = document.getElementById('athlete-dashboard');
@@ -119,6 +169,12 @@
     const pageMessageBox = document.getElementById('workout-page-message-box');
     const finishWorkoutBtn = document.getElementById('finish-workout-btn');
     const exerciseListEl = document.getElementById('athlete-exercise-list');
+
+    const maxWeighinPanel = document.getElementById('max-weighin-panel');
+    const maxWeighinInput = document.getElementById('max-weighin-input');
+    const saveWeighinBtn = document.getElementById('save-weighin-btn');
+    const maxWeighinStatus = document.getElementById('max-weighin-status');
+    const currentSavedWeightEl = document.getElementById('current-saved-weight');
 
     const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
 
@@ -195,6 +251,142 @@
         renderExerciseListMessage('Waiting for workout details...');
         hidePageMessage();
         setWorkoutStatus('Loading Session');
+        activeWorkoutData = null;
+        weighInCompletedForActiveWorkout = false;
+        syncMaxWorkoutAccessState();
+        hideMaxWeighinPanel();
+    }
+
+    function getResolvedBodyWeight() {
+        return Number(
+            currentMaxes.bodyWeight ??
+            currentMaxes.body_weight ??
+            currentMaxes.weight ??
+            latestProfileData.bodyWeight ??
+            latestProfileData.weight ??
+            latestUserData.weight ??
+            0
+        ) || 0;
+    }
+
+    function isActiveWorkoutMaxOut() {
+        return !!activeWorkoutData?.isMaxOutMode;
+    }
+
+    function hideMaxWeighinPanel() {
+        if (maxWeighinPanel) maxWeighinPanel.classList.add('hidden');
+        if (maxWeighinInput) maxWeighinInput.value = '';
+        if (maxWeighinStatus) {
+            maxWeighinStatus.innerText = 'Weigh-in required before workout can begin.';
+            maxWeighinStatus.className = 'text-[10px] text-yellow-300 font-bold uppercase tracking-widest mt-3';
+        }
+    }
+
+    function showMaxWeighinPanel() {
+        if (!maxWeighinPanel) return;
+        maxWeighinPanel.classList.remove('hidden');
+
+        const savedWeight = getResolvedBodyWeight();
+        if (currentSavedWeightEl) {
+            currentSavedWeightEl.innerText = savedWeight > 0 ? `${savedWeight} lbs` : '-- lbs';
+        }
+
+        if (maxWeighinInput && !maxWeighinInput.value && savedWeight > 0) {
+            maxWeighinInput.value = savedWeight;
+        }
+    }
+
+    function syncMaxWorkoutAccessState() {
+        if (!finishWorkoutBtn) return;
+
+        if (isActiveWorkoutMaxOut() && !weighInCompletedForActiveWorkout) {
+            finishWorkoutBtn.disabled = true;
+            finishWorkoutBtn.innerText = 'Weigh-In Required Before Max Workout';
+            return;
+        }
+
+        finishWorkoutBtn.disabled = false;
+        finishWorkoutBtn.innerText = 'Log Session & Finish';
+    }
+
+    async function saveRequiredWeighIn() {
+        const user = auth.currentUser;
+        if (!user || !isActiveWorkoutMaxOut()) return false;
+
+        const enteredWeight = Number(maxWeighinInput?.value || 0);
+        if (enteredWeight <= 0) {
+            if (maxWeighinStatus) {
+                maxWeighinStatus.innerText = 'Enter a valid body weight to continue.';
+                maxWeighinStatus.className = 'text-[10px] text-red-300 font-bold uppercase tracking-widest mt-3';
+            }
+            return false;
+        }
+
+        saveWeighinBtn.disabled = true;
+        saveWeighinBtn.innerText = 'Saving...';
+
+        try {
+            await Promise.all([
+                setDoc(doc(db, "users", user.uid), {
+                    weight: enteredWeight,
+                    lastSync: serverTimestamp()
+                }, { merge: true }),
+                setDoc(doc(db, "recruiting_profiles", user.uid), {
+                    weight: enteredWeight,
+                    bodyWeight: enteredWeight,
+                    lastUpdated: serverTimestamp()
+                }, { merge: true }),
+                setDoc(doc(db, "recruiting_profiles", user.uid, "maxes", "latest"), {
+                    weight: enteredWeight,
+                    bodyWeight: enteredWeight,
+                    body_weight: enteredWeight,
+                    lastUpdated: serverTimestamp()
+                }, { merge: true })
+            ]);
+
+            currentMaxes = {
+                ...currentMaxes,
+                weight: enteredWeight,
+                bodyWeight: enteredWeight,
+                body_weight: enteredWeight
+            };
+            latestProfileData = {
+                ...latestProfileData,
+                weight: enteredWeight,
+                bodyWeight: enteredWeight
+            };
+            latestUserData = {
+                ...latestUserData,
+                weight: enteredWeight
+            };
+
+            weighInCompletedForActiveWorkout = true;
+            syncMaxWorkoutAccessState();
+
+            if (currentSavedWeightEl) {
+                currentSavedWeightEl.innerText = `${enteredWeight} lbs`;
+            }
+
+            if (maxWeighinStatus) {
+                maxWeighinStatus.innerText = 'Weigh-in saved. You may now complete the max workout.';
+                maxWeighinStatus.className = 'text-[10px] text-green-300 font-bold uppercase tracking-widest mt-3';
+            }
+
+            showPageMessage('Weigh-in saved for this max workout.', 'success');
+            setWorkoutStatus('Max Workout Ready', 'success');
+            return true;
+        } catch (err) {
+            console.error("Weigh-in save error:", err);
+            if (maxWeighinStatus) {
+                maxWeighinStatus.innerText = 'Unable to save weigh-in. Please try again.';
+                maxWeighinStatus.className = 'text-[10px] text-red-300 font-bold uppercase tracking-widest mt-3';
+            }
+            showPageMessage('Weigh-in could not be saved.', 'error');
+            return false;
+        } finally {
+            saveWeighinBtn.disabled = false;
+            saveWeighinBtn.innerText = 'Save Weigh-In';
+        }
     }
 
     onAuthStateChanged(auth, async (user) => {
@@ -208,15 +400,17 @@
         currentAthleteId = user.uid;
 
         try {
-            const [profileSnap, userSnap] = await Promise.all([
+            const [profileSnap, userSnap, maxSnap] = await Promise.all([
                 getDoc(doc(db, "recruiting_profiles", user.uid)),
-                getDoc(doc(db, "users", user.uid))
+                getDoc(doc(db, "users", user.uid)),
+                getDoc(doc(db, "recruiting_profiles", user.uid, "maxes", "latest"))
             ]);
 
-            const profileData = profileSnap.exists() ? profileSnap.data() : {};
-            const userData = userSnap.exists() ? userSnap.data() : {};
-            const mergedData = { ...userData, ...profileData };
+            latestProfileData = profileSnap.exists() ? profileSnap.data() : {};
+            latestUserData = userSnap.exists() ? userSnap.data() : {};
+            currentMaxes = maxSnap.exists() ? maxSnap.data() : {};
 
+            const mergedData = { ...latestUserData, ...latestProfileData };
             currentSchoolId = getSchoolIdFromData(mergedData);
 
             if (!currentSchoolId) {
@@ -272,13 +466,17 @@
                 .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
 
             workouts.forEach((workout) => {
+                const isMaxOut = !!workout.isMaxOutMode;
                 const btn = document.createElement('button');
                 btn.className = "w-full bg-[#161618] border border-[#2a2a2c] p-5 rounded-xl flex justify-between items-center group text-left mb-3 transition-all hover:border-red-600";
                 btn.onclick = () => loadWorkoutDetails(workout.id);
                 btn.innerHTML = `
                     <div>
                         <h3 class="text-white font-black uppercase text-lg italic">${workout.name || "Workout"}</h3>
-                        <span class="text-red-600 font-black text-[9px] uppercase tracking-[0.2em]">${workout.date || "Active Session"}</span>
+                        <div class="flex items-center gap-2 mt-1 flex-wrap">
+                            <span class="text-red-600 font-black text-[9px] uppercase tracking-[0.2em]">${workout.date || "Active Session"}</span>
+                            ${isMaxOut ? `<span class="text-[8px] font-black uppercase bg-yellow-500/20 text-yellow-300 border border-yellow-500/20 px-2 py-1 rounded-full">Weigh-In Required</span>` : ``}
+                        </div>
                     </div>
                     <span class="text-gray-700 group-hover:text-red-600 font-black text-xl">→</span>
                 `;
@@ -441,7 +639,8 @@
             }
 
             activeWorkoutData = { id: workoutId, ...workoutSnap.data() };
-            currentMaxes = maxSnap.exists() ? maxSnap.data() : {};
+            currentMaxes = maxSnap.exists() ? maxSnap.data() : currentMaxes;
+            weighInCompletedForActiveWorkout = !activeWorkoutData.isMaxOutMode;
 
             dashboardEl.classList.add('hidden');
             workoutContainerEl.classList.remove('hidden');
@@ -449,11 +648,19 @@
             document.getElementById('display-title').innerText = activeWorkoutData.name || 'WORKOUT';
             document.getElementById('display-week').innerText = activeWorkoutData.date || 'ACTIVE SESSION';
 
+            if (isActiveWorkoutMaxOut()) {
+                showMaxWeighinPanel();
+                showPageMessage("Today's weigh-in is required before this max workout can be logged.", "warn");
+            } else {
+                hideMaxWeighinPanel();
+            }
+
             exerciseListEl.innerHTML = '';
 
             if (!Array.isArray(activeWorkoutData.exercises) || !activeWorkoutData.exercises.length) {
                 renderExerciseListMessage("No exercises were configured for this workout.", "warn");
-                setWorkoutStatus("Workout Ready", "warn");
+                syncMaxWorkoutAccessState();
+                setWorkoutStatus(isActiveWorkoutMaxOut() ? "Weigh-In Required" : "Workout Ready", isActiveWorkoutMaxOut() ? "warn" : "warn");
                 return;
             }
 
@@ -467,7 +674,8 @@
                 exerciseListEl.appendChild(renderStandardExerciseCard(ex, exIndex, athleteCurrentMax));
             });
 
-            setWorkoutStatus("Workout Ready", "success");
+            syncMaxWorkoutAccessState();
+            setWorkoutStatus(isActiveWorkoutMaxOut() ? "Weigh-In Required" : "Workout Ready", isActiveWorkoutMaxOut() ? "warn" : "success");
         } catch (err) {
             console.error("Workout detail load error:", err);
             showPageMessage("Workout details could not be loaded right now.", "error");
@@ -476,8 +684,18 @@
         }
     }
 
+    if (saveWeighinBtn) {
+        saveWeighinBtn.addEventListener('click', saveRequiredWeighIn);
+    }
+
     finishWorkoutBtn.onclick = async () => {
         if (finishWorkoutBtn.disabled || !activeWorkoutData) return;
+
+        if (isActiveWorkoutMaxOut() && !weighInCompletedForActiveWorkout) {
+            showPageMessage("Save today's weigh-in before logging a max workout.", "warn");
+            setWorkoutStatus("Weigh-In Required", "warn");
+            return;
+        }
 
         finishWorkoutBtn.disabled = true;
         finishWorkoutBtn.innerText = "SYNCING TO BOARD...";
@@ -526,7 +744,11 @@
                     };
                 });
 
-                return { name: ex.name || "Exercise", id: exId, sets: completedSets };
+                return {
+                    name: ex.name || "Exercise",
+                    id: exId,
+                    sets: completedSets
+                };
             });
 
             let profileSnap = await getDoc(doc(db, "users", currentAthleteId));
@@ -551,6 +773,14 @@
                 status: "completed"
             };
 
+            if (isActiveWorkoutMaxOut()) {
+                const weighInWeight = Number(getResolvedBodyWeight()) || 0;
+
+                completionDoc.weighInRequired = true;
+                completionDoc.weighInCaptured = weighInWeight > 0;
+                completionDoc.weighInWeight = weighInWeight;
+            }
+
             await addDoc(collection(db, "completed_workouts"), completionDoc);
 
             setWorkoutStatus("Session Logged", "success");
@@ -564,6 +794,7 @@
             alert("Failed to sync: " + err.message);
             finishWorkoutBtn.disabled = false;
             finishWorkoutBtn.innerText = "Log Session & Finish";
+            syncMaxWorkoutAccessState();
         }
     };
 </script>

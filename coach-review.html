@@ -109,6 +109,30 @@
         return combined || "Unknown Athlete";
     }
 
+    function getWeightClass(bw) {
+        const numericBw = Number(bw) || 0;
+        if (!numericBw || numericBw > 250) return "UNLIMITED";
+
+        const weightClasses = [125, 135, 145, 155, 165, 175, 185, 195, 210, 225, 250];
+        return weightClasses.find(c => numericBw <= c) || "UNLIMITED";
+    }
+
+    function getNumericBodyweight(maxes = {}, athleteData = {}, workoutLog = {}) {
+        return Number(
+            workoutLog.weighInWeight ??
+            workoutLog.bodyWeight ??
+            workoutLog.body_weight ??
+            workoutLog.weight ??
+            maxes.bodyWeight ??
+            maxes.body_weight ??
+            maxes.weight ??
+            athleteData.bodyWeight ??
+            athleteData.body_weight ??
+            athleteData.weight ??
+            0
+        ) || 0;
+    }
+
     function buildExerciseKeyVariations(name = "") {
         const normalized = slugify(name);
         const compact = normalized.replace(/_/g, "");
@@ -206,32 +230,40 @@
 
         const normalizedWeight = Number(attemptedWeight) || 0;
 
-        const approvedQ = query(
-            collection(db, "approved_max_reviews"),
-            where("schoolId", "==", currentSchoolId),
-            where("athleteId", "==", athleteId),
-            where("workoutId", "==", workoutId || null),
-            where("exerciseKey", "==", exerciseKey),
-            where("attemptedWeight", "==", normalizedWeight)
-        );
+        try {
+            const approvedQ = query(
+                collection(db, "approved_max_reviews"),
+                where("schoolId", "==", currentSchoolId),
+                where("athleteId", "==", athleteId),
+                where("workoutId", "==", workoutId || null),
+                where("exerciseKey", "==", exerciseKey),
+                where("attemptedWeight", "==", normalizedWeight)
+            );
 
-        const approvedSnap = await getDocs(approvedQ);
-        if (!approvedSnap.empty) {
-            return "approved";
+            const approvedSnap = await getDocs(approvedQ);
+            if (!approvedSnap.empty) {
+                return "approved";
+            }
+        } catch (err) {
+            console.warn("Approved review lookup skipped:", err);
         }
 
-        const rejectedQ = query(
-            collection(db, "rejected_max_reviews"),
-            where("schoolId", "==", currentSchoolId),
-            where("athleteId", "==", athleteId),
-            where("workoutId", "==", workoutId || null),
-            where("exerciseKey", "==", exerciseKey),
-            where("attemptedWeight", "==", normalizedWeight)
-        );
+        try {
+            const rejectedQ = query(
+                collection(db, "rejected_max_reviews"),
+                where("schoolId", "==", currentSchoolId),
+                where("athleteId", "==", athleteId),
+                where("workoutId", "==", workoutId || null),
+                where("exerciseKey", "==", exerciseKey),
+                where("attemptedWeight", "==", normalizedWeight)
+            );
 
-        const rejectedSnap = await getDocs(rejectedQ);
-        if (!rejectedSnap.empty) {
-            return "rejected";
+            const rejectedSnap = await getDocs(rejectedQ);
+            if (!rejectedSnap.empty) {
+                return "rejected";
+            }
+        } catch (err) {
+            console.warn("Rejected review lookup skipped:", err);
         }
 
         return null;
@@ -397,6 +429,8 @@
                         "Unknown Athlete";
 
                     const currentMaxes = maxSnap.exists() ? maxSnap.data() : {};
+                    const reviewBodyWeight = getNumericBodyweight(currentMaxes, aData, log);
+                    const reviewWeightClass = getWeightClass(reviewBodyWeight);
 
                     let timeString = "Recently";
                     if (log.timestamp) {
@@ -448,11 +482,19 @@
 
                         const exerciseKey = getExerciseReviewKey(ex.name);
                         const needsReview = topWeight > previousMax && topWeight > 0;
-                        const priorDecision = needsReview
-                            ? await getReviewDecision(athleteId, currentWorkoutId || null, exerciseKey, topWeight)
-                            : null;
+
+                        let priorDecision = null;
+                        if (needsReview) {
+                            priorDecision = await getReviewDecision(
+                                athleteId,
+                                currentWorkoutId || null,
+                                exerciseKey,
+                                topWeight
+                            );
+                        }
 
                         const encodedAthleteId = escapeAttr(athleteId);
+                        const encodedAthleteName = escapeAttr(athleteName);
                         const encodedExerciseKey = escapeAttr(exerciseKey);
                         const encodedWorkoutId = escapeAttr(currentWorkoutId || "");
                         const encodedWorkoutName = escapeAttr(currentWorkoutName || "");
@@ -480,12 +522,12 @@
                             reviewActions = `
                                 <span class="bg-red-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full animate-pulse uppercase">Needs Review</span>
                                 <button
-                                    onclick="window.approvePR('${encodedAthleteId}', '${encodedExerciseKey}', '${encodedExerciseName}', ${topWeight}, '${encodedWorkoutId}', '${encodedWorkoutName}', this)"
+                                    onclick="window.approvePR('${encodedAthleteId}', '${encodedAthleteName}', '${encodedExerciseKey}', '${encodedExerciseName}', ${topWeight}, '${encodedWorkoutId}', '${encodedWorkoutName}', ${reviewBodyWeight}, '${reviewWeightClass}', this)"
                                     class="bg-white/5 hover:bg-green-700 border border-white/10 text-[8px] font-black px-3 py-1 rounded-md text-white transition-all uppercase tracking-tighter">
                                     Verify Lift
                                 </button>
                                 <button
-                                    onclick="window.rejectPR('${encodedAthleteId}', '${encodedExerciseKey}', '${encodedExerciseName}', ${topWeight}, '${encodedWorkoutId}', '${encodedWorkoutName}', this)"
+                                    onclick="window.rejectPR('${encodedAthleteId}', '${encodedAthleteName}', '${encodedExerciseKey}', '${encodedExerciseName}', ${topWeight}, '${encodedWorkoutId}', '${encodedWorkoutName}', ${reviewBodyWeight}, '${reviewWeightClass}', this)"
                                     class="bg-white/5 hover:bg-red-700 border border-white/10 text-[8px] font-black px-3 py-1 rounded-md text-white transition-all uppercase tracking-tighter">
                                     Reject
                                 </button>
@@ -517,7 +559,12 @@
                     card.className = "bg-[#111113] border border-[#2a2a2c] rounded-2xl overflow-hidden mb-6 shadow-2xl";
                     card.innerHTML = `
                         <div class="bg-[#1a1a1c] p-4 flex justify-between items-center border-b border-[#2a2a2c] gap-4 flex-wrap">
-                            <h4 class="font-black text-white uppercase italic tracking-tighter text-lg">${athleteName}</h4>
+                            <div>
+                                <h4 class="font-black text-white uppercase italic tracking-tighter text-lg">${athleteName}</h4>
+                                <p class="text-[8px] text-gray-500 font-bold uppercase tracking-widest mt-1">
+                                    Review Weight: ${reviewBodyWeight > 0 ? `${reviewBodyWeight} LBS • ${reviewWeightClass}` : 'NOT CAPTURED'}
+                                </p>
+                            </div>
                             <div class="text-right">
                                 <span class="text-[9px] font-black text-gray-500 uppercase block leading-none mb-1">Logged At</span>
                                 <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">${timeString}</span>
@@ -546,7 +593,18 @@
         }
     };
 
-    window.approvePR = async function(athleteId, exerciseKey, exerciseName, newWeight, workoutId, workoutName, btnElement) {
+    window.approvePR = async function(
+        athleteId,
+        athleteName,
+        exerciseKey,
+        exerciseName,
+        newWeight,
+        workoutId,
+        workoutName,
+        weighInWeight,
+        weightClass,
+        btnElement
+    ) {
         const originalText = btnElement.innerText;
         btnElement.innerText = "SAVING...";
         btnElement.disabled = true;
@@ -568,12 +626,15 @@
                 }, { merge: true }),
                 addDoc(collection(db, "approved_max_reviews"), {
                     athleteId,
+                    athleteName: athleteName || "Unknown Athlete",
                     schoolId: currentSchoolId,
                     workoutId: workoutId || null,
                     workoutName: workoutName || null,
                     exerciseKey,
                     exerciseName,
                     attemptedWeight: Number(newWeight) || 0,
+                    weighInWeight: Number(weighInWeight) || 0,
+                    weightClass: weightClass || getWeightClass(weighInWeight),
                     reviewedAt: serverTimestamp(),
                     reviewedBy: auth.currentUser?.uid || null,
                     decision: "approved"
@@ -603,7 +664,18 @@
         }
     };
 
-    window.rejectPR = async function(athleteId, exerciseKey, exerciseName, attemptedWeight, workoutId, workoutName, btnElement) {
+    window.rejectPR = async function(
+        athleteId,
+        athleteName,
+        exerciseKey,
+        exerciseName,
+        attemptedWeight,
+        workoutId,
+        workoutName,
+        weighInWeight,
+        weightClass,
+        btnElement
+    ) {
         const originalText = btnElement.innerText;
         btnElement.innerText = "REJECTING...";
         btnElement.disabled = true;
@@ -617,12 +689,15 @@
         try {
             await addDoc(collection(db, "rejected_max_reviews"), {
                 athleteId,
+                athleteName: athleteName || "Unknown Athlete",
                 schoolId: currentSchoolId,
                 workoutId: workoutId || null,
                 workoutName: workoutName || null,
                 exerciseKey,
                 exerciseName,
                 attemptedWeight: Number(attemptedWeight) || 0,
+                weighInWeight: Number(weighInWeight) || 0,
+                weightClass: weightClass || getWeightClass(weighInWeight),
                 reviewedAt: serverTimestamp(),
                 reviewedBy: auth.currentUser?.uid || null,
                 decision: "rejected"
