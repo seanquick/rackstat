@@ -359,6 +359,29 @@
             }
         }
 
+        async function getApprovedLiftValue({ athleteId, exerciseKey }) {
+            try {
+                const q = query(
+                    collection(db, "approved_max_reviews"),
+                    where("athleteId", "==", athleteId),
+                    where("exerciseKey", "==", exerciseKey)
+                );
+
+                const snap = await getDocs(q);
+                let best = 0;
+
+                snap.forEach(docSnap => {
+                    const val = Number(docSnap.data().attemptedWeight || 0) || 0;
+                    if (val > best) best = val;
+                });
+
+                return best;
+            } catch (err) {
+                console.warn("Approved lift lookup failed:", err);
+                return 0;
+            }
+        }
+
         function setupDynamicRack(settings) {
             teamSettings = buildBoardScoreSettings(settings || {});
             const lifts = Array.isArray(teamSettings.tracked_lifts) ? teamSettings.tracked_lifts : [];
@@ -510,7 +533,7 @@
                     const normalizedLiftKey = slugify(liftKey);
                     const input = document.querySelector(`[data-lift-key="${normalizedLiftKey}"]`);
                     const enteredVal = Number(input?.value) || 0;
-                    const previousApprovedVal = Number(getLiftValue(approvedData, normalizedLiftKey)) || 0;
+                    const previousApprovedVal = await getApprovedLiftValue({athleteId: user.uid, exerciseKey: normalizedLiftKey });
 
                     if (enteredVal > previousApprovedVal) {
                         higherLiftSubmissions.push({
