@@ -159,6 +159,7 @@
     let schoolDocId = null;
     let loadedSchoolData = {};
     let pageLoaded = false;
+    let loadedUserData = {};
 
     const STANDARD_LIFT_IDS = ["bench", "squat", "clean", "deadlift", "push_press"];
 
@@ -468,7 +469,7 @@
             const clubStartRaw = parseInt(document.getElementById('club-start').value, 10);
             const clubStart = Number.isFinite(clubStartRaw) && clubStartRaw > 0 ? clubStartRaw : 50;
 
-        console.log("DEBUG USER ROLE:", auth.currentUser?.uid, loadedUserData?.role);
+        console.log("DEBUG USER ROLE:", auth.currentUser?.uid, auth.currentUser?.email);
         console.log("DEBUG SAVE:", {schoolDocId, coachSchoolId: schoolId, loadedSchoolData });
 
         await updateDoc(doc(db, "schools", schoolDocId), {
@@ -518,6 +519,7 @@
                 window.location.href = 'index.html';
                 return;
             }
+            loadedUserData = userDoc.data();
 
             schoolId = getSchoolIdFromData(userData);
 
