@@ -558,6 +558,29 @@
                 const role = userData.role?.toLowerCase();
                 const isLoginPage = window.location.pathname.endsWith('index.html') || window.location.pathname === '/';
 
+                const requiredConsentVersion = "v1_2026_04";
+                const hasRequiredConsent =
+                    userData.termsAccepted === true &&
+                    userData.privacyAccepted === true &&
+                    userData.consentVersion === requiredConsentVersion;
+
+                if (!hasRequiredConsent) {
+                    authSection.classList.add('hidden');
+                    mainMenu.classList.add('hidden');
+                    setLobbyStatus("Consent Required", "warn");
+
+                    if (typeof window.openConsentModal === "function") {
+                        window.openConsentModal(user, userData);
+                    } else if (typeof initConsent === "function") {
+                        initConsent(user, userData);
+                    } else {
+                        showPageMessage("Privacy and Terms acceptance is required before continuing.", "warn");
+                        console.error("Consent handler missing. Add openConsentModal() or initConsent().");
+                    }
+
+                    return;
+                }
+
                 if (role === 'admin' && isLoginPage) {
                     window.location.href = 'admin-lobby.html';
                     return;
