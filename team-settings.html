@@ -153,16 +153,7 @@
 <script type="module">
     import { db, auth } from './js/firebase-config.js';
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import {
-        doc,
-        getDoc,
-        setDoc,
-        collection,
-        getDocs,
-        query,
-        where,
-        serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { doc, getDoc, updateDoc, collection, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     let schoolId = null;
     let schoolDocId = null;
@@ -477,24 +468,28 @@
             const clubStartRaw = parseInt(document.getElementById('club-start').value, 10);
             const clubStart = Number.isFinite(clubStartRaw) && clubStartRaw > 0 ? clubStartRaw : 50;
 
-            await setDoc(doc(db, "schools", schoolDocId), {
-                schoolId: loadedSchoolData.schoolId || schoolId,
-                school_id: loadedSchoolData.school_id || schoolId,
-                colors: { primary, secondary },
-                primaryColor: primary,
-                primaryColorSecondary: secondary,
-                logo_url: logoUrl,
-                logo_primary: logoUrl,
-                formula_type: formulaType,
-                club_start: clubStart,
-                hasRecruitingCard: document.getElementById('toggle-recruiting').checked,
-                trackedLifts: dedupedTrackedLifts,
-                activeLifts: dedupedTrackedLifts,
-                scoring_lifts: scoringLifts,
-                scoringLifts,
-                customLifts,
-                lastUpdated: serverTimestamp()
-            }, { merge: true });
+        console.log("DEBUG SAVE:", {
+            schoolDocId,
+            coachSchoolId: schoolId,
+            loadedSchoolData
+            });
+
+        await updateDoc(doc(db, "schools", schoolDocId), {
+            colors: { primary, secondary },
+            primaryColor: primary,
+            primaryColorSecondary: secondary,
+            logo_url: logoUrl,
+            logo_primary: logoUrl,
+            formula_type: formulaType,
+            club_start: clubStart,
+            hasRecruitingCard: document.getElementById('toggle-recruiting').checked,
+            trackedLifts: dedupedTrackedLifts,
+            activeLifts: dedupedTrackedLifts,
+            scoring_lifts: scoringLifts,
+            scoringLifts,
+            customLifts,
+            lastUpdated: serverTimestamp()
+        });
 
             showPageMessage("Program settings saved successfully.", "success");
             setStatus("Settings Saved", "success");
