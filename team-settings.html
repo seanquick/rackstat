@@ -150,418 +150,403 @@
 
     </main>
 
-    <script type="module">
-        import { db, auth } from './js/firebase-config.js';
-        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { doc, getDoc, setDoc, collection, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+<script type="module">
+    import { db, auth } from './js/firebase-config.js';
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import {
+        doc,
+        getDoc,
+        setDoc,
+        collection,
+        getDocs,
+        query,
+        where,
+        serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        let schoolId = null;
-        let pageLoaded = false;
+    let schoolId = null;
+    let schoolDocId = null;
+    let loadedSchoolData = {};
+    let pageLoaded = false;
 
-        const STANDARD_LIFT_IDS = ["bench", "squat", "clean", "deadlift", "push_press"];
+    const STANDARD_LIFT_IDS = ["bench", "squat", "clean", "deadlift", "push_press"];
 
-        const pageMessage = document.getElementById('page-message');
-        const statusEl = document.getElementById('settings-status');
-        const saveBtn = document.getElementById('master-save-btn');
-        const playerCountBadge = document.getElementById('player-count');
+    const pageMessage = document.getElementById('page-message');
+    const statusEl = document.getElementById('settings-status');
+    const saveBtn = document.getElementById('master-save-btn');
+    const playerCountBadge = document.getElementById('player-count');
 
-        const slugify = (text) =>
-            String(text || "")
-                .toLowerCase()
-                .trim()
-                .replace(/\s+/g, '_')
-                .replace(/[^\w-]+/g, '');
+    const slugify = (text) =>
+        String(text || "")
+            .toLowerCase()
+            .trim()
+            .replace(/\s+/g, '_')
+            .replace(/[^\w-]+/g, '');
 
-        const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
+    const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
 
-        function setStatus(text, tone = 'default') {
-            if (!statusEl) return;
-            statusEl.innerText = text;
-            statusEl.className = 'text-[10px] font-bold uppercase tracking-widest';
+    function setStatus(text, tone = 'default') {
+        if (!statusEl) return;
+        statusEl.innerText = text;
+        statusEl.className = 'text-[10px] font-bold uppercase tracking-widest';
 
-            if (tone === 'error') statusEl.classList.add('text-red-400');
-            else if (tone === 'success') statusEl.classList.add('text-green-400');
-            else if (tone === 'warn') statusEl.classList.add('text-yellow-300');
-            else statusEl.classList.add('text-gray-500');
+        if (tone === 'error') statusEl.classList.add('text-red-400');
+        else if (tone === 'success') statusEl.classList.add('text-green-400');
+        else if (tone === 'warn') statusEl.classList.add('text-yellow-300');
+        else statusEl.classList.add('text-gray-500');
+    }
+
+    function showPageMessage(message, tone = 'warn') {
+        if (!pageMessage) return;
+        pageMessage.classList.remove('hidden');
+        pageMessage.innerText = message;
+        pageMessage.className = 'mb-6 rounded-xl border px-4 py-3 text-xs font-bold uppercase tracking-wider';
+
+        if (tone === 'error') pageMessage.classList.add('bg-red-500/10', 'border-red-500/20', 'text-red-300');
+        else if (tone === 'success') pageMessage.classList.add('bg-green-500/10', 'border-green-500/20', 'text-green-300');
+        else pageMessage.classList.add('bg-yellow-500/10', 'border-yellow-500/20', 'text-yellow-300');
+    }
+
+    function hidePageMessage() {
+        if (!pageMessage) return;
+        pageMessage.classList.add('hidden');
+        pageMessage.innerText = '';
+    }
+
+    function normalizeFormulaType(value) {
+        return value === 'straight_calculation' ? 'straight_total' : (value || 'power_index');
+    }
+
+    function normalizeLiftArray(value, fallback = []) {
+        if (!value) return [...fallback];
+
+        const raw = Array.isArray(value)
+            ? value.flatMap(item => typeof item === 'string' ? item.split(',') : [])
+            : typeof value === 'string'
+                ? value.split(',')
+                : [];
+
+        return [...new Set(raw.map(item => slugify(item)).filter(Boolean))];
+    }
+
+    async function resolveSchoolDoc() {
+        let snap = await getDoc(doc(db, "schools", schoolId));
+
+        if (snap.exists()) {
+            schoolDocId = snap.id;
+            loadedSchoolData = snap.data();
+            return snap;
         }
 
-        function showPageMessage(message, tone = 'warn') {
-            if (!pageMessage) return;
-            pageMessage.classList.remove('hidden');
-            pageMessage.innerText = message;
-            pageMessage.className = 'mb-6 rounded-xl border px-4 py-3 text-xs font-bold uppercase tracking-wider';
-
-            if (tone === 'error') {
-                pageMessage.classList.add('bg-red-500/10', 'border-red-500/20', 'text-red-300');
-            } else if (tone === 'success') {
-                pageMessage.classList.add('bg-green-500/10', 'border-green-500/20', 'text-green-300');
-            } else {
-                pageMessage.classList.add('bg-yellow-500/10', 'border-yellow-500/20', 'text-yellow-300');
-            }
+        let qSnap = await getDocs(query(collection(db, "schools"), where("schoolId", "==", schoolId)));
+        if (qSnap.empty) {
+            qSnap = await getDocs(query(collection(db, "schools"), where("school_id", "==", schoolId)));
         }
 
-        function hidePageMessage() {
-            if (!pageMessage) return;
-            pageMessage.classList.add('hidden');
-            pageMessage.innerText = '';
+        if (!qSnap.empty) {
+            const found = qSnap.docs[0];
+            schoolDocId = found.id;
+            loadedSchoolData = found.data();
+            return found;
         }
 
-        function normalizeFormulaType(value) {
-            return value === 'straight_calculation' ? 'straight_total' : (value || 'power_index');
+        schoolDocId = schoolId;
+        loadedSchoolData = {};
+        return null;
+    }
+
+    function updateFormulaHelp() {
+        const formulaType = document.getElementById('formula-type')?.value;
+        const help = document.getElementById('formula-help');
+        if (!help) return;
+
+        help.innerHTML = formulaType === 'power_index'
+            ? `Power Index uses:<br><span class="text-white font-bold">L - (BWadj × N)</span><br><br>Where L = the sum of selected lifts, BWadj = min(bodyweight, 200), and N = the number of selected lifts.`
+            : `Straight Total uses the sum of selected scoring lifts.`;
+    }
+
+    function getTrackedLiftCheckboxes() {
+        return Array.from(document.querySelectorAll('.lift-checkbox'));
+    }
+
+    function getTrackedLiftIds() {
+        return getTrackedLiftCheckboxes().filter(cb => cb.checked).map(cb => slugify(cb.value));
+    }
+
+    function renderScoringLiftCheckboxes(selectedScoringLifts = []) {
+        const container = document.getElementById('scoring-lifts-container');
+        if (!container) return;
+
+        const trackedCheckboxes = getTrackedLiftCheckboxes().filter(cb => cb.checked);
+        const selectedSet = new Set(selectedScoringLifts.map(slugify));
+
+        container.innerHTML = '';
+
+        if (!trackedCheckboxes.length) {
+            container.innerHTML = `<p class="text-gray-500 text-sm normal-case col-span-full">Select tracked lifts in the section below to configure Board Score lifts.</p>`;
+            return;
         }
 
-        function normalizeLiftArray(value, fallback = []) {
-            if (!value) return [...fallback];
-
-            const raw = Array.isArray(value)
-                ? value.flatMap(item => typeof item === 'string' ? item.split(',') : [])
-                : typeof value === 'string'
-                    ? value.split(',')
-                    : [];
-
-            return [...new Set(
-                raw
-                    .map(item => slugify(item))
-                    .filter(Boolean)
-            )];
-        }
-
-        function updateFormulaHelp() {
-            const formulaType = document.getElementById('formula-type')?.value;
-            const help = document.getElementById('formula-help');
-            if (!help) return;
-
-            if (formulaType === 'power_index') {
-                help.innerHTML = `
-                    Power Index uses:<br>
-                    <span class="text-white font-bold">L - (BWadj × N)</span><br><br>
-                    Where L = the sum of selected lifts, BWadj = min(bodyweight, 200), and N = the number of selected lifts.
-                `;
-            } else {
-                help.innerHTML = `
-                    Straight Total uses the sum of selected scoring lifts.
-                `;
-            }
-        }
-
-        function getTrackedLiftCheckboxes() {
-            return Array.from(document.querySelectorAll('.lift-checkbox'));
-        }
-
-        function getTrackedLiftIds() {
-            return getTrackedLiftCheckboxes()
-                .filter(cb => cb.checked)
-                .map(cb => slugify(cb.value));
-        }
-
-        function renderScoringLiftCheckboxes(selectedScoringLifts = []) {
-            const container = document.getElementById('scoring-lifts-container');
-            if (!container) return;
-
-            const trackedCheckboxes = getTrackedLiftCheckboxes().filter(cb => cb.checked);
-            const selectedSet = new Set(selectedScoringLifts.map(slugify));
-
-            container.innerHTML = '';
-
-            if (!trackedCheckboxes.length) {
-                container.innerHTML = `<p class="text-gray-500 text-sm normal-case col-span-full">Select tracked lifts in the section below to configure Board Score lifts.</p>`;
-                return;
-            }
-
-            trackedCheckboxes.forEach(cb => {
-                const id = slugify(cb.value);
-                const name = cb.getAttribute('data-name') || cb.nextElementSibling?.innerText || id.replace(/_/g, ' ');
-
-                const label = document.createElement('label');
-                label.className = "flex items-center space-x-3 cursor-pointer group";
-                label.innerHTML = `
-                    <input type="checkbox" value="${id}" class="score-lift-checkbox w-6 h-6 rounded bg-gray-800 border-gray-600 text-blue-500 focus:ring-blue-500 transition" ${selectedSet.has(id) ? 'checked' : ''}>
-                    <span class="group-hover:text-white">${name}</span>
-                `;
-                container.appendChild(label);
-            });
-        }
-
-        function refreshScoringLiftOptions() {
-            const currentSelected = Array.from(document.querySelectorAll('.score-lift-checkbox:checked')).map(cb => slugify(cb.value));
-            const trackedIds = getTrackedLiftIds();
-            const validSelected = currentSelected.filter(id => trackedIds.includes(id));
-            renderScoringLiftCheckboxes(validSelected);
-        }
-
-        function bindTrackedLiftListeners() {
-            document.querySelectorAll('.lift-checkbox').forEach(cb => {
-                cb.removeEventListener('change', refreshScoringLiftOptions);
-                cb.addEventListener('change', refreshScoringLiftOptions);
-            });
-        }
-
-        function renderNewLiftCheckbox(name, id, checked) {
-            const container = document.getElementById('core-lifts-container');
-            if (!container) return false;
-
-            const normalizedId = slugify(id);
-            const normalizedName = String(name || "").trim();
-            if (!normalizedId || !normalizedName) return false;
-
-            const existing = Array.from(container.querySelectorAll('.lift-checkbox')).find(cb => cb.value === normalizedId);
-            if (existing) {
-                existing.checked = checked;
-                return false;
-            }
+        trackedCheckboxes.forEach(cb => {
+            const id = slugify(cb.value);
+            const name = cb.getAttribute('data-name') || cb.nextElementSibling?.innerText || id.replace(/_/g, ' ');
 
             const label = document.createElement('label');
             label.className = "flex items-center space-x-3 cursor-pointer group";
             label.innerHTML = `
-                <input type="checkbox" value="${normalizedId}" data-name="${normalizedName}" class="lift-checkbox w-6 h-6 rounded bg-gray-800 border-gray-600 text-red-600 focus:ring-red-600 transition" ${checked ? 'checked' : ''}>
-                <span class="group-hover:text-white text-yellow-500">${normalizedName}</span>
+                <input type="checkbox" value="${id}" class="score-lift-checkbox w-6 h-6 rounded bg-gray-800 border-gray-600 text-blue-500 focus:ring-blue-500 transition" ${selectedSet.has(id) ? 'checked' : ''}>
+                <span class="group-hover:text-white">${name}</span>
             `;
             container.appendChild(label);
-            return true;
+        });
+    }
+
+    function refreshScoringLiftOptions() {
+        const currentSelected = Array.from(document.querySelectorAll('.score-lift-checkbox:checked')).map(cb => slugify(cb.value));
+        const trackedIds = getTrackedLiftIds();
+        renderScoringLiftCheckboxes(currentSelected.filter(id => trackedIds.includes(id)));
+    }
+
+    function bindTrackedLiftListeners() {
+        document.querySelectorAll('.lift-checkbox').forEach(cb => {
+            cb.removeEventListener('change', refreshScoringLiftOptions);
+            cb.addEventListener('change', refreshScoringLiftOptions);
+        });
+    }
+
+    function renderNewLiftCheckbox(name, id, checked) {
+        const container = document.getElementById('core-lifts-container');
+        if (!container) return false;
+
+        const normalizedId = slugify(id);
+        const normalizedName = String(name || "").trim();
+        if (!normalizedId || !normalizedName) return false;
+
+        const existing = Array.from(container.querySelectorAll('.lift-checkbox')).find(cb => cb.value === normalizedId);
+        if (existing) {
+            existing.checked = checked;
+            return false;
         }
 
-        async function loadSettings() {
-            if (!schoolId) return;
+        const label = document.createElement('label');
+        label.className = "flex items-center space-x-3 cursor-pointer group";
+        label.innerHTML = `
+            <input type="checkbox" value="${normalizedId}" data-name="${normalizedName}" class="lift-checkbox w-6 h-6 rounded bg-gray-800 border-gray-600 text-red-600 focus:ring-red-600 transition" ${checked ? 'checked' : ''}>
+            <span class="group-hover:text-white text-yellow-500">${normalizedName}</span>
+        `;
+        container.appendChild(label);
+        return true;
+    }
 
-            setStatus("Loading Settings...");
-            hidePageMessage();
+    async function loadSettings() {
+        if (!schoolId) return;
 
-            try {
-                const schoolRef = doc(db, "schools", schoolId);
-                const snap = await getDoc(schoolRef);
+        setStatus("Loading Settings...");
+        hidePageMessage();
 
-                if (!snap.exists()) {
-                    showPageMessage("This school record could not be found. Program settings cannot be loaded.", "error");
-                    setStatus("School Not Found", "error");
-                    return;
-                }
+        try {
+            const snap = await resolveSchoolDoc();
 
-                const data = snap.data();
-
-                const trackedLifts = normalizeLiftArray(data.trackedLifts || data.activeLifts, ["bench", "squat", "clean"]);
-                const scoringLifts = normalizeLiftArray(data.scoring_lifts || data.scoringLifts, trackedLifts).filter(id => trackedLifts.includes(id));
-                const customLifts = Array.isArray(data.customLifts) ? data.customLifts : [];
-                const recruitingEnabled = data.hasRecruitingCard !== undefined
-                    ? data.hasRecruitingCard
-                    : (data.recruitingEnabled !== false);
-
-                document.getElementById('program-title').innerText = `${data.name || 'Program'} Settings`;
-                document.getElementById('primary-color').value = data.colors?.primary || data.primaryColor || '#ff0000';
-                document.getElementById('secondary-color').value = data.colors?.secondary || data.primaryColorSecondary || '#000000';
-                document.getElementById('logo-url').value = data.logo_url || data.logo_primary || data.logo || '';
-                document.getElementById('formula-type').value = normalizeFormulaType(data.formula_type);
-                document.getElementById('club-start').value = Number.isFinite(Number(data.club_start)) ? Number(data.club_start) : 50;
-                document.getElementById('toggle-recruiting').checked = recruitingEnabled;
-
-                document.querySelectorAll('.lift-checkbox').forEach(cb => {
-                    cb.checked = trackedLifts.includes(slugify(cb.value));
-                });
-
-                customLifts.forEach(liftObj => {
-                    const liftId = typeof liftObj === 'string' ? slugify(liftObj) : slugify(liftObj?.id);
-                    const liftName = typeof liftObj === 'string' ? liftObj : String(liftObj?.name || liftObj?.id || "").trim();
-                    if (!liftId || !liftName) return;
-                    renderNewLiftCheckbox(liftName, liftId, trackedLifts.includes(liftId));
-                });
-
-                bindTrackedLiftListeners();
-                renderScoringLiftCheckboxes(scoringLifts);
-                updateFormulaHelp();
-
-                pageLoaded = true;
-                setStatus("Settings Ready", "success");
-            } catch (err) {
-                console.error("Error loading settings:", err);
-                showPageMessage("Program settings could not be loaded right now. Please refresh and try again.", "error");
-                setStatus("Load Failed", "error");
-            }
-        }
-
-        async function fetchPlayerCount() {
-            if (!schoolId) return;
-
-            if (playerCountBadge) playerCountBadge.innerText = "Loading...";
-
-            try {
-                let snap = await getDocs(query(
-                    collection(db, "users"),
-                    where("schoolId", "==", schoolId),
-                    where("role", "==", "player")
-                ));
-
-                if (snap.empty) {
-                    snap = await getDocs(query(
-                        collection(db, "users"),
-                        where("school_id", "==", schoolId),
-                        where("role", "==", "player")
-                    ));
-                }
-
-                const count = snap.size;
-                playerCountBadge.innerText = `${count} Athlete${count === 1 ? '' : 's'}`;
-            } catch (err) {
-                console.error("Error fetching athlete count:", err);
-                playerCountBadge.innerText = "Athletes Unavailable";
-            }
-        }
-
-        window.addCustomLiftToUI = () => {
-            const input = document.getElementById('custom-lift-input');
-            const liftName = input.value.trim();
-
-            if (!liftName) {
-                showPageMessage("Enter a custom lift name before adding it.", "warn");
+            if (!snap || !snap.exists()) {
+                showPageMessage("This school record could not be found.", "error");
+                setStatus("School Not Found", "error");
                 return;
             }
 
-            const liftId = slugify(liftName);
-            if (!liftId) {
-                showPageMessage("That lift name could not be converted into a valid lift ID.", "warn");
-                return;
-            }
+            const data = snap.data();
+            loadedSchoolData = data;
 
-            const created = renderNewLiftCheckbox(liftName, liftId, true);
+            const trackedLifts = normalizeLiftArray(data.trackedLifts || data.activeLifts, ["bench", "squat", "clean"]);
+            const scoringLifts = normalizeLiftArray(data.scoring_lifts || data.scoringLifts, trackedLifts).filter(id => trackedLifts.includes(id));
+            const customLifts = Array.isArray(data.customLifts) ? data.customLifts : [];
+            const recruitingEnabled = data.hasRecruitingCard !== undefined ? data.hasRecruitingCard : (data.recruitingEnabled !== false);
 
-            if (!created) {
-                showPageMessage("That lift already exists and has been checked for you.", "warn");
-            } else {
-                hidePageMessage();
-                setStatus("Custom Lift Added", "success");
-            }
-
-            input.value = "";
-            bindTrackedLiftListeners();
-            refreshScoringLiftOptions();
-        };
-
-        window.saveAllSettings = async () => {
-            if (!schoolId) {
-                showPageMessage("This coach account is missing a school link. Settings cannot be saved.", "error");
-                setStatus("Missing School", "error");
-                return;
-            }
-
-            const btn = document.getElementById('master-save-btn');
-            btn.innerText = "SAVING CHANGES...";
-            btn.disabled = true;
-            hidePageMessage();
-            setStatus("Saving Settings...");
-
-            const trackedLifts = [];
-            const customLifts = [];
+            document.getElementById('program-title').innerText = `${data.name || 'Program'} Settings`;
+            document.getElementById('primary-color').value = data.colors?.primary || data.primaryColor || '#ff0000';
+            document.getElementById('secondary-color').value = data.colors?.secondary || data.primaryColorSecondary || '#000000';
+            document.getElementById('logo-url').value = data.logo_url || data.logo_primary || data.logo || '';
+            document.getElementById('formula-type').value = normalizeFormulaType(data.formula_type);
+            document.getElementById('club-start').value = Number.isFinite(Number(data.club_start)) ? Number(data.club_start) : 50;
+            document.getElementById('toggle-recruiting').checked = recruitingEnabled;
 
             document.querySelectorAll('.lift-checkbox').forEach(cb => {
-                const id = slugify(cb.value);
-                const name = (cb.getAttribute('data-name') || cb.nextElementSibling?.innerText || id).trim();
-
-                if (cb.checked) {
-                    trackedLifts.push(id);
-                }
-
-                if (!STANDARD_LIFT_IDS.includes(id)) {
-                    customLifts.push({ id, name });
-                }
+                cb.checked = trackedLifts.includes(slugify(cb.value));
             });
 
-            const dedupedTrackedLifts = [...new Set(trackedLifts)];
-            const scoringLifts = [...new Set(
-                Array.from(document.querySelectorAll('.score-lift-checkbox:checked'))
-                    .map(cb => slugify(cb.value))
-                    .filter(id => dedupedTrackedLifts.includes(id))
-            )];
+            customLifts.forEach(liftObj => {
+                const liftId = typeof liftObj === 'string' ? slugify(liftObj) : slugify(liftObj?.id);
+                const liftName = typeof liftObj === 'string' ? liftObj : String(liftObj?.name || liftObj?.id || "").trim();
+                if (liftId && liftName) renderNewLiftCheckbox(liftName, liftId, trackedLifts.includes(liftId));
+            });
 
-            if (dedupedTrackedLifts.length === 0) {
-                showPageMessage("Please select at least one tracked lift.", "warn");
-                setStatus("Validation Required", "warn");
-                btn.innerText = "Save All Changes";
-                btn.disabled = false;
-                return;
+            bindTrackedLiftListeners();
+            renderScoringLiftCheckboxes(scoringLifts);
+            updateFormulaHelp();
+
+            pageLoaded = true;
+            setStatus("Settings Ready", "success");
+        } catch (err) {
+            console.error("Error loading settings:", err);
+            showPageMessage("Program settings could not be loaded.", "error");
+            setStatus("Load Failed", "error");
+        }
+    }
+
+    async function fetchPlayerCount() {
+        if (!schoolId) return;
+
+        playerCountBadge.innerText = "Loading...";
+
+        try {
+            let snap = await getDocs(query(collection(db, "users"), where("schoolId", "==", schoolId), where("role", "==", "player")));
+
+            if (snap.empty) {
+                snap = await getDocs(query(collection(db, "users"), where("school_id", "==", schoolId), where("role", "==", "player")));
             }
 
-            if (scoringLifts.length === 0) {
-                showPageMessage("Please select at least one lift to use in the Board Score calculation.", "warn");
-                setStatus("Validation Required", "warn");
-                btn.innerText = "Save All Changes";
-                btn.disabled = false;
-                return;
-            }
+            playerCountBadge.innerText = `${snap.size} Athlete${snap.size === 1 ? '' : 's'}`;
+        } catch (err) {
+            console.error("Error fetching athlete count:", err);
+            playerCountBadge.innerText = "Athletes Unavailable";
+        }
+    }
 
-            try {
-                const logoUrl = document.getElementById('logo-url').value.trim();
-                const formulaType = normalizeFormulaType(document.getElementById('formula-type').value);
-                const clubStartRaw = parseInt(document.getElementById('club-start').value, 10);
-                const clubStart = Number.isFinite(clubStartRaw) && clubStartRaw > 0 ? clubStartRaw : 50;
+    window.addCustomLiftToUI = () => {
+        const input = document.getElementById('custom-lift-input');
+        const liftName = input.value.trim();
 
-                await setDoc(doc(db, "schools", schoolId), {
-                    schoolId,
-                    school_id: schoolId,
-                    colors: {
-                        primary: document.getElementById('primary-color').value,
-                        secondary: document.getElementById('secondary-color').value
-                    },
-                    primaryColor: document.getElementById('primary-color').value,
-                    primaryColorSecondary: document.getElementById('secondary-color').value,
-                    logo_url: logoUrl,
-                    logo_primary: logoUrl,
-                    formula_type: formulaType,
-                    club_start: clubStart,
-                    hasRecruitingCard: document.getElementById('toggle-recruiting').checked,
-                    trackedLifts: dedupedTrackedLifts,
-                    activeLifts: dedupedTrackedLifts,
-                    scoring_lifts: scoringLifts,
-                    scoringLifts,
-                    customLifts,
-                    lastUpdated: serverTimestamp()
-                }, { merge: true });
+        if (!liftName) {
+            showPageMessage("Enter a custom lift name before adding it.", "warn");
+            return;
+        }
 
-                showPageMessage("Program settings saved successfully.", "success");
-                setStatus("Settings Saved", "success");
-            } catch (err) {
-                console.error("Settings save error:", err);
-                showPageMessage("Program settings could not be saved right now. Please try again.", "error");
-                setStatus("Save Failed", "error");
-            } finally {
-                btn.innerText = "Save All Changes";
-                btn.disabled = false;
-            }
-        };
+        const liftId = slugify(liftName);
+        const created = renderNewLiftCheckbox(liftName, liftId, true);
 
-        onAuthStateChanged(auth, async (user) => {
-            setStatus("Checking Coach Access...");
+        showPageMessage(created ? "Custom lift added." : "That lift already exists and has been checked for you.", created ? "success" : "warn");
 
-            if (!user) {
+        input.value = "";
+        bindTrackedLiftListeners();
+        refreshScoringLiftOptions();
+    };
+
+    window.saveAllSettings = async () => {
+        if (!schoolDocId) {
+            showPageMessage("School settings are not loaded yet.", "error");
+            setStatus("Missing School", "error");
+            return;
+        }
+
+        const btn = document.getElementById('master-save-btn');
+        btn.innerText = "SAVING CHANGES...";
+        btn.disabled = true;
+        hidePageMessage();
+        setStatus("Saving Settings...");
+
+        const trackedLifts = [];
+        const customLifts = [];
+
+        document.querySelectorAll('.lift-checkbox').forEach(cb => {
+            const id = slugify(cb.value);
+            const name = (cb.getAttribute('data-name') || cb.nextElementSibling?.innerText || id).trim();
+
+            if (cb.checked) trackedLifts.push(id);
+            if (!STANDARD_LIFT_IDS.includes(id)) customLifts.push({ id, name });
+        });
+
+        const dedupedTrackedLifts = [...new Set(trackedLifts)];
+        const scoringLifts = [...new Set(
+            Array.from(document.querySelectorAll('.score-lift-checkbox:checked'))
+                .map(cb => slugify(cb.value))
+                .filter(id => dedupedTrackedLifts.includes(id))
+        )];
+
+        if (!dedupedTrackedLifts.length || !scoringLifts.length) {
+            showPageMessage("Select at least one tracked lift and one Board Score lift.", "warn");
+            setStatus("Validation Required", "warn");
+            btn.innerText = "Save All Changes";
+            btn.disabled = false;
+            return;
+        }
+
+        try {
+            const primary = document.getElementById('primary-color').value;
+            const secondary = document.getElementById('secondary-color').value;
+            const logoUrl = document.getElementById('logo-url').value.trim();
+            const formulaType = normalizeFormulaType(document.getElementById('formula-type').value);
+            const clubStartRaw = parseInt(document.getElementById('club-start').value, 10);
+            const clubStart = Number.isFinite(clubStartRaw) && clubStartRaw > 0 ? clubStartRaw : 50;
+
+            await setDoc(doc(db, "schools", schoolDocId), {
+                schoolId: loadedSchoolData.schoolId || schoolId,
+                school_id: loadedSchoolData.school_id || schoolId,
+                colors: { primary, secondary },
+                primaryColor: primary,
+                primaryColorSecondary: secondary,
+                logo_url: logoUrl,
+                logo_primary: logoUrl,
+                formula_type: formulaType,
+                club_start: clubStart,
+                hasRecruitingCard: document.getElementById('toggle-recruiting').checked,
+                trackedLifts: dedupedTrackedLifts,
+                activeLifts: dedupedTrackedLifts,
+                scoring_lifts: scoringLifts,
+                scoringLifts,
+                customLifts,
+                lastUpdated: serverTimestamp()
+            }, { merge: true });
+
+            showPageMessage("Program settings saved successfully.", "success");
+            setStatus("Settings Saved", "success");
+            await loadSettings();
+        } catch (err) {
+            console.error("Settings save error:", err);
+            showPageMessage(`Program settings could not be saved. ${err.message}`, "error");
+            setStatus("Save Failed", "error");
+        } finally {
+            btn.innerText = "Save All Changes";
+            btn.disabled = false;
+        }
+    };
+
+    onAuthStateChanged(auth, async (user) => {
+        setStatus("Checking Coach Access...");
+
+        if (!user) {
+            window.location.href = 'index.html';
+            return;
+        }
+
+        try {
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            const userData = userDoc.exists() ? userDoc.data() : {};
+            const role = String(userData.role || "").toLowerCase();
+
+            if (!userDoc.exists() || role !== 'coach') {
                 window.location.href = 'index.html';
                 return;
             }
 
-            try {
-                const userDoc = await getDoc(doc(db, "users", user.uid));
+            schoolId = getSchoolIdFromData(userData);
 
-                if (!userDoc.exists() || userDoc.data().role !== 'coach') {
-                    window.location.href = 'index.html';
-                    return;
-                }
-
-                schoolId = getSchoolIdFromData(userDoc.data());
-
-                if (!schoolId) {
-                    showPageMessage("Coach profile is missing a school ID. Program settings are unavailable.", "error");
-                    setStatus("Missing School", "error");
-                    saveBtn.disabled = true;
-                    saveBtn.innerText = "School Link Required";
-                    return;
-                }
-
-                await loadSettings();
-                await fetchPlayerCount();
-            } catch (err) {
-                console.error("Error loading team settings auth context:", err);
-                showPageMessage("Program settings could not be initialized. Please refresh and try again.", "error");
-                setStatus("Initialization Failed", "error");
+            if (!schoolId) {
+                showPageMessage("Coach profile is missing a school ID.", "error");
+                setStatus("Missing School", "error");
+                saveBtn.disabled = true;
+                saveBtn.innerText = "School Link Required";
+                return;
             }
-        });
 
-        document.getElementById('formula-type')?.addEventListener('change', updateFormulaHelp);
-    </script>
+            await loadSettings();
+            await fetchPlayerCount();
+        } catch (err) {
+            console.error("Error loading team settings auth context:", err);
+            showPageMessage("Program settings could not be initialized.", "error");
+            setStatus("Initialization Failed", "error");
+        }
+    });
+
+    document.getElementById('formula-type')?.addEventListener('change', updateFormulaHelp);
+</script>
 </body>
 </html>
