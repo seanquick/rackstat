@@ -186,6 +186,7 @@
         import { applyTheme } from './js/theme.js';
         import {
             buildBoardScoreSettings,
+            calculateBoardScore,
             getLiftValue,
             buildLiftWritebacks
         } from './js/board-score.js';
@@ -461,20 +462,28 @@
                 bwInput.value = bw === 0 ? "" : bw;
             }
 
-            const officialBoardScore = Number(
-                latestProfileData.boardScore ??
-                latestUserData.boardScore ??
-                0
-            ) || 0;
+            const scoreResult = calculateBoardScore({
+                data: {
+                    ...latestUserData,
+                    ...latestProfileData,
+                    ...latestMaxesData,
+                    bodyWeight: bw,
+                    body_weight: bw,
+                    weight: bw
+                },
+                formulaType: teamSettings.formula_type,
+                scoringLifts: teamSettings.scoring_lifts
+            });
 
+            const officialBoardScore = Number(scoreResult.score) || 0;
             document.getElementById('view-total').innerText = officialBoardScore;
 
-            if (officialBoardScore > 0) {
+            if (teamSettings.formula_type === "power_index") {
                 document.getElementById('formula-detail').innerText =
-                    `OFFICIAL COACH-VERIFIED SCORE: ${officialBoardScore}`;
+                    `OFFICIAL VERIFIED SCORE: ${scoreResult.total} - (${scoreResult.bwAdj} × ${scoreResult.liftCount}) = ${scoreResult.score}`;
             } else {
                 document.getElementById('formula-detail').innerText =
-                    'OFFICIAL SCORE UPDATES AFTER COACH VERIFICATION';
+                    `OFFICIAL VERIFIED TOTAL: ${scoreResult.total}`;
             }
 
             const lastSyncSource =
