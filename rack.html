@@ -492,17 +492,15 @@
                 const bw = Number(document.getElementById('bodyWeight').value) || 0;
                 const athleteName = getDisplayName({ ...latestUserData, ...latestProfileData });
                 const schoolId = getSchoolIdFromData({ ...latestUserData, ...latestProfileData });
-                const currentApprovedData = {
+
+                if (!schoolId) {
+                    throw new Error("Missing school ID.");
+                }
+
+                const approvedData = {
                     ...latestUserData,
                     ...latestProfileData,
                     ...latestMaxesData
-                };
-
-                const updateObj = {
-                    lastUpdated: serverTimestamp(),
-                    bodyWeight: bw,
-                    body_weight: bw,
-                    weight: bw
                 };
 
                 const lifts = Array.isArray(teamSettings.tracked_lifts) ? teamSettings.tracked_lifts : [];
@@ -512,9 +510,7 @@
                     const normalizedLiftKey = slugify(liftKey);
                     const input = document.querySelector(`[data-lift-key="${normalizedLiftKey}"]`);
                     const enteredVal = Number(input?.value) || 0;
-                    const previousApprovedVal = Number(getLiftValue(currentApprovedData, normalizedLiftKey)) || 0;
-
-                    Object.assign(updateObj, buildLiftWritebacks(normalizedLiftKey, enteredVal));
+                    const previousApprovedVal = Number(getLiftValue(approvedData, normalizedLiftKey)) || 0;
 
                     if (enteredVal > previousApprovedVal) {
                         higherLiftSubmissions.push({
@@ -527,12 +523,19 @@
                 }
 
                 await Promise.all([
-                    setDoc(doc(db, "recruiting_profiles", user.uid, "maxes", "latest"), updateObj, { merge: true }),
+                    setDoc(doc(db, "recruiting_profiles", user.uid, "maxes", "latest"), {
+                        bodyWeight: bw,
+                        body_weight: bw,
+                        weight: bw,
+                        lastUpdated: serverTimestamp()
+                    }, { merge: true }),
+
                     setDoc(doc(db, "recruiting_profiles", user.uid), {
                         bodyWeight: bw,
                         weight: bw,
                         lastUpdated: serverTimestamp()
                     }, { merge: true }),
+
                     setDoc(doc(db, "users", user.uid), {
                         weight: bw,
                         lastSync: serverTimestamp()
@@ -542,65 +545,52 @@
                 let createdPendingCount = 0;
                 let skippedPendingCount = 0;
 
-                if (schoolId && higherLiftSubmissions.length) {
-                    for (const submission of higherLiftSubmissions) {
-                        if (bw <= 0) {
-                            skippedPendingCount += 1;
-                            continue;
-                        }
-
-                        const alreadyExists = await pendingReviewAlreadyExists({
-                            athleteId: user.uid,
-                            exerciseKey: submission.exerciseKey,
-                            attemptedWeight: submission.attemptedWeight
-                        });
-
-                        if (alreadyExists) {
-                            continue;
-                        }
-
-                        await addDoc(collection(db, "pending_max_reviews"), {
-                            athleteId: user.uid,
-                            athleteName,
-                            schoolId,
-                            source: "rack",
-                            exerciseKey: submission.exerciseKey,
-                            exerciseName: submission.exerciseName,
-                            attemptedWeight: Number(submission.attemptedWeight) || 0,
-                            previousWeight: Number(submission.previousWeight) || 0,
-                            weighInWeight: bw,
-                            weightClass: getWeightClass(bw),
-                            status: "pending",
-                            createdAt: serverTimestamp(),
-                            submittedAt: serverTimestamp(),
-                            reviewedAt: null,
-                            reviewedBy: null
-                        });
-
-                        createdPendingCount += 1;
+                for (const submission of higherLiftSubmissions) {
+                    if (bw <= 0) {
+                        skippedPendingCount += 1;
+                        continue;
                     }
+
+                    const alreadyExists = await pendingReviewAlreadyExists({
+                        athleteId: user.uid,
+                        exerciseKey: submission.exerciseKey,
+                        attemptedWeight: submission.attemptedWeight
+                    });
+
+                    if (alreadyExists) continue;
+
+                    await addDoc(collection(db, "pending_max_reviews"), {
+                        athleteId: user.uid,
+                        uid: user.uid,
+                        athleteName,
+                        schoolId,
+                        school_id: schoolId,
+                        source: "rack",
+                        exerciseKey: submission.exerciseKey,
+                        exerciseName: submission.exerciseName,
+                        attemptedWeight: Number(submission.attemptedWeight) || 0,
+                        previousWeight: Number(submission.previousWeight) || 0,
+                        weighInWeight: bw,
+                        weightClass: getWeightClass(bw),
+                        status: "pending",
+                        createdAt: serverTimestamp(),
+                        submittedAt: serverTimestamp(),
+                        reviewedAt: null,
+                        reviewedBy: null
+                    });
+
+                    createdPendingCount += 1;
                 }
 
                 saveBtn.innerText = "SUCCESS ✓";
-                setRackStatus("Stats Updated", "success");
+                setRackStatus("Stats Saved", "success");
 
-                if (createdPendingCount > 0 && skippedPendingCount > 0) {
-                    showPageMessage(
-                        `Stats saved. ${createdPendingCount} new lift review request(s) sent to your coach. Some higher lifts were not submitted because bodyweight is required.`,
-                        "warn"
-                    );
-                } else if (createdPendingCount > 0) {
-                    showPageMessage(
-                        `Stats saved. ${createdPendingCount} new lift review request(s) sent to your coach. Official Board Score will not change until coach verification.`,
-                        "success"
-                    );
+                if (createdPendingCount > 0) {
+                    showPageMessage(`${createdPendingCount} lift review request(s) sent to your coach. Official Board Score will not change until verified.`, "success");
                 } else if (skippedPendingCount > 0) {
-                    showPageMessage(
-                        "Stats saved, but new board-review submissions were skipped because bodyweight is required.",
-                        "warn"
-                    );
+                    showPageMessage("Stats saved, but higher lifts require bodyweight before coach review.", "warn");
                 } else {
-                    showPageMessage("Your lifts and bodyweight were synced successfully. Official Board Score remains coach-verified.", "success");
+                    showPageMessage("Bodyweight saved. No new higher maxes were submitted.", "success");
                 }
 
                 setTimeout(() => {
