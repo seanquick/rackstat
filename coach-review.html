@@ -959,26 +959,29 @@
         setReviewStatus("Approving Parent Access...");
 
         try {
-            await Promise.all([
-                updateDoc(doc(db, "parent_access_requests", requestId), {
-                    status: "approved",
-                    reviewedAt: serverTimestamp(),
-                    reviewedBy: auth.currentUser?.uid || null
-                }),
-                addDoc(collection(db, "parent_links"), {
-                    athleteId,
-                    athleteName,
-                    parentName,
-                    parentEmail,
-                    parentPhone,
-                    relationship,
-                    schoolId: currentSchoolId,
-                    school_id: currentSchoolId,
-                    approvedBy: auth.currentUser?.uid || null,
-                    approvedAt: serverTimestamp(),
-                    status: "active"
-                })
-            ]);
+            const linkPayload = {
+                athleteId,
+                athleteName,
+                parentName,
+                parentEmail: String(parentEmail || "").toLowerCase().trim(),
+                parentPhone,
+                relationship,
+                schoolId: currentSchoolId,
+                school_id: currentSchoolId,
+                approvedBy: auth.currentUser?.uid || null,
+                approvedAt: serverTimestamp(),
+                status: "active"
+            };
+
+            console.log("PARENT LINK PAYLOAD:", linkPayload);
+
+            await addDoc(collection(db, "parent_links"), linkPayload);
+
+            await updateDoc(doc(db, "parent_access_requests", requestId), {
+                status: "approved",
+                reviewedAt: serverTimestamp(),
+                reviewedBy: auth.currentUser?.uid || null
+            });
 
             btnElement.innerText = "APPROVED ✓";
             btnElement.classList.remove("bg-white/5", "hover:bg-green-700");
@@ -991,7 +994,7 @@
             console.error("Parent approval error:", err);
             btnElement.innerText = originalText;
             btnElement.disabled = false;
-            showPageMessage("Parent access could not be approved.", "error");
+            showPageMessage(`Parent access could not be approved. ${err.message}`, "error");
             setReviewStatus("Approval Failed", "error");
         }
     };
