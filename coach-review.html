@@ -65,19 +65,7 @@
 
 <script type="module">
     import { db, auth } from "./js/firebase-config.js";
-    import {
-        doc,
-        getDoc,
-        collection,
-        query,
-        where,
-        getDocs,
-        orderBy,
-        setDoc,
-        addDoc,
-        updateDoc,
-        serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { doc, getDoc, collection, query, where, getDocs, orderBy, setDoc, addDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { applyTheme } from './js/theme.js';
     import { buildLiftWritebacks, slugify } from "./js/board-score.js";
@@ -914,20 +902,30 @@
                         <p class="text-xs text-gray-400 font-bold uppercase">Email: <span class="text-white">${request.parentEmail || "-"}</span></p>
                         <p class="text-xs text-gray-400 font-bold uppercase">Phone: <span class="text-white">${request.parentPhone || "-"}</span></p>
 
-                        <div class="flex gap-2 flex-wrap pt-3">
-                            <button
-                                onclick="window.approveParentAccessRequest('${requestId}', '${athleteId}', '${athleteName}', '${parentName}', '${parentEmail}', '${parentPhone}', '${relationship}', this)"
-                                class="bg-white/5 hover:bg-green-700 border border-white/10 text-[8px] font-black px-3 py-2 rounded-md text-white transition-all uppercase tracking-tighter">
-                                Approve Access
-                            </button>
+                    <div class="flex gap-2 flex-wrap pt-3">
+                        <button
+                            onclick="window.approveParentAccessRequest('${requestId}', '${athleteId}', '${athleteName}', '${parentName}', '${parentEmail}', '${parentPhone}', '${relationship}', this)"
+                            class="bg-white/5 hover:bg-green-700 border border-white/10 text-[8px] font-black px-3 py-2 rounded-md text-white transition-all uppercase tracking-tighter">
+                            Approve Access
+                        </button>
 
-                            <button
-                                onclick="window.rejectParentAccessRequest('${requestId}', this)"
-                                class="bg-white/5 hover:bg-red-700 border border-white/10 text-[8px] font-black px-3 py-2 rounded-md text-white transition-all uppercase tracking-tighter">
-                                Reject
-                            </button>
-                        </div>
+                        <button
+                            onclick="window.rejectParentAccessRequest('${requestId}', this)"
+                            class="bg-white/5 hover:bg-red-700 border border-white/10 text-[8px] font-black px-3 py-2 rounded-md text-white transition-all uppercase tracking-tighter">
+                            Reject
+                        </button>
                     </div>
+
+                    ${request.registrationCode ? `
+                        <div class="mt-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                            <p class="text-[9px] font-black uppercase tracking-widest text-yellow-300 mb-1">
+                                Parent Registration Code
+                            </p>
+                            <p class="text-xl font-black text-white tracking-widest">
+                                ${request.registrationCode}
+                            </p>
+                        </div>
+                    ` : ""}
                 `;
 
                 performanceFeed.appendChild(card);
@@ -970,15 +968,14 @@
                 relationship,
                 schoolId: currentSchoolId,
                 school_id: currentSchoolId,
-                status: "active",
-
-                registrationCode,
-                registrationCodeUsed: false,
-                registrationCodeCreatedAt: serverTimestamp(),
-
                 approvedBy: auth.currentUser?.uid || null,
-                approvedAt: serverTimestamp()
+                approvedAt: serverTimestamp(),
+                status: "active",
+                registrationCode,
+                registrationCodeUsed: false
             };
+
+            console.log("PARENT LINK PAYLOAD:", linkPayload);
 
             await addDoc(collection(db, "parent_links"), linkPayload);
 
@@ -996,8 +993,7 @@
             showPageMessage(`Parent access approved. Registration Code: ${registrationCode}`, "success");
             setReviewStatus("Parent Access Approved", "success");
 
-            alert(`Parent Registration Code:\n\n${registrationCode}\n\nGive this code to the approved parent/guardian.`);
-
+            await loadParentAccessRequests();
             await loadWorkouts();
         } catch (err) {
             console.error("Parent approval error:", err);
