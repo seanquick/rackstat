@@ -856,10 +856,13 @@
             const q = query(
                 collection(db, "parent_access_requests"),
                 where("schoolId", "==", currentSchoolId),
-                where("status", "==", "pending")
-            );
+                );
 
             const snap = await getDocs(q);
+            const requestDocs = snap.docs.filter(docSnap => {
+                const request = docSnap.data();
+                return request.hiddenFromCoach !== true;
+            });
 
             statCount.innerText = `${snap.size} Pending`;
             setStatsVisible(true);
@@ -925,6 +928,14 @@
                                 ${request.registrationCode}
                             </p>
                         </div>
+                    ` : ""}
+    
+                    ${request.status === "approved" ? `
+                        <button
+                            onclick="window.hideParentAccessRequest('${requestId}', this)"
+                            class="bg-white/5 hover:bg-gray-700 border border-white/10 text-[8px] font-black px-3 py-2 rounded-md text-white transition-all uppercase tracking-tighter">
+                            Remove From Screen
+                        </button>
                     ` : ""}
                 `;
 
@@ -1004,6 +1015,27 @@
         }
     };
 
+    window.hideParentAccessRequest = async function(requestId, btnElement) {
+        const originalText = btnElement.innerText;
+        btnElement.innerText = "REMOVING...";
+        btnElement.disabled = true;
+
+        try {
+            await updateDoc(doc(db, "parent_access_requests", requestId), {
+                hiddenFromCoach: true,
+                hiddenFromCoachAt: serverTimestamp(),
+                hiddenFromCoachBy: auth.currentUser?.uid || null
+            });
+
+            await loadParentAccessRequests();
+            await loadWorkouts();
+        } catch (err) {
+            console.error("Hide parent request error:", err);
+            btnElement.innerText = originalText;
+            btnElement.disabled = false;
+            showPageMessage("Parent request could not be removed from the screen.", "error");
+        }
+    };
     window.rejectParentAccessRequest = async function(requestId, btnElement) {
         const originalText = btnElement.innerText;
         btnElement.innerText = "REJECTING...";
