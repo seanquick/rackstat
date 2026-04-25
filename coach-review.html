@@ -983,7 +983,7 @@
                 status: "approved",
                 reviewedAt: serverTimestamp(),
                 reviewedBy: auth.currentUser?.uid || null,
-                registrationCode
+                registrationCode: registrationCode
             });
 
             btnElement.innerText = "APPROVED ✓";
