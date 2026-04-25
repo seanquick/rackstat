@@ -416,13 +416,19 @@
 
     if (submitParentRequestBtn) {
         submitParentRequestBtn.onclick = async () => {
-            const athleteEmail = document.getElementById('parent-athlete-email').value.trim().toLowerCase();
+            const user = auth.currentUser;
+
+            if (!user) {
+                showPageMessage("Please sign in as the athlete before submitting a parent request.", "warn");
+                return;
+            }
+
             const parentName = document.getElementById('parent-name').value.trim();
             const parentEmail = document.getElementById('parent-email').value.trim().toLowerCase();
             const parentPhone = document.getElementById('parent-phone').value.trim();
             const relationship = document.getElementById('parent-relationship').value;
 
-            if (!athleteEmail || !parentName || !parentEmail || !relationship) {
+            if (!parentName || !parentEmail || !relationship) {
                 showPageMessage("Please complete all required parent request fields.", "warn");
                 return;
             }
@@ -431,39 +437,31 @@
             submitParentRequestBtn.innerText = "Submitting...";
 
             try {
-                const athleteQuery = query(
-                    collection(db, "users"),
-                    where("email", "==", athleteEmail),
-                    limit(1)
-                );
+                const athleteSnap = await getDoc(doc(db, "users", user.uid));
 
-                const athleteSnap = await getDocs(athleteQuery);
-
-                if (athleteSnap.empty) {
-                    showPageMessage("No athlete account was found with that email address.", "error");
+                if (!athleteSnap.exists()) {
+                    showPageMessage("Athlete profile could not be found.", "error");
                     return;
                 }
 
-                const athleteDoc = athleteSnap.docs[0];
-                const athleteData = athleteDoc.data();
+                const athleteData = athleteSnap.data();
+                const schoolId = athleteData.schoolId || athleteData.school_id || "";
 
-                const athleteId = athleteDoc.id;
+                if (!schoolId) {
+                    showPageMessage("Your athlete profile is missing a school link.", "error");
+                    return;
+                }
+
                 const athleteName =
                     athleteData.fullName ||
                     `${athleteData.firstName || ""} ${athleteData.lastName || ""}`.trim() ||
                     "Unknown Athlete";
 
-                const schoolId = athleteData.schoolId || athleteData.school_id || "";
-
-                if (!schoolId) {
-                    showPageMessage("The athlete account is missing a school link. Please contact the coach.", "error");
-                    return;
-                }
-
                 await addDoc(collection(db, "parent_access_requests"), {
-                    athleteId,
+                    athleteId: user.uid,
+                    uid: user.uid,
                     athleteName,
-                    athleteEmail,
+                    athleteEmail: user.email || "",
                     parentName,
                     parentEmail,
                     parentPhone,
@@ -476,11 +474,6 @@
 
                 parentRequestModal.classList.add('hidden');
                 showPageMessage("Parent access request submitted. The coaching staff will review it.", "success");
-
-                document.getElementById('parent-athlete-email').value = "";
-                document.getElementById('parent-name').value = "";
-                document.getElementById('parent-email').value = "";
-                document.getElementById('parent-phone').value = "";
             } catch (err) {
                 console.error("Parent access request error:", err);
                 showPageMessage("Parent access request could not be submitted right now.", "error");
