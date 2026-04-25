@@ -855,27 +855,28 @@
         try {
             const q = query(
                 collection(db, "parent_access_requests"),
-                where("schoolId", "==", currentSchoolId),
-                );
+                where("schoolId", "==", currentSchoolId)
+            );
 
             const snap = await getDocs(q);
+
             const requestDocs = snap.docs.filter(docSnap => {
                 const request = docSnap.data();
                 return request.hiddenFromCoach !== true;
             });
 
-            statCount.innerText = `${snap.size} Pending`;
+            statCount.innerText = `${requestDocs.length} Request${requestDocs.length === 1 ? "" : "s"}`;
             setStatsVisible(true);
 
-            if (snap.empty) {
-                renderFeedMessage("No pending parent access requests found.");
+            if (!requestDocs.length) {
+                renderFeedMessage("No parent access requests found.");
                 setReviewStatus("No Parent Requests", "warn");
                 return;
             }
 
             performanceFeed.innerHTML = '';
 
-            snap.forEach((requestDoc) => {
+            requestDocs.forEach((requestDoc) => {
                 const request = requestDoc.data();
 
                 const requestId = escapeAttr(requestDoc.id);
@@ -885,9 +886,17 @@
                 const parentEmail = escapeAttr(request.parentEmail || "");
                 const parentPhone = escapeAttr(request.parentPhone || "");
                 const relationship = escapeAttr(request.relationship || "Parent/Guardian");
+                const status = String(request.status || "pending").toLowerCase();
+
+                const statusClass = status === "approved"
+                    ? "bg-green-500/10 border-green-500/20 text-green-300"
+                    : status === "rejected"
+                        ? "bg-red-500/10 border-red-500/20 text-red-300"
+                        : "bg-yellow-500/10 border-yellow-500/20 text-yellow-300";
 
                 const card = document.createElement('div');
                 card.className = "bg-[#111113] border border-[#2a2a2c] rounded-2xl overflow-hidden mb-6 shadow-2xl";
+
                 card.innerHTML = `
                     <div class="bg-[#1a1a1c] p-4 flex justify-between items-center border-b border-[#2a2a2c] gap-4 flex-wrap">
                         <div>
@@ -896,8 +905,9 @@
                                 ${request.relationship || "Parent/Guardian"} • Requesting access to ${request.athleteName || "Unknown Athlete"}
                             </p>
                         </div>
-                        <span class="bg-yellow-500/10 border border-yellow-500/20 text-yellow-300 text-[8px] font-black px-3 py-1 rounded-md uppercase tracking-widest">
-                            Pending
+
+                        <span class="${statusClass} border text-[8px] font-black px-3 py-1 rounded-md uppercase tracking-widest">
+                            ${status}
                         </span>
                     </div>
 
@@ -905,38 +915,41 @@
                         <p class="text-xs text-gray-400 font-bold uppercase">Email: <span class="text-white">${request.parentEmail || "-"}</span></p>
                         <p class="text-xs text-gray-400 font-bold uppercase">Phone: <span class="text-white">${request.parentPhone || "-"}</span></p>
 
-                    <div class="flex gap-2 flex-wrap pt-3">
-                        <button
-                            onclick="window.approveParentAccessRequest('${requestId}', '${athleteId}', '${athleteName}', '${parentName}', '${parentEmail}', '${parentPhone}', '${relationship}', this)"
-                            class="bg-white/5 hover:bg-green-700 border border-white/10 text-[8px] font-black px-3 py-2 rounded-md text-white transition-all uppercase tracking-tighter">
-                            Approve Access
-                        </button>
+                        ${request.registrationCode ? `
+                            <div class="mt-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                                <p class="text-[9px] font-black uppercase tracking-widest text-yellow-300 mb-1">
+                                    Parent Registration Code
+                                </p>
+                                <p class="text-xl font-black text-white tracking-widest">
+                                    ${request.registrationCode}
+                                </p>
+                            </div>
+                        ` : ""}
 
-                        <button
-                            onclick="window.rejectParentAccessRequest('${requestId}', this)"
-                            class="bg-white/5 hover:bg-red-700 border border-white/10 text-[8px] font-black px-3 py-2 rounded-md text-white transition-all uppercase tracking-tighter">
-                            Reject
-                        </button>
-                    </div>
+                        <div class="flex gap-2 flex-wrap pt-3">
+                            ${status === "pending" ? `
+                                <button
+                                    onclick="window.approveParentAccessRequest('${requestId}', '${athleteId}', '${athleteName}', '${parentName}', '${parentEmail}', '${parentPhone}', '${relationship}', this)"
+                                    class="bg-white/5 hover:bg-green-700 border border-white/10 text-[8px] font-black px-3 py-2 rounded-md text-white transition-all uppercase tracking-tighter">
+                                    Approve Access
+                                </button>
 
-                    ${request.registrationCode ? `
-                        <div class="mt-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
-                            <p class="text-[9px] font-black uppercase tracking-widest text-yellow-300 mb-1">
-                                Parent Registration Code
-                            </p>
-                            <p class="text-xl font-black text-white tracking-widest">
-                                ${request.registrationCode}
-                            </p>
+                                <button
+                                    onclick="window.rejectParentAccessRequest('${requestId}', this)"
+                                    class="bg-white/5 hover:bg-red-700 border border-white/10 text-[8px] font-black px-3 py-2 rounded-md text-white transition-all uppercase tracking-tighter">
+                                    Reject
+                                </button>
+                            ` : ""}
+
+                            ${status === "approved" ? `
+                                <button
+                                    onclick="window.hideParentAccessRequest('${requestId}', this)"
+                                    class="bg-white/5 hover:bg-gray-700 border border-white/10 text-[8px] font-black px-3 py-2 rounded-md text-white transition-all uppercase tracking-tighter">
+                                    Remove From Screen
+                                </button>
+                            ` : ""}
                         </div>
-                    ` : ""}
-    
-                    ${request.status === "approved" ? `
-                        <button
-                            onclick="window.hideParentAccessRequest('${requestId}', this)"
-                            class="bg-white/5 hover:bg-gray-700 border border-white/10 text-[8px] font-black px-3 py-2 rounded-md text-white transition-all uppercase tracking-tighter">
-                            Remove From Screen
-                        </button>
-                    ` : ""}
+                    </div>
                 `;
 
                 performanceFeed.appendChild(card);
@@ -1005,7 +1018,7 @@
             setReviewStatus("Parent Access Approved", "success");
 
             await loadParentAccessRequests();
-            await loadWorkouts();
+            
         } catch (err) {
             console.error("Parent approval error:", err);
             btnElement.innerText = originalText;
