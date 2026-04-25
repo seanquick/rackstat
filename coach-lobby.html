@@ -130,6 +130,7 @@
         import { db, auth } from './js/firebase-config.js';
         import { doc, getDoc, collection, query, where, getDocs, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { applyTheme } from './js/theme.js';
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const getSchoolIdFromData = (data = {}) => data.schoolId || data.school_id || "";
 
