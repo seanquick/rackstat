@@ -373,7 +373,7 @@
 
 <script type="module">
     import { db, auth } from './js/firebase-config.js';
-    import { doc, getDoc, collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { doc, getDoc, collection, query, where, orderBy, limit, onSnapshot, addDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { applyTheme } from './js/theme.js';
 
@@ -692,6 +692,35 @@
         }
 
         return 'Athlete';
+    };
+
+    window.openConsentModal = async function(user, userData = {}) {
+        const accepted = confirm(
+            "Before continuing, you must accept the RACKSTAT Privacy Policy and Terms & Conditions.\n\nClick OK to accept and continue."
+        );
+
+        if (!accepted) {
+            await signOut(auth);
+            showPageMessage("You must accept the Privacy Policy and Terms & Conditions to use RACKSTAT.", "warn");
+            return;
+        }
+
+        try {
+            await updateDoc(doc(db, "users", user.uid), {
+                termsAccepted: true,
+                termsAcceptedAt: new Date(),
+                privacyAccepted: true,
+                privacyAcceptedAt: new Date(),
+                parentAcknowledged: true,
+                consentVersion: "v1_2026_04"
+            });
+
+            location.reload();
+        } catch (err) {
+            console.error("Consent save error:", err);
+            showPageMessage("Consent could not be saved. Please try again.", "error");
+            setLobbyStatus("Consent Save Failed", "error");
+        }
     };
 
     onAuthStateChanged(auth, async (user) => {
