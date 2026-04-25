@@ -1,306 +1,345 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Document metadata and responsive/mobile setup -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <!-- Page title shown in the browser tab -->
     <title>RACKSTAT | Join the Program</title>
-
-    <!-- Global project stylesheet -->
     <link rel="stylesheet" href="style.css">
-
-    <!-- Tailwind CSS via CDN for utility-based styling -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-[#0a0a0b] min-h-screen flex flex-col items-center justify-center p-4">
 
-    <!-- Fixed top navigation/header for registration page -->
-    <header class="bg-black border-b-2 border-red-700 p-4 w-full fixed top-0 z-50">
-        <div class="flex justify-between items-center max-w-5xl mx-auto">
-            <!-- Returns user to the login/lobby screen -->
-            <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1.5 rounded text-gray-400 hover:text-white transition-all">
-                ← Lobby
-            </button>
+<header class="bg-black border-b-2 border-red-700 p-4 w-full fixed top-0 z-50">
+    <div class="flex justify-between items-center max-w-5xl mx-auto">
+        <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1.5 rounded text-gray-400 hover:text-white transition-all">← Lobby</button>
+        <span class="text-sm font-black italic uppercase tracking-[0.15em] text-white">RACKSTAT REGISTRATION</span>
+        <div class="w-[65px]"></div>
+    </div>
+</header>
 
-            <!-- Registration page heading -->
-            <div class="flex items-center gap-5">
-                <span class="text-sm font-black italic uppercase tracking-[0.15em] text-white">RACKSTAT REGISTRATION</span>
-            </div>
-
-            <!-- Spacer used to keep header content centered -->
-            <div class="w-[65px]"></div>
-        </div>
-    </header>
-
-    <!-- Main registration container -->
-    <div class="container mt-20">
-        <!-- Dynamic registration title and optional school verification badge -->
-        <div class="text-center mb-6">
-            <h2 id="reg-title" class="text-xl font-black italic uppercase tracking-widest text-white">Athlete Registration</h2>
-            <div id="school-id-badge" class="hidden mt-2 text-[10px] font-bold text-red-500 uppercase tracking-widest">Verified School Found</div>
-        </div>
-
-        <div class="space-y-4">
-            <!-- Role toggle allows switching between athlete and coach registration -->
-            <div class="flex bg-black p-1 rounded border border-gray-800 mb-4">
-                <button onclick="setRole('player')" id="btn-player" class="flex-1 py-2 text-[10px] font-black uppercase rounded bg-red-700 text-white transition-all">Athlete</button>
-                <button onclick="setRole('coach')" id="btn-coach" class="flex-1 py-2 text-[10px] font-black uppercase text-gray-500 transition-all">Coach</button>
-            </div>
-
-            <!-- Full name input -->
-            <div class="form-group">
-                <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Full Name</label>
-                <input type="text" id="reg-name" placeholder="First & Last Name" class="w-full bg-zinc-900 p-3 rounded border border-zinc-800 text-white outline-none focus:border-red-600">
-            </div>
-
-            <!-- Email input used for Firebase authentication -->
-            <div class="form-group">
-                <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Email Address</label>
-                <input type="email" id="reg-email" placeholder="personal@email.com" class="w-full bg-zinc-900 p-3 rounded border border-zinc-800 text-white outline-none focus:border-red-600">
-            </div>
-
-            <!-- Graduation year is required for athletes and hidden for coaches -->
-            <div id="grad-year-group" class="form-group">
-                <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Graduation Year</label>
-                <input type="number" id="reg-grad-year" placeholder="e.g. 2027" class="w-full bg-zinc-900 p-3 rounded border border-zinc-800 text-white outline-none focus:border-red-600">
-            </div>
-
-            <!-- Password input for account creation -->
-            <div class="form-group">
-                <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Create Password</label>
-                <input type="password" id="reg-pass" placeholder="••••••••" class="w-full bg-zinc-900 p-3 rounded border border-zinc-800 text-white outline-none focus:border-red-600">
-            </div>
-
-            <!-- School access code field changes label depending on selected role -->
-            <div class="form-group">
-                <label id="code-label" class="block text-[10px] font-black uppercase text-gray-500 mb-1">Athlete Registration Code</label>
-                <input type="text" id="school-code" placeholder="Enter Code" class="w-full bg-red-900/10 p-3 rounded border border-red-900/50 text-white outline-none focus:border-red-600">
-            </div>
-
-            <!-- Required legal acknowledgment before registration is allowed -->
-            <div class="flex items-start gap-3 p-4 bg-zinc-900/50 border border-zinc-800 rounded mt-6">
-                <input type="checkbox" id="legal-agree" class="mt-1 w-4 h-4 accent-red-600 cursor-pointer">
-                <label for="legal-agree" class="text-[11px] leading-tight text-gray-400">
-                    I agree to the <button type="button" id="open-terms" class="text-white underline hover:text-red-500">Terms & Conditions</button> 
-                    and have reviewed the <button type="button" id="open-privacy" class="text-white underline hover:text-red-500">Privacy Policy (SB29)</button>.
-                </label>
-            </div>
-
-            <!-- Main submit button that triggers account creation -->
-            <button onclick="handleSignUp()" id="signup-btn" class="w-full bg-red-700 hover:bg-red-600 text-white font-black py-4 rounded uppercase tracking-widest transition-all mt-4">
-                Create My Profile
-            </button>
-        </div>
-
-        <!-- Link back to sign-in page for existing users -->
-        <p class="text-center text-[10px] text-gray-600 mt-6 uppercase font-bold tracking-widest">
-            Already registered? <a href="index.html" class="text-red-600 hover:underline">Sign In</a>
-        </p>
+<div class="container mt-20">
+    <div class="text-center mb-6">
+        <h2 id="reg-title" class="text-xl font-black italic uppercase tracking-widest text-white">Athlete Registration</h2>
+        <div id="school-id-badge" class="hidden mt-2 text-[10px] font-bold text-red-500 uppercase tracking-widest">Verified Code Found</div>
     </div>
 
-    <!-- Privacy policy modal shown when user clicks the privacy link -->
-    <div id="privacy-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-black/95">
-        <div class="bg-zinc-900 w-full max-w-2xl max-h-[80vh] rounded-2xl border border-zinc-800 flex flex-col">
-            <!-- Privacy modal header and close button -->
-            <div class="p-6 border-b border-zinc-800 flex justify-between items-center">
-                <h3 class="text-xl font-black italic uppercase tracking-tight">Privacy Policy</h3>
-                <button class="close-p text-gray-500 hover:text-white text-2xl">&times;</button>
-            </div>
-
-            <!-- Privacy modal body content -->
-            <div class="p-6 overflow-y-auto text-sm leading-relaxed text-gray-300 space-y-6">
-                <p class="font-bold text-white">Effective Date: April 2026</p>
-                <p>This application is designed to support student-athletes in accordance with Ohio Senate Bill 29. We collect name, school affiliation, athletic metrics, and nutritional data strictly for performance development.</p>
-                <p><strong>We do NOT sell student data or use it for advertising.</strong> Access is limited to authorized coaches and the student-athlete.</p>
-                <div class="p-4 bg-zinc-950 rounded-lg border border-zinc-800 italic text-xs">
-                    <strong>Disclaimer:</strong> Not a substitute for professional medical or nutritional advice.
-                </div>
-            </div>
-
-            <!-- Privacy modal footer close action -->
-            <div class="p-4 border-t border-zinc-800 text-center">
-                <button class="close-p px-8 py-2 bg-white text-black font-black uppercase text-xs rounded-full">Close</button>
-            </div>
+    <div class="space-y-4">
+        <div class="flex bg-black p-1 rounded border border-gray-800 mb-4">
+            <button onclick="setRole('player')" id="btn-player" class="flex-1 py-2 text-[10px] font-black uppercase rounded bg-red-700 text-white transition-all">Athlete</button>
+            <button onclick="setRole('coach')" id="btn-coach" class="flex-1 py-2 text-[10px] font-black uppercase text-gray-500 transition-all">Coach</button>
+            <button onclick="setRole('parent')" id="btn-parent" class="flex-1 py-2 text-[10px] font-black uppercase text-gray-500 transition-all">Parent</button>
         </div>
+
+        <div class="form-group">
+            <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Full Name</label>
+            <input type="text" id="reg-name" placeholder="First & Last Name" class="w-full bg-zinc-900 p-3 rounded border border-zinc-800 text-white outline-none focus:border-red-600">
+        </div>
+
+        <div class="form-group">
+            <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Email Address</label>
+            <input type="email" id="reg-email" placeholder="personal@email.com" class="w-full bg-zinc-900 p-3 rounded border border-zinc-800 text-white outline-none focus:border-red-600">
+        </div>
+
+        <div id="grad-year-group" class="form-group">
+            <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Graduation Year</label>
+            <input type="number" id="reg-grad-year" placeholder="e.g. 2027" class="w-full bg-zinc-900 p-3 rounded border border-zinc-800 text-white outline-none focus:border-red-600">
+        </div>
+
+        <div class="form-group">
+            <label class="block text-[10px] font-black uppercase text-gray-500 mb-1">Create Password</label>
+            <input type="password" id="reg-pass" placeholder="••••••••" class="w-full bg-zinc-900 p-3 rounded border border-zinc-800 text-white outline-none focus:border-red-600">
+        </div>
+
+        <div class="form-group">
+            <label id="code-label" class="block text-[10px] font-black uppercase text-gray-500 mb-1">Athlete Registration Code</label>
+            <input type="text" id="school-code" placeholder="Enter Code" class="w-full bg-red-900/10 p-3 rounded border border-red-900/50 text-white outline-none focus:border-red-600">
+        </div>
+
+        <div class="flex items-start gap-3 p-4 bg-zinc-900/50 border border-zinc-800 rounded mt-6">
+            <input type="checkbox" id="legal-agree" class="mt-1 w-4 h-4 accent-red-600 cursor-pointer">
+            <label for="legal-agree" class="text-[11px] leading-tight text-gray-400">
+                I agree to the <button type="button" id="open-terms" class="text-white underline hover:text-red-500">Terms & Conditions</button>
+                and have reviewed the <button type="button" id="open-privacy" class="text-white underline hover:text-red-500">Privacy Policy</button>.
+            </label>
+        </div>
+
+        <button onclick="handleSignUp()" id="signup-btn" class="w-full bg-red-700 hover:bg-red-600 text-white font-black py-4 rounded uppercase tracking-widest transition-all mt-4">
+            Create My Profile
+        </button>
     </div>
 
-    <!-- Terms and conditions modal shown when user clicks the terms link -->
-    <div id="terms-modal" class="fixed inset-0 z-[101] hidden flex items-center justify-center p-4 bg-black/95">
-        <div class="bg-zinc-900 w-full max-w-2xl max-h-[80vh] rounded-2xl border border-zinc-800 flex flex-col">
-            <!-- Terms modal header and close button -->
-            <div class="p-6 border-b border-zinc-800 flex justify-between items-center">
-                <h3 class="text-xl font-black italic uppercase tracking-tight text-white">Terms & Conditions</h3>
-                <button class="close-t text-gray-500 hover:text-white text-2xl">&times;</button>
-            </div>
+    <p class="text-center text-[10px] text-gray-600 mt-6 uppercase font-bold tracking-widest">
+        Already registered? <a href="index.html" class="text-red-600 hover:underline">Sign In</a>
+    </p>
+</div>
 
-            <!-- Terms modal body content -->
-            <div class="p-6 overflow-y-auto text-sm leading-relaxed text-gray-300 space-y-6">
-                <p class="font-bold text-white">Effective Date: April 9, 2026</p>
-                <p><strong>Assumption of Risk:</strong> Participation in athletics involves inherent risks. By using this App, you assume full responsibility for any injuries that may occur.</p>
-                <p><strong>Acceptable Use:</strong> Users agree not to enter false data or use the App to harass others. Violation may result in account termination.</p>
-            </div>
-
-            <!-- Terms modal footer close action -->
-            <div class="p-4 border-t border-zinc-800 text-center">
-                <button class="close-t px-8 py-2 bg-white text-black font-black uppercase text-xs rounded-full">Close</button>
+<div id="privacy-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-black/95">
+    <div class="bg-zinc-900 w-full max-w-2xl max-h-[80vh] rounded-2xl border border-zinc-800 flex flex-col">
+        <div class="p-6 border-b border-zinc-800 flex justify-between items-center">
+            <h3 class="text-xl font-black italic uppercase tracking-tight text-white">Privacy Policy</h3>
+            <button class="close-p text-gray-500 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div class="p-6 overflow-y-auto text-sm leading-relaxed text-gray-300 space-y-6">
+            <p class="font-bold text-white">Effective Date: April 2026</p>
+            <p>RACKSTAT supports student-athletes, parents/guardians, and coaching staff in tracking athletic development, training performance, and nutrition habits.</p>
+            <p><strong>We do not sell student data or use it for advertising.</strong> Student data is only available to the athlete, authorized coaching staff, and approved parents/guardians.</p>
+            <p>Parents or legal guardians may request access to their student-athlete’s data through the approved parent access process.</p>
+            <div class="p-4 bg-zinc-950 rounded-lg border border-zinc-800 italic text-xs">
+                <strong>Disclaimer:</strong> RACKSTAT is not a medical, nutrition, or healthcare provider.
             </div>
         </div>
+        <div class="p-4 border-t border-zinc-800 text-center">
+            <button class="close-p px-8 py-2 bg-white text-black font-black uppercase text-xs rounded-full">Close</button>
+        </div>
     </div>
+</div>
 
-    <script type="module">
-        // Main page bootstrap function that initializes Firebase services and page behavior
-        async function startSignup() {
-            try {
-                // Import initialized Firebase services from project config
-                const services = await import('./js/firebase-config.js');
-                const auth = services.auth;
-                const db = services.db;
+<div id="terms-modal" class="fixed inset-0 z-[101] hidden flex items-center justify-center p-4 bg-black/95">
+    <div class="bg-zinc-900 w-full max-w-2xl max-h-[80vh] rounded-2xl border border-zinc-800 flex flex-col">
+        <div class="p-6 border-b border-zinc-800 flex justify-between items-center">
+            <h3 class="text-xl font-black italic uppercase tracking-tight text-white">Terms & Conditions</h3>
+            <button class="close-t text-gray-500 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div class="p-6 overflow-y-auto text-sm leading-relaxed text-gray-300 space-y-6">
+            <p class="font-bold text-white">Effective Date: April 2026</p>
+            <p><strong>Assumption of Risk:</strong> Participation in athletics involves inherent risks. Users are responsible for safe training decisions.</p>
+            <p><strong>Acceptable Use:</strong> Users agree not to submit false data, impersonate others, or misuse the platform.</p>
+            <p><strong>Parent Access:</strong> Parent/guardian accounts may only access student-athlete data after coach approval and code-based registration.</p>
+        </div>
+        <div class="p-4 border-t border-zinc-800 text-center">
+            <button class="close-t px-8 py-2 bg-white text-black font-black uppercase text-xs rounded-full">Close</button>
+        </div>
+    </div>
+</div>
 
-                // Stop initialization if Firebase Auth or Firestore is unavailable
-                if (!auth || !db) {
-                    throw new Error("Could not find initialized auth or db in firebase-config.js");
+<script type="module">
+    async function startSignup() {
+        try {
+            const services = await import('./js/firebase-config.js');
+            const auth = services.auth;
+            const db = services.db;
+
+            const {
+                doc,
+                collection,
+                query,
+                where,
+                getDocs,
+                writeBatch,
+                serverTimestamp
+            } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+
+            const { createUserWithEmailAndPassword } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
+
+            let currentRole = 'player';
+
+            const pModal = document.getElementById('privacy-modal');
+            const tModal = document.getElementById('terms-modal');
+
+            document.getElementById('open-privacy').onclick = () => pModal.classList.remove('hidden');
+            document.getElementById('open-terms').onclick = () => tModal.classList.remove('hidden');
+
+            document.querySelectorAll('.close-p').forEach(btn => btn.onclick = () => pModal.classList.add('hidden'));
+            document.querySelectorAll('.close-t').forEach(btn => btn.onclick = () => tModal.classList.add('hidden'));
+
+            function setButtonState(activeRole) {
+                const roles = ['player', 'coach', 'parent'];
+
+                roles.forEach(role => {
+                    const btn = document.getElementById(`btn-${role}`);
+                    if (!btn) return;
+
+                    btn.className = role === activeRole
+                        ? "flex-1 py-2 text-[10px] font-black uppercase rounded bg-red-700 text-white transition-all"
+                        : "flex-1 py-2 text-[10px] font-black uppercase text-gray-500 transition-all";
+                });
+            }
+
+            window.setRole = (role) => {
+                currentRole = role;
+                setButtonState(role);
+
+                const title = document.getElementById('reg-title');
+                const codeLabel = document.getElementById('code-label');
+                const gradGroup = document.getElementById('grad-year-group');
+
+                if (role === 'coach') {
+                    title.innerText = "Coach Registration";
+                    codeLabel.innerText = "Coach Access Code";
+                    gradGroup.classList.add('hidden');
+                } else if (role === 'parent') {
+                    title.innerText = "Parent Registration";
+                    codeLabel.innerText = "Parent Registration Code";
+                    gradGroup.classList.add('hidden');
+                } else {
+                    title.innerText = "Athlete Registration";
+                    codeLabel.innerText = "Athlete Registration Code";
+                    gradGroup.classList.remove('hidden');
+                }
+            };
+
+            async function handleParentSignup({ fullName, email, pass, inputCode }) {
+                const code = inputCode.toUpperCase();
+
+                const parentLinksQuery = query(
+                    collection(db, "parent_links"),
+                    where("registrationCode", "==", code),
+                    where("registrationCodeUsed", "==", false),
+                    where("status", "==", "active")
+                );
+
+                const linkSnap = await getDocs(parentLinksQuery);
+
+                if (linkSnap.empty) {
+                    throw new Error("Invalid or already-used parent registration code.");
                 }
 
-                // Import only the Firebase modules needed for signup and Firestore writes
-                const { doc, collection, query, where, getDocs, writeBatch } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
-                const { createUserWithEmailAndPassword } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
+                const linkDoc = linkSnap.docs[0];
+                const linkData = linkDoc.data();
 
-                // Default registration role is athlete/player
-                let currentRole = 'player';
+                const approvedEmail = String(linkData.parentEmail || "").toLowerCase().trim();
+                const enteredEmail = String(email || "").toLowerCase().trim();
 
-                // Modal references for privacy policy and terms dialogs
-                const pModal = document.getElementById('privacy-modal');
-                const tModal = document.getElementById('terms-modal');
+                if (approvedEmail && approvedEmail !== enteredEmail) {
+                    throw new Error("This parent registration code is assigned to a different email address.");
+                }
 
-                // Opens the privacy policy modal
-                document.getElementById('open-privacy').onclick = () => pModal.classList.remove('hidden');
+                const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+                const user = userCredential.user;
 
-                // Opens the terms and conditions modal
-                document.getElementById('open-terms').onclick = () => tModal.classList.remove('hidden');
+                const batch = writeBatch(db);
 
-                // Closes privacy modal from any element assigned the close-p class
-                document.querySelectorAll('.close-p').forEach(btn => {
-                    btn.onclick = () => pModal.classList.add('hidden');
+                batch.set(doc(db, "users", user.uid), {
+                    fullName,
+                    email: enteredEmail,
+                    role: "parent",
+                    schoolId: linkData.schoolId || linkData.school_id || "",
+                    school_id: linkData.school_id || linkData.schoolId || "",
+                    linkedAthletes: [linkData.athleteId],
+                    termsAccepted: true,
+                    termsAcceptedAt: serverTimestamp(),
+                    privacyAccepted: true,
+                    privacyAcceptedAt: serverTimestamp(),
+                    parentAcknowledged: true,
+                    consentVersion: "v1_2026_04",
+                    createdAt: serverTimestamp()
                 });
 
-                // Closes terms modal from any element assigned the close-t class
-                document.querySelectorAll('.close-t').forEach(btn => {
-                    btn.onclick = () => tModal.classList.add('hidden');
+                batch.update(doc(db, "parent_links", linkDoc.id), {
+                    parentUid: user.uid,
+                    parentEmail: enteredEmail,
+                    registrationCodeUsed: true,
+                    registrationCodeUsedAt: serverTimestamp()
                 });
 
-                // Global role switcher updates button styles, title text, and field visibility
-                window.setRole = (role) => {
-                    currentRole = role;
-                    const pBtn = document.getElementById('btn-player');
-                    const cBtn = document.getElementById('btn-coach');
-                    const title = document.getElementById('reg-title');
-                    const codeLabel = document.getElementById('code-label');
-                    const gradGroup = document.getElementById('grad-year-group');
+                await batch.commit();
 
-                    // Coach mode changes labels/styling and hides grad year
-                    if (role === 'coach') {
-                        cBtn.className = "flex-1 py-2 text-[10px] font-black uppercase rounded bg-white text-black transition-all";
-                        pBtn.className = "flex-1 py-2 text-[10px] font-black uppercase text-gray-500 transition-all";
-                        title.innerText = "Coach Registration";
-                        codeLabel.innerText = "Coach Access Code";
-                        gradGroup.classList.add('hidden');
-                    } else {
-                        // Athlete mode restores athlete-specific labels/styling and shows grad year
-                        pBtn.className = "flex-1 py-2 text-[10px] font-black uppercase rounded bg-red-700 text-white transition-all";
-                        cBtn.className = "flex-1 py-2 text-[10px] font-black uppercase text-gray-500 transition-all";
-                        title.innerText = "Athlete Registration";
-                        codeLabel.innerText = "Athlete Registration Code";
-                        gradGroup.classList.remove('hidden');
-                    }
-                };
-
-                // Global signup handler validates inputs, verifies school code, creates auth user,
-                // and writes related Firestore profile documents
-                window.handleSignUp = async () => {
-                    // Collect current form values from the DOM
-                    const isAgreed = document.getElementById('legal-agree').checked;
-                    const fullName = document.getElementById('reg-name').value.trim();
-                    const email = document.getElementById('reg-email').value.trim();
-                    const pass = document.getElementById('reg-pass').value;
-                    const inputCode = document.getElementById('school-code').value.trim();
-                    const gradYear = document.getElementById('reg-grad-year').value.trim();
-
-                    // Basic required-field validation for all roles
-                    if (!fullName || !email || !pass || !inputCode) return alert("All fields required.");
-
-                    // Athlete registrations require a graduation year
-                    if (currentRole === 'player' && !gradYear) return alert("Please enter graduation year.");
-
-                    // Terms/privacy agreement must be accepted before proceeding
-                    if (!isAgreed) return alert("Please accept the Terms and Privacy Policy.");
-                    
-                    // Disable signup button and show processing state during verification
-                    const signupBtn = document.getElementById('signup-btn');
-                    signupBtn.innerText = "VERIFYING...";
-                    signupBtn.disabled = true;
-
-                    try {
-                        // Look up the school by the correct registration code field for the selected role
-                        const schoolsRef = collection(db, "schools");
-                        const codeField = currentRole === 'coach' ? "coach_code" : "player_code";
-                        const q = query(schoolsRef, where(codeField, "==", inputCode));
-                        const querySnapshot = await getDocs(q);
-
-                        // Stop signup if the provided school code is invalid
-                        if (querySnapshot.empty) throw new Error(`Invalid ${currentRole} code.`);
-
-                        // Use the first matching school document as the linked school record
-                        const schoolDoc = querySnapshot.docs[0];
-
-                        // Create Firebase Auth account using email and password
-                        const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-                        const user = userCredential.user;
-
-                        // Use a batch write so related profile documents are saved together
-                        const batch = writeBatch(db);
-
-                        // Create the main user record used across the app
-                        batch.set(doc(db, "users", user.uid), {
-                            fullName, email, role: currentRole,
-                            schoolId: schoolDoc.id,
-                            gradYear: currentRole === 'player' ? gradYear : null,
-                            createdAt: Date.now()
-                        });
-
-                        // Create initial recruiting profile document for athletes only
-                        if (currentRole === 'player') {
-                            batch.set(doc(db, "recruiting_profiles", user.uid), {
-                                fullName, schoolId: schoolDoc.id, gradYear,
-                                nextLevelComplete: false, offPrimary: "-", defPrimary: "-"
-                            });
-                        }
-
-                        // Commit all Firestore writes
-                        await batch.commit();
-
-                        // Notify user and return them to the login page
-                        alert(`Welcome, ${fullName}!`);
-                        window.location.href = 'index.html';
-
-                    } catch (e) {
-                        // Surface signup errors and restore button state for another attempt
-                        console.error("Signup Error:", e);
-                        alert(e.message);
-                        signupBtn.innerText = "Create My Profile";
-                        signupBtn.disabled = false;
-                    }
-                };
-
-            } catch (err) {
-                // Logs any startup/initialization failures
-                console.error("Initialization failed:", err);
+                alert(`Welcome, ${fullName}! Your parent portal account is ready.`);
+                window.location.href = "parent-lobby.html";
             }
-        }
 
-        // Starts registration page setup as soon as the module loads
-        startSignup();
-    </script>
+            async function handleAthleteOrCoachSignup({ fullName, email, pass, inputCode, gradYear }) {
+                const schoolsRef = collection(db, "schools");
+                const codeField = currentRole === 'coach' ? "coach_code" : "player_code";
+
+                const q = query(schoolsRef, where(codeField, "==", inputCode));
+                const querySnapshot = await getDocs(q);
+
+                if (querySnapshot.empty) {
+                    throw new Error(`Invalid ${currentRole === 'coach' ? 'coach' : 'athlete'} registration code.`);
+                }
+
+                const schoolDoc = querySnapshot.docs[0];
+                const schoolId = schoolDoc.id;
+
+                const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+                const user = userCredential.user;
+
+                const batch = writeBatch(db);
+
+                batch.set(doc(db, "users", user.uid), {
+                    fullName,
+                    email,
+                    role: currentRole,
+                    schoolId,
+                    school_id: schoolId,
+                    gradYear: currentRole === 'player' ? gradYear : null,
+                    termsAccepted: true,
+                    termsAcceptedAt: serverTimestamp(),
+                    privacyAccepted: true,
+                    privacyAcceptedAt: serverTimestamp(),
+                    parentAcknowledged: currentRole === 'player',
+                    consentVersion: "v1_2026_04",
+                    createdAt: serverTimestamp()
+                });
+
+                if (currentRole === 'player') {
+                    batch.set(doc(db, "recruiting_profiles", user.uid), {
+                        fullName,
+                        schoolId,
+                        school_id: schoolId,
+                        gradYear,
+                        nextLevelComplete: false,
+                        offPrimary: "-",
+                        defPrimary: "-",
+                        createdAt: serverTimestamp()
+                    });
+                }
+
+                await batch.commit();
+
+                alert(`Welcome, ${fullName}!`);
+                window.location.href = currentRole === 'coach' ? "coach-lobby.html" : "index.html";
+            }
+
+            window.handleSignUp = async () => {
+                const isAgreed = document.getElementById('legal-agree').checked;
+                const fullName = document.getElementById('reg-name').value.trim();
+                const email = document.getElementById('reg-email').value.trim().toLowerCase();
+                const pass = document.getElementById('reg-pass').value;
+                const inputCode = document.getElementById('school-code').value.trim();
+                const gradYear = document.getElementById('reg-grad-year').value.trim();
+
+                if (!fullName || !email || !pass || !inputCode) {
+                    alert("All fields are required.");
+                    return;
+                }
+
+                if (currentRole === 'player' && !gradYear) {
+                    alert("Please enter graduation year.");
+                    return;
+                }
+
+                if (!isAgreed) {
+                    alert("Please accept the Terms and Privacy Policy.");
+                    return;
+                }
+
+                const signupBtn = document.getElementById('signup-btn');
+                signupBtn.innerText = "VERIFYING...";
+                signupBtn.disabled = true;
+
+                try {
+                    if (currentRole === 'parent') {
+                        await handleParentSignup({ fullName, email, pass, inputCode });
+                    } else {
+                        await handleAthleteOrCoachSignup({ fullName, email, pass, inputCode, gradYear });
+                    }
+                } catch (e) {
+                    console.error("Signup Error:", e);
+                    alert(e.message);
+                    signupBtn.innerText = "Create My Profile";
+                    signupBtn.disabled = false;
+                }
+            };
+
+            window.setRole('player');
+        } catch (err) {
+            console.error("Initialization failed:", err);
+        }
+    }
+
+    startSignup();
+</script>
 </body>
 </html>

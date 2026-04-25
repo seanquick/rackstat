@@ -959,6 +959,8 @@
         setReviewStatus("Approving Parent Access...");
 
         try {
+            const registrationCode = `PARENT-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
             const linkPayload = {
                 athleteId,
                 athleteName,
@@ -968,27 +970,34 @@
                 relationship,
                 schoolId: currentSchoolId,
                 school_id: currentSchoolId,
-                approvedBy: auth.currentUser?.uid || null,
-                approvedAt: serverTimestamp(),
-                status: "active"
-            };
+                status: "active",
 
-            console.log("PARENT LINK PAYLOAD:", linkPayload);
+                registrationCode,
+                registrationCodeUsed: false,
+                registrationCodeCreatedAt: serverTimestamp(),
+
+                approvedBy: auth.currentUser?.uid || null,
+                approvedAt: serverTimestamp()
+            };
 
             await addDoc(collection(db, "parent_links"), linkPayload);
 
             await updateDoc(doc(db, "parent_access_requests", requestId), {
                 status: "approved",
                 reviewedAt: serverTimestamp(),
-                reviewedBy: auth.currentUser?.uid || null
+                reviewedBy: auth.currentUser?.uid || null,
+                registrationCode
             });
 
             btnElement.innerText = "APPROVED ✓";
             btnElement.classList.remove("bg-white/5", "hover:bg-green-700");
             btnElement.classList.add("bg-green-600");
 
-            showPageMessage("Parent access approved successfully.", "success");
+            showPageMessage(`Parent access approved. Registration Code: ${registrationCode}`, "success");
             setReviewStatus("Parent Access Approved", "success");
+
+            alert(`Parent Registration Code:\n\n${registrationCode}\n\nGive this code to the approved parent/guardian.`);
+
             await loadWorkouts();
         } catch (err) {
             console.error("Parent approval error:", err);
