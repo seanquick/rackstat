@@ -129,7 +129,7 @@
                 serverTimestamp
             } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
 
-            const { createUserWithEmailAndPassword } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
+            const { createUserWithEmailAndPassword, deleteUser } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
 
             let currentRole = 'player';
 
@@ -180,62 +180,73 @@
 
             async function handleParentSignup({ fullName, email, pass, inputCode }) {
                 const code = inputCode.toUpperCase();
-
-                const parentLinksQuery = query(
-                    collection(db, "parent_links"),
-                    where("registrationCode", "==", code),
-                    where("registrationCodeUsed", "==", false),
-                    where("status", "==", "active")
-                );
-
-                const linkSnap = await getDocs(parentLinksQuery);
-
-                if (linkSnap.empty) {
-                    throw new Error("Invalid or already-used parent registration code.");
-                }
-
-                const linkDoc = linkSnap.docs[0];
-                const linkData = linkDoc.data();
-
-                const approvedEmail = String(linkData.parentEmail || "").toLowerCase().trim();
                 const enteredEmail = String(email || "").toLowerCase().trim();
 
-                if (approvedEmail && approvedEmail !== enteredEmail) {
-                    throw new Error("This parent registration code is assigned to a different email address.");
+                let userCredential = null;
+
+                try {
+                    userCredential = await createUserWithEmailAndPassword(auth, enteredEmail, pass);
+                    const user = userCredential.user;
+
+                    const parentLinksQuery = query(
+                        collection(db, "parent_links"),
+                        where("registrationCode", "==", code),
+                        where("registrationCodeUsed", "==", false),
+                        where("status", "==", "active")
+                    );
+
+                    const linkSnap = await getDocs(parentLinksQuery);
+
+                    if (linkSnap.empty) {
+                        await deleteUser(user);
+                        throw new Error("Invalid or already-used parent registration code.");
+                    }
+
+                    const linkDoc = linkSnap.docs[0];
+                    const linkData = linkDoc.data();
+
+                    const approvedEmail = String(linkData.parentEmail || "").toLowerCase().trim();
+
+                    if (approvedEmail && approvedEmail !== enteredEmail) {
+                        await deleteUser(user);
+                        throw new Error("This parent registration code is assigned to a different email address.");
+                    }
+
+                    const schoolId = linkData.schoolId || linkData.school_id || "";
+
+                    const batch = writeBatch(db);
+
+                    batch.set(doc(db, "users", user.uid), {
+                        fullName,
+                        email: enteredEmail,
+                        role: "parent",
+                        schoolId,
+                        school_id: schoolId,
+                        linkedAthletes: [linkData.athleteId],
+                        termsAccepted: true,
+                        termsAcceptedAt: serverTimestamp(),
+                        privacyAccepted: true,
+                        privacyAcceptedAt: serverTimestamp(),
+                        parentAcknowledged: true,
+                        consentVersion: "v1_2026_04",
+                        createdAt: serverTimestamp()
+                    });
+
+                    batch.update(doc(db, "parent_links", linkDoc.id), {
+                        parentUid: user.uid,
+                        parentEmail: enteredEmail,
+                        registrationCodeUsed: true,
+                        registrationCodeUsedAt: serverTimestamp()
+                    });
+
+                    await batch.commit();
+
+                    alert(`Welcome, ${fullName}! Your parent portal account is ready.`);
+                    window.location.href = "parent-lobby.html";
+                } catch (err) {
+                    console.error("Parent signup error:", err);
+                    throw err;
                 }
-
-                const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-                const user = userCredential.user;
-
-                const batch = writeBatch(db);
-
-                batch.set(doc(db, "users", user.uid), {
-                    fullName,
-                    email: enteredEmail,
-                    role: "parent",
-                    schoolId: linkData.schoolId || linkData.school_id || "",
-                    school_id: linkData.school_id || linkData.schoolId || "",
-                    linkedAthletes: [linkData.athleteId],
-                    termsAccepted: true,
-                    termsAcceptedAt: serverTimestamp(),
-                    privacyAccepted: true,
-                    privacyAcceptedAt: serverTimestamp(),
-                    parentAcknowledged: true,
-                    consentVersion: "v1_2026_04",
-                    createdAt: serverTimestamp()
-                });
-
-                batch.update(doc(db, "parent_links", linkDoc.id), {
-                    parentUid: user.uid,
-                    parentEmail: enteredEmail,
-                    registrationCodeUsed: true,
-                    registrationCodeUsedAt: serverTimestamp()
-                });
-
-                await batch.commit();
-
-                alert(`Welcome, ${fullName}! Your parent portal account is ready.`);
-                window.location.href = "parent-lobby.html";
             }
 
             async function handleAthleteOrCoachSignup({ fullName, email, pass, inputCode, gradYear }) {
