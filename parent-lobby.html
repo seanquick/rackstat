@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parent Portal | RACKSTAT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        :root { --school-primary: #dc2626; }
+        body { background:#0a0a0b; color:white; }
+        .portal-card {
+            background:#111113;
+            border:1px solid #2a2a2c;
+            border-radius:1rem;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-16">
+
+<header class="bg-black border-b-2 border-red-700 p-4 sticky top-0 z-40">
+    <div class="max-w-5xl mx-auto flex justify-between items-center gap-4">
+        <div>
+            <h1 class="text-2xl font-black italic uppercase tracking-tighter">Parent Portal</h1>
+            <p id="portal-status" class="text-[9px] font-bold uppercase tracking-widest text-gray-500 mt-1">Checking Access...</p>
+        </div>
+        <button id="logout-btn" class="text-xs font-black uppercase tracking-widest text-gray-500 hover:text-white">
+            Logout
+        </button>
+    </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-6 py-10">
+    <div id="page-message" class="hidden mb-6 rounded-xl border p-4 text-xs font-bold uppercase tracking-wider"></div>
+
+    <section class="mb-8">
+        <h2 class="text-4xl font-black uppercase italic tracking-tighter mb-2">Linked Athletes</h2>
+        <p class="text-gray-500 text-sm">View approved student-athlete data. This portal is read-only.</p>
+    </section>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <aside class="lg:col-span-1">
+            <div id="athlete-list" class="space-y-3">
+                <div class="animate-pulse bg-[#1a1a1c] h-16 rounded-xl"></div>
+            </div>
+        </aside>
+
+        <section class="lg:col-span-3">
+            <div id="athlete-detail" class="portal-card p-8 text-center">
+                <p class="text-gray-600 text-xs font-bold uppercase tracking-widest">Select an athlete to view data</p>
+            </div>
+        </section>
+    </div>
+</main>
+
+<script type="module">
+    import { db, auth } from './js/firebase-config.js';
+    import {
+        doc,
+        getDoc,
+        collection,
+        query,
+        where,
+        getDocs,
+        orderBy,
+        limit
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import {
+        onAuthStateChanged,
+        signOut
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const portalStatus = document.getElementById('portal-status');
+    const pageMessage = document.getElementById('page-message');
+    const athleteList = document.getElementById('athlete-list');
+    const athleteDetail = document.getElementById('athlete-detail');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    let linkedAthletes = [];
+
+    function setStatus(text, tone = "default") {
+        portalStatus.innerText = text;
+        portalStatus.className = "text-[9px] font-bold uppercase tracking-widest mt-1";
+
+        if (tone === "error") portalStatus.classList.add("text-red-400");
+        else if (tone === "success") portalStatus.classList.add("text-green-400");
+        else if (tone === "warn") portalStatus.classList.add("text-yellow-300");
+        else portalStatus.classList.add("text-gray-500");
+    }
+
+    function showMessage(message, tone = "warn") {
+        pageMessage.classList.remove("hidden");
+        pageMessage.innerText = message;
+        pageMessage.className = "mb-6 rounded-xl border p-4 text-xs font-bold uppercase tracking-wider";
+
+        if (tone === "error") {
+            pageMessage.classList.add("bg-red-500/10", "border-red-500/20", "text-red-300");
+        } else if (tone === "success") {
+            pageMessage.classList.add("bg-green-500/10", "border-green-500/20", "text-green-300");
+        } else {
+            pageMessage.classList.add("bg-yellow-500/10", "border-yellow-500/20", "text-yellow-300");
+        }
+    }
+
+    function getDisplayName(data = {}) {
+        if (data.fullName && String(data.fullName).trim()) return String(data.fullName).trim();
+
+        const first = String(data.firstName || "").trim();
+        const last = String(data.lastName || "").trim();
+        return `${first} ${last}`.trim() || "Student Athlete";
+    }
+
+    function formatDate(value) {
+        if (!value) return "--";
+
+        try {
+            const d = value.toDate ? value.toDate() : new Date(value);
+            if (Number.isNaN(d.getTime())) return "--";
+            return d.toLocaleDateString();
+        } catch {
+            return "--";
+        }
+    }
+
+    function metricBox(label, value) {
+        return `
+            <div class="bg-black/30 border border-white/10 rounded-xl p-4">
+                <span class="block text-[9px] text-gray-500 font-black uppercase tracking-widest">${label}</span>
+                <span class="text-2xl font-black italic text-white">${value || "--"}</span>
+            </div>
+        `;
+    }
+
+    async function loadParentLinks(user) {
+        const email = String(user.email || "").toLowerCase();
+
+        const linksQuery = query(
+            collection(db, "parent_links"),
+            where("parentEmail", "==", email),
+            where("status", "==", "active")
+        );
+
+        const snap = await getDocs(linksQuery);
+
+        linkedAthletes = snap.docs.map(docSnap => ({
+            id: docSnap.id,
+            ...docSnap.data()
+        }));
+
+        renderAthleteList();
+    }
+
+    function renderAthleteList() {
+        athleteList.innerHTML = "";
+
+        if (!linkedAthletes.length) {
+            athleteList.innerHTML = `
+                <div class="portal-card p-4">
+                    <p class="text-yellow-300 text-[10px] font-black uppercase tracking-widest">
+                        No approved athletes linked yet.
+                    </p>
+                </div>
+            `;
+
+            athleteDetail.innerHTML = `
+                <div class="text-center py-16">
+                    <p class="text-gray-500 text-xs font-bold uppercase tracking-widest">
+                        Parent access must be approved by coaching staff before athlete data appears here.
+                    </p>
+                </div>
+            `;
+
+            setStatus("No Linked Athletes", "warn");
+            return;
+        }
+
+        linkedAthletes.forEach((link, index) => {
+            const btn = document.createElement("button");
+            btn.className = "w-full text-left portal-card p-4 hover:border-[var(--school-primary)] transition-all";
+            btn.innerHTML = `
+                <p class="text-white font-black uppercase italic">${link.athleteName || "Student Athlete"}</p>
+                <p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">${link.relationship || "Parent/Guardian"}</p>
+            `;
+            btn.onclick = () => loadAthleteDetail(link);
+            athleteList.appendChild(btn);
+
+            if (index === 0) loadAthleteDetail(link);
+        });
+
+        setStatus("Parent Portal Ready", "success");
+    }
+
+    async function loadAthleteDetail(link) {
+        athleteDetail.innerHTML = `
+            <div class="text-center py-16 animate-pulse">
+                <p class="text-gray-500 text-xs font-black uppercase tracking-widest">Loading athlete data...</p>
+            </div>
+        `;
+
+        try {
+            const athleteId = link.athleteId;
+
+            const [profileSnap, userSnap, maxSnap] = await Promise.all([
+                getDoc(doc(db, "recruiting_profiles", athleteId)),
+                getDoc(doc(db, "users", athleteId)),
+                getDoc(doc(db, "recruiting_profiles", athleteId, "maxes", "latest"))
+            ]);
+
+            const profileData = profileSnap.exists() ? profileSnap.data() : {};
+            const userData = userSnap.exists() ? userSnap.data() : {};
+            const maxes = maxSnap.exists() ? maxSnap.data() : {};
+            const athlete = { ...userData, ...profileData };
+
+            let meals = [];
+
+            try {
+                const mealsQuery = query(
+                    collection(db, "recruiting_profiles", athleteId, "meals"),
+                    orderBy("timestamp", "desc"),
+                    limit(5)
+                );
+                const mealsSnap = await getDocs(mealsQuery);
+                meals = mealsSnap.docs.map(docSnap => docSnap.data());
+            } catch (mealErr) {
+                console.warn("Meal load skipped:", mealErr);
+            }
+
+            const mealRows = meals.length
+                ? meals.map(meal => `
+                    <div class="flex justify-between border-b border-white/5 py-2 last:border-0">
+                        <span class="text-xs text-gray-400 font-bold uppercase">${meal.mealType || meal.type || "Meal"}</span>
+                        <span class="text-xs text-white font-black">${Number(meal.calories || 0)} CAL</span>
+                    </div>
+                `).join("")
+                : `<p class="text-xs text-gray-600 font-bold uppercase tracking-widest">No recent meals logged.</p>`;
+
+            athleteDetail.innerHTML = `
+                <div class="text-left">
+                    <div class="flex justify-between items-start gap-4 border-b border-white/10 pb-6 mb-6 flex-wrap">
+                        <div>
+                            <h3 class="text-3xl font-black uppercase italic tracking-tighter">${getDisplayName(athlete)}</h3>
+                            <p class="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-1">
+                                Read-Only Parent View
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <span class="block text-[9px] text-gray-500 font-black uppercase tracking-widest">Board Score</span>
+                            <span class="text-4xl font-black italic text-white">${athlete.boardScore || "--"}</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+                        ${metricBox("Bodyweight", maxes.bodyWeight || maxes.body_weight || maxes.weight || athlete.bodyWeight || athlete.weight)}
+                        ${metricBox("Bench", maxes.bench || maxes.bench_press)}
+                        ${metricBox("Squat", maxes.squat || maxes.back_squat)}
+                        ${metricBox("Clean", maxes.clean || maxes.power_clean)}
+                        ${metricBox("Deadlift", maxes.deadlift)}
+                        ${metricBox("Last Sync", formatDate(maxes.lastUpdated || athlete.lastUpdated))}
+                    </div>
+
+                    <div class="portal-card p-5">
+                        <h4 class="text-sm font-black uppercase italic mb-4 text-[var(--school-primary)]">Recent Nutrition Logs</h4>
+                        ${mealRows}
+                    </div>
+                </div>
+            `;
+        } catch (err) {
+            console.error("Parent athlete detail error:", err);
+            athleteDetail.innerHTML = `
+                <div class="text-center py-16">
+                    <p class="text-red-400 text-xs font-bold uppercase tracking-widest">
+                        Unable to load athlete data.
+                    </p>
+                </div>
+            `;
+        }
+    }
+
+    logoutBtn.addEventListener("click", async () => {
+        await signOut(auth);
+        location.href = "index.html";
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+            location.href = "index.html";
+            return;
+        }
+
+        try {
+            setStatus("Checking Parent Links...");
+            await loadParentLinks(user);
+        } catch (err) {
+            console.error("Parent portal init error:", err);
+            showMessage("Parent portal could not be loaded.", "error");
+            setStatus("Load Failed", "error");
+        }
+    });
+</script>
+</body>
+</html>

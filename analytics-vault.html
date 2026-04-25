@@ -57,7 +57,7 @@
     <script type="module">
         import { db, auth } from './js/firebase-config.js';
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { collection, getDocs, doc, getDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { collection, getDocs, doc, getDoc, query, where, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         let currentTab = 'rack';
         let coachSchoolId = null;
@@ -70,6 +70,32 @@
         const vaultSubtitle = document.getElementById('vault-subtitle');
         const rackBtn = document.getElementById('btn-rack');
         const kitchenBtn = document.getElementById('btn-kitchen');
+
+        async function logDataAccess({ action, athleteId = null, reason = "analytics_view" }) {
+            try {
+                const user = auth.currentUser;
+                if (!user) return;
+
+                const userSnap = await getDoc(doc(db, "users", user.uid));
+                const userData = userSnap.exists() ? userSnap.data() : {};
+
+                const schoolId = userData.schoolId || userData.school_id || "";
+
+                await addDoc(collection(db, "data_access_logs"), {
+                    actorId: user.uid,
+                    actorRole: userData.role || "unknown",
+                    schoolId,
+                    athleteId,
+                    action,
+                    reason,
+                    page: "analytics-vault.html",
+                    createdAt: serverTimestamp()
+                });
+
+            } catch (err) {
+                console.warn("Audit log failed:", err);
+            }
+        }
 
         function getSchoolIdFromData(data = {}) {
             return data.schoolId || data.school_id || "";
@@ -276,6 +302,11 @@
                 showPageMessage("Analytics Vault could not be loaded right now. Please refresh and try again.", "error");
                 setTableState("Analytics load failed.", "error");
             }
+
+            await logDataAccess({
+                action: "view_team_analytics",
+                reason: "coach_dashboard_access"
+            });
         });
 
         window.switchTable = async (type) => {
@@ -296,6 +327,11 @@
 
         async function loadData(type) {
             if (!coachSchoolId) return;
+
+            await logDataAccess({
+                action: type === 'rack' ? "view_team_lift_analytics" : "view_team_meal_analytics",
+                reason: "coach_loaded_analytics_tab"
+            });
 
             currentTableData = [];
             updateExportState();
@@ -416,9 +452,11 @@
                     setTableState(type === 'rack'
                         ? "No lift records found for this school."
                         : "No meal records found for this school.", "warn");
+
                     showPageMessage(type === 'rack'
                         ? "No approved max records are available yet."
                         : "No kitchen entries are available yet.", "warn");
+
                     return;
                 }
 
@@ -438,11 +476,16 @@
             }
         }
 
-        window.downloadCSV = () => {
+        window.downloadCSV = async () => {
             if (!currentTableData.length) {
                 alert("There is no data to export for this tab.");
                 return;
             }
+
+            await logDataAccess({
+                action: currentTab === 'rack' ? "export_team_lift_analytics" : "export_team_meal_analytics",
+                reason: "coach_exported_csv"
+            });
 
             const fileName = currentTab === 'rack' ? "Team_Maxes" : "Team_Meals";
             table.download("csv", `${fileName}_${new Date().getFullYear()}.csv`);

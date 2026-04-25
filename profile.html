@@ -202,6 +202,24 @@
     </div>
 </div>
 
+<section class="bg-[#111113] border border-[#2a2a2c] rounded-2xl p-6 mt-8">
+    <h2 class="text-xl font-black uppercase italic mb-2">Parent Data Request</h2>
+    <p class="text-sm text-gray-500 mb-5">
+        Parents or guardians may request access to athlete data through the coaching staff.
+    </p>
+
+    <div class="space-y-4">
+        <input id="parent-name" type="text" placeholder="Parent / Guardian Name" class="w-full p-3 rounded-lg bg-black border border-gray-700 text-white">
+        <input id="parent-email" type="email" placeholder="Parent / Guardian Email" class="w-full p-3 rounded-lg bg-black border border-gray-700 text-white">
+        <input id="parent-phone" type="text" placeholder="Parent / Guardian Phone" class="w-full p-3 rounded-lg bg-black border border-gray-700 text-white">
+        <input id="parent-relationship" type="text" placeholder="Relationship to Athlete" class="w-full p-3 rounded-lg bg-black border border-gray-700 text-white">
+
+        <button id="submit-parent-request-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-black uppercase italic py-4 rounded-xl">
+            Submit Parent Request
+        </button>
+    </div>
+</section>
+
 <nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-red-900/30 px-6 py-4 flex justify-between items-center z-50">
     <button onclick="location.href='board.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">Board</span></button>
     <button onclick="location.href='rack.html'" class="text-gray-500 flex flex-col items-center"><span class="text-[9px] font-black uppercase italic">The Rack</span></button>
@@ -211,7 +229,7 @@
 
 <script type="module">
     import { db, auth } from './js/firebase-config.js';
-    import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { applyTheme } from './js/theme.js';
     import { buildBoardScoreSettings, calculateBoardScore } from './js/board-score.js';
@@ -650,7 +668,63 @@
     document.getElementById('save-goal-btn').onclick = window.saveClubGoal;
     document.getElementById('btn-view-card').onclick = () => {
         if (viewedUid) window.location.href = `recruiting-card.html?uid=${viewedUid}`;
-    };
+        };
+
+        document.getElementById('submit-parent-request-btn')?.addEventListener('click', async () => {
+            const user = auth.currentUser;
+
+            if (!user) {
+                alert("You must be signed in to submit this request.");
+                return;
+            }
+
+            const parentName = document.getElementById('parent-name')?.value.trim();
+            const parentEmail = document.getElementById('parent-email')?.value.trim();
+            const parentPhone = document.getElementById('parent-phone')?.value.trim();
+            const relationship = document.getElementById('parent-relationship')?.value.trim();
+
+            if (!parentName || !parentEmail || !relationship) {
+                alert("Parent name, email, and relationship are required.");
+                return;
+            }
+
+            try {
+                const userSnap = await getDoc(doc(db, "users", user.uid));
+                const userData = userSnap.exists() ? userSnap.data() : {};
+
+                const athleteName = userData.fullName || userData.name || "Athlete";
+                const schoolId = userData.schoolId || userData.school_id || "";
+
+                if (!schoolId) {
+                    alert("Your account is missing a school link. Please contact your coach.");
+                    return;
+                }
+
+                await addDoc(collection(db, "parent_access_requests"), {
+                    athleteId: user.uid,
+                    athleteName,
+                    parentName,
+                    parentEmail,
+                    parentPhone,
+                    relationship,
+                    schoolId,
+                    school_id: schoolId,
+                    status: "pending",
+                    requestedAt: serverTimestamp()
+                });
+
+                alert("Parent access request submitted.");
+
+                document.getElementById('parent-name').value = "";
+                document.getElementById('parent-email').value = "";
+                document.getElementById('parent-phone').value = "";
+                document.getElementById('parent-relationship').value = "";
+            } catch (err) {
+                console.error("Parent request error:", err);
+                alert("Could not submit parent request.");
+            }
+        });
+
 </script>
 </body>
 </html>
