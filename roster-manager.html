@@ -154,37 +154,36 @@
             try {
                 window.currentSchoolId = schoolId;
 
-                let userQuery = query(
-                    collection(db, "users"),
-                    where("schoolId", "==", schoolId),
-                    where("role", "==", "player")
+                let profileQuery = query(
+                    collection(db, "recruiting_profiles"),
+                    where("schoolId", "==", schoolId)
                 );
 
-                let userSnap = await getDocs(userQuery);
+                let profileSnap = await getDocs(profileQuery);
 
-                // Legacy fallback for older user docs
-                if (userSnap.empty) {
-                    userQuery = query(
-                        collection(db, "users"),
-                        where("school_id", "==", schoolId),
-                        where("role", "==", "player")
+                if (profileSnap.empty) {
+                    profileQuery = query(
+                        collection(db, "recruiting_profiles"),
+                        where("school_id", "==", schoolId)
                     );
-                    userSnap = await getDocs(userQuery);
+
+                    profileSnap = await getDocs(profileQuery);
                 }
 
-                const athleteData = await Promise.all(userSnap.docs.map(async (userDoc) => {
-                    const userData = userDoc.data();
+                const athleteData = await Promise.all(profileSnap.docs.map(async (profileDoc) => {
+                    const profileData = profileDoc.data();
+                    const athleteId = profileDoc.id;
 
-                    const [profileDoc, maxesDoc] = await Promise.all([
-                        getDoc(doc(db, "recruiting_profiles", userDoc.id)),
-                        getDoc(doc(db, "recruiting_profiles", userDoc.id, "maxes", "latest"))
+                    const [userDoc, maxesDoc] = await Promise.all([
+                        getDoc(doc(db, "users", athleteId)),
+                        getDoc(doc(db, "recruiting_profiles", athleteId, "maxes", "latest"))
                     ]);
 
-                    const profileData = profileDoc.exists() ? profileDoc.data() : {};
+                    const userData = userDoc.exists() ? userDoc.data() : {};
                     const maxesData = maxesDoc.exists() ? maxesDoc.data() : {};
 
                     return {
-                        id: userDoc.id,
+                        id: athleteId,
                         fullName: getDisplayName({ ...userData, ...profileData }),
                         gradYear: userData.gradYear || profileData.gradYear || "N/A",
                         offPrimary: profileData.offPrimary || userData.offPrimary || "-",
@@ -205,6 +204,9 @@
 
             } catch (err) {
                 console.error("❌ Roster Load Error:", err);
+                table.setData([]);
+                const countEl = document.getElementById('player-count');
+                if (countEl) countEl.innerText = `0 ATHLETES ON FILE`;
             }
         }
 
