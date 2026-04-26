@@ -424,6 +424,25 @@ async function handleCreateSchool() {
 
         await setDoc(doc(db, "schools", schoolId), payload, { merge: true });
 
+        await Promise.all([
+            addDoc(collection(db, "school_codes"), {
+                code: coachCode,
+                role: "coach",
+                schoolId,
+                school_id: schoolId,
+                active: true,
+                createdAt: serverTimestamp()
+            }),
+            addDoc(collection(db, "school_codes"), {
+                code: playerCode,
+                role: "player",
+                schoolId,
+                school_id: schoolId,
+                active: true,
+                createdAt: serverTimestamp()
+            })
+        ]);
+
         showCreatedSchoolResult({
             schoolId,
             name: schoolName,

@@ -250,18 +250,27 @@
             }
 
             async function handleAthleteOrCoachSignup({ fullName, email, pass, inputCode, gradYear }) {
-                const schoolsRef = collection(db, "schools");
-                const codeField = currentRole === 'coach' ? "coach_code" : "player_code";
+                const normalizedCode = inputCode.trim();
 
-                const q = query(schoolsRef, where(codeField, "==", inputCode));
-                const querySnapshot = await getDocs(q);
+                const codeQuery = query(
+                    collection(db, "school_codes"),
+                    where("code", "==", normalizedCode),
+                    where("role", "==", currentRole === "coach" ? "coach" : "player"),
+                    where("active", "==", true)
+                );
 
-                if (querySnapshot.empty) {
+                const codeSnap = await getDocs(codeQuery);
+
+                if (codeSnap.empty) {
                     throw new Error(`Invalid ${currentRole === 'coach' ? 'coach' : 'athlete'} registration code.`);
                 }
 
-                const schoolDoc = querySnapshot.docs[0];
-                const schoolId = schoolDoc.id;
+                const codeData = codeSnap.docs[0].data();
+                const schoolId = codeData.schoolId || codeData.school_id;
+
+                if (!schoolId) {
+                    throw new Error("Registration code is missing a school link.");
+                }
 
                 const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
                 const user = userCredential.user;
