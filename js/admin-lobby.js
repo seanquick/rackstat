@@ -1,21 +1,7 @@
 import { db, auth } from './firebase-config.js';
 
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import {
-    collection,
-    query,
-    where,
-    count,
-    getAggregateFromServer,
-    doc,
-    getDoc,
-    getDocs,
-    orderBy,
-    limit,
-    addDoc,
-    setDoc,
-    serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { collection, query, where, count, getAggregateFromServer, doc, getDoc, getDocs, deleteDoc, updateDoc, orderBy, limit, addDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 let currentAdminUid = null;
 
@@ -246,6 +232,8 @@ async function handleAnnouncementPost() {
     }
 }
 
+await loadAnnouncements();
+
 function slugifySchoolName(text = "") {
     return String(text)
         .toLowerCase()
@@ -462,6 +450,107 @@ async function handleCreateSchool() {
         }
     }
 }
+
+async function loadAnnouncements() {
+    const list = document.getElementById("announcement-list");
+    if (!list) return;
+
+    list.innerHTML = `<p class="text-xs text-gray-600 italic">Loading announcements...</p>`;
+
+    try {
+        const q = query(
+            collection(db, "system_announcements"),
+            orderBy("timestamp", "desc")
+        );
+
+        const snap = await getDocs(q);
+
+        if (snap.empty) {
+            list.innerHTML = `<p class="text-xs text-gray-600 italic">No announcements found.</p>`;
+            return;
+        }
+
+        list.innerHTML = "";
+
+        snap.forEach((docSnap) => {
+            const data = docSnap.data();
+            const id = docSnap.id;
+
+            const active = data.active === true;
+            const expiresAt = data.expiresAt?.toDate
+                ? data.expiresAt.toDate().toLocaleDateString()
+                : "No expiration";
+
+            const row = document.createElement("div");
+            row.className = "bg-black/20 border border-white/10 rounded-xl p-4";
+
+            row.innerHTML = `
+                <div class="flex justify-between items-start gap-4">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded ${
+                                active ? "bg-green-500/10 text-green-300 border border-green-500/20" : "bg-gray-500/10 text-gray-400 border border-gray-500/20"
+                            }">
+                                ${active ? "Active" : "Ended"}
+                            </span>
+                            <span class="text-[10px] text-gray-500 uppercase tracking-widest">
+                                Expires: ${expiresAt}
+                            </span>
+                        </div>
+
+                        <p class="text-sm text-white leading-relaxed break-words">
+                            ${data.message || ""}
+                        </p>
+                    </div>
+
+                    <div class="flex gap-2 shrink-0">
+                        ${active ? `
+                            <button
+                                onclick="endAnnouncement('${id}')"
+                                class="bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/20 text-yellow-300 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider"
+                            >
+                                End
+                            </button>
+                        ` : ""}
+
+                        <button
+                            onclick="deleteAnnouncement('${id}')"
+                            class="bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-300 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider"
+                        >
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            list.appendChild(row);
+        });
+    } catch (err) {
+        console.error("Announcement load error:", err);
+        list.innerHTML = `<p class="text-xs text-red-400 font-bold">Unable to load announcements.</p>`;
+    }
+}
+
+    window.endAnnouncement = async function(id) {
+        if (!confirm("End this announcement now?")) return;
+
+        await updateDoc(doc(db, "system_announcements", id), {
+            active: false,
+            endedAt: serverTimestamp()
+        });
+
+        await loadAnnouncements();
+    };
+
+    window.deleteAnnouncement = async function(id) {
+        if (!confirm("Permanently delete this announcement? This cannot be undone.")) return;
+
+        await deleteDoc(doc(db, "system_announcements", id));
+        await loadAnnouncements();
+    };
+
+    document.getElementById("refresh-announcements-btn")?.addEventListener("click", loadAnnouncements);
+        loadAnnouncements();
 
 // Utility helper for Firestore aggregate counts
 async function getCount(queryOrColl) {

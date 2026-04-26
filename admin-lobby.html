@@ -316,6 +316,25 @@
                 Leave the date blank if the announcement should stay active until manually replaced or disabled.
             </p>
         </div>
+
+        <div class="mt-6 p-8 bg-blue-600/5 border border-blue-500/20 rounded-2xl">
+            <div class="flex justify-between items-center gap-4 mb-4">
+                <div>
+                    <h3 class="font-bold text-lg">Existing Global Announcements</h3>
+                    <p class="text-sm text-gray-400">View, end, or permanently delete posted announcements.</p>
+                </div>
+                <button
+                    id="refresh-announcements-btn"
+                    class="bg-white/5 hover:bg-white/10 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider"
+                >
+                    Refresh
+                </button>
+            </div>
+
+            <div id="announcement-list" class="space-y-3">
+                <p class="text-xs text-gray-600 italic">Loading announcements...</p>
+            </div>
+        </div>
     </main>
 
     <!-- Admin dashboard logic -->
