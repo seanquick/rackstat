@@ -310,7 +310,10 @@
         }
 
         window.handleLogout = async (e) => {
-            if (e) e.preventDefault();
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
 
             try {
                 if (announcementUnsubscribe) {
@@ -319,12 +322,16 @@
                 }
 
                 await signOut(auth);
-            } catch (err) {
-                console.warn("Firebase signout failed, clearing local session state.", err);
-            }
 
-            sessionStorage.clear();
-            window.location.href = 'index.html';
+                sessionStorage.clear();
+                localStorage.removeItem("rackstat_user_role");
+                localStorage.removeItem("rackstat_school_id");
+
+                window.location.replace("index.html");
+            } catch (err) {
+                console.error("Logout failed:", err);
+                showPageMessage("Logout failed. Please refresh and try again.", "error");
+            }
         };
 
         async function initDashboard() {
