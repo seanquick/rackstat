@@ -238,3 +238,121 @@ body {
     background: var(--school-primary);
     border-radius: 10px;
 }
+
+/* ==========================================================================
+   8. MOBILE HEADER RESPONSIVENESS
+   ========================================================================== */
+
+@media (max-width: 640px) {
+    header {
+        padding: 0.75rem 0.9rem !important;
+    }
+
+    header .max-w-6xl,
+    header .max-w-5xl {
+        gap: 0.5rem !important;
+        max-width: 100% !important;
+    }
+
+    .header-logo-container {
+        width: 36px;
+        height: 36px;
+    }
+
+    .header-logo-container img {
+        max-height: 28px;
+        max-width: 44px;
+    }
+
+    .header-logo-container img:not(#school-logo) {
+        transform: scale(1.25);
+    }
+
+    .school-logo-primary,
+    #school-logo,
+    #coach-school-logo {
+        max-height: 34px !important;
+        max-width: 72px !important;
+        object-fit: contain !important;
+    }
+
+    .logo-container-fixed {
+        height: 42px;
+        max-width: 72px;
+    }
+
+    header h1 {
+        font-size: 1rem !important;
+        line-height: 1.1 !important;
+    }
+
+    header h2 {
+        font-size: 0.6rem !important;
+        line-height: 1.1 !important;
+    }
+
+    header p,
+    header span {
+        line-height: 1.1 !important;
+    }
+
+    #school-tag,
+    #program-title {
+        font-size: 0.7rem !important;
+        max-width: 145px !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere !important;
+        text-align: center;
+    }
+
+    #lobby-status,
+    #office-status,
+    #settings-status,
+    #rack-status,
+    #review-status {
+        font-size: 0.45rem !important;
+        max-width: 145px !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere !important;
+    }
+
+    header button,
+    header a {
+        font-size: 0.55rem !important;
+        padding: 0.35rem 0.5rem !important;
+        white-space: nowrap !important;
+    }
+
+    header .h-10,
+    header .w-\[1px\] {
+        display: none !important;
+    }
+}
+
+@media (max-width: 420px) {
+    .header-logo-container {
+        width: 30px;
+        height: 30px;
+    }
+
+    .header-logo-container img {
+        max-height: 24px;
+        max-width: 36px;
+    }
+
+    .header-logo-container img:not(#school-logo) {
+        transform: scale(1.1);
+    }
+
+    #school-tag,
+    #program-title {
+        max-width: 115px !important;
+        font-size: 0.62rem !important;
+    }
+
+    header button,
+    header a {
+        font-size: 0.5rem !important;
+        padding: 0.3rem 0.45rem !important;
+    }
+}
