@@ -1,9 +1,12 @@
 import { db, auth } from './firebase-config.js';
-
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { collection, query, where, count, getAggregateFromServer, doc, getDoc, getDocs, deleteDoc, updateDoc, orderBy, limit, addDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 let currentAdminUid = null;
+
+const functions = getFunctions();
+const deleteUserData = httpsCallable(functions, "deleteUserData");
 
 // Auth guard for the admin lobby
 onAuthStateChanged(auth, async (user) => {
@@ -161,6 +164,7 @@ function bindAdminActions() {
     const announcementBtn = document.getElementById('post-announcement');
     const createSchoolBtn = document.getElementById('create-school-btn');
     const resetSchoolFormBtn = document.getElementById('reset-school-form-btn');
+    const deleteUserBtn = document.getElementById('delete-user-btn');
 
     if (logoutBtn && !logoutBtn.dataset.bound) {
         logoutBtn.dataset.bound = 'true';
@@ -180,6 +184,11 @@ function bindAdminActions() {
     if (resetSchoolFormBtn && !resetSchoolFormBtn.dataset.bound) {
         resetSchoolFormBtn.dataset.bound = 'true';
         resetSchoolFormBtn.addEventListener('click', resetSchoolForm);
+    }
+
+    if (deleteUserBtn && !deleteUserBtn.dataset.bound) {
+        deleteUserBtn.dataset.bound = 'true';
+        deleteUserBtn.addEventListener('click', handleDeleteUserRequest);
     }
 }
 
@@ -264,6 +273,20 @@ async function generateUniqueRegistrationCode(fieldName) {
     }
 
     throw new Error(`Unable to generate unique ${fieldName}. Please try again.`);
+}
+
+async function handleDeleteUserRequest() {
+    const input = document.getElementById('delete-user-uid');
+    const targetUid = input?.value.trim() || "";
+
+    if (!targetUid) {
+        alert("Please enter a Firebase UID.");
+        return;
+    }
+
+    await window.deleteUserByAdmin(targetUid);
+
+    if (input) input.value = "";
 }
 
 function getCheckedValues(selector) {
@@ -570,6 +593,31 @@ async function loadAnnouncements() {
 
     document.getElementById("refresh-announcements-btn")?.addEventListener("click", loadAnnouncements);
         loadAnnouncements();
+
+
+    window.deleteUserByAdmin = async function(uid) {
+        if (!uid) {
+            alert("Missing user ID.");
+            return;
+        }
+
+        if (!confirm("Permanently delete this user and associated data? This cannot be undone.")) {
+            return;
+        }
+
+        try {
+            await deleteUserData({ targetUid: uid });
+            alert("User deleted successfully.");
+
+            await Promise.all([
+                renderMetrics(),
+                loadSchoolActivity()
+            ]);
+        } catch (err) {
+            console.error("Delete user error:", err);
+            alert(err.message || "Unable to delete user.");
+        }
+    };
 
 // Utility helper for Firestore aggregate counts
 async function getCount(queryOrColl) {
