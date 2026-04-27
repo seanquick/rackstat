@@ -188,10 +188,11 @@
                     userCredential = await createUserWithEmailAndPassword(auth, enteredEmail, pass);
                     const user = userCredential.user;
 
+                    const { runTransaction } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+
                     const parentLinksQuery = query(
                         collection(db, "parent_links"),
                         where("registrationCode", "==", code),
-                        where("registrationCodeUsed", "==", false),
                         where("status", "==", "active")
                     );
 
@@ -199,52 +200,81 @@
 
                     if (linkSnap.empty) {
                         await deleteUser(user);
-                        throw new Error("Invalid or already-used parent registration code.");
+                        throw new Error("Invalid parent registration code.");
                     }
 
                     const linkDoc = linkSnap.docs[0];
-                    const linkData = linkDoc.data();
+                    const linkRef = doc(db, "parent_links", linkDoc.id);
 
-                    const approvedEmail = String(linkData.parentEmail || "").toLowerCase().trim();
+                    await runTransaction(db, async (transaction) => {
+                        const freshDoc = await transaction.get(linkRef);
 
-                    if (approvedEmail && approvedEmail !== enteredEmail) {
-                        await deleteUser(user);
-                        throw new Error("This parent registration code is assigned to a different email address.");
-                    }
+                        if (!freshDoc.exists()) {
+                            throw new Error("Registration code not found.");
+                        }
 
-                    const schoolId = linkData.schoolId || linkData.school_id || "";
+                        const data = freshDoc.data();
 
-                    const batch = writeBatch(db);
+                        if (data.registrationCodeUsed) {
+                            throw new Error("This parent registration code has already been used.");
+                        }
 
-                    batch.set(doc(db, "users", user.uid), {
-                        fullName,
-                        email: enteredEmail,
-                        role: "parent",
-                        schoolId,
-                        school_id: schoolId,
-                        linkedAthletes: [linkData.athleteId],
-                        termsAccepted: true,
-                        termsAcceptedAt: serverTimestamp(),
-                        privacyAccepted: true,
-                        privacyAcceptedAt: serverTimestamp(),
-                        parentAcknowledged: true,
-                        consentVersion: "v1_2026_04",
-                        createdAt: serverTimestamp()
+                        if (data.status !== "active") {
+                            throw new Error("This parent registration code is no longer active.");
+                        }
+
+                        const approvedEmail = String(data.parentEmail || "").toLowerCase().trim();
+
+                        if (approvedEmail && approvedEmail !== enteredEmail) {
+                            throw new Error("This parent registration code is assigned to a different email address.");
+                        }
+
+                        const schoolId = data.schoolId || data.school_id || "";
+
+                        transaction.set(doc(db, "users", user.uid), {
+                            fullName,
+                            email: enteredEmail,
+                            role: "parent",
+                            schoolId,
+                            school_id: schoolId,
+                            linkedAthletes: [data.athleteId],
+                            termsAccepted: true,
+                            termsAcceptedAt: serverTimestamp(),
+                            privacyAccepted: true,
+                            privacyAcceptedAt: serverTimestamp(),
+                            parentAcknowledged: true,
+                            consentVersion: "v1_2026_04",
+                            createdAt: serverTimestamp(),
+
+                            // 🔍 audit fields (recommended)
+                            codeUsed: code,
+                            codeVerified: true,
+                            codeVerifiedAt: serverTimestamp()
+                        });
+
+                        transaction.update(linkRef, {
+                            parentUid: user.uid,
+                            parentEmail: enteredEmail,
+                            registrationCodeUsed: true,
+                            registrationCodeUsedAt: serverTimestamp()
+                        });
                     });
-
-                    batch.update(doc(db, "parent_links", linkDoc.id), {
-                        parentUid: user.uid,
-                        parentEmail: enteredEmail,
-                        registrationCodeUsed: true,
-                        registrationCodeUsedAt: serverTimestamp()
-                    });
-
-                    await batch.commit();
 
                     alert(`Welcome, ${fullName}! Your parent portal account is ready.`);
                     window.location.href = "parent-lobby.html";
+
                 } catch (err) {
                     console.error("Parent signup error:", err);
+
+                    // cleanup orphaned auth user if transaction fails
+                    if (userCredential?.user) {
+                        try {
+                            await deleteUser(userCredential.user);
+                        } catch (cleanupErr) {
+                            console.warn("Cleanup failed:", cleanupErr);
+                        }
+                    }
+
                     throw err;
                 }
             }
