@@ -1,12 +1,8 @@
 import { db, auth } from './firebase-config.js';
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { collection, query, where, count, getAggregateFromServer, doc, getDoc, getDocs, deleteDoc, updateDoc, orderBy, limit, addDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 let currentAdminUid = null;
-
-const functions = getFunctions();
-const deleteUserData = httpsCallable(functions, "deleteUserData");
 
 // Auth guard for the admin lobby
 onAuthStateChanged(auth, async (user) => {
@@ -584,11 +580,52 @@ async function loadAnnouncements() {
         await loadAnnouncements();
     };
 
-    window.deleteAnnouncement = async function(id) {
-        if (!confirm("Permanently delete this announcement? This cannot be undone.")) return;
+    window.deleteUserByAdmin = async function(uid) {
+        if (!uid) {
+            alert("Missing user ID.");
+            return;
+        }
 
-        await deleteDoc(doc(db, "system_announcements", id));
-        await loadAnnouncements();
+        if (!auth.currentUser) {
+            alert("Admin session expired. Please log in again.");
+            window.location.replace("index.html");
+            return;
+        }
+
+        if (!confirm("Permanently delete this user and associated data? This cannot be undone.")) {
+            return;
+        }
+
+        try {
+            const token = await auth.currentUser.getIdToken();
+
+            const response = await fetch("https://us-central1-rackstat-production.cloudfunctions.net/deleteUserData", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    targetUid: uid
+                })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || "Unable to delete user.");
+            }
+
+            alert("User deleted successfully.");
+
+            await Promise.all([
+                renderMetrics(),
+                loadSchoolActivity()
+            ]);
+        } catch (err) {
+            console.error("Delete user error:", err);
+            alert(err.message || "Unable to delete user.");
+        }
     };
 
     document.getElementById("refresh-announcements-btn")?.addEventListener("click", loadAnnouncements);
