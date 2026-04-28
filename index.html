@@ -632,22 +632,33 @@
             const user = userCredential.user;
             const userDoc = await getDoc(doc(db, "users", user.uid));
 
-            if (userDoc.exists()) {
-                const userData = userDoc.data();
-
-                if (userData.role === 'admin') {
-                    window.location.href = 'admin-lobby.html';
-                } else if (userData.role === 'coach') {
-                    window.location.href = 'coach-lobby.html';
-                } else {
-                    authSection.classList.add('hidden');
-                    mainMenu.classList.remove('hidden');
-                    setLobbyStatus("Signed In", "success");
-                }
-            } else {
+            if (!userDoc.exists()) {
                 showPageMessage("Profile document not found. Please contact support.", "error");
                 setLobbyStatus("Profile Missing", "error");
+                return;
             }
+
+            const userData = userDoc.data();
+            const role = String(userData.role || "").toLowerCase();
+
+            if (role === 'admin') {
+                window.location.href = 'admin-lobby.html';
+                return;
+            }
+
+            if (role === 'coach') {
+                window.location.href = 'coach-lobby.html';
+                return;
+            }
+
+            if (role === 'parent') {
+                window.location.href = 'parent-lobby.html';
+                return;
+            }
+
+            authSection.classList.add('hidden');
+            mainMenu.classList.remove('hidden');
+            setLobbyStatus("Signed In", "success");
         } catch (e) {
             showPageMessage(`Login failed: ${e.message}`, "error");
             setLobbyStatus("Login Failed", "error");
@@ -766,6 +777,11 @@
 
                 if (role === 'coach' && isLoginPage) {
                     window.location.href = 'coach-lobby.html';
+                    return;
+                }
+
+                if (role === 'parent' && isLoginPage) {
+                    window.location.href = 'parent-lobby.html';
                     return;
                 }
 

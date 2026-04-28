@@ -61,7 +61,7 @@
 
     <script type="module">
         import { db, auth } from './js/firebase-config.js';
-        import { collection, getDocs, doc, deleteDoc, updateDoc, query, where, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { collection, getDocs, doc, updateDoc, query, where, getDoc, writeBatch, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { applyTheme } from './js/theme.js';
 
@@ -156,7 +156,8 @@
 
                 let profileQuery = query(
                     collection(db, "recruiting_profiles"),
-                    where("schoolId", "==", schoolId)
+                    where("schoolId", "==", schoolId),
+                    limit(250)
                 );
 
                 let profileSnap = await getDocs(profileQuery);
@@ -164,7 +165,8 @@
                 if (profileSnap.empty) {
                     profileQuery = query(
                         collection(db, "recruiting_profiles"),
-                        where("school_id", "==", schoolId)
+                        where("school_id", "==", schoolId),
+                        limit(250)
                     );
 
                     profileSnap = await getDocs(profileQuery);
@@ -195,12 +197,13 @@
                     };
                 }));
 
-                athleteData.sort((a, b) => (a.fullName || "").localeCompare(b.fullName || ""));
+                const activeAthletes = athleteData.filter(athlete => athlete.active !== false);
+                activeAthletes.sort((a, b) => (a.fullName || "").localeCompare(b.fullName || ""));
 
-                table.setData(athleteData);
+                table.setData(activeAthletes);
 
                 const countEl = document.getElementById('player-count');
-                if (countEl) countEl.innerText = `${athleteData.length} ATHLETES ON FILE`;
+                if (countEl) countEl.innerText = `${activeAthletes.length} ATHLETES ON FILE`;
 
             } catch (err) {
                 console.error("❌ Roster Load Error:", err);
@@ -212,28 +215,26 @@
 
         // --- Updated Global Delete Athlete Logic ---
         window.deleteAthlete = async (athleteId, athleteName) => {
-            const typedName = prompt(`To confirm deletion, type the athlete's name exactly: ${athleteName.toUpperCase()}`);
+            const typedName = prompt(`To confirm roster removal, type the athlete's name exactly: ${athleteName.toUpperCase()}`);
             if (typedName === null) return;
 
             if (typedName.trim().toLowerCase() !== athleteName.trim().toLowerCase()) {
-                alert(`ERROR: "${typedName}" does not match "${athleteName}". Deletion unsuccessful.`);
+                alert(`ERROR: "${typedName}" does not match "${athleteName}". Removal cancelled.`);
                 return;
             }
 
-            if (!confirm("LAST WARNING: This will permanently wipe all stats and the user account. Proceed?")) return;
+            if (!confirm("This will remove the athlete from the active roster. Their account/data will not be permanently deleted.")) return;
 
             try {
                 const profileRef = doc(db, "recruiting_profiles", athleteId);
                 const userRef = doc(db, "users", athleteId);
-                const maxesRef = doc(db, "recruiting_profiles", athleteId, "maxes", "latest");
-                
-                const [athleteSnap, userSnap, maxesSnap] = await Promise.all([
+
+                const [profileSnap, userSnap] = await Promise.all([
                     getDoc(profileRef),
-                    getDoc(userRef),
-                    getDoc(maxesRef)
+                    getDoc(userRef)
                 ]);
 
-                const profileSchoolId = athleteSnap.exists() ? getSchoolIdFromData(athleteSnap.data()) : "";
+                const profileSchoolId = profileSnap.exists() ? getSchoolIdFromData(profileSnap.data()) : "";
                 const userSchoolId = userSnap.exists() ? getSchoolIdFromData(userSnap.data()) : "";
                 const resolvedSchoolId = userSchoolId || profileSchoolId;
 
@@ -242,24 +243,25 @@
                     return;
                 }
 
-                const batch = writeBatch(db);
+                const payload = {
+                    active: false,
+                    rosterStatus: "removed",
+                    removedFromRosterAt: new Date(),
+                    removedFromRosterBy: auth.currentUser?.uid || null
+                };
 
-                if (athleteSnap.exists()) batch.delete(profileRef);
-                if (userSnap.exists()) batch.delete(userRef);
-                if (maxesSnap.exists()) batch.delete(maxesRef);
+                await Promise.all([
+                    updateDoc(profileRef, payload),
+                    updateDoc(userRef, payload)
+                ]);
 
-                await batch.commit();
-                
-                alert(`SUCCESS: ${athleteName.toUpperCase()} has been removed.`);
-                
+                alert(`${athleteName.toUpperCase()} has been removed from the active roster.`);
+
                 if (window.currentSchoolId) {
                     await loadRoster(window.currentSchoolId);
-                } else {
-                    location.reload();
                 }
-
             } catch (error) {
-                console.error("Deletion Error:", error);
+                console.error("Roster removal error:", error);
                 alert(`CRITICAL ERROR: ${error.message}`);
             }
         };

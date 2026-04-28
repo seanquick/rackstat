@@ -662,7 +662,7 @@ async function loadAnnouncements() {
             const result = await response.json();
 
             if (!response.ok) {
-                throw new Error(result.error || "Delete failed");
+                throw new Error(result.message || "Delete failed");
             }
 
             alert("User deleted successfully.");

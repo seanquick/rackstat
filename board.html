@@ -649,10 +649,18 @@
             return;
         }
 
-        if (!approvedRecordCount) {
+        const hasManualRecords = Object.keys(manualRecords || {}).length > 0;
+
+        if (!approvedRecordCount && !hasManualRecords) {
             renderRecordTableMessage("No approved historical records found yet.");
             showPageMessage("Weight class records will appear after coaches approve athlete max lifts.", "warn");
             setBoardStatus("No Historical Records", "warn");
+            return;
+        }
+
+        if (!approvedRecordCount && hasManualRecords) {
+            showPageMessage("Manual board records are currently displayed. Approved lift history will appear after coach verification.", "warn");
+            setBoardStatus("Manual Records Active", "success");
             return;
         }
 

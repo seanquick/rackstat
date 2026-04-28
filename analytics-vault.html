@@ -46,27 +46,18 @@
         </button>
     </div>
 
-    <div class="bg-gray-900 rounded-b-xl rounded-tr-xl border border-gray-800 overflow-hidden shadow-2xl">
+    <div class="bg-gray-900 rounded-b-xl rounded-tr-xl border border-gray-800 overflow-x-auto shadow-2xl">
         <div id="table-state" class="px-6 py-8 text-center text-xs font-black uppercase tracking-widest text-gray-500">
             Initializing analytics vault...
         </div>
-        <div id="stats-table"></div>
+        <div id="stats-table" class="min-w-[1100px]"></div>
     </div>
 </main>
 
 <script type="module">
     import { db, auth } from './js/firebase-config.js';
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import {
-        collection,
-        getDocs,
-        doc,
-        getDoc,
-        query,
-        where,
-        addDoc,
-        serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { collection, getDocs, doc, getDoc, query, where, addDoc, serverTimestamp, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     let currentTab = 'rack';
     let coachSchoolId = null;
@@ -117,7 +108,7 @@
     ];
 
     table = new Tabulator("#stats-table", {
-        layout: "fitColumns",
+        layout: "fitDataStretch",
         responsiveLayout: "collapse",
         pagination: "local",
         paginationSize: 20,
@@ -278,7 +269,8 @@
         try {
             let athletesQuery = query(
                 collection(db, "recruiting_profiles"),
-                where("schoolId", "==", coachSchoolId)
+                where("schoolId", "==", coachSchoolId),
+                limit(250)
             );
 
             let athletesSnap = await getDocs(athletesQuery);
@@ -286,7 +278,8 @@
             if (athletesSnap.empty) {
                 athletesQuery = query(
                     collection(db, "recruiting_profiles"),
-                    where("school_id", "==", coachSchoolId)
+                    where("school_id", "==", coachSchoolId),
+                    limit(250)
                 );
                 athletesSnap = await getDocs(athletesQuery);
             }
@@ -333,7 +326,10 @@
                             return;
                         }
 
-                        const subSnap = await getDocs(collection(db, "recruiting_profiles", uid, "maxes"));
+                        const subSnap = await getDocs(query(
+                            collection(db, "recruiting_profiles", uid, "maxes"),
+                            limit(25)
+                        ));
 
                         subSnap.forEach((subDoc) => {
                             const s = subDoc.data();
@@ -353,7 +349,10 @@
                             });
                         });
                     } else {
-                        const mealsSnap = await getDocs(collection(db, "recruiting_profiles", uid, "meals"));
+                        const mealsSnap = await getDocs(query(
+                            collection(db, "recruiting_profiles", uid, "meals"),
+                            limit(100)
+                        ));
 
                         mealsSnap.forEach((mealDoc) => {
                             const s = mealDoc.data();

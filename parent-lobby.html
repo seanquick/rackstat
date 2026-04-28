@@ -132,11 +132,28 @@
     }
 
     async function loadParentLinks(user) {
-        const email = String(user.email || "").toLowerCase();
+        const parentSnap = await getDoc(doc(db, "users", user.uid));
+
+        if (!parentSnap.exists()) {
+            throw new Error("Parent user profile not found.");
+        }
+
+        const parentData = parentSnap.data();
+        const role = String(parentData.role || "").toLowerCase();
+        const schoolId = parentData.schoolId || parentData.school_id || "";
+
+        if (role !== "parent") {
+            throw new Error("This account is not a parent account.");
+        }
+
+        if (!schoolId) {
+            throw new Error("Parent account is missing school link.");
+        }
 
         const linksQuery = query(
             collection(db, "parent_links"),
-            where("parentEmail", "==", email),
+            where("parentUid", "==", user.uid),
+            where("schoolId", "==", schoolId),
             where("status", "==", "active")
         );
 

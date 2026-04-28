@@ -154,6 +154,17 @@ exports.deleteUserData = onRequest(async (req, res) => {
     }
 
     await batch.commit();
+
+    await db.collection("data_access_logs").add({
+      action: "delete_user_data",
+      targetUid,
+      targetRole: role || null,
+      performedBy: requesterUid,
+      performedByRole: "admin",
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      source: "admin-lobby",
+    });
+
     await admin.auth().deleteUser(targetUid);
 
     res.status(200).json({
