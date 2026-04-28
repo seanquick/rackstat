@@ -643,13 +643,35 @@ async function loadAnnouncements() {
         }
 
         try {
-            await deleteUserData({ targetUid: uid });
+            const token = await auth.currentUser.getIdToken();
+
+            const response = await fetch(
+                "https://us-central1-rackstat-production.cloudfunctions.net/deleteUserData",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        targetUid: uid
+                    })
+                }
+            );
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "Delete failed");
+            }
+
             alert("User deleted successfully.");
 
             await Promise.all([
                 renderMetrics(),
                 loadSchoolActivity()
             ]);
+
         } catch (err) {
             console.error("Delete user error:", err);
             alert(err.message || "Unable to delete user.");

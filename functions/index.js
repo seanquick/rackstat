@@ -153,8 +153,8 @@ exports.deleteUserData = onRequest(async (req, res) => {
       links.forEach((doc) => batch.delete(doc.ref));
     }
 
-    await admin.auth().deleteUser(targetUid);
     await batch.commit();
+    await admin.auth().deleteUser(targetUid);
 
     res.status(200).json({
       success: true,
