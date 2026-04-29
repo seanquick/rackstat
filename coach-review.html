@@ -513,6 +513,7 @@
         try {
             const q = query(
                 collection(db, "completed_workouts"),
+                where("schoolId", "==", currentSchoolId),
                 where("workoutId", "==", workoutId),
                 orderBy("timestamp", "desc"),
                 limit(100)
