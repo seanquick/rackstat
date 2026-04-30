@@ -74,7 +74,9 @@
                     </div>
                 </div>
 
-                <div id="performance-feed" class="space-y-4">
+                <div id="review-queue-container" class="space-y-4"></div>
+
+                <div id="performance-feed" class="space-y-4 hidden">
                     <div class="text-center py-20 border-2 border-dashed border-[#2a2a2c] rounded-3xl">
                         <p class="text-gray-600 uppercase text-xs font-bold tracking-widest">Select a review queue on the left to see results</p>
                     </div>
@@ -1497,7 +1499,9 @@
 
     tabWorkout.onclick = () => {
         setActiveTab(tabWorkout);
-        loadPerformance(); // existing function
+        currentViewMode = "workout";
+        loadWorkouts();
+        renderFeedMessage("Select a workout session from the left queue.");
     };
 </script>
 </body>
