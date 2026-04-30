@@ -277,6 +277,42 @@
                 console.warn("Workout load skipped:", workoutErr);
             }
 
+            let weeklyStats = {
+                total: 0,
+                thisWeek: 0
+            };
+
+            try {
+                const workoutQuery = query(
+                    collection(db, "completed_workouts"),
+                    where("athleteId", "==", athleteId),
+                    orderBy("timestamp", "desc"),
+                    limit(50)
+                );
+
+                const snap = await getDocs(workoutQuery);
+
+                const now = new Date();
+                const startOfWeek = new Date(now);
+                startOfWeek.setDate(now.getDate() - 7);
+
+                snap.forEach(doc => {
+                    const w = doc.data();
+                    const date = w.timestamp?.toDate?.() || new Date(w.timestamp);
+
+                    if (!Number.isNaN(date.getTime())) {
+                        weeklyStats.total++;
+
+                        if (date >= startOfWeek) {
+                            weeklyStats.thisWeek++;
+                        }
+                    }
+                });
+
+            } catch (err) {
+                console.warn("Weekly stats skipped:", err);
+            }
+
             // --------------------
             // LOAD MEALS
             // --------------------
@@ -308,6 +344,35 @@
             } catch (err) {
                 console.warn("PR load skipped:", err);
             }
+
+
+            const weeklySummary = `
+                <div class="portal-card p-5 mb-6">
+                    <h4 class="text-sm font-black uppercase italic mb-4 text-[var(--school-primary)]">
+                        Weekly Activity
+                    </h4>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-black/30 border border-white/10 rounded-xl p-4">
+                            <span class="block text-[9px] text-gray-500 font-black uppercase tracking-widest">
+                                Workouts (7 Days)
+                            </span>
+                            <span class="text-2xl font-black italic text-white">
+                                ${weeklyStats.thisWeek}
+                            </span>
+                        </div>
+
+                        <div class="bg-black/30 border border-white/10 rounded-xl p-4">
+                            <span class="block text-[9px] text-gray-500 font-black uppercase tracking-widest">
+                                Recent Activity
+                            </span>
+                            <span class="text-2xl font-black italic text-white">
+                                ${weeklyStats.total}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `;
 
              // --------------------
             // BUILD WORKOUT ROWS
@@ -404,6 +469,7 @@
                         ${metricBox("Last Sync", formatDate(maxes.lastUpdated || athlete.lastUpdated))}
                     </div>
 
+                    ${weeklySummary}
                     <div class="grid md:grid-cols-3 gap-6">
                         <div class="portal-card p-5">
                             <h4 class="text-sm font-black uppercase italic mb-4 text-[var(--school-primary)]">
