@@ -163,6 +163,7 @@ function bindAdminActions() {
     const createSchoolBtn = document.getElementById('create-school-btn');
     const resetSchoolFormBtn = document.getElementById('reset-school-form-btn');
     const deleteUserBtn = document.getElementById('delete-user-btn');
+    const archiveSchoolBtn = document.getElementById('archive-school-btn');
 
     if (logoutBtn && !logoutBtn.dataset.bound) {
         logoutBtn.dataset.bound = 'true';
@@ -187,6 +188,11 @@ function bindAdminActions() {
     if (deleteUserBtn && !deleteUserBtn.dataset.bound) {
         deleteUserBtn.dataset.bound = 'true';
         deleteUserBtn.addEventListener('click', handleDeleteUserRequest);
+    }
+
+    if (archiveSchoolBtn && !archiveSchoolBtn.dataset.bound) {
+        archiveSchoolBtn.dataset.bound = 'true';
+        archiveSchoolBtn.addEventListener('click', handleArchiveSchoolRequest);
     }
 }
 
@@ -286,6 +292,46 @@ async function handleDeleteUserRequest() {
     await window.deleteUserByAdmin(targetUid);
 
     if (input) input.value = "";
+}
+
+async function handleArchiveSchoolRequest() {
+    const input = document.getElementById('archive-school-id');
+    const schoolId = input?.value.trim() || "";
+
+    if (!schoolId) {
+        alert("Please enter a School ID.");
+        return;
+    }
+
+    if (!confirm(`Deactivate school/team "${schoolId}"? This will not delete data.`)) {
+        return;
+    }
+
+    try {
+        await appCheckReady;
+
+        const schoolRef = doc(db, "schools", schoolId);
+        const schoolSnap = await getDoc(schoolRef);
+
+        if (!schoolSnap.exists()) {
+            throw new Error("School/team not found.");
+        }
+
+        await updateDoc(schoolRef, {
+            active: false,
+            archivedAt: serverTimestamp(),
+            archivedBy: auth.currentUser?.uid || null
+        });
+
+        alert("School/team deactivated successfully.");
+
+        if (input) input.value = "";
+
+        await loadSchoolActivity();
+    } catch (err) {
+        console.error("Archive school error:", err);
+        alert(err.message || "Unable to deactivate school/team.");
+    }
 }
 
 function getCheckedValues(selector) {
@@ -615,7 +661,7 @@ async function loadAnnouncements() {
 
         try {
             await appCheckReady;
-            
+
             const token = await auth.currentUser.getIdToken();
 
             const response = await fetch("https://us-central1-rackstat-production.cloudfunctions.net/deleteUserData", {
@@ -661,3 +707,4 @@ async function getCount(queryOrColl) {
         return 0;
     }
 }
+

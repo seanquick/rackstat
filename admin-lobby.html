@@ -309,6 +309,34 @@
             </p>
         </div>
 
+        <!-- Admin school deletion tool -->
+         <div class="mt-12 p-8 bg-yellow-600/5 border border-yellow-500/20 rounded-2xl">
+            <h3 class="font-bold text-lg mb-2 text-yellow-300">Deactivate School / Team</h3>
+            <p class="text-sm text-gray-400 mb-4">
+                Archive a school without permanently deleting data. Archived schools can be hidden from active use.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4">
+                <input
+                    type="text"
+                    id="archive-school-id"
+                    placeholder="Enter School ID"
+                    class="bg-black/20 border border-white/10 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-yellow-500"
+                >
+
+                <button
+                    id="archive-school-btn"
+                    class="bg-yellow-700 hover:bg-yellow-600 text-white px-6 py-3 rounded-lg text-sm font-bold transition uppercase tracking-wider"
+                >
+                    Deactivate School
+                </button>
+            </div>
+
+            <p class="mt-3 text-[11px] text-yellow-300/70">
+                This sets active=false and keeps all records intact.
+            </p>
+        </div>
+
         <!-- Admin announcement composer for system-wide notices -->
         <div class="mt-12 p-8 bg-blue-600/5 border border-blue-500/20 rounded-2xl">
             <h3 class="font-bold text-lg mb-2">Global Announcement</h3>
