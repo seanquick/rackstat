@@ -38,26 +38,6 @@
             <div id="review-page-message-box" class="rounded-xl border p-4 text-xs font-bold uppercase tracking-wider"></div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <button id="tab-parent-requests" class="review-tab bg-[#161618] border border-red-600 p-5 rounded-2xl text-left">
-                <p class="text-[9px] font-black uppercase tracking-widest text-red-500">Queue</p>
-                <h3 class="text-xl font-black uppercase italic text-white">Parent Requests</h3>
-                <p id="parent-request-count" class="text-[10px] text-gray-500 font-bold uppercase mt-2">Loading...</p>
-            </button>
-
-            <button id="tab-rack-reviews" class="review-tab bg-[#161618] border border-[#2a2a2c] p-5 rounded-2xl text-left">
-                <p class="text-[9px] font-black uppercase tracking-widest text-red-500">Queue</p>
-                <h3 class="text-xl font-black uppercase italic text-white">Rack PR Reviews</h3>
-                <p id="rack-review-count" class="text-[10px] text-gray-500 font-bold uppercase mt-2">Loading...</p>
-            </button>
-
-            <button id="tab-workout-reviews" class="review-tab bg-[#161618] border border-[#2a2a2c] p-5 rounded-2xl text-left">
-                <p class="text-[9px] font-black uppercase tracking-widest text-red-500">Queue</p>
-                <h3 class="text-xl font-black uppercase italic text-white">Workout Sessions</h3>
-                <p id="workout-review-count" class="text-[10px] text-gray-500 font-bold uppercase mt-2">Loading...</p>
-            </button>
-        </div>
-
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <div class="lg:col-span-1 space-y-4">
                 <h3 class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-4">Select Review Queue</h3>
@@ -341,121 +321,6 @@
         }
     }
 
-    function renderParentRequestCards(requestDocs) {
-        if (!queueContainer) return;
-
-        queueContainer.innerHTML = "";
-
-        if (!requestDocs.length) {
-            queueContainer.innerHTML = `
-                <div class="rounded-2xl border border-white/10 bg-[#111113] p-8 text-center">
-                    <p class="text-xs font-black uppercase tracking-widest text-gray-500">
-                        No parent access requests found.
-                    </p>
-                </div>
-            `;
-            return;
-        }
-
-        requestDocs.forEach((requestDoc) => {
-            const request = requestDoc.data();
-            const status = String(request.status || "pending").toLowerCase();
-
-            const statusClass =
-                status === "approved"
-                    ? "bg-green-500/10 text-green-300 border-green-500/20"
-                    : status === "rejected"
-                        ? "bg-red-500/10 text-red-300 border-red-500/20"
-                        : "bg-yellow-500/10 text-yellow-300 border-yellow-500/20";
-
-            const card = document.createElement("div");
-            card.className = "rounded-2xl border border-white/10 bg-[#111113] p-5 shadow-xl";
-
-            card.innerHTML = `
-                <div class="flex justify-between items-start gap-4 flex-wrap">
-                    <div>
-                        <p class="text-[10px] font-black uppercase tracking-widest text-gray-500">
-                            Parent Request
-                        </p>
-                        <h3 class="text-xl font-black uppercase italic text-white mt-1">
-                            ${request.parentName || "Parent / Guardian"}
-                        </h3>
-                        <p class="text-xs font-bold text-gray-400 mt-1">
-                            ${request.relationship || "Parent/Guardian"} requesting access to
-                            <span class="text-white">${request.athleteName || "Unknown Athlete"}</span>
-                        </p>
-                    </div>
-
-                    <span class="${statusClass} border rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-widest">
-                        ${status}
-                    </span>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-5">
-                    <div class="rounded-xl bg-black/30 border border-white/5 p-4">
-                        <p class="text-[9px] text-gray-500 font-black uppercase tracking-widest">Parent Email</p>
-                        <p class="text-sm text-white font-bold break-all">${request.parentEmail || "-"}</p>
-                    </div>
-
-                    <div class="rounded-xl bg-black/30 border border-white/5 p-4">
-                        <p class="text-[9px] text-gray-500 font-black uppercase tracking-widest">Parent Phone</p>
-                        <p class="text-sm text-white font-bold">${request.parentPhone || "-"}</p>
-                    </div>
-
-                    <div class="rounded-xl bg-black/30 border border-white/5 p-4">
-                        <p class="text-[9px] text-gray-500 font-black uppercase tracking-widest">Athlete Email</p>
-                        <p class="text-sm text-white font-bold break-all">${request.athleteEmail || "-"}</p>
-                    </div>
-
-                    <div class="rounded-xl bg-black/30 border border-white/5 p-4">
-                        <p class="text-[9px] text-gray-500 font-black uppercase tracking-widest">School ID</p>
-                        <p class="text-sm text-white font-bold">${request.schoolId || request.school_id || "-"}</p>
-                    </div>
-                </div>
-
-                ${request.registrationCode ? `
-                    <div class="mt-5 rounded-xl border border-green-500/20 bg-green-500/10 p-4">
-                        <p class="text-[9px] font-black uppercase tracking-widest text-green-300">
-                            Parent Registration Code
-                        </p>
-                        <p class="text-3xl font-black tracking-widest text-white mt-2 select-all">
-                            ${request.registrationCode}
-                        </p>
-                        <p class="text-[10px] text-green-200/70 font-bold uppercase tracking-widest mt-2">
-                            Parent uses this code on signup as a Parent account.
-                        </p>
-                    </div>
-                ` : ""}
-
-                <div class="flex gap-2 flex-wrap mt-5">
-                    ${status === "pending" ? `
-                        <button
-                            onclick="window.approveParentAccessRequest('${requestDoc.id}', this)"
-                            class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest">
-                            Approve Access
-                        </button>
-
-                        <button
-                            onclick="window.rejectParentAccessRequest('${requestDoc.id}', this)"
-                            class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest">
-                            Reject
-                        </button>
-                    ` : ""}
-
-                    ${status === "approved" ? `
-                        <button
-                            onclick="window.hideParentAccessRequest('${requestDoc.id}', this)"
-                            class="bg-white/5 hover:bg-white/10 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest">
-                            Remove From Screen
-                        </button>
-                    ` : ""}
-                </div>
-            `;
-
-            queueContainer.appendChild(card);
-        });
-    }
-
     function renderQueueButtons(workouts, pendingCount, parentRequestCount = 0) {
         workoutList.innerHTML = '';
 
@@ -594,8 +459,6 @@
             }
 
             await loadWorkouts();
-            await window.loadParentAccessRequests();    
-
             setReviewStatus("Ready", "success");
         } catch (err) {
             console.error("Auth/Theme Error:", err);
@@ -998,18 +861,12 @@
         currentViewMode = "parents";
         currentWorkoutId = null;
         currentWorkoutName = "Parent Requests";
+        await loadWorkouts();
 
         hidePageMessage();
         setReviewStatus("Loading Parent Requests...");
         setStatsVisible(false);
-
-        if (queueContainer) {
-            queueContainer.innerHTML = `
-                <div class="text-center py-10 animate-pulse uppercase text-xs font-black text-gray-500 tracking-widest">
-                    Retrieving parent requests...
-                </div>
-            `;
-        }
+        performanceFeed.innerHTML = '<div class="text-center py-10 animate-pulse uppercase text-xs font-black text-gray-500 tracking-widest">Retrieving parent requests...</div>';
 
         try {
             const q = query(
@@ -1020,93 +877,176 @@
 
             const snap = await getDocs(q);
 
-            const requestDocs = snap.docs.filter((docSnap) => {
+            const requestDocs = snap.docs.filter(docSnap => {
                 const request = docSnap.data();
                 return request.hiddenFromCoach !== true;
             });
 
-            if (statCount) {
-                statCount.innerText = `${requestDocs.length} Request${requestDocs.length === 1 ? "" : "s"}`;
+            statCount.innerText = `${requestDocs.length} Request${requestDocs.length === 1 ? "" : "s"}`;
+            setStatsVisible(true);
+
+            if (!requestDocs.length) {
+                renderFeedMessage("No parent access requests found.");
+                setReviewStatus("No Parent Requests", "warn");
+                return;
             }
 
-            setStatsVisible(true);
-            renderParentRequestCards(requestDocs);
+            performanceFeed.innerHTML = '';
+
+            requestDocs.forEach((requestDoc) => {
+                const request = requestDoc.data();
+
+                const requestId = escapeAttr(requestDoc.id);
+                const athleteId = escapeAttr(request.athleteId || "");
+                const athleteName = escapeAttr(request.athleteName || "Unknown Athlete");
+                const parentName = escapeAttr(request.parentName || "Parent");
+                const parentEmail = escapeAttr(request.parentEmail || "");
+                const parentPhone = escapeAttr(request.parentPhone || "");
+                const relationship = escapeAttr(request.relationship || "Parent/Guardian");
+                const status = String(request.status || "pending").toLowerCase();
+
+                const statusClass = status === "approved"
+                    ? "bg-green-500/10 border-green-500/20 text-green-300"
+                    : status === "rejected"
+                        ? "bg-red-500/10 border-red-500/20 text-red-300"
+                        : "bg-yellow-500/10 border-yellow-500/20 text-yellow-300";
+
+                const card = document.createElement('div');
+                card.className = "bg-[#111113] border border-[#2a2a2c] rounded-2xl overflow-hidden mb-6 shadow-2xl";
+
+                card.innerHTML = `
+                    <div class="bg-[#1a1a1c] p-4 flex justify-between items-center border-b border-[#2a2a2c] gap-4 flex-wrap">
+                        <div>
+                            <h4 class="font-black text-white uppercase italic tracking-tighter text-lg">${request.parentName || "Parent"}</h4>
+                            <p class="text-[8px] text-gray-500 font-bold uppercase tracking-widest mt-1">
+                                ${request.relationship || "Parent/Guardian"} • Requesting access to ${request.athleteName || "Unknown Athlete"}
+                            </p>
+                        </div>
+
+                        <span class="${statusClass} border text-[8px] font-black px-3 py-1 rounded-md uppercase tracking-widest">
+                            ${status}
+                        </span>
+                    </div>
+
+                    <div class="p-4 bg-black/20 space-y-3">
+                        <p class="text-xs text-gray-400 font-bold uppercase">Email: <span class="text-white">${request.parentEmail || "-"}</span></p>
+                        <p class="text-xs text-gray-400 font-bold uppercase">Phone: <span class="text-white">${request.parentPhone || "-"}</span></p>
+
+                        ${request.registrationCode ? `
+                            <div class="mt-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                                <p class="text-[9px] font-black uppercase tracking-widest text-yellow-300 mb-1">
+                                    Parent Registration Code
+                                </p>
+                                <p class="text-xl font-black text-white tracking-widest">
+                                    ${request.registrationCode}
+                                </p>
+                            </div>
+                        ` : ""}
+
+                        <div class="flex gap-2 flex-wrap pt-3">
+                            ${status === "pending" ? `
+                                <button
+                                    onclick="window.approveParentAccessRequest('${requestId}', '${athleteId}', '${athleteName}', '${parentName}', '${parentEmail}', '${parentPhone}', '${relationship}', this)"
+                                    class="bg-white/5 hover:bg-green-700 border border-white/10 text-[8px] font-black px-3 py-2 rounded-md text-white transition-all uppercase tracking-tighter">
+                                    Approve Access
+                                </button>
+
+                                <button
+                                    onclick="window.rejectParentAccessRequest('${requestId}', this)"
+                                    class="bg-white/5 hover:bg-red-700 border border-white/10 text-[8px] font-black px-3 py-2 rounded-md text-white transition-all uppercase tracking-tighter">
+                                    Reject
+                                </button>
+                            ` : ""}
+
+                            ${status === "approved" ? `
+                                <button
+                                    onclick="window.hideParentAccessRequest('${requestId}', this)"
+                                    class="bg-white/5 hover:bg-gray-700 border border-white/10 text-[8px] font-black px-3 py-2 rounded-md text-white transition-all uppercase tracking-tighter">
+                                    Remove From Screen
+                                </button>
+                            ` : ""}
+                        </div>
+                    </div>
+                `;
+
+                performanceFeed.appendChild(card);
+            });
 
             setReviewStatus("Parent Requests Loaded", "success");
         } catch (err) {
             console.error("Parent request load error:", err);
-
-            if (queueContainer) {
-                queueContainer.innerHTML = `
-                    <div class="rounded-2xl border border-red-500/20 bg-red-500/10 p-8 text-center">
-                        <p class="text-xs font-black uppercase tracking-widest text-red-300">
-                            Unable to load parent access requests.
-                        </p>
-                    </div>
-                `;
-            }
-
+            renderFeedMessage("Unable to load parent access requests.", "error");
             setReviewStatus("Parent Request Load Failed", "error");
         }
     };
 
-    window.approveParentAccessRequest = async function(requestId, btnElement) {
-    const originalText = btnElement.innerText;
-    btnElement.innerText = "APPROVING...";
-    btnElement.disabled = true;
+    window.approveParentAccessRequest = async function(
+        requestId,
+        athleteId,
+        athleteName,
+        parentName,
+        parentEmail,
+        parentPhone,
+        relationship,
+        btnElement
+    ) {
+        const originalText = btnElement.innerText;
+        btnElement.innerText = "APPROVING...";
+        btnElement.disabled = true;
 
-    hidePageMessage();
-    setReviewStatus("Approving Parent Access...");
+        hidePageMessage();
+        setReviewStatus("Approving Parent Access...");
 
-    try {
-        const requestRef = doc(db, "parent_access_requests", requestId);
-        const requestSnap = await getDoc(requestRef);
+        try {
+            await appCheckReady;
 
-        if (!requestSnap.exists()) {
-            throw new Error("Parent request could not be found.");
+            const registrationCode = generateParentRegistrationCode();
+
+            const linkPayload = {
+                athleteId,
+                athleteName,
+                parentName,
+                parentEmail: String(parentEmail || "").toLowerCase().trim(),
+                parentPhone,
+                relationship,
+                schoolId: currentSchoolId,
+                school_id: currentSchoolId,
+                approvedBy: auth.currentUser?.uid || null,
+                approvedAt: serverTimestamp(),
+                status: "active",
+                registrationCode,
+                registrationCodeUsed: false
+            };
+
+            console.log("PARENT LINK PAYLOAD:", linkPayload);
+
+            await addDoc(collection(db, "parent_links"), linkPayload);
+
+            await updateDoc(doc(db, "parent_access_requests", requestId), {
+                status: "approved",
+                reviewedAt: serverTimestamp(),
+                reviewedBy: auth.currentUser?.uid || null,
+                registrationCode,
+                parentEmail: String(parentEmail || "").toLowerCase().trim()
+            });
+
+            btnElement.innerText = "APPROVED ✓";
+            btnElement.classList.remove("bg-white/5", "hover:bg-green-700");
+            btnElement.classList.add("bg-green-600");
+
+            showPageMessage(`Parent access approved. Registration Code: ${registrationCode}`, "success");
+            setReviewStatus("Parent Access Approved", "success");
+
+            await loadParentAccessRequests();
+
+        } catch (err) {
+            console.error("Parent approval error:", err);
+            btnElement.innerText = originalText;
+            btnElement.disabled = false;
+            showPageMessage(`Parent access could not be approved. ${err.message}`, "error");
+            setReviewStatus("Approval Failed", "error");
         }
-
-        const request = requestSnap.data();
-
-        const registrationCode = `PARENT-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-
-        await addDoc(collection(db, "parent_links"), {
-            athleteId: request.athleteId,
-            athleteName: request.athleteName || "Unknown Athlete",
-            parentName: request.parentName || "",
-            parentEmail: String(request.parentEmail || "").toLowerCase().trim(),
-            parentPhone: request.parentPhone || "",
-            relationship: request.relationship || "",
-            schoolId: request.schoolId || request.school_id || currentSchoolId,
-            school_id: request.schoolId || request.school_id || currentSchoolId,
-            approvedBy: auth.currentUser?.uid || null,
-            approvedAt: serverTimestamp(),
-            status: "active",
-            registrationCode,
-            registrationCodeUsed: false
-        });
-
-        await updateDoc(requestRef, {
-            status: "approved",
-            reviewedAt: serverTimestamp(),
-            reviewedBy: auth.currentUser?.uid || null,
-            registrationCode
-        });
-
-        showPageMessage(`Parent access approved. Code: ${registrationCode}`, "success");
-        setReviewStatus("Parent Access Approved", "success");
-
-        await window.loadParentAccessRequests();
-        await loadWorkouts();
-
-    } catch (err) {
-        console.error("Parent approval error:", err);
-        btnElement.innerText = originalText;
-        btnElement.disabled = false;
-        showPageMessage(err.message || "Parent access could not be approved.", "error");
-        setReviewStatus("Approval Failed", "error");
-    }
-};
+    };
 
     window.hideParentAccessRequest = async function(requestId, btnElement) {
         const originalText = btnElement.innerText;
@@ -1114,23 +1054,23 @@
         btnElement.disabled = true;
 
         try {
-            const requestRef = doc(db, "parent_access_requests", requestId);
+            await appCheckReady;
 
-            await updateDoc(requestRef, {
-                hiddenFromCoach: true
+            await updateDoc(doc(db, "parent_access_requests", requestId), {
+                hiddenFromCoach: true,
+                hiddenFromCoachAt: serverTimestamp(),
+                hiddenFromCoachBy: auth.currentUser?.uid || null
             });
 
-            await window.loadParentAccessRequests();
+            await loadParentAccessRequests();
             await loadWorkouts();
-
         } catch (err) {
-            console.error("Hide error:", err);
+            console.error("Hide parent request error:", err);
             btnElement.innerText = originalText;
             btnElement.disabled = false;
-            showPageMessage("Unable to remove request.", "error");
+            showPageMessage("Parent request could not be removed from the screen.", "error");
         }
     };
-
     window.rejectParentAccessRequest = async function(requestId, btnElement) {
         const originalText = btnElement.innerText;
         btnElement.innerText = "REJECTING...";
@@ -1140,26 +1080,27 @@
         setReviewStatus("Rejecting Parent Request...");
 
         try {
-            const requestRef = doc(db, "parent_access_requests", requestId);
+            await appCheckReady;
 
-            await updateDoc(requestRef, {
+            await updateDoc(doc(db, "parent_access_requests", requestId), {
                 status: "rejected",
                 reviewedAt: serverTimestamp(),
                 reviewedBy: auth.currentUser?.uid || null
             });
 
-            showPageMessage("Parent access request rejected.", "warn");
-            setReviewStatus("Request Rejected", "success");
+            btnElement.innerText = "REJECTED ✓";
+            btnElement.classList.remove("bg-white/5", "hover:bg-red-700");
+            btnElement.classList.add("bg-red-600");
 
-            await window.loadParentAccessRequests();
+            showPageMessage("Parent request rejected.", "success");
+            setReviewStatus("Parent Request Rejected", "success");
             await loadWorkouts();
-
         } catch (err) {
-            console.error("Reject error:", err);
+            console.error("Parent rejection error:", err);
             btnElement.innerText = originalText;
             btnElement.disabled = false;
-            showPageMessage("Unable to reject request.", "error");
-            setReviewStatus("Reject Failed", "error");
+            showPageMessage("Parent request could not be rejected.", "error");
+            setReviewStatus("Rejection Failed", "error");
         }
     };
 
@@ -1468,36 +1409,6 @@
             btnElement.disabled = false;
             if (siblingApprove) siblingApprove.disabled = false;
         }
-    };
-
-    const tabParent = document.getElementById('tab-parent-requests');
-    const tabRack = document.getElementById('tab-rack-reviews');
-    const tabWorkout = document.getElementById('tab-workout-reviews');
-
-    const queueContainer = document.getElementById('review-queue-container'); // you already have this or similar
-
-    function setActiveTab(activeTab) {
-        document.querySelectorAll('.review-tab').forEach(tab => {
-            tab.classList.remove('border-red-600');
-            tab.classList.add('border-[#2a2a2c]');
-        });
-
-        activeTab.classList.add('border-red-600');
-    }
-
-    tabParent.onclick = () => {
-        setActiveTab(tabParent);
-        loadParentAccessRequests(); // you already have this
-    };
-
-    tabRack.onclick = () => {
-        setActiveTab(tabRack);
-        loadPendingRackReviews(); // existing function
-    };
-
-    tabWorkout.onclick = () => {
-        setActiveTab(tabWorkout);
-        loadPerformance(); // existing function
     };
 </script>
 </body>
