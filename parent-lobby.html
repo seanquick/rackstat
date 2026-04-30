@@ -293,6 +293,22 @@
                 console.warn("Meal load skipped:", mealErr);
             }
 
+            let recentPRs = [];
+
+            try {
+                const prQuery = query(
+                    collection(db, "approved_max_reviews"),
+                    where("athleteId", "==", athleteId),
+                    orderBy("reviewedAt", "desc"),
+                    limit(5)
+                );
+
+                const prSnap = await getDocs(prQuery);
+                recentPRs = prSnap.docs.map(doc => doc.data());
+            } catch (err) {
+                console.warn("PR load skipped:", err);
+            }
+
              // --------------------
             // BUILD WORKOUT ROWS
             // --------------------
@@ -329,6 +345,32 @@
                     No recent meals logged.
                 </p>`;
 
+
+                const prRows = recentPRs.length
+                    ? recentPRs.map(pr => `
+                        <div class="flex justify-between border-b border-white/5 py-2 last:border-0">
+                            <div class="flex flex-col">
+                                <span class="text-xs text-white font-black uppercase">
+                                    ${pr.exerciseName || pr.exerciseKey || "Lift"}
+                                </span>
+                                <span class="text-[9px] text-gray-500 font-bold uppercase">
+                                    Verified PR
+                                </span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-sm text-green-400 font-black">
+                                    ${pr.attemptedWeight || 0} LBS
+                                </span>
+                                <p class="text-[9px] text-gray-600 font-bold uppercase">
+                                    ${formatDate(pr.reviewedAt)}
+                                </p>
+                            </div>
+                        </div>
+                    `).join("")
+                    : `<p class="text-xs text-gray-600 font-bold uppercase tracking-widest">
+                        No verified PRs yet.
+                    </p>`;
+                    
             // --------------------
             // RENDER UI
             // --------------------
@@ -362,7 +404,7 @@
                         ${metricBox("Last Sync", formatDate(maxes.lastUpdated || athlete.lastUpdated))}
                     </div>
 
-                    <div class="grid md:grid-cols-2 gap-6">
+                    <div class="grid md:grid-cols-3 gap-6">
                         <div class="portal-card p-5">
                             <h4 class="text-sm font-black uppercase italic mb-4 text-[var(--school-primary)]">
                                 Recent Workouts
@@ -376,6 +418,14 @@
                             </h4>
                             ${mealRows}
                         </div>
+
+                        <div class="portal-card p-5">
+                            <h4 class="text-sm font-black uppercase italic mb-4 text-green-400">
+                                Verified PRs
+                            </h4>
+                            ${prRows}
+                        </div>
+
                     </div>
                 </div>
             `;
