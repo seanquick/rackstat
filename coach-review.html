@@ -1050,10 +1050,33 @@
 
             const snap = await getDocs(q);
 
-            const requestDocs = snap.docs.filter((docSnap) => {
-                const request = docSnap.data();
-                return request.hiddenFromCoach !== true;
-            });
+            const requestDocs = snap.docs
+                .filter((docSnap) => {
+                    const request = docSnap.data();
+                    return request.hiddenFromCoach !== true;
+                })
+                .sort((a, b) => {
+                    const order = {
+                        pending: 0,
+                        approved: 1,
+                        rejected: 2
+                    };
+
+                    const dataA = a.data();
+                    const dataB = b.data();
+
+                    const statusA = String(dataA.status || "pending").toLowerCase();
+                    const statusB = String(dataB.status || "pending").toLowerCase();
+
+                    if (statusA !== statusB) {
+                        return (order[statusA] ?? 99) - (order[statusB] ?? 99);
+                    }
+
+                    const timeA = dataA.requestedAt?.seconds || 0;
+                    const timeB = dataB.requestedAt?.seconds || 0;
+
+                    return timeB - timeA; // newest first
+                });
 
             if (statCount) {
                 statCount.innerText = `${requestDocs.length} Request${requestDocs.length === 1 ? "" : "s"}`;
