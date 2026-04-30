@@ -250,6 +250,16 @@
         statsHeader.classList.toggle('hidden', !show);
     }
 
+    function showQueueView(type) {
+        if (type === "parents") {
+            queueContainer.classList.remove("hidden");
+            performanceFeed.classList.add("hidden");
+        } else {
+            queueContainer.classList.add("hidden");
+            performanceFeed.classList.remove("hidden");
+        }
+    }
+
     async function getReviewDecision(athleteId, workoutId, exerciseKey, attemptedWeight) {
         if (!currentSchoolId) return null;
 
@@ -596,7 +606,8 @@
             }
 
             await loadWorkouts();
-            await window.loadParentAccessRequests();    
+            showQueueView("parents");
+            await window.loadParentAccessRequests(); 
 
             setReviewStatus("Ready", "success");
         } catch (err) {
@@ -1489,20 +1500,24 @@
 
     tabParent.onclick = () => {
         setActiveTab(tabParent);
-        loadParentAccessRequests(); // you already have this
+        showQueueView("parents");
+        window.loadParentAccessRequests();
     };
 
     tabRack.onclick = () => {
         setActiveTab(tabRack);
-        loadPendingRackReviews(); // existing function
+        showQueueView("rack");
+        window.loadPendingRackReviews();
     };
 
     tabWorkout.onclick = () => {
         setActiveTab(tabWorkout);
+        showQueueView("workout");
         currentViewMode = "workout";
         loadWorkouts();
         renderFeedMessage("Select a workout session from the left queue.");
     };
+
 </script>
 </body>
 </html>
