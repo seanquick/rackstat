@@ -479,16 +479,17 @@
         await appCheckReady;
 
         let schoolSnap;
-        let manualSnap;
+        let manualSnap = { exists: () => false };
 
         try {
-            [schoolSnap, manualSnap] = await Promise.all([
-                getDoc(doc(db, "schools", schoolId)),
-                getDoc(doc(db, "schools", schoolId, "settings", "manual_records"))
-            ]);
+            schoolSnap = await getDoc(doc(db, "schools", schoolId));
         } catch (err) {
-            console.warn("Board settings load error:", err);
-            manualSnap = { exists: () => false };
+            console.error("School document load error:", err);
+            setBoardStatus("School Load Failed", "error");
+            showPageMessage("This school's board settings could not be loaded.", "error");
+            renderGridMessage("Board Unavailable", "error");
+            renderRecordTableMessage("School settings could not be loaded.", "error");
+            return;
         }
 
         if (!schoolSnap || !schoolSnap.exists()) {
@@ -503,6 +504,37 @@
         }
 
         const school = schoolSnap.data();
+
+        if (school.active === false) {
+            setBoardStatus("Program Inactive", "error");
+            showPageMessage("This school/team is currently inactive.", "error");
+            renderGridMessage("Board Unavailable", "error");
+            renderRecordTableMessage("This school/team is currently inactive.", "error");
+
+            if (schoolTag) {
+                schoolTag.innerText = `${school.name || "School"} Inactive`.toUpperCase();
+            }
+
+            if (formulaDisplay) {
+                formulaDisplay.innerText = "Inactive";
+            }
+
+            if (athleteCountDisplay) {
+                athleteCountDisplay.innerText = "0 Athletes";
+            }
+
+            return;
+        }
+
+        try {
+            manualSnap = await getDoc(
+                doc(db, "schools", schoolId, "settings", "manual_records")
+            );
+        } catch (err) {
+            console.warn("Manual board records unavailable:", err);
+            manualSnap = { exists: () => false };
+        }
+
         const manualRecords = manualSnap.exists() ? manualSnap.data() : {};
         const boardSettings = buildBoardScoreSettings(school);
 
