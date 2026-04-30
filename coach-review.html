@@ -1109,63 +1109,80 @@
         }
     };
 
+    window.loadAthleteAlerts = async function() {
+        currentViewMode = "alerts";
+        currentWorkoutId = null;
+
+        hidePageMessage();
+        setReviewStatus("Loading Athlete Alerts...");
+        setStatsVisible(false);
+
+        performanceFeed.innerHTML = `
+            <div class="text-center py-20 border-2 border-dashed border-[#2a2a2c] rounded-3xl">
+                <p class="text-gray-500 uppercase text-xs font-bold tracking-widest">
+                    Athlete alerts coming next...
+                </p>
+            </div>
+        `;
+    };
+
     window.approveParentAccessRequest = async function(requestId, btnElement) {
-    const originalText = btnElement.innerText;
-    btnElement.innerText = "APPROVING...";
-    btnElement.disabled = true;
+        const originalText = btnElement.innerText;
+        btnElement.innerText = "APPROVING...";
+        btnElement.disabled = true;
 
-    hidePageMessage();
-    setReviewStatus("Approving Parent Access...");
+        hidePageMessage();
+        setReviewStatus("Approving Parent Access...");
 
-    try {
-        const requestRef = doc(db, "parent_access_requests", requestId);
-        const requestSnap = await getDoc(requestRef);
+        try {
+            const requestRef = doc(db, "parent_access_requests", requestId);
+            const requestSnap = await getDoc(requestRef);
 
-        if (!requestSnap.exists()) {
-            throw new Error("Parent request could not be found.");
+            if (!requestSnap.exists()) {
+                throw new Error("Parent request could not be found.");
+            }
+
+            const request = requestSnap.data();
+
+            const registrationCode = `PARENT-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+            await addDoc(collection(db, "parent_links"), {
+                athleteId: request.athleteId,
+                athleteName: request.athleteName || "Unknown Athlete",
+                parentName: request.parentName || "",
+                parentEmail: String(request.parentEmail || "").toLowerCase().trim(),
+                parentPhone: request.parentPhone || "",
+                relationship: request.relationship || "",
+                schoolId: request.schoolId || request.school_id || currentSchoolId,
+                school_id: request.schoolId || request.school_id || currentSchoolId,
+                approvedBy: auth.currentUser?.uid || null,
+                approvedAt: serverTimestamp(),
+                status: "active",
+                registrationCode,
+                registrationCodeUsed: false
+            });
+
+            await updateDoc(requestRef, {
+                status: "approved",
+                reviewedAt: serverTimestamp(),
+                reviewedBy: auth.currentUser?.uid || null,
+                registrationCode
+            });
+
+            showPageMessage(`Parent access approved. Code: ${registrationCode}`, "success");
+            setReviewStatus("Parent Access Approved", "success");
+
+            await window.loadParentAccessRequests();
+            await loadWorkouts();
+
+        } catch (err) {
+            console.error("Parent approval error:", err);
+            btnElement.innerText = originalText;
+            btnElement.disabled = false;
+            showPageMessage(err.message || "Parent access could not be approved.", "error");
+            setReviewStatus("Approval Failed", "error");
         }
-
-        const request = requestSnap.data();
-
-        const registrationCode = `PARENT-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-
-        await addDoc(collection(db, "parent_links"), {
-            athleteId: request.athleteId,
-            athleteName: request.athleteName || "Unknown Athlete",
-            parentName: request.parentName || "",
-            parentEmail: String(request.parentEmail || "").toLowerCase().trim(),
-            parentPhone: request.parentPhone || "",
-            relationship: request.relationship || "",
-            schoolId: request.schoolId || request.school_id || currentSchoolId,
-            school_id: request.schoolId || request.school_id || currentSchoolId,
-            approvedBy: auth.currentUser?.uid || null,
-            approvedAt: serverTimestamp(),
-            status: "active",
-            registrationCode,
-            registrationCodeUsed: false
-        });
-
-        await updateDoc(requestRef, {
-            status: "approved",
-            reviewedAt: serverTimestamp(),
-            reviewedBy: auth.currentUser?.uid || null,
-            registrationCode
-        });
-
-        showPageMessage(`Parent access approved. Code: ${registrationCode}`, "success");
-        setReviewStatus("Parent Access Approved", "success");
-
-        await window.loadParentAccessRequests();
-        await loadWorkouts();
-
-    } catch (err) {
-        console.error("Parent approval error:", err);
-        btnElement.innerText = originalText;
-        btnElement.disabled = false;
-        showPageMessage(err.message || "Parent access could not be approved.", "error");
-        setReviewStatus("Approval Failed", "error");
-    }
-};
+    };
 
     window.hideParentAccessRequest = async function(requestId, btnElement) {
         const originalText = btnElement.innerText;
@@ -1532,6 +1549,7 @@
     const tabParent = document.getElementById('tab-parent-requests');
     const tabRack = document.getElementById('tab-rack-reviews');
     const tabWorkout = document.getElementById('tab-workout-reviews');
+    const tabAlerts = document.getElementById('tab-athlete-alerts');
 
     const queueContainer = document.getElementById('review-queue-container'); // you already have this or similar
 
@@ -1562,6 +1580,11 @@
         currentViewMode = "workout";
         loadWorkouts();
         renderFeedMessage("Select a workout session from the left queue.");
+    };
+
+    tabAlerts.onclick = () => {
+        setActiveTab(tabAlerts);
+        loadAthleteAlerts();
     };
 
 </script>
