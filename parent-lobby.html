@@ -296,6 +296,8 @@
                 const startOfWeek = new Date(now);
                 startOfWeek.setDate(now.getDate() - 7);
 
+                let lastWorkoutDate = null;
+
                 snap.forEach(doc => {
                     const w = doc.data();
                     const date = w.timestamp?.toDate?.() || new Date(w.timestamp);
@@ -306,8 +308,30 @@
                         if (date >= startOfWeek) {
                             weeklyStats.thisWeek++;
                         }
+
+                        // THIS is what you were missing
+                        if (!lastWorkoutDate || date > lastWorkoutDate) {
+                            lastWorkoutDate = date;
+                        }
                     }
                 });
+
+                let activityStatus = "inactive";
+                let activityColor = "text-red-400";
+
+                if (lastWorkoutDate) {
+                    const diffDays = Math.floor(
+                        (Date.now() - lastWorkoutDate.getTime()) / (1000 * 60 * 60 * 24)
+                    );
+
+                    if (diffDays <= 2) {
+                        activityStatus = "active";
+                        activityColor = "text-green-400";
+                    } else if (diffDays <= 5) {
+                        activityStatus = "slowing";
+                        activityColor = "text-yellow-300";
+                    }
+                }
 
             } catch (err) {
                 console.warn("Weekly stats skipped:", err);
@@ -345,14 +369,14 @@
                 console.warn("PR load skipped:", err);
             }
 
-
             const weeklySummary = `
                 <div class="portal-card p-5 mb-6">
                     <h4 class="text-sm font-black uppercase italic mb-4 text-[var(--school-primary)]">
                         Weekly Activity
                     </h4>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-3 gap-4">
+
                         <div class="bg-black/30 border border-white/10 rounded-xl p-4">
                             <span class="block text-[9px] text-gray-500 font-black uppercase tracking-widest">
                                 Workouts (7 Days)
@@ -364,12 +388,22 @@
 
                         <div class="bg-black/30 border border-white/10 rounded-xl p-4">
                             <span class="block text-[9px] text-gray-500 font-black uppercase tracking-widest">
-                                Recent Activity
+                                Last Workout
                             </span>
-                            <span class="text-2xl font-black italic text-white">
-                                ${weeklyStats.total}
+                            <span class="text-sm font-black text-white">
+                                ${lastWorkoutDate ? formatDate(lastWorkoutDate) : "--"}
                             </span>
                         </div>
+
+                        <div class="bg-black/30 border border-white/10 rounded-xl p-4">
+                            <span class="block text-[9px] text-gray-500 font-black uppercase tracking-widest">
+                                Status
+                            </span>
+                            <span class="text-sm font-black uppercase ${activityColor}">
+                                ${activityStatus}
+                            </span>
+                        </div>
+
                     </div>
                 </div>
             `;
