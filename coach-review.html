@@ -1117,13 +1117,132 @@
         setReviewStatus("Loading Athlete Alerts...");
         setStatsVisible(false);
 
+        showQueueView("rack");
+
         performanceFeed.innerHTML = `
-            <div class="text-center py-20 border-2 border-dashed border-[#2a2a2c] rounded-3xl">
-                <p class="text-gray-500 uppercase text-xs font-bold tracking-widest">
-                    Athlete alerts coming next...
-                </p>
+            <div class="text-center py-10 animate-pulse uppercase text-xs font-black text-gray-500 tracking-widest">
+                Scanning athlete activity...
             </div>
         `;
+
+        try {
+            const athleteQuery = query(
+                collection(db, "recruiting_profiles"),
+                where("schoolId", "==", currentSchoolId),
+                limit(250)
+            );
+
+            let athleteSnap = await getDocs(athleteQuery);
+
+            if (athleteSnap.empty) {
+                const fallbackQuery = query(
+                    collection(db, "recruiting_profiles"),
+                    where("school_id", "==", currentSchoolId),
+                    limit(250)
+                );
+
+                athleteSnap = await getDocs(fallbackQuery);
+            }
+
+            const alerts = [];
+            const now = new Date();
+
+            for (const athleteDoc of athleteSnap.docs) {
+                const athleteId = athleteDoc.id;
+                const athleteData = athleteDoc.data();
+
+                if (athleteData.active === false) continue;
+
+                const workoutsQuery = query(
+                    collection(db, "completed_workouts"),
+                    where("athleteId", "==", athleteId),
+                    orderBy("timestamp", "desc"),
+                    limit(1)
+                );
+
+                const workoutSnap = await getDocs(workoutsQuery);
+
+                let lastWorkoutDate = null;
+                let daysInactive = null;
+
+                if (!workoutSnap.empty) {
+                    const workout = workoutSnap.docs[0].data();
+                    const rawDate = workout.timestamp;
+                    lastWorkoutDate = rawDate?.toDate ? rawDate.toDate() : new Date(rawDate);
+
+                    if (!Number.isNaN(lastWorkoutDate.getTime())) {
+                        daysInactive = Math.floor(
+                            (now.getTime() - lastWorkoutDate.getTime()) / (1000 * 60 * 60 * 24)
+                        );
+                    }
+                }
+
+                if (!lastWorkoutDate || daysInactive >= 5) {
+                    alerts.push({
+                        athleteId,
+                        athleteName: getDisplayName(athleteData),
+                        daysInactive,
+                        lastWorkoutDate
+                    });
+                }
+            }
+
+            alerts.sort((a, b) => {
+                if (a.daysInactive === null) return -1;
+                if (b.daysInactive === null) return 1;
+                return b.daysInactive - a.daysInactive;
+            });
+
+            const alertCountEl = document.getElementById("athlete-alert-count");
+            if (alertCountEl) {
+                alertCountEl.innerText = `${alerts.length} Alert${alerts.length === 1 ? "" : "s"}`;
+            }
+
+            statCount.innerText = `${alerts.length} Alert${alerts.length === 1 ? "" : "s"}`;
+            setStatsVisible(true);
+
+            if (!alerts.length) {
+                renderFeedMessage("No inactive athlete alerts found.", "success");
+                setReviewStatus("No Athlete Alerts", "success");
+                return;
+            }
+
+            performanceFeed.innerHTML = alerts.map(alert => `
+                <div class="bg-[#111113] border border-red-500/20 rounded-2xl p-5 shadow-xl">
+                    <div class="flex justify-between items-start gap-4 flex-wrap">
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-widest text-red-400">
+                                Inactivity Alert
+                            </p>
+                            <h3 class="text-xl font-black uppercase italic text-white mt-1">
+                                ${alert.athleteName}
+                            </h3>
+                            <p class="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">
+                                ${alert.lastWorkoutDate ? `Last workout: ${alert.lastWorkoutDate.toLocaleDateString()}` : "No workout history found"}
+                            </p>
+                        </div>
+
+                        <div class="text-right">
+                            <span class="block text-[9px] font-black uppercase tracking-widest text-gray-500">
+                                Inactive
+                            </span>
+                            <span class="text-3xl font-black italic text-red-400">
+                                ${alert.daysInactive === null ? "NEW" : alert.daysInactive}
+                            </span>
+                            <p class="text-[9px] text-gray-500 font-bold uppercase">
+                                ${alert.daysInactive === null ? "No Logs" : "Days"}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `).join("");
+
+            setReviewStatus("Athlete Alerts Loaded", "success");
+        } catch (err) {
+            console.error("Athlete alerts error:", err);
+            renderFeedMessage("Unable to load athlete alerts.", "error");
+            setReviewStatus("Athlete Alerts Failed", "error");
+        }
     };
 
     window.approveParentAccessRequest = async function(requestId, btnElement) {
