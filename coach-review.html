@@ -1143,54 +1143,62 @@
                 athleteSnap = await getDocs(athleteQuery);
             }
 
+            let workoutQuery = query(
+                collection(db, "completed_workouts"),
+                where("schoolId", "==", currentSchoolId),
+                limit(500)
+            );
+
+            let workoutSnap = await getDocs(workoutQuery);
+
+            if (workoutSnap.empty) {
+                workoutQuery = query(
+                    collection(db, "completed_workouts"),
+                    where("school_id", "==", currentSchoolId),
+                    limit(500)
+                );
+
+                workoutSnap = await getDocs(workoutQuery);
+            }
+
+            const latestWorkoutByAthlete = new Map();
+
+            workoutSnap.docs.forEach(docSnap => {
+                const workout = docSnap.data();
+                const athleteId = workout.athleteId || workout.uid;
+
+                if (!athleteId) return;
+
+                const rawDate = workout.timestamp || workout.createdAt || workout.completedAt;
+                const workoutDate = rawDate?.toDate ? rawDate.toDate() : new Date(rawDate);
+
+                if (Number.isNaN(workoutDate.getTime())) return;
+
+                const currentLatest = latestWorkoutByAthlete.get(athleteId);
+
+                if (!currentLatest || workoutDate > currentLatest) {
+                    latestWorkoutByAthlete.set(athleteId, workoutDate);
+                }
+            });
+
             const alerts = [];
             const now = new Date();
 
-            for (const athleteDoc of athleteSnap.docs) {
+            athleteSnap.docs.forEach(athleteDoc => {
                 const athleteId = athleteDoc.id;
                 const athleteData = athleteDoc.data();
 
-                if (athleteData.active === false) continue;
+                if (athleteData.active === false) return;
 
-                let workoutsQuery = query(
-                    collection(db, "completed_workouts"),
-                    where("schoolId", "==", currentSchoolId),
-                    where("athleteId", "==", athleteId),
-                    orderBy("timestamp", "desc"),
-                    limit(1)
-                );
+                const lastWorkoutDate = latestWorkoutByAthlete.get(athleteId) || null;
 
-                let workoutSnap = await getDocs(workoutsQuery);
-
-                if (workoutSnap.empty) {
-                    workoutsQuery = query(
-                        collection(db, "completed_workouts"),
-                        where("school_id", "==", currentSchoolId),
-                        where("athleteId", "==", athleteId),
-                        orderBy("timestamp", "desc"),
-                        limit(1)
-                    );
-
-                    workoutSnap = await getDocs(workoutsQuery);
-                }
-
-                let lastWorkoutDate = null;
                 let daysInactive = null;
 
-                if (!workoutSnap.empty) {
-                    const workout = workoutSnap.docs[0].data();
-                    const rawDate = workout.timestamp;
-
-                    lastWorkoutDate = rawDate?.toDate
-                        ? rawDate.toDate()
-                        : new Date(rawDate);
-
-                    if (!Number.isNaN(lastWorkoutDate.getTime())) {
-                        daysInactive = Math.floor(
-                            (now.getTime() - lastWorkoutDate.getTime()) /
-                            (1000 * 60 * 60 * 24)
-                        );
-                    }
+                if (lastWorkoutDate) {
+                    daysInactive = Math.floor(
+                        (now.getTime() - lastWorkoutDate.getTime()) /
+                        (1000 * 60 * 60 * 24)
+                    );
                 }
 
                 if (!lastWorkoutDate || daysInactive >= 5) {
@@ -1201,7 +1209,7 @@
                         lastWorkoutDate
                     });
                 }
-            }
+            });
 
             alerts.sort((a, b) => {
                 if (a.daysInactive === null) return -1;
@@ -1209,8 +1217,8 @@
                 return b.daysInactive - a.daysInactive;
             });
 
-            const alertCountEl = document.getElementById("athlete-alert-count");
             const countText = `${alerts.length} Alert${alerts.length === 1 ? "" : "s"}`;
+            const alertCountEl = document.getElementById("athlete-alert-count");
 
             if (alertCountEl) alertCountEl.innerText = countText;
             if (statCount) statCount.innerText = countText;
@@ -1268,6 +1276,7 @@
             setReviewStatus("Athlete Alerts Failed", "error");
         }
     };
+
     window.approveParentAccessRequest = async function(requestId, btnElement) {
         const originalText = btnElement.innerText;
         btnElement.innerText = "APPROVING...";
