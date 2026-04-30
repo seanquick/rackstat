@@ -192,26 +192,23 @@ body {
     padding: 1.5rem;
     border-radius: 1rem;
 
-    /* CORE CHANGE */
-    color: var(--school-secondary); /* text now uses secondary (dark) */
+    /* ALL BUTTONS NOW USE PRIMARY */
+    background-color: var(--school-primary);
+    color: var(--school-secondary);
+
     font-weight: 900;
     font-style: italic;
     text-transform: uppercase;
     letter-spacing: -0.03em;
 
-    background-color: var(--school-primary);
-
-    /* NEW: white outline */
     border: 2px solid #ffffff;
-
-    /* depth */
     border-bottom: 4px solid rgba(0,0,0,0.4);
 
     box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.6),               /* depth */
-    0 0 10px color-mix(in srgb, var(--school-primary) 40%, transparent); /* glow */
+        0 4px 14px rgba(0, 0, 0, 0.6),
+        0 0 10px color-mix(in srgb, var(--school-primary) 40%, transparent);
 
-    transition: transform 0.15s ease, filter 0.15s ease;
+    transition: all 0.15s ease;
 }
 
 .lobby-btn:hover {
@@ -219,8 +216,8 @@ body {
     filter: brightness(1.1);
 
     box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.6),               /* depth */
-    0 0 10px color-mix(in srgb, var(--school-primary) 40%, transparent); /* glow */
+        0 6px 18px rgba(0, 0, 0, 0.7),
+        0 0 16px color-mix(in srgb, var(--school-primary) 60%, transparent);
 }
 
 .lobby-btn-primary {

@@ -474,9 +474,6 @@
             const clubStartRaw = parseInt(document.getElementById('club-start').value, 10);
             const clubStart = Number.isFinite(clubStartRaw) && clubStartRaw > 0 ? clubStartRaw : 50;
 
-        console.log("DEBUG USER ROLE:", auth.currentUser?.uid, auth.currentUser?.email);
-        console.log("DEBUG SAVE:", {schoolDocId, coachSchoolId: schoolId, loadedSchoolData });
-
         await updateDoc(doc(db, "schools", schoolDocId), {
             colors: { primary, secondary },
             primaryColor: primary,
