@@ -55,7 +55,7 @@
 </main>
 
 <script type="module">
-    import { db, auth } from './js/firebase-config.js';
+    import { db, auth, appCheckReady } from './js/firebase-config.js';
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { collection, getDocs, doc, getDoc, query, where, addDoc, serverTimestamp, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -234,6 +234,8 @@
             const user = auth.currentUser;
             if (!user) return;
 
+            await appCheckReady;
+
             const userSnap = await getDoc(doc(db, "users", user.uid));
             const userData = userSnap.exists() ? userSnap.data() : {};
             const schoolId = userData.schoolId || userData.school_id || "";
@@ -255,6 +257,8 @@
 
     async function loadData(type) {
         if (!coachSchoolId || !table) return;
+
+        await appCheckReady;
 
         await logDataAccess({
             action: type === 'rack' ? "view_team_lift_analytics" : "view_team_meal_analytics",
@@ -389,7 +393,7 @@
                 );
 
                 showPageMessage(
-                    type === 'rack' ? "No approved max records are available yet." : "No kitchen entries are available yet.",
+                    type === 'rack' ? "No max records are available yet." : "No kitchen entries are available yet.",
                     "warn"
                 );
 
@@ -434,6 +438,8 @@
             return;
         }
 
+        await appCheckReady;
+
         await logDataAccess({
             action: currentTab === 'rack' ? "export_team_lift_analytics" : "export_team_meal_analytics",
             reason: "coach_exported_csv"
@@ -453,6 +459,8 @@
         }
 
         try {
+            await appCheckReady;
+
             const userDoc = await getDoc(doc(db, "users", user.uid));
 
             if (!userDoc.exists()) {

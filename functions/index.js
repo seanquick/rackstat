@@ -16,11 +16,10 @@ const allowedOrigins = [
   "http://localhost:5000",
   "http://localhost:5173",
 ];
-
 /**
- * Applies CORS headers for approved origins.
- * @param {object} req Express request object.
- * @param {object} res Express response object.
+ * Apply CORS headers for allowed origins.
+ * @param {object} req Express request
+ * @param {object} res Express response
  */
 function setCorsHeaders(req, res) {
   const origin = req.headers.origin;
@@ -33,12 +32,11 @@ function setCorsHeaders(req, res) {
   res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
 }
-
 /**
- * Sends a normalized JSON error response.
- * @param {object} res Express response object.
- * @param {number} status HTTP status code.
- * @param {string} message Error message.
+ * Send standardized JSON error response.
+ * @param {object} res Express response
+ * @param {number} status HTTP status code
+ * @param {string} message Error message
  */
 function sendError(res, status, message) {
   res.status(status).json({
@@ -46,11 +44,10 @@ function sendError(res, status, message) {
     message,
   });
 }
-
 /**
- * Verifies Firebase Auth bearer token from request headers.
- * @param {object} req Express request object.
- * @return {Promise<object>} Decoded Firebase Auth token.
+ * Verify Firebase Auth bearer token.
+ * @param {object} req Express request
+ * @return {Promise<object>} Decoded token
  */
 async function verifyBearerToken(req) {
   const authHeader = req.headers.authorization || "";
@@ -67,7 +64,11 @@ async function verifyBearerToken(req) {
 
   return admin.auth().verifyIdToken(idToken);
 }
-
+/**
+ * Claim a parent registration code and create parent account.
+ * @param {object} req Express request
+ * @param {object} res Express response
+ */
 exports.claimParentRegistrationCode = onRequest(async (req, res) => {
   setCorsHeaders(req, res);
 
@@ -102,7 +103,6 @@ exports.claimParentRegistrationCode = onRequest(async (req, res) => {
     }
 
     const db = admin.firestore();
-
     const existingUser = await db.collection("users").doc(parentUid).get();
 
     if (existingUser.exists) {
@@ -189,7 +189,112 @@ exports.claimParentRegistrationCode = onRequest(async (req, res) => {
     sendError(res, 500, err.message || "Internal server error.");
   }
 });
+/**
+ * Submit parent access request using athlete email.
+ * @param {object} req Express request
+ * @param {object} res Express response
+ */
+exports.requestParentAccessByAthleteEmail = onRequest(async (req, res) => {
+  setCorsHeaders(req, res);
 
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+
+  if (req.method !== "POST") {
+    sendError(res, 405, "Method not allowed.");
+    return;
+  }
+
+  try {
+    const body = req.body || {};
+    const parentName = String(body.parentName || "").trim();
+    const parentEmail = String(body.parentEmail || "").toLowerCase().trim();
+    const parentPhone = String(body.parentPhone || "").trim();
+    const relationship = String(body.relationship || "").trim();
+    const athleteEmail = String(body.athleteEmail || "").toLowerCase().trim();
+
+    if (!athleteEmail || !parentName || !parentEmail || !relationship) {
+      sendError(res, 400, "Required fields are missing.");
+      return;
+    }
+
+    const db = admin.firestore();
+
+    const athleteSnap = await db.collection("users")
+        .where("email", "==", athleteEmail)
+        .limit(1)
+        .get();
+
+    if (athleteSnap.empty) {
+      sendError(res, 404, "No athlete account was found.");
+      return;
+    }
+
+    const athleteDoc = athleteSnap.docs[0];
+    const athleteData = athleteDoc.data();
+    const athleteRole = String(athleteData.role || "").toLowerCase();
+
+    if (athleteRole !== "player" && athleteRole !== "athlete") {
+      sendError(res, 400, "Email does not belong to an athlete account.");
+      return;
+    }
+
+    const athleteId = athleteDoc.id;
+    const schoolId = athleteData.schoolId || athleteData.school_id || "";
+
+    if (!schoolId) {
+      sendError(res, 400, "Athlete account is missing a school link.");
+      return;
+    }
+
+    const athleteName = athleteData.fullName ||
+      `${athleteData.firstName || ""} ${athleteData.lastName || ""}`.trim() ||
+      "Unknown Athlete";
+
+    const existingPending = await db.collection("parent_access_requests")
+        .where("athleteId", "==", athleteId)
+        .where("parentEmail", "==", parentEmail)
+        .where("status", "==", "pending")
+        .limit(1)
+        .get();
+
+    if (!existingPending.empty) {
+      sendError(res, 409, "A pending parent access request already exists.");
+      return;
+    }
+
+    await db.collection("parent_access_requests").add({
+      athleteId,
+      uid: athleteId,
+      athleteName,
+      athleteEmail,
+      parentName,
+      parentEmail,
+      parentPhone,
+      relationship,
+      schoolId,
+      school_id: schoolId,
+      status: "pending",
+      requestedAt: admin.firestore.FieldValue.serverTimestamp(),
+      source: "public_parent_request",
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Parent access request submitted.",
+    });
+  } catch (err) {
+    console.error("requestParentAccessByAthleteEmail error:", err);
+    sendError(res, 500, err.message || "Internal server error.");
+  }
+});
+/**
+ * Delete a user and all associated data (admin only).
+ * @param {object} req Express request
+ * @param {object} res Express response
+ */
 exports.deleteUserData = onRequest(async (req, res) => {
   setCorsHeaders(req, res);
 
@@ -239,7 +344,6 @@ exports.deleteUserData = onRequest(async (req, res) => {
 
     const userData = userDoc.data();
     const role = userData.role;
-
     const batch = db.batch();
 
     batch.delete(userRef);

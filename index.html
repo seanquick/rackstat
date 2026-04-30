@@ -372,8 +372,8 @@
 </div>
 
 <script type="module">
-    import { db, auth } from './js/firebase-config.js';
-    import { doc, getDoc, getDocs, collection, query, where, orderBy, limit, onSnapshot, addDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { db, auth, appCheckReady } from './js/firebase-config.js';
+    import { doc, getDoc, collection, query, where, orderBy, limit, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { applyTheme } from './js/theme.js';
 
@@ -403,8 +403,8 @@
     let currentAnnouncementId = null;
 
     if (openParentRequestBtn) {
-    openParentRequestBtn.onclick = () => parentRequestModal.classList.remove('hidden');
-    }
+        openParentRequestBtn.onclick = () => parentRequestModal.classList.remove('hidden');
+        }
 
     if (closeParentRequestBtn) {
         closeParentRequestBtn.onclick = () => parentRequestModal.classList.add('hidden');
@@ -415,74 +415,65 @@
     }
 
     if (submitParentRequestBtn) {
-        submitParentRequestBtn.onclick = async () => {
-            const user = auth.currentUser;
+    submitParentRequestBtn.onclick = async () => {
+        const athleteEmail = document.getElementById('parent-athlete-email').value.trim().toLowerCase();
+        const parentName = document.getElementById('parent-name').value.trim();
+        const parentEmail = document.getElementById('parent-email').value.trim().toLowerCase();
+        const parentPhone = document.getElementById('parent-phone').value.trim();
+        const relationship = document.getElementById('parent-relationship').value;
 
-            if (!user) {
-                showPageMessage("Please sign in as the athlete before submitting a parent request.", "warn");
-                return;
-            }
+        if (!athleteEmail || !parentName || !parentEmail || !relationship) {
+            showPageMessage("Please complete athlete email, parent name, parent email, and relationship.", "warn");
+            return;
+        }
 
-            const parentName = document.getElementById('parent-name').value.trim();
-            const parentEmail = document.getElementById('parent-email').value.trim().toLowerCase();
-            const parentPhone = document.getElementById('parent-phone').value.trim();
-            const relationship = document.getElementById('parent-relationship').value;
+        submitParentRequestBtn.disabled = true;
+        submitParentRequestBtn.innerText = "Submitting...";
 
-            if (!parentName || !parentEmail || !relationship) {
-                showPageMessage("Please complete all required parent request fields.", "warn");
-                return;
-            }
+        try {
+            await appCheckReady;
 
-            submitParentRequestBtn.disabled = true;
-            submitParentRequestBtn.innerText = "Submitting...";
-
-            try {
-                const athleteSnap = await getDoc(doc(db, "users", user.uid));
-
-                if (!athleteSnap.exists()) {
-                    showPageMessage("Athlete profile could not be found.", "error");
-                    return;
+            const response = await fetch(
+                "https://us-central1-rackstat-production.cloudfunctions.net/requestParentAccessByAthleteEmail",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        athleteEmail,
+                        parentName,
+                        parentEmail,
+                        parentPhone,
+                        relationship
+                    })
                 }
+            );
 
-                const athleteData = athleteSnap.data();
-                const schoolId = athleteData.schoolId || athleteData.school_id || "";
+            const result = await response.json().catch(() => null);
 
-                if (!schoolId) {
-                    showPageMessage("Your athlete profile is missing a school link.", "error");
-                    return;
-                }
-
-                const athleteName =
-                    athleteData.fullName ||
-                    `${athleteData.firstName || ""} ${athleteData.lastName || ""}`.trim() ||
-                    "Unknown Athlete";
-
-                await addDoc(collection(db, "parent_access_requests"), {
-                    athleteId: user.uid,
-                    uid: user.uid,
-                    athleteName,
-                    athleteEmail: user.email || "",
-                    parentName,
-                    parentEmail,
-                    parentPhone,
-                    relationship,
-                    schoolId,
-                    school_id: schoolId,
-                    status: "pending",
-                    requestedAt: serverTimestamp()
-                });
-
-                parentRequestModal.classList.add('hidden');
-                showPageMessage("Parent access request submitted. The coaching staff will review it.", "success");
-            } catch (err) {
-                console.error("Parent access request error:", err);
-                showPageMessage("Parent access request could not be submitted right now.", "error");
-            } finally {
-                submitParentRequestBtn.disabled = false;
-                submitParentRequestBtn.innerText = "Submit Request";
+            if (!response.ok || !result?.success) {
+                throw new Error(result?.message || "Parent access request could not be submitted.");
             }
-        };
-    }
+
+            parentRequestModal.classList.add('hidden');
+
+            document.getElementById('parent-athlete-email').value = "";
+            document.getElementById('parent-name').value = "";
+            document.getElementById('parent-email').value = "";
+            document.getElementById('parent-phone').value = "";
+            document.getElementById('parent-relationship').value = "Parent";
+
+            showPageMessage("Parent access request submitted. The coaching staff will review it.", "success");
+        } catch (err) {
+            console.error("Parent access request error:", err);
+            showPageMessage(err.message || "Parent access request could not be submitted right now.", "error");
+        } finally {
+            submitParentRequestBtn.disabled = false;
+            submitParentRequestBtn.innerText = "Submit Request";
+        }
+    };
+}
 
     document.getElementById('open-privacy').onclick = () => pModal.classList.remove('hidden');
     document.getElementById('open-terms').onclick = () => tModal.classList.remove('hidden');
@@ -546,7 +537,7 @@
         if (alertText) alertText.innerText = "";
     }
 
-    function subscribeToSystemAnnouncement(user) {
+    async function subscribeToSystemAnnouncement(user) {
         if (!user) {
             hideAnnouncementBanner();
             return;
@@ -556,6 +547,8 @@
             announcementUnsubscribe();
             announcementUnsubscribe = null;
         }
+
+        await appCheckReady;
 
         const announcementsQuery = query(
             collection(db, "system_announcements"),
@@ -628,6 +621,7 @@
         loginBtn.innerText = "Signing In...";
 
         try {
+            await appCheckReady;
             const userCredential = await signInWithEmailAndPassword(auth, email, pass);
             const user = userCredential.user;
             const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -710,6 +704,7 @@
         }
 
         try {
+            await appCheckReady;
             await updateDoc(doc(db, "users", user.uid), {
                 termsAccepted: true,
                 termsAcceptedAt: new Date(),
@@ -730,6 +725,7 @@
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             try {
+                await appCheckReady;
                 setLobbyStatus("Loading Profile...");
                 hidePageMessage();
 

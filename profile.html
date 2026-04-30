@@ -228,7 +228,7 @@
 </nav>
 
 <script type="module">
-    import { db, auth } from './js/firebase-config.js';
+    import { db, auth, appCheckReady } from './js/firebase-config.js';
     import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { applyTheme } from './js/theme.js';
@@ -429,6 +429,8 @@
         const targetMaxesRef = doc(db, "recruiting_profiles", targetUID, "maxes", "latest");
 
         try {
+            await appCheckReady;
+
             const [currentUserSnap, targetUserSnap, profileSnap, maxesSnap] = await Promise.all([
                 getDoc(currentUserRef),
                 getDoc(targetUserRef),
@@ -536,6 +538,8 @@
         btn.disabled = true;
 
         try {
+            await appCheckReady;
+
             await setDoc(doc(db, "recruiting_profiles", viewedUid), {
                 clubGoal: Number(goalValue)
             }, { merge: true });
@@ -579,6 +583,8 @@
         };
 
         try {
+            await appCheckReady;
+
             const fullName = getVal('full-name');
             const weight = getVal('weight', true);
 
@@ -689,6 +695,8 @@
             }
 
             try {
+                await appCheckReady;
+                
                 const userSnap = await getDoc(doc(db, "users", user.uid));
                 const userData = userSnap.exists() ? userSnap.data() : {};
 

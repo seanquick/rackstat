@@ -1,4 +1,4 @@
-import { db, auth } from './firebase-config.js';
+import { db, auth, appCheckReady } from './firebase-config.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { collection, query, where, count, getAggregateFromServer, doc, getDoc, getDocs, deleteDoc, updateDoc, orderBy, limit, addDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -21,6 +21,8 @@ onAuthStateChanged(auth, async (user) => {
         }
 
         currentAdminUid = user.uid;
+
+        await appCheckReady;
 
         renderMetrics();
         getRecentPulse();
@@ -199,6 +201,7 @@ async function handleLogout(e) {
 }
 
 async function handleAnnouncementPost() {
+    await appCheckReady;
     const input = document.getElementById('announcement-text');
     const expirationInput = document.getElementById('announcement-expiration');
 
@@ -426,7 +429,10 @@ async function handleCreateSchool() {
         const payload = {
             name: schoolName,
             primaryColor,
-            "colors.primary": primaryColor,
+            colors: {
+                primary: primaryColor,
+                secondary: "#0a0a0b"
+            },
             logo_url: logoUrl,
             logo_primary: logoUrl,
             formula_type: formulaType,
@@ -572,11 +578,22 @@ async function loadAnnouncements() {
     window.endAnnouncement = async function(id) {
         if (!confirm("End this announcement now?")) return;
 
+        await appCheckReady;
+
         await updateDoc(doc(db, "system_announcements", id), {
             active: false,
             endedAt: serverTimestamp()
         });
 
+        await loadAnnouncements();
+    };
+
+    window.deleteAnnouncement = async function(id) {
+        if (!confirm("Permanently delete this announcement?")) return;
+
+        await appCheckReady;
+
+        await deleteDoc(doc(db, "system_announcements", id));
         await loadAnnouncements();
     };
 
@@ -597,6 +614,8 @@ async function loadAnnouncements() {
         }
 
         try {
+            await appCheckReady;
+            
             const token = await auth.currentUser.getIdToken();
 
             const response = await fetch("https://us-central1-rackstat-production.cloudfunctions.net/deleteUserData", {
@@ -632,52 +651,7 @@ async function loadAnnouncements() {
         loadAnnouncements();
 
 
-    window.deleteUserByAdmin = async function(uid) {
-        if (!uid) {
-            alert("Missing user ID.");
-            return;
-        }
-
-        if (!confirm("Permanently delete this user and associated data? This cannot be undone.")) {
-            return;
-        }
-
-        try {
-            const token = await auth.currentUser.getIdToken();
-
-            const response = await fetch(
-                "https://us-central1-rackstat-production.cloudfunctions.net/deleteUserData",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        targetUid: uid
-                    })
-                }
-            );
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.message || "Delete failed");
-            }
-
-            alert("User deleted successfully.");
-
-            await Promise.all([
-                renderMetrics(),
-                loadSchoolActivity()
-            ]);
-
-        } catch (err) {
-            console.error("Delete user error:", err);
-            alert(err.message || "Unable to delete user.");
-        }
-    };
-
+    
 // Utility helper for Firestore aggregate counts
 async function getCount(queryOrColl) {
     try {

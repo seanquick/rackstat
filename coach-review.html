@@ -64,7 +64,7 @@
     </div>
 
 <script type="module">
-    import { db, auth } from "./js/firebase-config.js";
+    import { db, auth, appCheckReady } from "./js/firebase-config.js";
     import { doc, getDoc, collection, query, where, getDocs, orderBy, limit, setDoc, addDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { applyTheme } from './js/theme.js';
@@ -148,6 +148,17 @@
             .replace(/'/g, "&#39;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;");
+    }
+
+    function generateParentRegistrationCode() {
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        let code = "PARENT-";
+
+        for (let i = 0; i < 6; i += 1) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+
+        return code;
     }
 
     function setReviewStatus(text, tone = "default") {
@@ -488,7 +499,7 @@
             const parentRequestCount = await loadPendingParentRequestCount();
             renderQueueButtons(workouts, pendingCount, parentRequestCount);
 
-            if (!workouts.length && !pendingCount) {
+            if (!workouts.length && !pendingCount && !parentRequestCount) {
                 renderWorkoutListMessage("No review queues found.");
                 setReviewStatus("No Review Queues", "warn");
             }
@@ -987,7 +998,9 @@
         setReviewStatus("Approving Parent Access...");
 
         try {
-            const registrationCode = `PARENT-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+            await appCheckReady;
+
+            const registrationCode = generateParentRegistrationCode();
 
             const linkPayload = {
                 athleteId,
@@ -1040,6 +1053,8 @@
         btnElement.disabled = true;
 
         try {
+            await appCheckReady;
+
             await updateDoc(doc(db, "parent_access_requests", requestId), {
                 hiddenFromCoach: true,
                 hiddenFromCoachAt: serverTimestamp(),
@@ -1064,6 +1079,8 @@
         setReviewStatus("Rejecting Parent Request...");
 
         try {
+            await appCheckReady;
+
             await updateDoc(doc(db, "parent_access_requests", requestId), {
                 status: "rejected",
                 reviewedAt: serverTimestamp(),
@@ -1109,6 +1126,8 @@
         setReviewStatus("Saving Approval...");
 
         try {
+            await appCheckReady;
+
             const numericWeighInWeight = Number(weighInWeight) || 0;
             const resolvedWeightClass = weightClass || getWeightClass(numericWeighInWeight);
 
@@ -1185,6 +1204,8 @@
         setReviewStatus("Saving Rejection...");
 
         try {
+            await appCheckReady;
+
             const numericWeighInWeight = Number(weighInWeight) || 0;
             const resolvedWeightClass = weightClass || getWeightClass(numericWeighInWeight);
 
@@ -1249,6 +1270,8 @@
         setReviewStatus("Saving Approval...");
 
         try {
+            await appCheckReady;
+
             const numericWeighInWeight = Number(weighInWeight) || 0;
             const resolvedWeightClass = weightClass || getWeightClass(numericWeighInWeight);
 
@@ -1332,6 +1355,8 @@
         setReviewStatus("Saving Rejection...");
 
         try {
+            await appCheckReady;
+
             const numericWeighInWeight = Number(weighInWeight) || 0;
             const resolvedWeightClass = weightClass || getWeightClass(numericWeighInWeight);
 

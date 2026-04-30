@@ -137,7 +137,7 @@
 </nav>
 
 <script type="module">
-    import { db, auth } from "./js/firebase-config.js";
+    import { db, auth, appCheckReady } from "./js/firebase-config.js";
     import { applyTheme } from "./js/theme.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import {
@@ -400,6 +400,8 @@
         currentAthleteId = user.uid;
 
         try {
+            await appCheckReady;
+
             const [profileSnap, userSnap, maxSnap] = await Promise.all([
                 getDoc(doc(db, "recruiting_profiles", user.uid)),
                 getDoc(doc(db, "users", user.uid)),
@@ -445,6 +447,8 @@
         hidePageMessage();
 
         try {
+            await appCheckReady;
+
             let q = query(collection(db, "workouts"), where("schoolId", "==", currentSchoolId));
             let querySnapshot = await getDocs(q);
 
@@ -626,6 +630,8 @@
         renderExerciseListMessage("Loading workout details...");
 
         try {
+            await appCheckReady;
+
             const [workoutSnap, maxSnap] = await Promise.all([
                 getDoc(doc(db, "workouts", workoutId)),
                 getDoc(doc(db, "recruiting_profiles", currentAthleteId, "maxes", "latest"))
@@ -703,6 +709,8 @@
         setWorkoutStatus("Saving Session...");
 
         try {
+            await appCheckReady;
+            
             const workoutExercises = (Array.isArray(activeWorkoutData.exercises) ? activeWorkoutData.exercises : []).map((ex, exIndex) => {
                 if (ex.isCircuit) {
                     const circuitCard = document.querySelector(`[data-ex-index="${exIndex}"][data-ex-type="circuit"]`);

@@ -278,7 +278,7 @@
 </nav>
 
 <script type="module">
-    import { db, auth } from './js/firebase-config.js';
+    import { db, auth, appCheckReady } from './js/firebase-config.js';
     import {
         doc,
         getDoc,
@@ -411,6 +411,7 @@
     }
 
     async function syncBodyweightAcrossApp(uid, weightValue) {
+        await appCheckReady;
         const numericWeight = Number(weightValue) || 0;
         if (!numericWeight) return;
 
@@ -447,6 +448,7 @@
         if (profileUnsubscribe) profileUnsubscribe();
 
         try {
+            await appCheckReady;
             const userSnap = await getDoc(doc(db, "users", user.uid));
 
             if (!userSnap.exists()) {
@@ -481,6 +483,8 @@
                 setKitchenStatus("Theme Limited", "warn");
             }
 
+            await appCheckReady;
+            
             userUnsubscribe = onSnapshot(doc(db, "users", user.uid), async (userDoc) => {
                 if (!userDoc.exists()) return;
 
@@ -561,6 +565,8 @@
         const user = auth.currentUser;
         if (!user) return;
 
+        await appCheckReady;
+
         const btn = document.getElementById('set-targets-btn');
         const originalText = btn?.innerText || "Set Targets";
 
@@ -599,6 +605,8 @@
     window.saveQuickStats = async () => {
         const user = auth.currentUser;
         if (!user) return;
+
+        await appCheckReady;
 
         const htInput = document.getElementById('quick-height');
         const bwInput = document.getElementById('quick-weight');
@@ -659,6 +667,8 @@
         const user = auth.currentUser;
         if (!user) return;
 
+        await appCheckReady;
+
         const selectedDate = getSelectedDateKey();
         const today = new Date().toISOString().split('T')[0];
 
@@ -700,6 +710,8 @@
     window.undoLastWater = async () => {
         const user = auth.currentUser;
         if (!user) return;
+
+        await appCheckReady;
 
         const selectedDate = getSelectedDateKey();
         const undoBtn = document.getElementById('undo-water-btn');
@@ -744,6 +756,8 @@
     window.saveMeal = async () => {
         const user = auth.currentUser;
         if (!user) return;
+
+        await appCheckReady;
 
         const selectedDate = getSelectedDateKey();
         const today = new Date().toISOString().split('T')[0];
@@ -806,6 +820,8 @@
         const user = auth.currentUser;
         if (!user) return;
 
+        await appCheckReady;
+
         const selectedDate = getSelectedDateKey();
         if (!selectedDate) return;
 
@@ -862,6 +878,8 @@
         const container = document.getElementById('history-list');
         const user = auth.currentUser;
         const selectedDate = getSelectedDateKey();
+
+        await appCheckReady;
 
         if (!container || !user || !selectedDate) return;
 
@@ -921,6 +939,8 @@
     window.showWeeklySummary = async () => {
         const user = auth.currentUser;
         if (!user) return;
+
+        await appCheckReady;
 
         const weeklyBtn = document.getElementById('weekly-summary-btn');
         const weeklyModal = document.getElementById('weekly-modal');

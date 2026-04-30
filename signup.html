@@ -118,6 +118,9 @@
             const services = await import('./js/firebase-config.js');
             const auth = services.auth;
             const db = services.db;
+            const appCheckReady = services.appCheckReady;
+
+            await appCheckReady;
 
             const {
                 doc,
@@ -185,7 +188,8 @@
                 let userCredential = null;
 
                 try {
-                    userCredential = await createUserWithEmailAndPassword(auth, enteredEmail, pass);
+                    await appCheckReady;
+                        userCredential = await createUserWithEmailAndPassword(auth, enteredEmail, pass);
                     const user = userCredential.user;
                     const token = await user.getIdToken(true);
 
@@ -228,30 +232,35 @@
                 }
             }
 
-            async function handleAthleteOrCoachSignup({ fullName, email, pass, inputCode, gradYear }) {
-                const normalizedCode = inputCode.trim();
+        async function handleAthleteOrCoachSignup({ fullName, email, pass, inputCode, gradYear }) {
+            await appCheckReady;
 
-                const codeQuery = query(
-                    collection(db, "school_codes"),
-                    where("code", "==", normalizedCode),
-                    where("role", "==", currentRole === "coach" ? "coach" : "player"),
-                    where("active", "==", true)
-                );
+            const normalizedCode = inputCode.toUpperCase().trim();
 
-                const codeSnap = await getDocs(codeQuery);
+            const codeQuery = query(
+                collection(db, "school_codes"),
+                where("code", "==", normalizedCode),
+                where("role", "==", currentRole === "coach" ? "coach" : "player"),
+                where("active", "==", true)
+            );
 
-                if (codeSnap.empty) {
-                    throw new Error(`Invalid ${currentRole === 'coach' ? 'coach' : 'athlete'} registration code.`);
-                }
+            const codeSnap = await getDocs(codeQuery);
 
-                const codeData = codeSnap.docs[0].data();
-                const schoolId = codeData.schoolId || codeData.school_id;
+            if (codeSnap.empty) {
+                throw new Error(`Invalid ${currentRole === 'coach' ? 'coach' : 'athlete'} registration code.`);
+            }
 
-                if (!schoolId) {
-                    throw new Error("Registration code is missing a school link.");
-                }
+            const codeData = codeSnap.docs[0].data();
+            const schoolId = codeData.schoolId || codeData.school_id;
 
-                const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+            if (!schoolId) {
+                throw new Error("Registration code is missing a school link.");
+            }
+
+            let userCredential = null;
+
+            try {
+                userCredential = await createUserWithEmailAndPassword(auth, email, pass);
                 const user = userCredential.user;
 
                 const batch = writeBatch(db);
@@ -289,7 +298,18 @@
 
                 alert(`Welcome, ${fullName}!`);
                 window.location.href = currentRole === 'coach' ? "coach-lobby.html" : "index.html";
+            } catch (err) {
+                if (userCredential?.user) {
+                    try {
+                        await deleteUser(userCredential.user);
+                    } catch (cleanupErr) {
+                        console.warn("Signup cleanup failed:", cleanupErr);
+                    }
+                }
+
+                throw err;
             }
+        }
 
             window.handleSignUp = async () => {
                 const isAgreed = document.getElementById('legal-agree').checked;

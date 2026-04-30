@@ -97,7 +97,7 @@
     </main>
 
     <script type="module">
-        import { db, auth } from './js/firebase-config.js';
+        import { db, auth, appCheckReady } from './js/firebase-config.js';
         import {
             collection,
             addDoc,
@@ -266,6 +266,8 @@
             }
 
             try {
+                await appCheckReady;
+
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 if (!userDoc.exists()) {
                     window.location.href = 'index.html';
@@ -316,6 +318,8 @@
 
         async function fetchTeamSettings() {
             try {
+                await appCheckReady;
+
                 if (!userSchoolId) return;
 
                 const schoolDoc = await getDoc(doc(db, "schools", userSchoolId));
@@ -374,6 +378,8 @@
 
         async function fetchSupplements() {
             try {
+                await appCheckReady;
+                
                 const snap = await getDocs(collection(db, "supplement_library"));
                 supplementLibrary = snap.docs.map(docSnap => docSnap.data().name).filter(Boolean);
             } catch (err) {
@@ -635,6 +641,8 @@
         }
 
         window.saveWorkout = async () => {
+            await appCheckReady;
+
             const dateInput = document.getElementById('workout-date');
             const nameInput = document.getElementById('workout-name');
             const originalText = saveButton.innerText;
@@ -666,12 +674,15 @@
             setTrainingStatus(editingWorkoutId ? 'Updating Workout...' : 'Saving Workout...');
 
             try {
+                await appCheckReady;
+
                 const cleanedExercises = exercises.map(ex => sanitizeExercise(ex));
 
                 const workoutData = {
                     date: dateInput.value,
                     name: nameInput.value.trim().toUpperCase(),
                     schoolId: userSchoolId,
+                    school_id: userSchoolId,
                     isMaxOutMode,
                     exercises: cleanedExercises,
                     updatedAt: serverTimestamp()
@@ -704,6 +715,8 @@
             setTrainingStatus('Loading Archive...');
 
             try {
+                await appCheckReady;
+
                 let snap = await getDocs(query(collection(db, "workouts"), where("schoolId", "==", userSchoolId)));
 
                 if (snap.empty) {
@@ -750,6 +763,8 @@
 
         window.editWorkout = async (id) => {
             try {
+                await appCheckReady;
+
                 const snap = await getDoc(doc(db, "workouts", id));
                 if (!snap.exists()) {
                     showPageMessage("That workout could not be found for editing.", "error");
@@ -779,6 +794,8 @@
 
         window.duplicateWorkout = async (id) => {
             try {
+                await appCheckReady;
+
                 const snap = await getDoc(doc(db, "workouts", id));
                 if (!snap.exists()) {
                     showPageMessage("That workout could not be found for cloning.", "error");
@@ -811,6 +828,8 @@
             if (!confirm("DANGER: This training session will be permanently purged from the archive. Continue?")) return;
 
             try {
+                await appCheckReady;
+
                 await deleteDoc(doc(db, "workouts", id));
 
                 if (editingWorkoutId === id) {

@@ -1,3 +1,4 @@
+import { appCheckReady } from "./firebase-config.js";
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 /**
@@ -11,6 +12,8 @@ export async function applyTheme(db, schoolId) {
     }
 
     try {
+        await appCheckReady;
+        
         // Load the school's primary branding/config document
         const schoolSnap = await getDoc(doc(db, "schools", schoolId));
 

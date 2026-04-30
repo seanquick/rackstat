@@ -97,7 +97,7 @@
 </nav>
 
 <script type="module">
-    import { db, auth } from "./js/firebase-config.js";
+    import { db, auth, appCheckReady } from "./js/firebase-config.js";
     import { applyTheme } from "./js/theme.js";
     import {
         buildBoardScoreSettings,
@@ -316,6 +316,7 @@
     }
 
     async function buildHistoricalClassRecords(schoolId) {
+        await appCheckReady;
         const classRecords = createEmptyClassRecords();
         const athleteCache = new Map();
 
@@ -364,6 +365,7 @@
     }
 
     async function buildClubScores(pSnap, boardSettings) {
+        await appCheckReady;
         const scores = [];
         let athletesWithMaxes = 0;
 
@@ -420,6 +422,7 @@
         }
 
         try {
+            await appCheckReady;
             const [profileSnap, userSnap] = await Promise.all([
                 getDoc(doc(db, "recruiting_profiles", user.uid)),
                 getDoc(doc(db, "users", user.uid))
@@ -472,6 +475,8 @@
 
         hidePageMessage();
         setBoardStatus("Loading Board...");
+
+        await appCheckReady;
 
         let schoolSnap;
         let manualSnap;
@@ -672,6 +677,7 @@
 
         const recordRef = doc(db, "schools", currentSchoolId, "settings", "manual_records");
         try {
+            await appCheckReady;
             await setDoc(recordRef, {
                 [wc]: { [lift]: { val: Number(val) || 0, name } }
             }, { merge: true });

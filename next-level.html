@@ -288,7 +288,7 @@
 </nav>
 
 <script type="module">
-    import { db, auth } from './js/firebase-config.js';
+    import { db, auth, appCheckReady } from './js/firebase-config.js';
     import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { applyTheme } from './js/theme.js';
@@ -316,6 +316,8 @@
         currentUser = user;
 
         try {
+            await appCheckReady;
+
             const [userSnap, recruitingSnap] = await Promise.all([
                 getDoc(doc(db, "users", user.uid)),
                 getDoc(doc(db, "recruiting_profiles", user.uid))
@@ -486,6 +488,8 @@
         };
 
         try {
+            await appCheckReady;
+            
             await Promise.all([
                 setDoc(doc(db, "recruiting_profiles", currentUser.uid), profileData, { merge: true }),
                 setDoc(doc(db, "users", currentUser.uid), {

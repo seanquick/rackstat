@@ -151,7 +151,7 @@
     </main>
 
 <script type="module">
-    import { db, auth } from './js/firebase-config.js';
+    import { db, auth, appCheckReady } from './js/firebase-config.js';
     import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { doc, getDoc, updateDoc, collection, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -333,6 +333,8 @@
     async function loadSettings() {
         if (!schoolId) return;
 
+        await appCheckReady;
+
         setStatus("Loading Settings...");
         hidePageMessage();
 
@@ -387,6 +389,8 @@
     async function fetchPlayerCount() {
         if (!schoolId) return;
 
+        await appCheckReady;
+
         playerCountBadge.innerText = "Loading...";
 
         try {
@@ -424,6 +428,7 @@
 
     window.saveAllSettings = async () => {
         if (!schoolDocId) {
+            await appCheckReady;
             showPageMessage("School settings are not loaded yet.", "error");
             setStatus("Missing School", "error");
             return;
@@ -511,6 +516,7 @@
         }
 
         try {
+            await appCheckReady;
             const userDoc = await getDoc(doc(db, "users", user.uid));
             const userData = userDoc.exists() ? userDoc.data() : {};
             const role = String(userData.role || "").toLowerCase();

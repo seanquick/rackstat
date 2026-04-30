@@ -127,7 +127,7 @@
     </main>
 
     <script type="module">
-        import { db, auth } from './js/firebase-config.js';
+        import { db, auth, appCheckReady } from './js/firebase-config.js';
         import { doc, getDoc, collection, query, where, getDocs, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { applyTheme } from './js/theme.js';
         import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -229,62 +229,55 @@
                 announcementUnsubscribe = null;
             }
 
-            const announcementsQuery = query(
-                collection(db, "system_announcements"),
-                where("active", "==", true),
-                orderBy("timestamp", "desc"),
-                limit(5)
-            );
+            appCheckReady.then(() => {
+                const announcementsQuery = query(
+                    collection(db, "system_announcements"),
+                    where("active", "==", true),
+                    orderBy("timestamp", "desc"),
+                    limit(5)
+                );
 
-            announcementUnsubscribe = onSnapshot(announcementsQuery, (snapshot) => {
-                if (!banner || !alertText) return;
+                announcementUnsubscribe = onSnapshot(announcementsQuery, (snapshot) => {
+                    if (!banner || !alertText) return;
 
-                const now = new Date();
+                    const now = new Date();
 
-                const activeAnnouncement = snapshot.docs.find((docSnap) => {
-                    const data = docSnap.data();
+                    const activeAnnouncement = snapshot.docs.find((docSnap) => {
+                        const data = docSnap.data();
 
-                    if (!data.active) return false;
+                        if (!data.active) return false;
 
-                    if (data.expiresAt) {
-                        const expiresDate = data.expiresAt.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt);
-                        if (Number.isNaN(expiresDate.getTime()) || expiresDate < now) {
+                        if (data.expiresAt) {
+                            const expiresDate = data.expiresAt.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt);
+                            if (Number.isNaN(expiresDate.getTime()) || expiresDate < now) {
+                                return false;
+                            }
+                        }
+
+                        if (isAnnouncementDismissed(user.uid, docSnap.id)) {
                             return false;
                         }
+
+                        return true;
+                    });
+
+                    if (!activeAnnouncement) {
+                        hideAnnouncementBanner();
+                        return;
                     }
 
-                    if (isAnnouncementDismissed(user.uid, docSnap.id)) {
-                        return false;
-                    }
-
-                    return true;
-                });
-
-                if (!activeAnnouncement) {
+                    currentAnnouncementId = activeAnnouncement.id;
+                    alertText.innerText = activeAnnouncement.data().message || "";
+                    banner.classList.remove('hidden');
+                }, (err) => {
+                    console.error("Announcement subscription error:", err);
                     hideAnnouncementBanner();
-                    return;
-                }
-
-                currentAnnouncementId = activeAnnouncement.id;
-                alertText.innerText = activeAnnouncement.data().message || "";
-                banner.classList.remove('hidden');
-            }, (err) => {
-                console.error("Announcement subscription error:", err);
-                hideAnnouncementBanner();
+                });
             });
         }
-
-        if (dismissAlertBtn) {
-            dismissAlertBtn.addEventListener('click', () => {
-                const user = auth.currentUser;
-                if (!user || !currentAnnouncementId) return;
-
-                dismissAnnouncement(user.uid, currentAnnouncementId);
-                hideAnnouncementBanner();
-            });
-        }
-
         async function loadParentRequestBadge(schoolId) {
+            await appCheckReady;
+            
             const badge = document.getElementById('parent-request-badge');
             if (!badge || !schoolId) return;
 
@@ -345,6 +338,8 @@
                 }
 
                 try {
+                    await appCheckReady;
+
                     const userDoc = await getDoc(doc(db, "users", user.uid));
 
                     if (!userDoc.exists()) {
