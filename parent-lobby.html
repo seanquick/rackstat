@@ -63,7 +63,9 @@
         where,
         getDocs,
         orderBy,
-        limit
+        limit,
+        addDoc,
+        serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import {
         onAuthStateChanged,
@@ -216,6 +218,22 @@
         setStatus("Parent Portal Ready", "success");
     }
 
+    async function logParentAthleteView(athleteId, athleteName = "") {
+        try {
+            await addDoc(collection(db, "data_access_logs"), {
+                action: "parent_view_athlete_data",
+                actorId: auth.currentUser?.uid || null,
+                actorRole: "parent",
+                athleteId,
+                athleteName,
+                page: "parent-lobby.html",
+                createdAt: serverTimestamp()
+            });
+        } catch (err) {
+            console.warn("Parent audit log skipped:", err);
+        }
+    }
+
     async function loadAthleteDetail(link) {
         await appCheckReady;
         athleteDetail.innerHTML = `
@@ -226,6 +244,7 @@
 
         try {
             const athleteId = link.athleteId;
+            await logParentAthleteView(athleteId, link.athleteName || "");
 
             const [profileSnap, userSnap, maxSnap] = await Promise.all([
                 getDoc(doc(db, "recruiting_profiles", athleteId)),
