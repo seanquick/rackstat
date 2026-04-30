@@ -240,6 +240,22 @@
 
             let meals = [];
 
+            let workouts = [];
+
+            try {
+                const workoutQuery = query(
+                    collection(db, "completed_workouts"),
+                    where("athleteId", "==", athleteId),
+                    orderBy("timestamp", "desc"),
+                    limit(5)
+                );
+
+                const workoutSnap = await getDocs(workoutQuery);
+                workouts = workoutSnap.docs.map(docSnap => docSnap.data());
+            } catch (workoutErr) {
+                console.warn("Workout load skipped:", workoutErr);
+            }
+
             try {
                 const mealsQuery = query(
                     collection(db, "recruiting_profiles", athleteId, "meals"),
@@ -285,9 +301,22 @@
                         ${metricBox("Last Sync", formatDate(maxes.lastUpdated || athlete.lastUpdated))}
                     </div>
 
-                    <div class="portal-card p-5">
-                        <h4 class="text-sm font-black uppercase italic mb-4 text-[var(--school-primary)]">Recent Nutrition Logs</h4>
-                        ${mealRows}
+                    <div class="grid md:grid-cols-2 gap-6">
+
+                        <div class="portal-card p-5">
+                            <h4 class="text-sm font-black uppercase italic mb-4 text-[var(--school-primary)]">
+                                Recent Workouts
+                            </h4>
+                            ${workoutRows}
+                        </div>
+
+                        <div class="portal-card p-5">
+                            <h4 class="text-sm font-black uppercase italic mb-4 text-[var(--school-primary)]">
+                                Recent Nutrition Logs
+                            </h4>
+                            ${mealRows}
+                        </div>
+
                     </div>
                 </div>
             `;
@@ -302,6 +331,21 @@
             `;
         }
     }
+
+    const workoutRows = workouts.length
+        ? workouts.map(w => `
+            <div class="flex justify-between border-b border-white/5 py-2 last:border-0">
+                <span class="text-xs text-gray-400 font-bold uppercase">
+                    ${w.name || "Workout"}
+                </span>
+                <span class="text-xs text-white font-black">
+                    ${formatDate(w.timestamp)}
+                </span>
+            </div>
+        `).join("")
+        : `<p class="text-xs text-gray-600 font-bold uppercase tracking-widest">
+            No recent workouts logged.
+        </p>`;
 
     logoutBtn.addEventListener("click", async () => {
         await signOut(auth);
