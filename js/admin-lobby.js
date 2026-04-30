@@ -140,16 +140,25 @@ async function loadSchoolActivity() {
         snap.forEach(docSnap => {
             const school = docSnap.data();
             const row = document.createElement('div');
+
+            const isActive = school.active !== false;
+
+            const statusBadge = isActive
+                ? `<span class="text-[10px] bg-green-500/10 text-green-300 px-3 py-1 rounded-full border border-green-500/20 uppercase font-bold">Active</span>`
+                : `<span class="text-[10px] bg-red-500/10 text-red-300 px-3 py-1 rounded-full border border-red-500/20 uppercase font-bold">Inactive</span>`;
+
             row.className = "p-4 flex justify-between items-center hover:bg-white/[0.02] transition";
+
             row.innerHTML = `
                 <div>
                     <p class="font-bold text-sm">${school.name || 'Unnamed School'}</p>
                     <p class="text-[10px] text-gray-500 uppercase">${docSnap.id}</p>
                 </div>
                 <div class="text-right">
-                    <span class="text-[10px] bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20 uppercase font-bold">Active</span>
+                    ${statusBadge}
                 </div>
             `;
+
             container.appendChild(row);
         });
     } catch (err) {
