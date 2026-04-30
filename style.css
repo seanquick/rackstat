@@ -187,6 +187,34 @@ body {
     filter: brightness(1.2);
 }
 
+.lobby-btn {
+    width: 100%;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    color: #fff;
+    font-weight: 900;
+    font-style: italic;
+    text-transform: uppercase;
+    letter-spacing: -0.03em;
+    transition: transform 0.15s ease, filter 0.15s ease;
+    border-bottom: 4px solid rgba(0,0,0,0.35);
+}
+
+.lobby-btn:hover {
+    transform: scale(1.02);
+    filter: brightness(1.08);
+}
+
+.lobby-btn-primary {
+    background-color: var(--school-primary);
+}
+
+.lobby-btn-secondary {
+    background-color: var(--school-secondary);
+    border: 1px solid color-mix(in srgb, var(--school-primary) 35%, #ffffff 10%);
+    border-bottom: 4px solid rgba(0,0,0,0.45);
+}
+
 /* ==========================================================================
    6. COACH REVIEW / INTELLIGENCE HEADER
    ========================================================================== */
