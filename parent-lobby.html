@@ -260,7 +260,7 @@
             let meals = [];
             let workouts = [];
 
-            // --------------------
+             // --------------------
             // LOAD WORKOUTS
             // --------------------
             try {
@@ -282,24 +282,26 @@
                 thisWeek: 0
             };
 
+            let lastWorkoutDate = null;
+            let activityStatus = "inactive";
+            let activityColor = "text-red-400";
+
             try {
-                const workoutQuery = query(
+                const weeklyQuery = query(
                     collection(db, "completed_workouts"),
                     where("athleteId", "==", athleteId),
                     orderBy("timestamp", "desc"),
                     limit(50)
                 );
 
-                const snap = await getDocs(workoutQuery);
+                const snap = await getDocs(weeklyQuery);
 
                 const now = new Date();
                 const startOfWeek = new Date(now);
                 startOfWeek.setDate(now.getDate() - 7);
 
-                let lastWorkoutDate = null;
-
-                snap.forEach(doc => {
-                    const w = doc.data();
+                snap.forEach(docSnap => {
+                    const w = docSnap.data();
                     const date = w.timestamp?.toDate?.() || new Date(w.timestamp);
 
                     if (!Number.isNaN(date.getTime())) {
@@ -309,15 +311,11 @@
                             weeklyStats.thisWeek++;
                         }
 
-                        // THIS is what you were missing
                         if (!lastWorkoutDate || date > lastWorkoutDate) {
                             lastWorkoutDate = date;
                         }
                     }
                 });
-
-                let activityStatus = "inactive";
-                let activityColor = "text-red-400";
 
                 if (lastWorkoutDate) {
                     const diffDays = Math.floor(
@@ -332,7 +330,6 @@
                         activityColor = "text-yellow-300";
                     }
                 }
-
             } catch (err) {
                 console.warn("Weekly stats skipped:", err);
             }
@@ -364,7 +361,7 @@
                 );
 
                 const prSnap = await getDocs(prQuery);
-                recentPRs = prSnap.docs.map(doc => doc.data());
+                recentPRs = prSnap.docs.map(docSnap => docSnap.data());
             } catch (err) {
                 console.warn("PR load skipped:", err);
             }
@@ -375,8 +372,7 @@
                         Weekly Activity
                     </h4>
 
-                    <div class="grid grid-cols-3 gap-4">
-
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div class="bg-black/30 border border-white/10 rounded-xl p-4">
                             <span class="block text-[9px] text-gray-500 font-black uppercase tracking-widest">
                                 Workouts (7 Days)
@@ -403,14 +399,10 @@
                                 ${activityStatus}
                             </span>
                         </div>
-
                     </div>
                 </div>
             `;
 
-             // --------------------
-            // BUILD WORKOUT ROWS
-            // --------------------
             const workoutRows = workouts.length
                 ? workouts.map(w => `
                     <div class="flex justify-between border-b border-white/5 py-2 last:border-0">
@@ -426,9 +418,6 @@
                     No recent workouts logged.
                 </p>`;
 
-            // --------------------
-            // BUILD MEAL ROWS
-            // --------------------
             const mealRows = meals.length
                 ? meals.map(meal => `
                     <div class="flex justify-between border-b border-white/5 py-2 last:border-0">
@@ -444,35 +433,31 @@
                     No recent meals logged.
                 </p>`;
 
-
-                const prRows = recentPRs.length
-                    ? recentPRs.map(pr => `
-                        <div class="flex justify-between border-b border-white/5 py-2 last:border-0">
-                            <div class="flex flex-col">
-                                <span class="text-xs text-white font-black uppercase">
-                                    ${pr.exerciseName || pr.exerciseKey || "Lift"}
-                                </span>
-                                <span class="text-[9px] text-gray-500 font-bold uppercase">
-                                    Verified PR
-                                </span>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-sm text-green-400 font-black">
-                                    ${pr.attemptedWeight || 0} LBS
-                                </span>
-                                <p class="text-[9px] text-gray-600 font-bold uppercase">
-                                    ${formatDate(pr.reviewedAt)}
-                                </p>
-                            </div>
+            const prRows = recentPRs.length
+                ? recentPRs.map(pr => `
+                    <div class="flex justify-between border-b border-white/5 py-2 last:border-0">
+                        <div class="flex flex-col">
+                            <span class="text-xs text-white font-black uppercase">
+                                ${pr.exerciseName || pr.exerciseKey || "Lift"}
+                            </span>
+                            <span class="text-[9px] text-gray-500 font-bold uppercase">
+                                Verified PR
+                            </span>
                         </div>
-                    `).join("")
-                    : `<p class="text-xs text-gray-600 font-bold uppercase tracking-widest">
-                        No verified PRs yet.
-                    </p>`;
-                    
-            // --------------------
-            // RENDER UI
-            // --------------------
+                        <div class="text-right">
+                            <span class="text-sm text-green-400 font-black">
+                                ${pr.attemptedWeight || 0} LBS
+                            </span>
+                            <p class="text-[9px] text-gray-600 font-bold uppercase">
+                                ${formatDate(pr.reviewedAt)}
+                            </p>
+                        </div>
+                    </div>
+                `).join("")
+                : `<p class="text-xs text-gray-600 font-bold uppercase tracking-widest">
+                    No verified PRs yet.
+                </p>`;
+
             athleteDetail.innerHTML = `
                 <div class="text-left">
                     <div class="flex justify-between items-start gap-4 border-b border-white/10 pb-6 mb-6 flex-wrap">
@@ -504,6 +489,7 @@
                     </div>
 
                     ${weeklySummary}
+
                     <div class="grid md:grid-cols-3 gap-6">
                         <div class="portal-card p-5">
                             <h4 class="text-sm font-black uppercase italic mb-4 text-[var(--school-primary)]">
@@ -525,7 +511,6 @@
                             </h4>
                             ${prRows}
                         </div>
-
                     </div>
                 </div>
             `;
