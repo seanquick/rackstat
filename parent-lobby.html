@@ -239,9 +239,11 @@
             const athlete = { ...userData, ...profileData };
 
             let meals = [];
-
             let workouts = [];
 
+            // --------------------
+            // LOAD WORKOUTS
+            // --------------------
             try {
                 const workoutQuery = query(
                     collection(db, "completed_workouts"),
@@ -256,39 +258,79 @@
                 console.warn("Workout load skipped:", workoutErr);
             }
 
+            // --------------------
+            // LOAD MEALS
+            // --------------------
             try {
                 const mealsQuery = query(
                     collection(db, "recruiting_profiles", athleteId, "meals"),
                     orderBy("timestamp", "desc"),
                     limit(5)
                 );
+
                 const mealsSnap = await getDocs(mealsQuery);
                 meals = mealsSnap.docs.map(docSnap => docSnap.data());
             } catch (mealErr) {
                 console.warn("Meal load skipped:", mealErr);
             }
 
+             // --------------------
+            // BUILD WORKOUT ROWS
+            // --------------------
+            const workoutRows = workouts.length
+                ? workouts.map(w => `
+                    <div class="flex justify-between border-b border-white/5 py-2 last:border-0">
+                        <span class="text-xs text-gray-400 font-bold uppercase">
+                            ${w.name || w.workoutName || "Workout"}
+                        </span>
+                        <span class="text-xs text-white font-black">
+                            ${formatDate(w.timestamp)}
+                        </span>
+                    </div>
+                `).join("")
+                : `<p class="text-xs text-gray-600 font-bold uppercase tracking-widest">
+                    No recent workouts logged.
+                </p>`;
+
+            // --------------------
+            // BUILD MEAL ROWS
+            // --------------------
             const mealRows = meals.length
                 ? meals.map(meal => `
                     <div class="flex justify-between border-b border-white/5 py-2 last:border-0">
-                        <span class="text-xs text-gray-400 font-bold uppercase">${meal.mealType || meal.type || "Meal"}</span>
-                        <span class="text-xs text-white font-black">${Number(meal.calories || 0)} CAL</span>
+                        <span class="text-xs text-gray-400 font-bold uppercase">
+                            ${meal.mealType || meal.type || "Meal"}
+                        </span>
+                        <span class="text-xs text-white font-black">
+                            ${Number(meal.calories || 0)} CAL
+                        </span>
                     </div>
                 `).join("")
-                : `<p class="text-xs text-gray-600 font-bold uppercase tracking-widest">No recent meals logged.</p>`;
+                : `<p class="text-xs text-gray-600 font-bold uppercase tracking-widest">
+                    No recent meals logged.
+                </p>`;
 
+            // --------------------
+            // RENDER UI
+            // --------------------
             athleteDetail.innerHTML = `
                 <div class="text-left">
                     <div class="flex justify-between items-start gap-4 border-b border-white/10 pb-6 mb-6 flex-wrap">
                         <div>
-                            <h3 class="text-3xl font-black uppercase italic tracking-tighter">${getDisplayName(athlete)}</h3>
+                            <h3 class="text-3xl font-black uppercase italic tracking-tighter">
+                                ${getDisplayName(athlete)}
+                            </h3>
                             <p class="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-1">
                                 Read-Only Parent View
                             </p>
                         </div>
                         <div class="text-right">
-                            <span class="block text-[9px] text-gray-500 font-black uppercase tracking-widest">Board Score</span>
-                            <span class="text-4xl font-black italic text-white">${athlete.boardScore || "--"}</span>
+                            <span class="block text-[9px] text-gray-500 font-black uppercase tracking-widest">
+                                Board Score
+                            </span>
+                            <span class="text-4xl font-black italic text-white">
+                                ${athlete.boardScore || "--"}
+                            </span>
                         </div>
                     </div>
 
@@ -302,7 +344,6 @@
                     </div>
 
                     <div class="grid md:grid-cols-2 gap-6">
-
                         <div class="portal-card p-5">
                             <h4 class="text-sm font-black uppercase italic mb-4 text-[var(--school-primary)]">
                                 Recent Workouts
@@ -316,7 +357,6 @@
                             </h4>
                             ${mealRows}
                         </div>
-
                     </div>
                 </div>
             `;
@@ -331,21 +371,6 @@
             `;
         }
     }
-
-    const workoutRows = workouts.length
-        ? workouts.map(w => `
-            <div class="flex justify-between border-b border-white/5 py-2 last:border-0">
-                <span class="text-xs text-gray-400 font-bold uppercase">
-                    ${w.name || "Workout"}
-                </span>
-                <span class="text-xs text-white font-black">
-                    ${formatDate(w.timestamp)}
-                </span>
-            </div>
-        `).join("")
-        : `<p class="text-xs text-gray-600 font-bold uppercase tracking-widest">
-            No recent workouts logged.
-        </p>`;
 
     logoutBtn.addEventListener("click", async () => {
         await signOut(auth);
