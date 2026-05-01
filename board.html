@@ -317,6 +317,7 @@
 
     async function buildHistoricalClassRecords(schoolId) {
         await appCheckReady;
+
         const classRecords = createEmptyClassRecords();
         const athleteCache = new Map();
 
@@ -338,24 +339,46 @@
 
                 if (!athleteId || !liftKey || attemptedWeight <= 0) continue;
 
-                const reviewWeightClass = review.weightClass || getWeightClass(Number(review.weighInWeight || 0));
+                const reviewWeightClass =
+                    review.weightClass ||
+                    getWeightClass(Number(review.weighInWeight || 0));
+
                 if (!reviewWeightClass) continue;
 
-                let athleteData = athleteCache.get(athleteId);
-                if (!athleteData) {
-                    const [userSnap, profileSnap] = await Promise.all([
-                        getDoc(doc(db, "users", athleteId)),
-                        getDoc(doc(db, "recruiting_profiles", athleteId))
-                    ]);
+                let athleteName = review.athleteName || "";
 
-                    const userData = userSnap.exists() ? userSnap.data() : {};
-                    const profileData = profileSnap.exists() ? profileSnap.data() : {};
-                    athleteData = { ...userData, ...profileData };
-                    athleteCache.set(athleteId, athleteData);
+                if (!athleteName && athleteCache.has(athleteId)) {
+                    athleteName = athleteCache.get(athleteId);
                 }
 
-                const athleteName = review.athleteName || getDisplayName(athleteData);
-                applyRecordToClassRecords(classRecords, reviewWeightClass, liftKey, attemptedWeight, athleteName);
+                if (!athleteName) {
+                    try {
+                        const profileSnap = await getDoc(
+                            doc(db, "recruiting_profiles", athleteId)
+                        );
+
+                        if (profileSnap.exists()) {
+                            athleteName = getDisplayName(profileSnap.data());
+                        }
+                    } catch (profileErr) {
+                        console.warn(
+                            "Athlete profile lookup skipped:",
+                            athleteId,
+                            profileErr
+                        );
+                    }
+                }
+
+                athleteName = athleteName || "Unknown Athlete";
+                athleteCache.set(athleteId, athleteName);
+
+                applyRecordToClassRecords(
+                    classRecords,
+                    reviewWeightClass,
+                    liftKey,
+                    attemptedWeight,
+                    athleteName
+                );
             } catch (reviewErr) {
                 console.warn("Failed to process approved review:", reviewErr);
             }
