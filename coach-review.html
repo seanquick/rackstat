@@ -491,7 +491,12 @@
         });
     }
 
-    function renderQueueButtons(workouts, pendingCount, parentRequestCount = 0) {
+    function renderQueueButtons(
+        workouts,
+        pendingCount,
+        parentRequestCount = 0,
+        workoutReviewCounts = new Map()
+    ) {
         workoutList.innerHTML = '';
 
         const rackBtn = document.createElement('button');
@@ -509,18 +514,18 @@
         workoutList.appendChild(rackBtn);
 
         const parentBtn = document.createElement('button');
-            parentBtn.className = `w-full text-left p-4 rounded-xl border transition-all mb-2 ${
-                currentViewMode === 'parents'
-                    ? 'bg-[var(--school-primary)]/10 border-[var(--school-primary)]'
-                    : 'bg-[#1a1a1c] border-transparent hover:border-[var(--school-primary)]'
-            }`;
-            parentBtn.onclick = () => window.loadParentAccessRequests();
-            parentBtn.innerHTML = `
-                <p class="text-[10px] font-black uppercase mb-1" style="color: var(--school-primary)">Parent Access</p>
-                <p class="text-white font-black uppercase text-sm italic">Parent Requests</p>
-                <p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">${parentRequestCount} Pending</p>
-            `;
-            workoutList.appendChild(parentBtn);
+        parentBtn.className = `w-full text-left p-4 rounded-xl border transition-all mb-2 ${
+            currentViewMode === 'parents'
+                ? 'bg-[var(--school-primary)]/10 border-[var(--school-primary)]'
+                : 'bg-[#1a1a1c] border-transparent hover:border-[var(--school-primary)]'
+        }`;
+        parentBtn.onclick = () => window.loadParentAccessRequests();
+        parentBtn.innerHTML = `
+            <p class="text-[10px] font-black uppercase mb-1" style="color: var(--school-primary)">Parent Access</p>
+            <p class="text-white font-black uppercase text-sm italic">Parent Requests</p>
+            <p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">${parentRequestCount} Pending</p>
+        `;
+        workoutList.appendChild(parentBtn);
 
         if (!workouts.length) {
             const empty = document.createElement('p');
@@ -531,17 +536,38 @@
         }
 
         workouts.forEach(({ id, data }) => {
+            const reviewCount = workoutReviewCounts.get(id) || 0;
+
             const btn = document.createElement('button');
             btn.className = `w-full text-left p-4 rounded-xl border transition-all group mb-2 ${
-                currentViewMode === 'workout' && currentWorkoutId === id
-                    ? 'bg-[var(--school-primary)]/10 border-[var(--school-primary)]'
-                    : 'bg-[#1a1a1c] border-transparent hover:border-[var(--school-primary)]'
+                reviewCount > 0
+                    ? 'bg-red-500/10 border-red-500/40'
+                    : currentViewMode === 'workout' && currentWorkoutId === id
+                        ? 'bg-[var(--school-primary)]/10 border-[var(--school-primary)]'
+                        : 'bg-[#1a1a1c] border-transparent hover:border-[var(--school-primary)]'
             }`;
+
             btn.onclick = () => window.loadPerformance(id, data.name || "Workout");
+
             btn.innerHTML = `
-                <p class="text-[10px] font-black uppercase mb-1" style="color: var(--school-primary)">${data.date || 'No Date'}</p>
-                <p class="text-white font-black uppercase text-sm italic group-hover:translate-x-1 transition-transform">${data.name || 'UNTITLED WORKOUT'}</p>
+                <div class="flex justify-between items-start gap-3">
+                    <div>
+                        <p class="text-[10px] font-black uppercase mb-1" style="color: var(--school-primary)">
+                            ${data.date || 'No Date'}
+                        </p>
+                        <p class="text-white font-black uppercase text-sm italic group-hover:translate-x-1 transition-transform">
+                            ${data.name || 'UNTITLED WORKOUT'}
+                        </p>
+                    </div>
+
+                    ${reviewCount > 0 ? `
+                        <span class="bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-full">
+                            ${reviewCount}
+                        </span>
+                    ` : ""}
+                </div>
             `;
+
             workoutList.appendChild(btn);
         });
     }
@@ -559,6 +585,92 @@
             console.warn("Unable to count pending rack reviews:", err);
             return 0;
         }
+    }
+
+    function setQueueSummary(elementId, count, label = "Pending") {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+
+        el.innerText = `${count} ${label}`;
+
+        if (count > 0) {
+            el.classList.remove("text-gray-500");
+            el.classList.add("text-red-400");
+        } else {
+            el.classList.remove("text-red-400");
+            el.classList.add("text-gray-500");
+        }
+    }
+
+    async function loadWorkoutReviewCounts(workouts = []) {
+        const countsByWorkoutId = new Map();
+        let totalReviewCount = 0;
+
+        for (const workout of workouts) {
+            const workoutId = workout.id;
+            let count = 0;
+
+            try {
+                const q = query(
+                    collection(db, "completed_workouts"),
+                    where("schoolId", "==", currentSchoolId),
+                    where("workoutId", "==", workoutId),
+                    limit(100)
+                );
+
+                const snap = await getDocs(q);
+
+                for (const logDoc of snap.docs) {
+                    const log = logDoc.data();
+                    const athleteId = log.athleteId || log.uid;
+                    if (!athleteId) continue;
+
+                    const sourceData = Array.isArray(log.exercises || log.performance)
+                        ? (log.exercises || log.performance)
+                        : [];
+
+                    for (const ex of sourceData) {
+                        if (ex.isCircuit) continue;
+
+                        const sets = Array.isArray(ex.sets) ? ex.sets : [];
+                        const weights = sets.map(s => parseFloat(s.weight) || 0);
+                        const topWeight = weights.length ? Math.max(...weights) : 0;
+
+                        if (topWeight <= 0) continue;
+
+                        const exerciseKey = getExerciseReviewKey(ex.name);
+                        const previousMax = await getOfficialApprovedMax(
+                            athleteId,
+                            exerciseKey,
+                            ex.name
+                        );
+
+                        if (topWeight <= previousMax) continue;
+
+                        const priorDecision = await getReviewDecision(
+                            athleteId,
+                            workoutId,
+                            exerciseKey,
+                            topWeight
+                        );
+
+                        if (!priorDecision) {
+                            count += 1;
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn("Workout review count skipped:", workoutId, err);
+            }
+
+            countsByWorkoutId.set(workoutId, count);
+            totalReviewCount += count;
+        }
+
+        return {
+            countsByWorkoutId,
+            totalReviewCount
+        };
     }
 
     async function loadPendingParentRequestCount() {
@@ -670,7 +782,22 @@
 
             const pendingCount = await loadPendingRackCount();
             const parentRequestCount = await loadPendingParentRequestCount();
-            renderQueueButtons(workouts, pendingCount, parentRequestCount);
+            const workoutCounts = await loadWorkoutReviewCounts(workouts);
+
+            setQueueSummary("rack-review-count", pendingCount, "Pending");
+            setQueueSummary("parent-request-count", parentRequestCount, "Pending");
+            setQueueSummary(
+                "workout-review-count",
+                workoutCounts.totalReviewCount,
+                workoutCounts.totalReviewCount === 1 ? "Review" : "Reviews"
+            );
+
+            renderQueueButtons(
+                workouts,
+                pendingCount,
+                parentRequestCount,
+                workoutCounts.countsByWorkoutId
+            );
 
             if (!workouts.length && !pendingCount && !parentRequestCount) {
                 renderWorkoutListMessage("No review queues found.");
