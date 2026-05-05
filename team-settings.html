@@ -474,6 +474,9 @@
             const clubStartRaw = parseInt(document.getElementById('club-start').value, 10);
             const clubStart = Number.isFinite(clubStartRaw) && clubStartRaw > 0 ? clubStartRaw : 50;
 
+        console.log("Saving school settings payload:", payload);
+        console.log("Saving school settings keys:", Object.keys(payload));
+
         await updateDoc(doc(db, "schools", schoolDocId), {
             colors: { primary, secondary },
             primaryColor: primary,

@@ -399,3 +399,90 @@ body {
         padding: 0.3rem 0.45rem !important;
     }
 }
+
+/* ==========================================================================
+   SHARED APP HEADER - TRUE CENTER LAYOUT
+   ========================================================================== */
+
+.app-header {
+    background: #000;
+    border-bottom: 2px solid var(--school-primary);
+    position: sticky;
+    top: 0;
+    z-index: 40;
+}
+
+.app-header-inner {
+    max-width: 72rem;
+    margin: 0 auto;
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 78px;
+    padding: 1rem;
+}
+
+.app-header-left,
+.app-header-right {
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+.app-header-left {
+    justify-content: flex-start;
+}
+
+.app-header-right {
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+.app-header-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    min-width: 0;
+}
+
+.app-header-title-wrap {
+    text-align: center;
+    min-width: 140px;
+}
+
+.app-header-title {
+    font-size: 0.95rem;
+    line-height: 1;
+    font-weight: 900;
+    font-style: italic;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #fff;
+}
+
+.app-header-subtitle {
+    margin-top: 0.25rem;
+    font-size: 0.45rem;
+    line-height: 1;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: #64748b;
+}
+
+.app-header-action {
+    font-size: 0.7rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #64748b;
+    transition: color 0.15s ease;
+}
+
+.app-header-action:hover {
+    color: #fff;
+}

@@ -1,0 +1,643 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function hasUserDoc() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function getUser() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function getUserSchoolId() {
+      return hasUserDoc()
+        ? (getUser().schoolId != null ? getUser().schoolId : getUser().school_id)
+        : null;
+    }
+
+    function getUserEmail() {
+      return isAuthenticated() && request.auth.token.email != null
+        ? request.auth.token.email
+        : "";
+    }
+
+    function isAdmin() {
+      return hasUserDoc() &&
+        getUser().role in ['admin', 'Admin', 'ADMIN'];
+    }
+
+    function isCoach() {
+      return hasUserDoc() &&
+        getUser().role in ['coach', 'Coach', 'COACH'];
+    }
+
+    function isAthlete() {
+      return hasUserDoc() &&
+        getUser().role in ['player', 'athlete', 'Player', 'Athlete'];
+    }
+
+    function isParent() {
+      return hasUserDoc() &&
+        getUser().role in ['parent', 'Parent', 'PARENT'];
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function docSchoolId(data) {
+      return data.schoolId != null ? data.schoolId : data.school_id;
+    }
+
+    function sameSchoolId(schoolId) {
+      return isAuthenticated() &&
+        getUserSchoolId() != null &&
+        schoolId != null &&
+        getUserSchoolId() == schoolId;
+    }
+
+    function sameSchoolData(data) {
+      return sameSchoolId(docSchoolId(data));
+    }
+
+    function isSchoolActive(schoolId) {
+      return schoolId != null &&
+        exists(/databases/$(database)/documents/schools/$(schoolId)) &&
+        get(/databases/$(database)/documents/schools/$(schoolId)).data.active != false;
+    }
+
+    function userSchoolIsActive() {
+      return isAdmin() || isSchoolActive(getUserSchoolId());
+    }
+
+    function parentCanAccessAthlete(athleteId) {
+      return userSchoolIsActive() &&
+        isParent() &&
+        getUser().linkedAthletes != null &&
+        athleteId in getUser().linkedAthletes;
+    }
+
+    function completedWorkoutOwner(data) {
+      return userSchoolIsActive() &&
+        isAuthenticated() && (
+          (data.uid != null && data.uid == request.auth.uid) ||
+          (data.athleteId != null && data.athleteId == request.auth.uid)
+        );
+    }
+
+    function completedWorkoutParent(data) {
+      return userSchoolIsActive() &&
+        isAuthenticated() && (
+          (data.uid != null && parentCanAccessAthlete(data.uid)) ||
+          (data.athleteId != null && parentCanAccessAthlete(data.athleteId))
+        );
+    }
+
+    function validMealOwnerCreate(data) {
+      return userSchoolIsActive() &&
+        isAuthenticated() &&
+        data.uid == request.auth.uid &&
+        data.dateKey is string &&
+        data.dateKey.size() == 10;
+    }
+
+    function validMealOwnerExisting(data) {
+      return userSchoolIsActive() &&
+        isAuthenticated() &&
+        data.uid == request.auth.uid;
+    }
+
+    function parentCanAccessMeal(data) {
+      return userSchoolIsActive() &&
+        isAuthenticated() &&
+        data.uid != null &&
+        parentCanAccessAthlete(data.uid);
+    }
+
+    function pendingMaxReviewOwner(data) {
+      return userSchoolIsActive() &&
+        isAuthenticated() && (
+          (data.athleteId != null && data.athleteId == request.auth.uid) ||
+          (data.uid != null && data.uid == request.auth.uid)
+        );
+    }
+
+    function reviewOwnerOrParent(data) {
+      return userSchoolIsActive() &&
+        isAuthenticated() && (
+          (data.athleteId != null && data.athleteId == request.auth.uid) ||
+          (data.uid != null && data.uid == request.auth.uid) ||
+          (data.athleteId != null && parentCanAccessAthlete(data.athleteId))
+        );
+    }
+
+    match /school_codes/{docId} {
+      allow read, list: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /schools/{schoolId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolId(schoolId) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "colors",
+            "primaryColor",
+            "primaryColorSecondary",
+            "logo_url",
+            "logo_primary",
+
+            "formula_type",
+            "formulaType",
+
+            "club_start",
+            "clubStart",
+
+            "hasRecruitingCard",
+            "recruitingEnabled",
+            "recruiting_enabled",
+
+            "trackedLifts",
+            "tracked_lifts",
+            "activeLifts",
+            "active_lifts",
+
+            "scoring_lifts",
+            "scoringLifts",
+
+            "customLifts",
+            "custom_lifts",
+            "availableLifts",
+            "available_lifts",
+
+            "updatedAt",
+            "updated_at",
+            "updatedBy",
+            "updated_by",
+            "lastUpdated"
+            ])
+        );
+      allow delete: if isAdmin();
+
+      match /settings/{settingId} {
+        allow read, list: if isAuthenticated() && userSchoolIsActive();
+
+        allow create, update, delete: if isAdmin() ||
+          (
+            isCoach() &&
+            userSchoolIsActive() &&
+            sameSchoolId(schoolId)
+          );
+      }
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) ||
+        isAdmin() ||
+        parentCanAccessAthlete(userId) ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(resource.data)
+        );
+
+      allow list: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(resource.data)
+        );
+
+      allow create: if isAuthenticated() &&
+        request.auth.uid == userId &&
+        request.resource.data.role in ['player', 'athlete', 'coach', 'parent'] &&
+        request.resource.data.role != 'admin' &&
+        request.resource.data.schoolId != null &&
+        request.resource.data.school_id != null &&
+        isSchoolActive(request.resource.data.schoolId);
+
+      allow update: if isAdmin() ||
+        (
+          isOwner(userId) &&
+          userSchoolIsActive() &&
+          request.resource.data.role == resource.data.role &&
+          request.resource.data.schoolId == resource.data.schoolId &&
+          request.resource.data.school_id == resource.data.school_id
+        ) ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(resource.data) &&
+          sameSchoolData(request.resource.data) &&
+          request.resource.data.role == resource.data.role
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    match /recruiting_profiles/{userId} {
+      allow get: if isOwner(userId) ||
+        isAdmin() ||
+        parentCanAccessAthlete(userId) ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          (
+            resource.data.schoolId == getUserSchoolId() ||
+            resource.data.school_id == getUserSchoolId()
+          )
+        ) ||
+        (
+          isAthlete() &&
+          userSchoolIsActive() &&
+          (
+            resource.data.schoolId == getUserSchoolId() ||
+            resource.data.school_id == getUserSchoolId()
+          )
+        );
+
+      allow list: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          (
+            resource.data.schoolId == getUserSchoolId() ||
+            resource.data.school_id == getUserSchoolId()
+          )
+        ) ||
+        (
+          isAthlete() &&
+          userSchoolIsActive() &&
+          (
+            resource.data.schoolId == getUserSchoolId() ||
+            resource.data.school_id == getUserSchoolId()
+          )
+        );
+
+      allow create: if isOwner(userId) ||
+        isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(request.resource.data)
+        );
+
+      allow update: if isOwner(userId) ||
+        isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          (
+            sameSchoolData(resource.data) ||
+            sameSchoolData(request.resource.data)
+          )
+        );
+
+      allow delete: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(resource.data)
+        );
+
+      match /maxes/{docId} {
+        allow read, list: if isOwner(userId) ||
+          isAdmin() ||
+          parentCanAccessAthlete(userId) ||
+          (
+            userSchoolIsActive() &&
+            sameSchoolData(get(/databases/$(database)/documents/recruiting_profiles/$(userId)).data)
+          );
+
+        allow create, update: if isOwner(userId) ||
+          isAdmin() ||
+          (
+            isCoach() &&
+            userSchoolIsActive() &&
+            sameSchoolData(get(/databases/$(database)/documents/recruiting_profiles/$(userId)).data)
+          );
+
+        allow delete: if isAdmin() ||
+          (
+            isCoach() &&
+            userSchoolIsActive() &&
+            sameSchoolData(get(/databases/$(database)/documents/recruiting_profiles/$(userId)).data)
+          );
+      }
+
+      match /meals/{mealId} {
+        allow read, list: if isOwner(userId) ||
+          isAdmin() ||
+          parentCanAccessAthlete(userId) ||
+          (
+            isCoach() &&
+            userSchoolIsActive() &&
+            sameSchoolData(get(/databases/$(database)/documents/recruiting_profiles/$(userId)).data)
+          );
+
+        allow create, update, delete: if isOwner(userId) ||
+          isAdmin() ||
+          (
+            isCoach() &&
+            userSchoolIsActive() &&
+            sameSchoolData(get(/databases/$(database)/documents/recruiting_profiles/$(userId)).data)
+          );
+      }
+
+      match /{allPaths=**} {
+        allow read, list: if isOwner(userId) ||
+          isAdmin() ||
+          parentCanAccessAthlete(userId) ||
+          (
+            isCoach() &&
+            userSchoolIsActive() &&
+            sameSchoolData(get(/databases/$(database)/documents/recruiting_profiles/$(userId)).data)
+          );
+
+        allow write: if isOwner(userId) ||
+          isAdmin() ||
+          (
+            isCoach() &&
+            userSchoolIsActive() &&
+            sameSchoolData(get(/databases/$(database)/documents/recruiting_profiles/$(userId)).data)
+          );
+      }
+    }
+
+    match /school_settings/{docId} {
+      allow read: if true;
+
+      allow create, update, delete: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolId(docId)
+        );
+    }
+
+    match /completed_workouts/{docId} {
+      allow create: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(request.resource.data)
+        ) ||
+        (
+          isAuthenticated() &&
+          userSchoolIsActive() &&
+          (
+            request.resource.data.uid == request.auth.uid ||
+            request.resource.data.athleteId == request.auth.uid
+          )
+        );
+
+      allow read, list: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(resource.data)
+        ) ||
+        completedWorkoutOwner(resource.data) ||
+        completedWorkoutParent(resource.data);
+
+      allow update, delete: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(resource.data)
+        ) ||
+        completedWorkoutOwner(resource.data);
+    }
+
+    match /meals/{mealId} {
+      allow read, list: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(resource.data)
+        ) ||
+        validMealOwnerExisting(resource.data) ||
+        parentCanAccessMeal(resource.data);
+
+      allow create: if isAdmin() ||
+        validMealOwnerCreate(request.resource.data);
+
+      allow update, delete: if isAdmin() ||
+        validMealOwnerExisting(resource.data);
+    }
+
+    match /workouts/{workoutId} {
+      allow read: if isAuthenticated() && userSchoolIsActive();
+
+      allow create: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(request.resource.data)
+        );
+
+      allow update, delete: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(resource.data)
+        );
+    }
+
+    match /metrics/{metricId} {
+      allow read, list: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(resource.data)
+        ) ||
+        (
+          isAuthenticated() &&
+          userSchoolIsActive() &&
+          resource.data.userId == request.auth.uid
+        ) ||
+        (
+          resource.data.userId != null &&
+          parentCanAccessAthlete(resource.data.userId)
+        );
+
+      allow create: if isAuthenticated() &&
+        userSchoolIsActive() &&
+        request.resource.data.userId == request.auth.uid;
+
+      allow update: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(resource.data)
+        ) ||
+        (
+          isAuthenticated() &&
+          userSchoolIsActive() &&
+          resource.data.userId == request.auth.uid
+        );
+
+      allow delete: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(resource.data)
+        );
+    }
+
+    match /supplement_library/{item} {
+      allow read: if isAuthenticated() && userSchoolIsActive();
+      allow write: if isAdmin() || (isCoach() && userSchoolIsActive());
+    }
+
+    match /system_announcements/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /approved_max_reviews/{docId} {
+      allow create: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(request.resource.data)
+        );
+
+      allow read, list: if isAdmin() ||
+        (
+          userSchoolIsActive() &&
+          sameSchoolData(resource.data)
+        ) ||
+        reviewOwnerOrParent(resource.data);
+
+      allow update, delete: if isAdmin();
+    }
+
+    match /rejected_max_reviews/{docId} {
+      allow create: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(request.resource.data)
+        );
+
+      allow read, list: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(resource.data)
+        ) ||
+        reviewOwnerOrParent(resource.data);
+
+      allow update, delete: if isAdmin();
+    }
+
+    match /pending_max_reviews/{docId} {
+      allow create: if isAuthenticated() &&
+        userSchoolIsActive() &&
+        request.resource.data.status == "pending" &&
+        request.resource.data.athleteId == request.auth.uid &&
+        sameSchoolData(request.resource.data);
+
+      allow read, list: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(resource.data)
+        ) ||
+        pendingMaxReviewOwner(resource.data);
+
+      allow update: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(resource.data) &&
+          request.resource.data.status in ["approved", "rejected", "pending"]
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    match /parent_access_requests/{docId} {
+      allow create: if isAuthenticated() &&
+        userSchoolIsActive() &&
+        request.resource.data.athleteId == request.auth.uid &&
+        request.resource.data.status == "pending" &&
+        sameSchoolData(request.resource.data);
+
+      allow read, list: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(resource.data)
+        ) ||
+        (
+          isAuthenticated() &&
+          userSchoolIsActive() &&
+          resource.data.athleteId == request.auth.uid
+        ) ||
+        (
+          isParent() &&
+          userSchoolIsActive() &&
+          resource.data.parentEmail == getUserEmail() &&
+          sameSchoolData(resource.data)
+        );
+
+      allow update: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(resource.data) &&
+          request.resource.data.status in ["pending", "approved", "rejected"]
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    match /parent_links/{docId} {
+      allow create: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(request.resource.data)
+        );
+
+      allow read, list: if isAdmin() ||
+        (
+          isCoach() &&
+          userSchoolIsActive() &&
+          sameSchoolData(resource.data)
+        ) ||
+        (
+          isParent() &&
+          userSchoolIsActive() &&
+          resource.data.status == "active" &&
+          resource.data.parentUid == request.auth.uid &&
+          sameSchoolData(resource.data)
+        );
+
+      allow update, delete: if isAdmin();
+    }
+
+    match /data_access_logs/{docId} {
+      allow create: if isAuthenticated();
+      allow read, list: if isAdmin() || (isCoach() && userSchoolIsActive());
+      allow update, delete: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

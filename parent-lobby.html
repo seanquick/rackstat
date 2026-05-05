@@ -24,9 +24,18 @@
             <h1 class="text-2xl font-black italic uppercase tracking-tighter">Parent Portal</h1>
             <p id="portal-status" class="text-[9px] font-bold uppercase tracking-widest text-gray-500 mt-1">Checking Access...</p>
         </div>
-        <button id="logout-btn" class="text-xs font-black uppercase tracking-widest text-gray-500 hover:text-white">
-            Logout
-        </button>
+
+        <div class="flex items-center gap-4">
+            <button
+                onclick="location.href='help-parent.html'"
+                class="text-xs font-black uppercase tracking-widest text-gray-500 hover:text-white">
+                Help / Parent Guide
+            </button>
+
+            <button id="logout-btn" class="text-xs font-black uppercase tracking-widest text-gray-500 hover:text-white">
+                Logout
+            </button>
+        </div>
     </div>
 </header>
 
@@ -65,7 +74,8 @@
         orderBy,
         limit,
         addDoc,
-        serverTimestamp
+        serverTimestamp,
+        updateDoc
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import {
         onAuthStateChanged,
@@ -136,7 +146,7 @@
 
     async function loadParentLinks(user) {
         await appCheckReady;
-        
+
         const parentSnap = await getDoc(doc(db, "users", user.uid));
 
         if (!parentSnap.exists()) {
@@ -260,9 +270,6 @@
             let meals = [];
             let workouts = [];
 
-             // --------------------
-            // LOAD WORKOUTS
-            // --------------------
             try {
                 const workoutQuery = query(
                     collection(db, "completed_workouts"),
@@ -277,11 +284,7 @@
                 console.warn("Workout load skipped:", workoutErr);
             }
 
-            let weeklyStats = {
-                total: 0,
-                thisWeek: 0
-            };
-
+            let weeklyStats = { total: 0, thisWeek: 0 };
             let lastWorkoutDate = null;
             let activityStatus = "inactive";
             let activityColor = "text-red-400";
@@ -295,7 +298,6 @@
                 );
 
                 const snap = await getDocs(weeklyQuery);
-
                 const now = new Date();
                 const startOfWeek = new Date(now);
                 startOfWeek.setDate(now.getDate() - 7);
@@ -334,9 +336,6 @@
                 console.warn("Weekly stats skipped:", err);
             }
 
-            // --------------------
-            // LOAD MEALS
-            // --------------------
             try {
                 const mealsQuery = query(
                     collection(db, "recruiting_profiles", athleteId, "meals"),
@@ -414,9 +413,7 @@
                         </span>
                     </div>
                 `).join("")
-                : `<p class="text-xs text-gray-600 font-bold uppercase tracking-widest">
-                    No recent workouts logged.
-                </p>`;
+                : `<p class="text-xs text-gray-600 font-bold uppercase tracking-widest">No recent workouts logged.</p>`;
 
             const mealRows = meals.length
                 ? meals.map(meal => `
@@ -429,9 +426,7 @@
                         </span>
                     </div>
                 `).join("")
-                : `<p class="text-xs text-gray-600 font-bold uppercase tracking-widest">
-                    No recent meals logged.
-                </p>`;
+                : `<p class="text-xs text-gray-600 font-bold uppercase tracking-widest">No recent meals logged.</p>`;
 
             const prRows = recentPRs.length
                 ? recentPRs.map(pr => `
@@ -454,9 +449,7 @@
                         </div>
                     </div>
                 `).join("")
-                : `<p class="text-xs text-gray-600 font-bold uppercase tracking-widest">
-                    No verified PRs yet.
-                </p>`;
+                : `<p class="text-xs text-gray-600 font-bold uppercase tracking-widest">No verified PRs yet.</p>`;
 
             athleteDetail.innerHTML = `
                 <div class="text-left">
@@ -539,6 +532,31 @@
 
         try {
             setStatus("Checking Parent Links...");
+
+            const userSnap = await getDoc(doc(db, "users", user.uid));
+
+            if (!userSnap.exists()) {
+                throw new Error("Parent user profile not found.");
+            }
+
+            const userData = userSnap.data();
+            const role = String(userData.role || "").toLowerCase();
+
+            if (role === "parent" && userData.hasSeenParentGuide !== true) {
+                const openGuide = confirm(
+                    "Welcome to RackStat Parent Access.\n\nWould you like to open the Parent Guide?"
+                );
+
+                await updateDoc(doc(db, "users", user.uid), {
+                    hasSeenParentGuide: true
+                });
+
+                if (openGuide) {
+                    location.href = "help-parent.html";
+                    return;
+                }
+            }
+
             await loadParentLinks(user);
         } catch (err) {
             console.error("Parent portal init error:", err);

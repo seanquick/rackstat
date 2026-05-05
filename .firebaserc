@@ -1,7 +1,7 @@
 {
   "projects": {
     "default": "rackstat-production",
-    "dev": "panthertracker-b8ff6"
+    "dev": "rackstat-dev"
   },
   "targets": {},
   "etags": {}

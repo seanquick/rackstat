@@ -96,23 +96,45 @@
 </head>
 <body class="font-sans pb-32">
 
-    <header class="bg-black border-b-2 border-red-700 p-4 sticky top-0 z-50">
-        <div class="flex justify-between items-center max-w-5xl mx-auto gap-4">
-            <button onclick="location.href='index.html'" class="text-[10px] font-black uppercase bg-gray-800 px-3 py-1.5 rounded text-gray-400 hover:text-white transition-all shrink-0">
+ <header class="bg-black border-b-2 border-red-700 p-4 sticky top-0 z-40">
+    <div class="max-w-5xl mx-auto relative flex items-center">
+
+        <!-- LEFT -->
+        <div class="flex-1">
+            <button
+                onclick="location.href='index.html'"
+                class="text-xs font-black uppercase tracking-widest text-gray-500 hover:text-white">
                 ← Lobby
             </button>
+        </div>
 
-            <div class="flex items-center gap-5 min-w-0">
-                <img id="school-logo" src="images/rackstat-logo.png" alt="School" class="h-10 w-auto object-contain" onerror="this.src='images/rackstat-logo.png'">
-                <div class="min-w-0 text-center">
-                    <span id="school-tag" class="block text-sm font-black italic uppercase tracking-widest text-white">THE RACK</span>
-                    <span id="rack-status" class="block text-[8px] font-bold uppercase tracking-widest text-gray-500 mt-1">Loading Weightroom Data...</span>
-                </div>
+        <!-- CENTER (ABSOLUTE TRUE CENTER) -->
+        <div class="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-4">
+            <img src="assets/logo-left.png" class="h-8" />
+
+            <div class="text-center">
+                <h1 class="text-lg font-black uppercase tracking-widest">
+                    ATHLETE LOBBY
+                </h1>
+                <p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">
+                    Awaiting Sign In...
+                </p>
             </div>
 
-            <div class="w-[65px] shrink-0"></div>
+            <img src="assets/logo-right.png" class="h-8" />
         </div>
-    </header>
+
+        <!-- RIGHT -->
+        <div class="flex-1 flex justify-end">
+            <button
+                onclick="location.href='help-athlete.html'"
+                class="text-xs font-black uppercase tracking-widest text-gray-500 hover:text-white">
+                Help / Athlete Guide
+            </button>
+        </div>
+
+    </div>
+</header>
 
     <div id="page-message" class="hidden max-w-md mx-auto px-4 mt-6">
         <div id="page-message-box" class="rounded-xl border p-4 text-xs font-bold uppercase tracking-wider"></div>

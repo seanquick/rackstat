@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coach Guide | RACKSTAT</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="bg-black text-white min-h-screen">
+  <main class="max-w-4xl mx-auto px-5 py-10">
+
+    <button onclick="history.back()" class="mb-8 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white">
+      ← Back
+    </button>
+
+    <header class="border-b border-white/10 pb-6 mb-8">
+      <p class="text-[10px] font-black uppercase tracking-[0.25em] text-[var(--school-primary)]">
+        RackStat Coach Guide
+      </p>
+      <h1 class="text-4xl font-black uppercase italic tracking-tighter mt-2">
+        Coaching Staff Overview
+      </h1>
+      <p class="text-sm text-gray-400 mt-3 max-w-2xl">
+        This guide explains the main areas available to coaches and how to use them to monitor athlete progress, review submissions, manage program settings, and support accountability.
+      </p>
+    </header>
+
+    <section class="space-y-6">
+
+      <div class="bg-[#111113] border border-white/10 rounded-2xl p-6">
+        <h2 class="text-xl font-black uppercase italic text-[var(--school-primary)]">1. Coach Lobby</h2>
+        <p class="text-sm text-gray-300 mt-3">
+          The Coach Lobby is the main starting point for coaching staff. From here, coaches can access session review, team settings, athlete data, and program tools.
+        </p>
+      </div>
+
+      <div class="bg-[#111113] border border-white/10 rounded-2xl p-6">
+        <h2 class="text-xl font-black uppercase italic text-[var(--school-primary)]">2. Session Review</h2>
+        <p class="text-sm text-gray-300 mt-3">
+          Session Review is where coaches monitor activity and approve athlete-submitted performance data.
+        </p>
+
+        <div class="grid md:grid-cols-2 gap-4 mt-5">
+          <div class="bg-black/30 border border-white/10 rounded-xl p-4">
+            <h3 class="text-sm font-black uppercase">Parent Requests</h3>
+            <p class="text-xs text-gray-400 mt-2">
+              Review and approve parent or guardian access requests. Approved parents receive read-only access to linked athlete data.
+            </p>
+          </div>
+
+          <div class="bg-black/30 border border-white/10 rounded-xl p-4">
+            <h3 class="text-sm font-black uppercase">Rack PR Reviews</h3>
+            <p class="text-xs text-gray-400 mt-2">
+              Review max lift submissions from athletes. Approved lifts update the athlete profile and can affect The Board.
+            </p>
+          </div>
+
+          <div class="bg-black/30 border border-white/10 rounded-xl p-4">
+            <h3 class="text-sm font-black uppercase">Workout Sessions</h3>
+            <p class="text-xs text-gray-400 mt-2">
+              View completed workout sessions and identify athlete performance that may require review.
+            </p>
+          </div>
+
+          <div class="bg-black/30 border border-white/10 rounded-xl p-4">
+            <h3 class="text-sm font-black uppercase">Athlete Alerts</h3>
+            <p class="text-xs text-gray-400 mt-2">
+              Identify athletes who have not logged recent activity. This helps coaches follow up and maintain accountability.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-[#111113] border border-white/10 rounded-2xl p-6">
+        <h2 class="text-xl font-black uppercase italic text-[var(--school-primary)]">3. The Board</h2>
+        <p class="text-sm text-gray-300 mt-3">
+          The Board displays athlete rankings, weight class records, and lifting club progress. It reflects verified and approved athlete data.
+        </p>
+        <p class="text-sm text-gray-400 mt-3">
+          Coaches may use Coach Mode to manage manual records where appropriate.
+        </p>
+      </div>
+
+      <div class="bg-[#111113] border border-white/10 rounded-2xl p-6">
+        <h2 class="text-xl font-black uppercase italic text-[var(--school-primary)]">4. Team Settings</h2>
+        <p class="text-sm text-gray-300 mt-3">
+          Team Settings allow coaches to configure how the program tracks and scores athlete performance.
+        </p>
+
+        <ul class="list-disc list-inside text-sm text-gray-400 mt-4 space-y-2">
+          <li><strong class="text-white">Tracked Lifts:</strong> lifts that appear in athlete tracking areas.</li>
+          <li><strong class="text-white">Scoring Lifts:</strong> lifts used in Board Score calculations.</li>
+          <li><strong class="text-white">Club Start:</strong> minimum score needed to appear in lifting clubs.</li>
+          <li><strong class="text-white">Recruiting Feature:</strong> enables or disables recruiting-card visibility.</li>
+        </ul>
+      </div>
+
+      <div class="bg-[#111113] border border-white/10 rounded-2xl p-6">
+        <h2 class="text-xl font-black uppercase italic text-[var(--school-primary)]">5. Parent Access</h2>
+        <p class="text-sm text-gray-300 mt-3">
+          Parent access is read-only. Parents can view approved athlete information once a coach approves the request.
+        </p>
+        <p class="text-sm text-gray-400 mt-3">
+          Parents cannot edit athlete data, approve lifts, or change team settings.
+        </p>
+      </div>
+
+      <div class="bg-[#111113] border border-white/10 rounded-2xl p-6">
+        <h2 class="text-xl font-black uppercase italic text-[var(--school-primary)]">6. Recommended Coach Routine</h2>
+        <ul class="list-disc list-inside text-sm text-gray-400 mt-4 space-y-2">
+          <li>Check Athlete Alerts regularly.</li>
+          <li>Review Rack PR submissions at least weekly.</li>
+          <li>Approve or reject submitted lifts promptly.</li>
+          <li>Keep tracked and scoring lifts consistent across the program.</li>
+          <li>Use parent access to increase transparency without allowing data edits.</li>
+        </ul>
+      </div>
+
+      <div class="bg-red-500/10 border border-red-500/20 rounded-2xl p-6">
+        <h2 class="text-xl font-black uppercase italic text-red-300">Important Note</h2>
+        <p class="text-sm text-red-100/80 mt-3">
+          RackStat is a performance tracking tool. It does not replace coaching judgment, medical advice, athletic training guidance, or school policy.
+        </p>
+      </div>
+
+    </section>
+  </main>
+</body>
+</html>

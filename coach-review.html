@@ -29,9 +29,19 @@
                     <p id="review-status" class="text-[9px] font-bold text-gray-500 uppercase tracking-widest mt-2">Initializing</p>
                 </div>
             </div>
-            <button onclick="location.href='coach-lobby.html'" class="text-xs font-bold text-gray-500 hover:text-white transition-colors uppercase tracking-widest">
-                ← Coach Lobby
-            </button>
+            <div class="flex items-center gap-4">
+                <button
+                    onclick="location.href='help-coach.html'"
+                    class="text-xs font-bold text-gray-500 hover:text-white transition-colors uppercase tracking-widest">
+                    Help / Coach Guide
+                </button>
+
+                <button
+                    onclick="location.href='coach-lobby.html'"
+                    class="text-xs font-bold text-gray-500 hover:text-white transition-colors uppercase tracking-widest">
+                    ← Coach Lobby
+                </button>
+            </div>
         </div>
 
         <div id="review-page-message" class="hidden mb-6">
@@ -1252,48 +1262,23 @@
         `;
 
         try {
-            let athleteQuery = query(
+            const athleteSnap = await getDocs(query(
                 collection(db, "recruiting_profiles"),
                 where("schoolId", "==", currentSchoolId),
                 limit(250)
-            );
+            ));
 
-            let athleteSnap = await getDocs(athleteQuery);
-
-            if (athleteSnap.empty) {
-                athleteQuery = query(
-                    collection(db, "recruiting_profiles"),
-                    where("school_id", "==", currentSchoolId),
-                    limit(250)
-                );
-
-                athleteSnap = await getDocs(athleteQuery);
-            }
-
-            let workoutQuery = query(
+            const workoutSnap = await getDocs(query(
                 collection(db, "completed_workouts"),
                 where("schoolId", "==", currentSchoolId),
                 limit(500)
-            );
-
-            let workoutSnap = await getDocs(workoutQuery);
-
-            if (workoutSnap.empty) {
-                workoutQuery = query(
-                    collection(db, "completed_workouts"),
-                    where("school_id", "==", currentSchoolId),
-                    limit(500)
-                );
-
-                workoutSnap = await getDocs(workoutQuery);
-            }
+            ));
 
             const latestWorkoutByAthlete = new Map();
 
             workoutSnap.docs.forEach(docSnap => {
                 const workout = docSnap.data();
                 const athleteId = workout.athleteId || workout.uid;
-
                 if (!athleteId) return;
 
                 const rawDate = workout.timestamp || workout.createdAt || workout.completedAt;
@@ -1302,7 +1287,6 @@
                 if (Number.isNaN(workoutDate.getTime())) return;
 
                 const currentLatest = latestWorkoutByAthlete.get(athleteId);
-
                 if (!currentLatest || workoutDate > currentLatest) {
                     latestWorkoutByAthlete.set(athleteId, workoutDate);
                 }
@@ -1318,13 +1302,11 @@
                 if (athleteData.active === false) return;
 
                 const lastWorkoutDate = latestWorkoutByAthlete.get(athleteId) || null;
-
                 let daysInactive = null;
 
                 if (lastWorkoutDate) {
                     daysInactive = Math.floor(
-                        (now.getTime() - lastWorkoutDate.getTime()) /
-                        (1000 * 60 * 60 * 24)
+                        (now.getTime() - lastWorkoutDate.getTime()) / (1000 * 60 * 60 * 24)
                     );
                 }
 
@@ -1345,8 +1327,8 @@
             });
 
             const countText = `${alerts.length} Alert${alerts.length === 1 ? "" : "s"}`;
-            const alertCountEl = document.getElementById("athlete-alert-count");
 
+            const alertCountEl = document.getElementById("athlete-alert-count");
             if (alertCountEl) alertCountEl.innerText = countText;
             if (statCount) statCount.innerText = countText;
 
@@ -1377,14 +1359,6 @@
                                         : "No workout history found"
                                 }
                             </p>
-
-                            <button
-                                onclick="location.href='profile.html?id=${alert.athleteId}'"
-                                class="mt-4 bg-white/5 hover:bg-white hover:text-black text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all">
-                                View Athlete Profile
-                            </button>
-                        </div>
-                        
                         </div>
 
                         <div class="text-right">

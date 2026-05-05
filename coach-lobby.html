@@ -38,6 +38,12 @@
             <button onclick="handleLogout(event)" class="relative z-[100] cursor-pointer pointer-events-auto text-xs font-black text-gray-500 hover:text-[var(--school-primary)] transition tracking-widest uppercase px-4 py-2 shrink-0">
                 Logout
             </button>
+
+            <button
+                onclick="location.href='help-coach.html'"
+                class="text-xs font-black uppercase tracking-widest text-gray-500 hover:text-white">
+                Help / Coach Guide
+            </button>
         </div>
     </header>
 
@@ -123,12 +129,13 @@
                 </div>
                 <p class="text-sm text-gray-500 font-medium">Toggle recruiting visibility, define core lifts, and manage branding.</p>
             </a>
+
         </div>
     </main>
 
     <script type="module">
         import { db, auth, appCheckReady } from './js/firebase-config.js';
-        import { doc, getDoc, collection, query, where, getDocs, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { doc, getDoc, collection, query, where, getDocs, orderBy, limit, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { applyTheme } from './js/theme.js';
         import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
@@ -351,6 +358,21 @@
 
                     const userData = userDoc.data();
                     const role = (userData.role || '').toLowerCase();
+
+                    if (userData.hasSeenCoachGuide !== true) {
+                        const openGuide = confirm(
+                            "Welcome to RackStat Coach Mode.\n\nWould you like to open the Coach Guide before getting started?"
+                        );
+
+                        await updateDoc(doc(db, "users", user.uid), {
+                            hasSeenCoachGuide: true
+                        });
+
+                        if (openGuide) {
+                            location.href = "help-coach.html";
+                            return;
+                        }
+                    }
 
                     if (role !== 'coach') {
                         window.location.replace('index.html');
