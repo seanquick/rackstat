@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security & Data Protection | RACKSTAT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="bg-black text-white min-h-screen">
+
+<main class="max-w-4xl mx-auto px-6 py-10">
+    <button onclick="history.back()" class="mb-8 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white">
+        ← Back
+    </button>
+
+    <header class="border-b border-white/10 pb-6 mb-8">
+        <p class="text-[10px] font-black uppercase tracking-[0.25em] text-[var(--school-primary)]">
+            RackStat Security Overview
+        </p>
+
+        <h1 class="text-4xl font-black uppercase italic tracking-tighter mt-2">
+            Security & Data Protection
+        </h1>
+
+        <p class="text-sm text-gray-400 mt-3 max-w-2xl">
+            RackStat is designed to support schools, coaches, athletes, and approved parents while applying reasonable safeguards to protect student and program data.
+        </p>
+
+        <p class="text-xs text-gray-500 mt-4 font-bold uppercase tracking-widest">
+            Last Updated: May 2026
+        </p>
+    </header>
+
+    <section class="space-y-6">
+
+        <div class="bg-[#111113] border border-white/10 rounded-2xl p-6">
+            <h2 class="text-xl font-black uppercase italic text-[var(--school-primary)]">1. Infrastructure</h2>
+            <p class="text-sm text-gray-300 mt-3">
+                RackStat is hosted using Firebase and Google Cloud infrastructure. Platform data is stored and transmitted using cloud-hosted services designed for secure application operation.
+            </p>
+            <ul class="list-disc pl-5 space-y-2 text-sm text-gray-400 mt-4">
+                <li>Firebase Hosting for secure web delivery</li>
+                <li>Google Cloud / Firebase infrastructure for application services</li>
+                <li>HTTPS/TLS encrypted connections</li>
+                <li>Managed authentication and database services</li>
+            </ul>
+        </div>
+
+        <div class="bg-[#111113] border border-white/10 rounded-2xl p-6">
+            <h2 class="text-xl font-black uppercase italic text-[var(--school-primary)]">2. Authentication</h2>
+            <p class="text-sm text-gray-300 mt-3">
+                RackStat uses Firebase Authentication to manage user login and account access. Users are assigned roles such as athlete, coach, parent, or administrator.
+            </p>
+            <ul class="list-disc pl-5 space-y-2 text-sm text-gray-400 mt-4">
+                <li>Authenticated account access required for protected areas</li>
+                <li>Role-based application experiences</li>
+                <li>School-specific user assignments</li>
+                <li>Administrative access limited to authorized platform administrators</li>
+            </ul>
+        </div>
+
+        <div class="bg-[#111113] border border-white/10 rounded-2xl p-6">
+            <h2 class="text-xl font-black uppercase italic text-[var(--school-primary)]">3. Access Controls</h2>
+            <p class="text-sm text-gray-300 mt-3">
+                RackStat applies role-based and school-based access controls to limit who can view or manage student-athlete information.
+            </p>
+            <ul class="list-disc pl-5 space-y-2 text-sm text-gray-400 mt-4">
+                <li>Athletes can access their own profile, workout, nutrition, and performance data</li>
+                <li>Coaches can access athlete data associated with their assigned school or program</li>
+                <li>Parents can access read-only information only for approved linked athletes</li>
+                <li>Admins can manage platform-level operations as needed for support and security</li>
+                <li>Firestore security rules restrict unauthorized cross-school or cross-user access</li>
+            </ul>
+        </div>
+
+        <div class="bg-[#111113] border border-white/10 rounded-2xl p-6">
+            <h2 class="text-xl font-black uppercase italic text-[var(--school-primary)]">4. Student Data Protection</h2>
+            <p class="text-sm text-gray-300 mt-3">
+                RackStat does not sell student data, does not use student data for advertising, and does not knowingly disclose student information except as directed by authorized school personnel or required by law.
+            </p>
+            <ul class="list-disc pl-5 space-y-2 text-sm text-gray-400 mt-4">
+                <li>No sale, rental, or monetization of student data</li>
+                <li>No targeted advertising or behavioral advertising</li>
+                <li>Student information used only for athletic performance tracking, program management, account access, and platform security</li>
+                <li>School-controlled access to student-athlete records</li>
+            </ul>
+        </div>
+
+        <div class="bg-[#111113] border border-white/10 rounded-2xl p-6">
+            <h2 class="text-xl font-black uppercase italic text-[var(--school-primary)]">5. Application Protections</h2>
+            <p class="text-sm text-gray-300 mt-3">
+                RackStat uses application-level protections intended to reduce unauthorized access and misuse.
+            </p>
+            <ul class="list-disc pl-5 space-y-2 text-sm text-gray-400 mt-4">
+                <li>Firebase App Check protection for production application requests</li>
+                <li>Firestore database rules limiting read and write permissions</li>
+                <li>Separate development and production environments</li>
+                <li>Role-specific onboarding and help documentation</li>
+                <li>Controlled parent access approval workflow</li>
+            </ul>
+        </div>
+
+        <div class="bg-[#111113] border border-white/10 rounded-2xl p-6">
+            <h2 class="text-xl font-black uppercase italic text-[var(--school-primary)]">6. Audit Logging</h2>
+            <p class="text-sm text-gray-300 mt-3">
+                RackStat may log selected sensitive actions to support security review, accountability, troubleshooting, and appropriate use.
+            </p>
+            <ul class="list-disc pl-5 space-y-2 text-sm text-gray-400 mt-4">
+                <li>Parent access activity</li>
+                <li>Coach review and approval actions</li>
+                <li>Administrative actions</li>
+                <li>Account or data access events where applicable</li>
+            </ul>
+        </div>
+
+        <div class="bg-[#111113] border border-white/10 rounded-2xl p-6">
+            <h2 class="text-xl font-black uppercase italic text-[var(--school-primary)]">7. Data Retention & Deletion</h2>
+            <p class="text-sm text-gray-300 mt-3">
+                Schools, parents, guardians, eligible students, or authorized users may request deletion of records. Requests are processed within a reasonable administrative timeframe, subject to applicable legal, security, backup, or school-retention obligations.
+            </p>
+            <p class="text-sm text-gray-400 mt-3">
+                Deletion and support requests may be submitted to support@rackstatapp.com or privacy@rackstatapp.com.
+            </p>
+        </div>
+
+        <div class="bg-[#111113] border border-white/10 rounded-2xl p-6">
+            <h2 class="text-xl font-black uppercase italic text-[var(--school-primary)]">8. Incident Response</h2>
+            <p class="text-sm text-gray-300 mt-3">
+                If RackStat becomes aware of a confirmed security incident involving protected student information, affected educational institutions will be notified without unreasonable delay following confirmation of the incident and in accordance with applicable legal requirements.
+            </p>
+            <p class="text-sm text-gray-400 mt-3">
+                Security concerns may be reported to security@rackstatapp.com.
+            </p>
+        </div>
+
+        <div class="bg-[#111113] border border-white/10 rounded-2xl p-6">
+            <h2 class="text-xl font-black uppercase italic text-[var(--school-primary)]">9. Third-Party Infrastructure</h2>
+            <p class="text-sm text-gray-300 mt-3">
+                RackStat uses Firebase and Google Cloud services to provide hosting, authentication, database storage, application security, and cloud functions. These services support technical operation of the platform.
+            </p>
+        </div>
+
+        <div class="bg-red-500/10 border border-red-500/20 rounded-2xl p-6">
+            <h2 class="text-xl font-black uppercase italic text-red-300">Important Note</h2>
+            <p class="text-sm text-red-100/80 mt-3">
+                This security overview is provided for transparency and school review. It is not a guarantee that unauthorized access, service interruption, or security incidents can never occur.
+            </p>
+        </div>
+
+        <div class="bg-[#111113] border border-white/10 rounded-2xl p-6">
+            <h2 class="text-xl font-black uppercase italic text-[var(--school-primary)]">Contact</h2>
+            <div class="text-sm text-gray-400 mt-3 space-y-1">
+                <p><strong class="text-white">Support:</strong> support@rackstatapp.com</p>
+                <p><strong class="text-white">Privacy:</strong> privacy@rackstatapp.com</p>
+                <p><strong class="text-white">Security:</strong> security@rackstatapp.com</p>
+            </div>
+        </div>
+
+    </section>
+</main>
+
+</body>
+</html>

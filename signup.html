@@ -58,8 +58,18 @@
         <div class="flex items-start gap-3 p-4 bg-zinc-900/50 border border-zinc-800 rounded mt-6">
             <input type="checkbox" id="legal-agree" class="mt-1 w-4 h-4 accent-red-600 cursor-pointer">
             <label for="legal-agree" class="text-[11px] leading-tight text-gray-400">
-                I agree to the <button type="button" id="open-terms" class="text-white underline hover:text-red-500">Terms & Conditions</button>
-                and have reviewed the <button type="button" id="open-privacy" class="text-white underline hover:text-red-500">Privacy Policy</button>.
+                I agree to the
+                    <button type="button" id="open-terms" class="text-white underline hover:text-red-500">
+                        Terms & Conditions
+                    </button>
+                    and have reviewed the
+                    <button type="button" id="open-privacy" class="text-white underline hover:text-red-500">
+                        Privacy Policy
+                    </button>
+                    and
+                    <a href="security.html" target="_blank" class="text-white underline hover:text-red-500">
+                        Security Practices
+                    </a>.
             </label>
         </div>
 
@@ -76,75 +86,175 @@
 <div id="privacy-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-black/95">
     <div class="bg-zinc-900 w-full max-w-2xl max-h-[80vh] rounded-2xl border border-zinc-800 flex flex-col">
         <div class="p-6 border-b border-zinc-800 flex justify-between items-center">
-            <h3 class="text-xl font-black italic uppercase tracking-tight">Privacy Policy</h3>
+            <h3 class="text-xl font-black italic uppercase tracking-tight text-white">Privacy Policy</h3>
             <button class="close-p text-gray-500 hover:text-white text-2xl">&times;</button>
         </div>
 
         <div class="p-6 overflow-y-auto text-sm leading-relaxed text-gray-300 space-y-6">
-            <p class="font-bold text-white">Effective Date: April 2026</p>
+            <p class="font-bold text-white">Effective Date: May 2026</p>
 
             <p>
-                RACKSTAT is designed to support student-athletes and coaching staff in tracking athletic development,
-                training performance, and nutrition habits in a structured, team-controlled environment.
+                RACKSTAT is an educational athletic performance platform designed to help schools, coaches,
+                student-athletes, and approved parents track training activity, strength development,
+                nutrition logs, and program participation in a secure, school-controlled environment.
             </p>
 
             <div>
                 <h4 class="text-white font-black uppercase text-xs mb-2">Information We Collect</h4>
-                <p>
-                    We may collect and store the following information:
-                </p>
-                <ul class="list-disc pl-5 space-y-1 text-gray-400">
-                    <li>Student name and school affiliation</li>
-                    <li>Strength and performance metrics (e.g., lifts, bodyweight, scores)</li>
-                    <li>Nutritional and meal tracking data</li>
-                    <li>Basic profile information provided by the athlete or coach</li>
+                <p>RACKSTAT may collect and store the following types of information:</p>
+                <ul class="list-disc pl-5 space-y-1 text-gray-400 mt-2">
+                    <li>Student-athlete name, email address, school affiliation, team, grade, graduation year, and basic profile information</li>
+                    <li>Coach, parent, and authorized user account information</li>
+                    <li>Strength and performance data, including lifts, bodyweight, workout activity, scores, and personal records</li>
+                    <li>Workout logs, session completion data, and coach review decisions</li>
+                    <li>Nutrition and meal tracking information entered by the athlete or authorized users</li>
+                    <li>Parent access requests, parent-athlete relationships, and approval status</li>
+                    <li>System activity records such as account actions, access logs, timestamps, and security-related events</li>
                 </ul>
             </div>
 
             <div>
-                <h4 class="text-white font-black uppercase text-xs mb-2">How Data Is Used</h4>
+                <h4 class="text-white font-black uppercase text-xs mb-2">Why Information Is Collected</h4>
                 <p>
-                    This data is used strictly for athletic development, team performance tracking,
-                    and communication between athletes and authorized coaching staff.
+                    Information is collected only to provide athletic performance tracking, team management,
+                    coach oversight, parent-approved visibility, progress monitoring, and program administration
+                    for participating schools and athletic programs.
                 </p>
             </div>
 
             <div>
-                <h4 class="text-white font-black uppercase text-xs mb-2">Data Access & Control</h4>
+                <h4 class="text-white font-black uppercase text-xs mb-2">How Information Is Used</h4>
                 <ul class="list-disc pl-5 space-y-1 text-gray-400">
-                    <li>Access is limited to the student-athlete and authorized coaches within the same program</li>
-                    <li>Data is <strong class="text-white">not sold, rented, or shared with third parties</strong></li>
-                    <li>No data is used for advertising or marketing purposes</li>
+                    <li>To allow athletes to track workouts, strength progress, nutrition logs, and personal records</li>
+                    <li>To allow coaches to review athlete activity, approve submitted lifts, and manage team settings</li>
+                    <li>To allow approved parents or guardians to view linked athlete information in read-only form</li>
+                    <li>To support team performance monitoring, accountability, and athletic program administration</li>
+                    <li>To maintain platform security, audit activity, and prevent unauthorized access</li>
                 </ul>
             </div>
 
             <div>
-                <h4 class="text-white font-black uppercase text-xs mb-2">Parental Rights</h4>
+                <h4 class="text-white font-black uppercase text-xs mb-2">No Sale or Advertising Use of Student Data</h4>
                 <p>
-                    For student-athletes under 18, parents or legal guardians have the right to request access to their
-                    child’s data at any time. Requests should be made through the athlete’s coaching staff or program administrator.
+                    RACKSTAT does not sell, rent, trade, or monetize student data. Student information is not used
+                    for targeted advertising, behavioral advertising, or unrelated marketing purposes.
                 </p>
             </div>
 
             <div>
-                <h4 class="text-white font-black uppercase text-xs mb-2">Data Security</h4>
+                <h4 class="text-white font-black uppercase text-xs mb-2">Who Can Access Information</h4>
+                <ul class="list-disc pl-5 space-y-1 text-gray-400">
+                    <li>Student-athletes may access their own account and performance information</li>
+                    <li>Authorized coaches and school personnel may access athlete information within their assigned school or program</li>
+                    <li>Approved parents or guardians may access read-only information for linked athletes only</li>
+                    <li>Platform administrators may access information only as needed to operate, secure, support, or troubleshoot the platform</li>
+                    <li>Information may be disclosed if required by law or directed by authorized school personnel</li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="text-white font-black uppercase text-xs mb-2">Student Data & School Control</h4>
                 <p>
-                    We take reasonable measures to protect stored data from unauthorized access. However, no system can be
-                    guaranteed to be completely secure.
+                    RACKSTAT acts as a technology service provider to participating schools and athletic programs.
+                    Student data remains under the control of the school, district, or authorized program personnel.
+                    Schools determine appropriate use, account access, and participation within their program.
                 </p>
             </div>
 
             <div>
-                <h4 class="text-white font-black uppercase text-xs mb-2">Data Retention</h4>
+                <h4 class="text-white font-black uppercase text-xs mb-2">Parent and Student Rights</h4>
                 <p>
-                    Data is retained for as long as the athlete is part of the program, unless a deletion request is made
-                    by the athlete, parent/guardian, or coaching staff.
+                    Parents, legal guardians, and eligible students may request access to, correction of, or deletion
+                    of student information in accordance with applicable law and school policy. Requests may be made
+                    through the athlete’s coaching staff, school administrator, or by contacting RACKSTAT at
+                    privacy@rackstatapp.com.
                 </p>
             </div>
 
-            <div class="p-4 bg-zinc-950 rounded-lg border border-zinc-800 italic text-xs">
-                <strong>Disclaimer:</strong> RACKSTAT is not a medical or nutritional provider. Information within the platform
-                should not be considered medical advice.
+            <div>
+                <h4 class="text-white font-black uppercase text-xs mb-2">How Information Is Protected</h4>
+                <p>
+                    RACKSTAT uses commercially reasonable administrative, technical, and physical safeguards intended
+                    to protect student and user information from unauthorized access, disclosure, alteration, or destruction.
+                </p>
+
+                <ul class="list-disc pl-5 space-y-1 text-gray-400 mt-2">
+                    <li>Encrypted HTTPS/TLS connections</li>
+                    <li>Firebase Authentication for secured account access</li>
+                    <li>Role-based access controls for athletes, coaches, parents, and administrators</li>
+                    <li>Firestore security rules restricting unauthorized cross-school or cross-user access</li>
+                    <li>Firebase App Check protections against unauthorized client access</li>
+                    <li>Audit logging for selected sensitive access and account activity</li>
+                    <li>Cloud-hosted infrastructure managed by Google Firebase / Google Cloud</li>
+                </ul>
+
+                <p class="mt-3">
+                    No system can be guaranteed to be completely secure, but RACKSTAT is designed to apply reasonable
+                    safeguards appropriate for protecting student and athletic program data.
+                </p>
+            </div>
+
+            <div>
+                <h4 class="text-white font-black uppercase text-xs mb-2">Data Retention and Deletion</h4>
+                <p>
+                    Student and user data is retained for as long as needed to support the athlete’s participation,
+                    school program administration, legal obligations, security review, or platform operation.
+                </p>
+
+                <p class="mt-3">
+                    Schools, authorized users, parents, guardians, or eligible students may request deletion of records.
+                    Deletion requests will be processed within a reasonable administrative timeframe, subject to legal,
+                    security, backup, or school-retention obligations.
+                </p>
+            </div>
+
+            <div>
+                <h4 class="text-white font-black uppercase text-xs mb-2">Security Incidents</h4>
+                <p>
+                    If RACKSTAT becomes aware of a confirmed security incident involving protected student information,
+                    affected educational institutions will be notified without unreasonable delay following confirmation
+                    of the incident and in accordance with applicable legal requirements.
+                </p>
+            </div>
+
+            <div>
+                <h4 class="text-white font-black uppercase text-xs mb-2">Third-Party Infrastructure Providers</h4>
+                <p>
+                    RACKSTAT uses Firebase and Google Cloud services to host, authenticate, store, and secure platform data.
+                    These providers support the technical operation of the platform and are not permitted by RACKSTAT to use
+                    student information for advertising or unrelated marketing purposes.
+                </p>
+            </div>
+
+            <div>
+                <h4 class="text-white font-black uppercase text-xs mb-2">No Medical or Nutritional Advice</h4>
+                <p>
+                    RACKSTAT is not a medical provider, healthcare service, dietitian, or nutritional advisory platform.
+                    Information entered into RACKSTAT is used for tracking and awareness only and should not be considered
+                    medical, dietary, rehabilitation, or professional training advice.
+                </p>
+            </div>
+
+            <div>
+                <h4 class="text-white font-black uppercase text-xs mb-2">Policy Updates</h4>
+                <p>
+                    This Privacy Policy may be updated periodically to reflect operational, legal, or security changes.
+                    Updated versions will be posted within the platform, and continued use of RACKSTAT constitutes
+                    acknowledgement of the updated policy.
+                </p>
+            </div>
+
+            <div>
+                <h4 class="text-white font-black uppercase text-xs mb-2">Contact Information</h4>
+                <p>
+                    Questions, privacy requests, security concerns, or data deletion requests may be directed to:
+                </p>
+
+                <div class="mt-3 space-y-1 text-gray-400">
+                    <p>privacy@rackstatapp.com</p>
+                    <p>security@rackstatapp.com</p>
+                    <p>support@rackstatapp.com</p>
+                </div>
             </div>
         </div>
 
@@ -156,81 +266,224 @@
 
 <div id="terms-modal" class="fixed inset-0 z-[101] hidden flex items-center justify-center p-4 bg-black/95">
     <div class="bg-zinc-900 w-full max-w-2xl max-h-[80vh] rounded-2xl border border-zinc-800 flex flex-col">
+        
         <div class="p-6 border-b border-zinc-800 flex justify-between items-center">
-            <h3 class="text-xl font-black italic uppercase tracking-tight text-white">Terms & Conditions</h3>
-            <button class="close-t text-gray-500 hover:text-white text-2xl">&times;</button>
+            <h3 class="text-xl font-black italic uppercase tracking-tight text-white">
+                Terms & Conditions
+            </h3>
+
+            <button class="close-t text-gray-500 hover:text-white text-2xl">
+                &times;
+            </button>
         </div>
 
         <div class="p-6 overflow-y-auto text-sm leading-relaxed text-gray-300 space-y-6">
-            <p class="font-bold text-white">Effective Date: April 2026</p>
 
+            <p class="font-bold text-white">
+                Effective Date: May 2026
+            </p>
+
+            <!-- USE OF PLATFORM -->
             <div>
-                <h4 class="text-white font-black uppercase text-xs mb-2">Use of the Platform</h4>
+                <h4 class="text-white font-black uppercase text-xs mb-2">
+                    Use of the Platform
+                </h4>
+
                 <p>
-                    RACKSTAT is provided for use by student-athletes and coaching staff for the purpose of tracking athletic
-                    performance, workouts, and nutrition.
+                    RACKSTAT is an educational athletic performance and program management platform
+                    designed for use by schools, coaches, student-athletes, parents, and authorized
+                    program personnel.
                 </p>
             </div>
 
+            <!-- USER RESPONSIBILITY -->
             <div>
-                <h4 class="text-white font-black uppercase text-xs mb-2">User Responsibility</h4>
+                <h4 class="text-white font-black uppercase text-xs mb-2">
+                    User Responsibility
+                </h4>
+
                 <ul class="list-disc pl-5 space-y-1 text-gray-400">
-                    <li>Users agree to provide accurate and honest data</li>
-                    <li>Users may not impersonate others or submit misleading performance data</li>
-                    <li>Misuse of the platform may result in account restriction or removal</li>
+                    <li>Users agree to provide accurate and honest information</li>
+                    <li>Users may not impersonate others or falsify athletic performance data</li>
+                    <li>Users are responsible for maintaining the confidentiality of their login credentials</li>
+                    <li>Improper use of the platform may result in suspension or removal of access</li>
                 </ul>
             </div>
 
+            <!-- COACH OVERSIGHT -->
             <div>
-                <h4 class="text-white font-black uppercase text-xs mb-2">Coach Oversight</h4>
+                <h4 class="text-white font-black uppercase text-xs mb-2">
+                    Coach & School Oversight
+                </h4>
+
                 <p>
-                    Coaches have administrative visibility into athlete data within their program and may review,
-                    approve, or manage submitted performance data.
+                    Authorized coaches and school administrators may review, manage, approve,
+                    or monitor athlete data associated with their athletic program in accordance
+                    with school policies and applicable law.
                 </p>
             </div>
 
+            <!-- STUDENT DATA PRIVACY -->
             <div>
-                <h4 class="text-white font-black uppercase text-xs mb-2">Assumption of Risk</h4>
+                <h4 class="text-white font-black uppercase text-xs mb-2">
+                    Student Data Privacy
+                </h4>
+
                 <p>
-                    Participation in athletic training involves inherent physical risks. By using this platform,
-                    users acknowledge and accept full responsibility for any injuries or outcomes resulting from training activities.
+                    RACKSTAT acts as a technology service provider to participating schools and
+                    athletic programs. Student data remains the property of the educational institution
+                    and/or authorized users.
+                </p>
+
+                <p class="mt-3">
+                    Authorized school personnel are responsible for determining appropriate platform
+                    usage and managing access permissions for coaches, athletes, parents, and staff.
                 </p>
             </div>
 
+            <!-- DATA SECURITY -->
             <div>
-                <h4 class="text-white font-black uppercase text-xs mb-2">No Medical Advice</h4>
+                <h4 class="text-white font-black uppercase text-xs mb-2">
+                    Data Security & Educational Records
+                </h4>
+
                 <p>
-                    RACKSTAT does not provide medical, dietary, or professional training advice. Users should consult
-                    qualified professionals before making health or training decisions.
+                    RACKSTAT implements commercially reasonable administrative, technical,
+                    and physical safeguards intended to protect student and user data from
+                    unauthorized access, disclosure, alteration, or destruction.
+                </p>
+
+                <p class="mt-3">
+                    RACKSTAT does not sell student data, does not use student data for advertising,
+                    and does not knowingly disclose educational records except as directed by
+                    authorized school personnel or as required by law.
+                </p>
+
+                <p class="mt-3">
+                    In the event of a confirmed data security incident involving protected student
+                    information, affected educational institutions will be notified without
+                    unreasonable delay in accordance with applicable legal requirements.
                 </p>
             </div>
 
+            <!-- SECURITY PRACTICES -->
             <div>
-                <h4 class="text-white font-black uppercase text-xs mb-2">Limitation of Liability</h4>
+                <h4 class="text-white font-black uppercase text-xs mb-2">
+                    Security Practices
+                </h4>
+
+                <ul class="list-disc pl-5 space-y-1 text-gray-400">
+                    <li>Encrypted HTTPS/TLS connections</li>
+                    <li>Firebase Authentication secured login access</li>
+                    <li>Role-based access controls</li>
+                    <li>Firestore security rules restricting unauthorized access</li>
+                    <li>Audit logging for sensitive account activity</li>
+                    <li>Cloud-hosted infrastructure managed by Google Firebase</li>
+                </ul>
+            </div>
+
+            <!-- ASSUMPTION OF RISK -->
+            <div>
+                <h4 class="text-white font-black uppercase text-xs mb-2">
+                    Assumption of Risk
+                </h4>
+
                 <p>
-                    RACKSTAT and its operators are not liable for any injuries, damages, or losses resulting from the use
-                    of this platform or reliance on its data.
+                    Participation in athletic training and physical activity involves inherent
+                    physical risks. Users acknowledge that athletic participation is voluntary
+                    and accept responsibility for decisions related to workouts, nutrition,
+                    conditioning, and physical activity.
                 </p>
             </div>
 
+            <!-- NO MEDICAL ADVICE -->
             <div>
-                <h4 class="text-white font-black uppercase text-xs mb-2">Account & Access</h4>
+                <h4 class="text-white font-black uppercase text-xs mb-2">
+                    No Medical Advice
+                </h4>
+
                 <p>
-                    Accounts are controlled by the associated school or coaching staff. Access may be revoked at any time
-                    for violations of these terms or at the discretion of program administrators.
+                    RACKSTAT does not provide medical, dietary, rehabilitation, or professional
+                    training advice. Users should consult qualified medical or athletic professionals
+                    before making health, nutrition, or training decisions.
                 </p>
             </div>
 
+            <!-- ACCOUNT ACCESS -->
             <div>
-                <h4 class="text-white font-black uppercase text-xs mb-2">Updates to Terms</h4>
+                <h4 class="text-white font-black uppercase text-xs mb-2">
+                    Account & Access
+                </h4>
+
                 <p>
-                    These terms may be updated periodically. Continued use of the platform constitutes acceptance of any changes.
+                    Accounts are managed by the associated school or coaching staff.
+                    Access may be modified, restricted, or revoked for violations of these terms,
+                    school policy, or platform misuse.
                 </p>
+            </div>
+
+            <!-- DATA RETENTION -->
+            <div>
+                <h4 class="text-white font-black uppercase text-xs mb-2">
+                    Data Retention
+                </h4>
+
+                <p>
+                    Schools and authorized users may request deletion of student records
+                    upon termination of service, subject to reasonable administrative
+                    processing time and applicable legal retention obligations.
+                </p>
+            </div>
+
+            <!-- PLATFORM AVAILABILITY -->
+            <div>
+                <h4 class="text-white font-black uppercase text-xs mb-2">
+                    Platform Availability
+                </h4>
+
+                <p>
+                    While RACKSTAT strives to maintain reliable platform availability,
+                    uninterrupted access cannot be guaranteed. Scheduled maintenance,
+                    updates, or technical issues may occasionally impact availability.
+                </p>
+            </div>
+
+            <!-- UPDATES -->
+            <div>
+                <h4 class="text-white font-black uppercase text-xs mb-2">
+                    Updates to Terms
+                </h4>
+
+                <p>
+                    These Terms & Conditions may be updated periodically to reflect
+                    operational, legal, or security changes. Continued use of the platform
+                    constitutes acceptance of the updated terms.
+                </p>
+            </div>
+
+            <!-- CONTACT -->
+            <div>
+                <h4 class="text-white font-black uppercase text-xs mb-2">
+                    Contact Information
+                </h4>
+
+                <p>
+                    Questions regarding these terms, data privacy, or security practices
+                    may be directed to:
+                </p>
+
+                <div class="mt-3 space-y-1 text-gray-400">
+                    <p>support@rackstatapp.com</p>
+                    <p>privacy@rackstatapp.com</p>
+                    <p>security@rackstatapp.com</p>
+                </div>
             </div>
         </div>
 
         <div class="p-4 border-t border-zinc-800 text-center">
-            <button class="close-t px-8 py-2 bg-white text-black font-black uppercase text-xs rounded-full">Close</button>
+            <button class="close-t px-8 py-2 bg-white text-black font-black uppercase text-xs rounded-full">
+                Close
+            </button>
         </div>
     </div>
 </div>
@@ -483,5 +736,36 @@
 
     startSignup();
 </script>
+
+<footer class="app-footer">
+    <p class="app-footer-copy">
+        © 2026 RackStat • Estee Investments LLC
+    </p>
+
+    <div class="app-footer-links">
+        <a href="privacy.html">Privacy</a>
+        <span class="app-footer-divider">|</span>
+
+        <a href="terms.html">Terms</a>
+        <span class="app-footer-divider">|</span>
+
+        <a href="security.html">Security</a>
+        <span class="app-footer-divider">|</span>
+
+        <a href="help-coach.html">Coach Guide</a>
+        <span class="app-footer-divider">|</span>
+
+        <a href="help-athlete.html">Athlete Guide</a>
+        <span class="app-footer-divider">|</span>
+
+        <a href="help-parent.html">Parent Guide</a>
+    </div>
+
+    <p class="app-footer-subtext">
+        Educational Athletic Performance Platform
+    </p>
+<a href="mailto:support@rackstatapp.com">Support</a>
+</footer>
+
 </body>
 </html>
