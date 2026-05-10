@@ -460,7 +460,7 @@ body {
 
 .app-header {
     background: #000;
-    border-bottom: 2px solid var(--school-primary);
+    border-bottom: 1px solid rgba(185, 28, 28, 0.55);
     position: sticky;
     top: 0;
     z-index: 40;
@@ -472,7 +472,7 @@ body {
     position: relative;
     display: flex;
     align-items: center;
-    min-height: 78px;
+    min-height: 92px;
     padding: 1rem;
 }
 
