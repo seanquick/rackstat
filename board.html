@@ -20,33 +20,34 @@
 <body class="pb-24">
 
 <header class="bg-black border-b-2 border-red-700 p-4 sticky top-0 z-40">
-    <div class="max-w-5xl mx-auto relative flex items-center">
+    <div class="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-4">
 
-        <!-- LEFT -->
-        <div class="flex-1">
-            <button
-                onclick="location.href='index.html'"
-                class="text-xs font-black uppercase tracking-widest text-gray-500 hover:text-white">
-                ← Lobby
-            </button>
-        </div>
+    <!-- SCHOOL LOGO -->
+    <img
+        id="school-logo"
+        src=""
+        class="h-8 hidden"
+        alt="School Logo"
+    >
 
-        <!-- CENTER (ABSOLUTE TRUE CENTER) -->
-        <div class="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-4">
-            <img src="images/logo-left.png" class="h-8" />
+    <!-- TITLE -->
+    <div class="text-center">
+        <h1 class="text-lg font-black uppercase tracking-widest">
+            ATHLETE LOBBY
+        </h1>
 
-            <div class="text-center">
-                <h1 class="text-lg font-black uppercase tracking-widest">
-                    ATHLETE LOBBY
-                </h1>
-                <p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">
-                    Awaiting Sign In...
-                </p>
-            </div>
-
-            <img src="images/logo-right.png" class="h-8" />
-        </div>
+        <p class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">
+            Awaiting Sign In...
+        </p>
     </div>
+
+    <!-- RACKSTAT LOGO -->
+    <img
+        src="images/rackstat-logo.png"
+        class="h-8"
+        alt="RackStat"
+    >
+</div>  
 </header>
 
 <main class="max-w-4xl mx-auto px-4 py-6">
