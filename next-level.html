@@ -490,12 +490,27 @@
         try {
             await appCheckReady;
             
-            await Promise.all([
-                setDoc(doc(db, "recruiting_profiles", currentUser.uid), profileData, { merge: true }),
-                setDoc(doc(db, "users", currentUser.uid), {
-                    fullName
-                }, { merge: true })
-            ]);
+        const schoolId =
+            profileData.schoolId ||
+            profileData.school_id ||
+            currentUserData?.schoolId ||
+            currentUserData?.school_id;
+
+        if (!schoolId) {
+            throw new Error("Missing school ID. Unable to save recruiting profile.");
+        }
+
+        await Promise.all([
+            setDoc(doc(db, "recruiting_profiles", currentUser.uid), {
+                ...profileData,
+                schoolId,
+                school_id: schoolId
+            }, { merge: true }),
+
+            setDoc(doc(db, "users", currentUser.uid), {
+                fullName
+            }, { merge: true })
+        ]);
 
             alert("SCOUTING PROFILE SYNCED!");
             window.location.href = 'profile.html';
