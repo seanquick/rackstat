@@ -506,7 +506,7 @@
 
             if (!schoolId) {
                 showPageMessage("This profile is not connected to a school yet. Some branding and recruiting features may be unavailable.", "warn");
-                document.getElementById('school-name').innerText = 'ATHLETE PROFILE';
+                safeSet('school-name', 'ATHLETE PROFILE');
                 currentBoardSettings = null;
             } else {
                 try {
@@ -525,13 +525,13 @@
                     }
 
                     if (themeData?.name) {
-                        document.getElementById('school-name').innerText = themeData.name;
+                        safeSet('school-name', themeData.name);
                     } else {
-                        document.getElementById('school-name').innerText = 'ATHLETE PROFILE';
+                        safeSet('school-name', 'ATHLETE PROFILE');
                     }
                 } catch (themeErr) {
                     console.error("Theme load error:", themeErr);
-                    document.getElementById('school-name').innerText = 'ATHLETE PROFILE';
+                    safeSet('school-name', 'ATHLETE PROFILE');
                     showPageMessage("School branding could not be fully loaded, but your profile is still available.", "warn");
                 }
             }
@@ -554,7 +554,10 @@
             }
 
             if (mergedData.clubGoal) {
-                document.getElementById('goal-selector').value = mergedData.clubGoal;
+                const goalSelector = document.getElementById('goal-selector');
+                if (goalSelector) {
+                    goalSelector.value = mergedData.clubGoal;
+                }
             }
 
             currentGoals = mergedData.goals || [];
