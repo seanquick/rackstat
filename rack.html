@@ -603,29 +603,37 @@
                     }
                 }
 
-                await Promise.all([
-                    setDoc(doc(db, "recruiting_profiles", user.uid, "maxes", "latest"), {
+                try {
+                    console.log("Saving maxes/latest...");
+                    await setDoc(doc(db, "recruiting_profiles", user.uid, "maxes", "latest"), {
                         schoolId,
                         school_id: schoolId,
                         bodyWeight: bw,
                         body_weight: bw,
                         weight: bw,
                         lastUpdated: serverTimestamp()
-                    }, { merge: true }),
+                    }, { merge: true });
 
-                    setDoc(doc(db, "recruiting_profiles", user.uid), {
+                    console.log("Saving recruiting profile...");
+                    await setDoc(doc(db, "recruiting_profiles", user.uid), {
                         schoolId,
                         school_id: schoolId,
                         bodyWeight: bw,
                         weight: bw,
                         lastUpdated: serverTimestamp()
-                    }, { merge: true }),
+                    }, { merge: true });
 
-                    setDoc(doc(db, "users", user.uid), {
+                    console.log("Saving user weight...");
+                    await setDoc(doc(db, "users", user.uid), {
                         weight: bw,
                         lastSync: serverTimestamp()
-                    }, { merge: true })
-                ]);
+                    }, { merge: true });
+
+                    console.log("Base Rack saves complete.");
+                } catch (saveStepErr) {
+                    console.error("Rack base save failed:", saveStepErr);
+                    throw saveStepErr;
+                }
 
                 let createdPendingCount = 0;
                 let skippedPendingCount = 0;
