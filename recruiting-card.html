@@ -392,12 +392,27 @@
         <div class="share-stat"><div class="share-label">Position</div><div id="share-position" class="share-value text-4xl">--</div></div>
     </div>
 
-    <div class="grid grid-cols-2 gap-5 mb-10">
+    <div class="grid grid-cols-2 gap-5 mb-7">
         <div class="share-stat"><div class="share-label">Bench</div><div id="share-bench" class="share-value">--</div></div>
         <div class="share-stat"><div class="share-label">Squat</div><div id="share-squat" class="share-value">--</div></div>
         <div class="share-stat"><div class="share-label">Clean</div><div id="share-clean" class="share-value">--</div></div>
         <div class="share-stat"><div class="share-label">Deadlift</div><div id="share-deadlift" class="share-value">--</div></div>
-    </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-5 mb-7">
+            <div class="share-stat">
+                <div class="share-label">GPA</div>
+                <div id="share-gpa" class="share-value">--</div>
+            </div>
+            <div class="share-stat">
+                <div class="share-label">ACT</div>
+                <div id="share-act" class="share-value">--</div>
+            </div>
+            <div class="share-stat">
+                <div class="share-label">SAT</div>
+                <div id="share-sat" class="share-value">--</div>
+            </div>
+        </div>
 
     <div class="share-stat mb-10">
         <div class="share-label">Why I Play</div>
@@ -500,6 +515,9 @@
         copyText('stat-squat', 'share-squat');
         copyText('stat-clean', 'share-clean');
         copyText('stat-deadlift', 'share-deadlift');
+        copyText('disp-core-gpa', 'share-gpa');
+        copyText('disp-act', 'share-act');
+        copyText('disp-sat', 'share-sat');
         copyText('whyPlay', 'share-why');
 
         const dispLogo = document.getElementById('disp-logo');
