@@ -474,10 +474,7 @@
             const clubStartRaw = parseInt(document.getElementById('club-start').value, 10);
             const clubStart = Number.isFinite(clubStartRaw) && clubStartRaw > 0 ? clubStartRaw : 50;
 
-        console.log("Saving school settings payload:", payload);
-        console.log("Saving school settings keys:", Object.keys(payload));
-
-        await updateDoc(doc(db, "schools", schoolDocId), {
+        const payload = {
             colors: { primary, secondary },
             primaryColor: primary,
             primaryColorSecondary: secondary,
@@ -492,7 +489,12 @@
             scoringLifts,
             customLifts,
             lastUpdated: serverTimestamp()
-        });
+        };
+
+        console.log("Saving school settings payload:", payload);
+        console.log("Saving school settings keys:", Object.keys(payload));
+
+        await updateDoc(doc(db, "schools", schoolDocId), payload);
 
             showPageMessage("Program settings saved successfully.", "success");
             setStatus("Settings Saved", "success");
