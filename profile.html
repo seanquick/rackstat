@@ -655,29 +655,40 @@
                 currentBoardSettings
             );
 
-            await Promise.all([
-                setDoc(doc(db, "recruiting_profiles", viewedUid), {
-                    schoolId: getSchoolIdFromData(latestMergedProfileData),
-                    school_id: getSchoolIdFromData(latestMergedProfileData),
-                    ...profilePayload,
-                    boardScore: recalculatedBoardScore
-                }, { merge: true }),
+            const profileSchoolId =
+                getSchoolIdFromData(latestMergedProfileData) ||
+                getSchoolIdFromData(currentUserData);
 
-                setDoc(doc(db, "users", viewedUid), {
-                    fullName,
-                    weight,
-                    lastSync: serverTimestamp()
-                }, { merge: true }),
+            if (!profileSchoolId) {
+                throw new Error("Missing schoolId for profile save.");
+            }
 
-                setDoc(doc(db, "recruiting_profiles", viewedUid, "maxes", "latest"), {
-                    schoolId: getSchoolIdFromData(latestMergedProfileData),
-                    school_id: getSchoolIdFromData(latestMergedProfileData),
-                    weight,
-                    bodyWeight: weight,
-                    body_weight: weight,
-                    lastUpdated: serverTimestamp()
-                }, { merge: true })
-            ]);
+            console.log("Saving recruiting profile...");
+            await setDoc(doc(db, "recruiting_profiles", viewedUid), {
+                schoolId: profileSchoolId,
+                school_id: profileSchoolId,
+                ...profilePayload,
+                boardScore: recalculatedBoardScore
+            }, { merge: true });
+
+            console.log("Saving user profile...");
+            await setDoc(doc(db, "users", viewedUid), {
+                fullName,
+                weight,
+                lastSync: serverTimestamp()
+            }, { merge: true });
+
+            console.log("Saving maxes/latest...");
+            await setDoc(doc(db, "recruiting_profiles", viewedUid, "maxes", "latest"), {
+                schoolId: profileSchoolId,
+                school_id: profileSchoolId,
+                weight,
+                bodyWeight: weight,
+                body_weight: weight,
+                lastUpdated: serverTimestamp()
+            }, { merge: true });
+
+            console.log("Profile saves complete.");
 
             latestMergedProfileData = {
                 ...latestMergedProfileData,
