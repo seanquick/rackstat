@@ -241,8 +241,10 @@
             const schoolId = userData.schoolId || userData.school_id || "";
 
             await addDoc(collection(db, "data_access_logs"), {
+                actorUid: user.uid,
                 actorId: user.uid,
                 actorRole: userData.role || "unknown",
+                actorEmail: user.email || "",
                 schoolId,
                 athleteId,
                 action,
