@@ -6,6 +6,7 @@
     <title>Scouting Report | RACKSTAT</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
     <style>
         :root {
@@ -21,65 +22,148 @@
             font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
 
-        .label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--school-primary, var(--rackstat-red)); }
-        .value { font-size: 1.125rem; font-weight: 900; font-style: italic; }
+        .label {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--school-primary, var(--rackstat-red));
+        }
+
+        .value {
+            font-size: 1.125rem;
+            font-weight: 900;
+            font-style: italic;
+        }
 
         .stat-box {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--rackstat-border);
             border-radius: 0.75rem;
             padding: 0.75rem;
-            transition: all 0.2s;
         }
 
-        #disp-logo:not([src]), #disp-logo[src=""] { display: none !important; }
+        #disp-logo:not([src]), #disp-logo[src=""] {
+            display: none !important;
+        }
+
+        .share-card {
+            width: 1080px;
+            min-height: 1350px;
+            background:
+                radial-gradient(circle at top left, rgba(239, 68, 68, 0.35), transparent 35%),
+                linear-gradient(145deg, #050505 0%, #111827 55%, #000 100%);
+            color: white;
+            padding: 64px;
+            position: fixed;
+            left: -99999px;
+            top: 0;
+            border: 8px solid var(--school-primary, var(--rackstat-red));
+        }
+
+        .share-stat {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.16);
+            border-radius: 24px;
+            padding: 24px;
+        }
+
+        .share-label {
+            color: var(--school-primary, #ef4444);
+            font-size: 22px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .12em;
+        }
+
+        .share-value {
+            font-size: 46px;
+            font-weight: 1000;
+            font-style: italic;
+            line-height: 1;
+            margin-top: 8px;
+        }
 
         @media print {
-            @page { size: letter; margin: 0; }
-            body { background: white !important; color: black !important; }
-            .no-print { display: none !important; }
+            @page {
+                size: letter;
+                margin: 0.35in;
+            }
+
+            html, body {
+                background: white !important;
+                color: black !important;
+            }
+
+            .no-print,
+            nav,
+            #share-card,
+            #save-profile-btn {
+                display: none !important;
+            }
 
             #capture-area {
                 background: white !important;
                 color: black !important;
                 box-shadow: none !important;
-                border: 1px solid #eee !important;
-                position: absolute;
-                top: 0;
-                left: 50%;
-                transform: translateX(-50%) scale(0.75);
-                transform-origin: top center;
-                width: 100%;
-                max-width: 800px;
+                border: 1px solid #d1d5db !important;
+                border-radius: 0 !important;
+                width: 100% !important;
+                max-width: 760px !important;
+                margin: 0 auto !important;
+                padding: 22px !important;
             }
 
-            span, p, h1, h2, h3, h4, div:not(.label) { color: black !important; }
-            .label { color: var(--school-primary, var(--rackstat-red)) !important; }
-            .stat-box { background: #f9fafb !important; border-color: #e5e7eb !important; }
-        }
+            span, p, h1, h2, h3, h4, div:not(.label) {
+                color: black !important;
+            }
 
-        body.social-export { background-color: var(--rackstat-dark) !important; }
-        body.social-export #capture-area { border: 2px solid var(--school-primary, var(--rackstat-red)) !important; }
+            .label {
+                color: #991b1b !important;
+            }
+
+            .stat-box {
+                background: #f9fafb !important;
+                border-color: #d1d5db !important;
+                break-inside: avoid;
+            }
+
+            .bg-red-600,
+            .bg-blue-600 {
+                background: #f3f4f6 !important;
+                color: black !important;
+            }
+
+            .border-white\/5 {
+                border-color: #d1d5db !important;
+            }
+
+            img {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+        }
     </style>
 </head>
-<body class="p-4 md:p-8">
+
+<body class="p-4 md:p-8 pb-24">
 
 <div class="max-w-2xl mx-auto mb-6 flex justify-between items-center no-print">
-    <div class="flex gap-2">
-        <button id="back-button" onclick="history.back()" class="bg-gray-800 text-gray-400 hover:text-white px-4 py-2 rounded-full font-bold uppercase text-[10px] transition-all">
-            ← Back
-        </button>
-    </div>
+    <button id="back-button" onclick="history.back()" class="bg-gray-800 text-gray-400 hover:text-white px-4 py-2 rounded-full font-bold uppercase text-[10px] transition-all">
+        ← Back
+    </button>
 
-    <div class="flex gap-2">
+    <div class="flex flex-wrap justify-end gap-2">
         <button id="unlock-btn" onclick="toggleEditMode()" class="hidden bg-yellow-600 text-black font-black px-4 py-2 rounded-full uppercase text-[10px] transition-all">
             🔓 Edit Report
         </button>
-        <button onclick="window.print()" class="bg-white text-black px-4 py-2 rounded-full font-bold uppercase text-[10px] hover:bg-gray-200 transition-all">
-            Export PDF
+
+        <button onclick="window.printRecruitingCard()" class="bg-white text-black px-4 py-2 rounded-full font-bold uppercase text-[10px] hover:bg-gray-200 transition-all">
+            Print / PDF
         </button>
-        <button onclick="window.exportSocial()" class="bg-red-600 text-white px-4 py-2 rounded-full font-bold uppercase text-[10px] hover:bg-red-700 transition-all">
-            Share
+
+        <button onclick="window.downloadSocialCard()" class="bg-red-600 text-white px-4 py-2 rounded-full font-bold uppercase text-[10px] hover:bg-red-700 transition-all">
+            Download Social Card
         </button>
     </div>
 </div>
@@ -92,6 +176,7 @@
             <input id="edit-name" type="text" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-2xl font-black p-2 rounded w-full outline-none">
 
             <p id="disp-class" class="text-red-500 font-bold tracking-widest text-sm mt-1 view-mode uppercase">CLASS OF --</p>
+
             <div class="edit-mode hidden mt-2">
                 <label class="label text-[8px] uppercase text-gray-500">Graduation Year</label>
                 <input id="edit-grad" type="number" class="bg-black/40 border border-blue-500 text-red-500 text-sm p-1 w-24 rounded">
@@ -152,36 +237,12 @@
             <div>
                 <h3 class="label mb-4 uppercase text-[10px] tracking-widest text-gray-500">Verified Strength & Speed</h3>
                 <div class="grid grid-cols-2 gap-3">
-                    <div class="stat-box">
-                        <span class="label">Bench Press</span>
-                        <div id="stat-bench" class="value view-mode text-white font-black italic">--</div>
-                        <input id="edit-bench" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center">
-                    </div>
-                    <div class="stat-box">
-                        <span class="label">Squat</span>
-                        <div id="stat-squat" class="value view-mode text-white font-black italic">--</div>
-                        <input id="edit-squat" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center">
-                    </div>
-                    <div class="stat-box">
-                        <span class="label">Clean</span>
-                        <div id="stat-clean" class="value view-mode text-white font-black italic">--</div>
-                        <input id="edit-clean" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center">
-                    </div>
-                    <div class="stat-box">
-                        <span class="label">40 Yard</span>
-                        <div id="stat-forty" class="value view-mode text-white font-black italic">--</div>
-                        <input id="edit-forty" type="text" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center">
-                    </div>
-                    <div class="stat-box">
-                        <span class="label">Deadlift</span>
-                        <div id="stat-deadlift" class="value view-mode text-white font-black italic">--</div>
-                        <input id="edit-deadlift" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center">
-                    </div>
-                    <div class="stat-box">
-                        <span class="label">Push Press</span>
-                        <div id="stat-push-press" class="value view-mode text-white font-black italic">--</div>
-                        <input id="edit-push-press" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center">
-                    </div>
+                    <div class="stat-box"><span class="label">Bench Press</span><div id="stat-bench" class="value view-mode text-white font-black italic">--</div><input id="edit-bench" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center"></div>
+                    <div class="stat-box"><span class="label">Squat</span><div id="stat-squat" class="value view-mode text-white font-black italic">--</div><input id="edit-squat" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center"></div>
+                    <div class="stat-box"><span class="label">Clean</span><div id="stat-clean" class="value view-mode text-white font-black italic">--</div><input id="edit-clean" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center"></div>
+                    <div class="stat-box"><span class="label">40 Yard</span><div id="stat-forty" class="value view-mode text-white font-black italic">--</div><input id="edit-forty" type="text" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center"></div>
+                    <div class="stat-box"><span class="label">Deadlift</span><div id="stat-deadlift" class="value view-mode text-white font-black italic">--</div><input id="edit-deadlift" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center"></div>
+                    <div class="stat-box"><span class="label">Push Press</span><div id="stat-push-press" class="value view-mode text-white font-black italic">--</div><input id="edit-push-press" type="number" class="edit-mode hidden bg-black/40 border border-blue-500 text-white text-lg font-bold p-1 w-full rounded text-center"></div>
                 </div>
             </div>
 
@@ -296,11 +357,9 @@
         </div>
 
         <div class="bg-white/[0.02] p-6 rounded-2xl border border-white/5 italic text-sm text-gray-400">
-            <div class="flex flex-col">
-                <p class="label not-italic mb-2 opacity-40 text-[9px] uppercase">Personal Philosophy & Teammate Type:</p>
-                <p id="disp-teammate-type" class="leading-relaxed view-mode">--</p>
-                <textarea id="edit-team-type" placeholder="Leadership style..." class="edit-mode hidden bg-black/40 border border-blue-500 text-white w-full p-4 rounded-xl h-32 text-xs outline-none"></textarea>
-            </div>
+            <p class="label not-italic mb-2 opacity-40 text-[9px] uppercase">Personal Philosophy & Teammate Type:</p>
+            <p id="disp-teammate-type" class="leading-relaxed view-mode">--</p>
+            <textarea id="edit-team-type" placeholder="Leadership style..." class="edit-mode hidden bg-black/40 border border-blue-500 text-white w-full p-4 rounded-xl h-32 text-xs outline-none"></textarea>
         </div>
     </div>
 
@@ -312,6 +371,46 @@
     <button id="save-profile-btn" onclick="saveAthleteProfile()" class="hidden fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-500 text-white font-black px-10 py-4 rounded-full shadow-2xl uppercase italic tracking-tighter transition-all z-50">
         Save Profile
     </button>
+</div>
+
+<div id="share-card" class="share-card">
+    <div class="flex items-center justify-between mb-12">
+        <div>
+            <div class="text-2xl font-black uppercase tracking-[0.3em] text-red-500">RackStat Recruiting</div>
+            <h2 id="share-name" class="text-7xl font-black italic uppercase leading-none mt-4">--</h2>
+            <div id="share-class" class="text-3xl font-black uppercase text-gray-300 mt-3">CLASS OF --</div>
+        </div>
+        <div class="text-right">
+            <img id="share-logo" src="images/rackstat-logo.png" class="h-28 w-28 object-contain ml-auto mb-4">
+            <div id="share-number" class="text-7xl font-black italic text-white/20">#--</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-5 mb-10">
+        <div class="share-stat"><div class="share-label">Height</div><div id="share-height" class="share-value">--</div></div>
+        <div class="share-stat"><div class="share-label">Weight</div><div id="share-weight" class="share-value">--</div></div>
+        <div class="share-stat"><div class="share-label">Position</div><div id="share-position" class="share-value text-4xl">--</div></div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-5 mb-10">
+        <div class="share-stat"><div class="share-label">Bench</div><div id="share-bench" class="share-value">--</div></div>
+        <div class="share-stat"><div class="share-label">Squat</div><div id="share-squat" class="share-value">--</div></div>
+        <div class="share-stat"><div class="share-label">Clean</div><div id="share-clean" class="share-value">--</div></div>
+        <div class="share-stat"><div class="share-label">Deadlift</div><div id="share-deadlift" class="share-value">--</div></div>
+    </div>
+
+    <div class="share-stat mb-10">
+        <div class="share-label">Why I Play</div>
+        <div id="share-why" class="text-4xl font-black italic leading-tight mt-4">--</div>
+    </div>
+
+    <div class="flex justify-between items-end mt-16">
+        <div>
+            <div class="text-xl font-black uppercase tracking-[0.25em] text-gray-400">Educational Athletic Performance Platform</div>
+            <div class="text-4xl font-black italic mt-2">app.rackstatapp.com</div>
+        </div>
+        <img src="images/rackstat-logo.png" class="h-20 w-auto">
+    </div>
 </div>
 
 <nav class="fixed bottom-0 left-0 right-0 bg-black border-t border-red-900/30 px-6 py-4 flex justify-between items-center z-50 no-print">
@@ -347,14 +446,19 @@
         return `${feet}'${remainingInches}"`;
     };
 
+    const copyText = (fromId, toId) => {
+        const from = document.getElementById(fromId);
+        const to = document.getElementById(toId);
+        if (from && to) to.innerText = from.innerText || "--";
+    };
+
     const formatLink = (linkId, dispId, handle, platform = '') => {
         const linkEl = document.getElementById(linkId);
         const dispEl = dispId ? document.getElementById(dispId) : null;
-
         if (!linkEl) return;
 
         if (handle) {
-            const isUrl = handle.includes('http');
+            const isUrl = String(handle).includes('http');
             const cleanHandle = String(handle).replace('@', '');
             linkEl.href = isUrl ? handle : `https://www.${platform}.com/${cleanHandle}`;
             if (dispEl) dispEl.innerText = isUrl ? 'View Link' : `@${cleanHandle}`;
@@ -374,12 +478,8 @@
     }
 
     function recruitingFeatureEnabled(schoolData = {}) {
-        if (schoolData.hasRecruitingCard !== undefined) {
-            return schoolData.hasRecruitingCard !== false;
-        }
-        if (schoolData.recruitingEnabled !== undefined) {
-            return schoolData.recruitingEnabled !== false;
-        }
+        if (schoolData.hasRecruitingCard !== undefined) return schoolData.hasRecruitingCard !== false;
+        if (schoolData.recruitingEnabled !== undefined) return schoolData.recruitingEnabled !== false;
         return true;
     }
 
@@ -389,13 +489,71 @@
         return true;
     }
 
-    window.exportSocial = () => {
-        document.body.classList.add('social-export');
+    function syncShareCard() {
+        copyText('disp-name', 'share-name');
+        copyText('disp-class', 'share-class');
+        copyText('disp-number', 'share-number');
+        copyText('disp-height', 'share-height');
+        copyText('disp-weight', 'share-weight');
+        copyText('disp-pos', 'share-position');
+        copyText('stat-bench', 'share-bench');
+        copyText('stat-squat', 'share-squat');
+        copyText('stat-clean', 'share-clean');
+        copyText('stat-deadlift', 'share-deadlift');
+        copyText('whyPlay', 'share-why');
+
+        const dispLogo = document.getElementById('disp-logo');
+        const shareLogo = document.getElementById('share-logo');
+        if (dispLogo && shareLogo && dispLogo.src) {
+            shareLogo.src = dispLogo.src;
+        }
+    }
+
+    window.printRecruitingCard = () => {
+        syncShareCard();
         window.print();
-        setTimeout(() => {
-            document.body.classList.remove('social-export');
-        }, 500);
     };
+
+    window.downloadSocialCard = async () => {
+        syncShareCard();
+
+        const card = document.getElementById('share-card');
+        if (!card || !window.html2canvas) {
+            alert("Social export tool is not available.");
+            return;
+        }
+
+        const previousLeft = card.style.left;
+        const previousPosition = card.style.position;
+
+        card.style.position = "absolute";
+        card.style.left = "0";
+        card.style.top = "0";
+        card.style.zIndex = "-1";
+
+        try {
+            const canvas = await html2canvas(card, {
+                backgroundColor: null,
+                scale: 2,
+                useCORS: true,
+                allowTaint: true
+            });
+
+            const link = document.createElement('a');
+            link.download = 'rackstat-recruiting-card.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        } catch (err) {
+            console.error("Social card export failed:", err);
+            alert("Unable to export social card right now.");
+        } finally {
+            card.style.left = previousLeft;
+            card.style.position = previousPosition;
+            card.style.zIndex = "";
+        }
+    };
+
+    window.exportSocial = window.downloadSocialCard;
 
     onAuthStateChanged(auth, async (user) => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -478,8 +636,8 @@
             safeSet('disp-height', formatHeight(merged.height));
             safeSet('disp-weight', merged.weight);
             safeSet('disp-sports', merged.sports);
-
             safeSet('disp-pos', merged.offPrimary);
+
             const pos2 = document.getElementById('disp-pos2');
             if (pos2) pos2.innerText = merged.offSecondary ? `/ ${merged.offSecondary}` : "";
 
@@ -504,7 +662,6 @@
             safeSet('disp-parents', d.parentNames);
             safeSet('disp-parent-contact', d.parentContact);
             safeSet('disp-teammate-type', d.teammateType);
-
             safeSet('perceivedLevel', d.perceivedLevel || "--");
             safeSet('seriousness', d.seriousness || "--");
             safeSet('major', d.major || "--");
@@ -521,13 +678,11 @@
             setVal('edit-off-sec', merged.offSecondary);
             setVal('edit-def-prim', merged.defPrimary);
             setVal('edit-def-sec', merged.defSecondary);
-
             setVal('edit-bench', mx.bench ?? mx.bench_press ?? d.bench);
             setVal('edit-squat', mx.squat ?? mx.back_squat ?? d.squat);
             setVal('edit-clean', mx.clean ?? mx.power_clean ?? d.clean);
             setVal('edit-deadlift', mx.deadlift ?? d.deadlift);
             setVal('edit-push-press', mx.push_press ?? mx.pushPress ?? d.push_press);
-
             setVal('edit-forty', d.forty);
             setVal('edit-core-gpa', d.coreGpa || d.gpa);
             setVal('edit-act', d.act);
@@ -545,6 +700,8 @@
             setVal('edit-ncaa', d.ncaaReg);
             setVal('edit-why-play', d.whyPlay);
             setVal('edit-is-starter', d.isStarter);
+
+            syncShareCard();
 
             if (isEditMode && (viewerRole === 'coach' || viewerRole === 'admin')) {
                 window.toggleEditMode();
@@ -618,10 +775,28 @@
 
         try {
             await appCheckReady;
-            
+
+            const targetUserSnap = await getDoc(doc(db, "users", playerUID));
+            const targetUserData = targetUserSnap.exists() ? targetUserSnap.data() : {};
+            const schoolId = targetUserData.schoolId || targetUserData.school_id;
+
+            if (!schoolId) {
+                throw new Error("Missing school ID.");
+            }
+
             await Promise.all([
-                setDoc(doc(db, "recruiting_profiles", playerUID), profileUpdate, { merge: true }),
-                setDoc(doc(db, "recruiting_profiles", playerUID, "maxes", "latest"), maxesUpdate, { merge: true }),
+                setDoc(doc(db, "recruiting_profiles", playerUID), {
+                    ...profileUpdate,
+                    schoolId,
+                    school_id: schoolId
+                }, { merge: true }),
+
+                setDoc(doc(db, "recruiting_profiles", playerUID, "maxes", "latest"), {
+                    ...maxesUpdate,
+                    schoolId,
+                    school_id: schoolId
+                }, { merge: true }),
+
                 setDoc(doc(db, "users", playerUID), {
                     fullName: profileUpdate.fullName,
                     weight: profileUpdate.weight
