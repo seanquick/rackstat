@@ -612,6 +612,8 @@
                     }, { merge: true }),
 
                     setDoc(doc(db, "recruiting_profiles", user.uid), {
+                        schoolId,
+                        school_id: schoolId,
                         bodyWeight: bw,
                         weight: bw,
                         lastUpdated: serverTimestamp()
