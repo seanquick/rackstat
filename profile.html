@@ -319,11 +319,16 @@
     }
 
     function resetProfileShell() {
-        document.getElementById('school-name').innerText = 'MY PROFILE';
-        document.getElementById('last-updated-date').innerText = '';
-        document.getElementById('goal-progress-bar').style.width = '0%';
-        document.getElementById('goal-message').innerText = 'Update stats in the RACK to see progress';
-        document.getElementById('goals-container').innerHTML = '';
+        safeSet('school-name', 'MY PROFILE');
+        safeSet('last-updated-date', '');
+        safeSet('goal-message', 'Update stats in the RACK to see progress');
+
+        const goalProgressBar = document.getElementById('goal-progress-bar');
+        if (goalProgressBar) goalProgressBar.style.width = '0%';
+
+        const goalsContainer = document.getElementById('goals-container');
+        if (goalsContainer) goalsContainer.innerHTML = '';
+
         safeSet('full-name', '');
         safeSet('height', '');
         safeSet('weight', '');
@@ -335,7 +340,7 @@
         safeSet('sat', '');
         safeSet('act', '');
         safeSet('character-statement', '');
-        document.getElementById('height-display').innerText = '';
+        safeSet('height-display', '');
     }
 
     function formatHeight(totalInches) {
