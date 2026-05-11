@@ -490,11 +490,17 @@
         try {
             await appCheckReady;
             
+        const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+
+        if (!userSnap.exists()) {
+            throw new Error("User profile not found.");
+        }
+
+        const userData = userSnap.data();
+
         const schoolId =
-            profileData.schoolId ||
-            profileData.school_id ||
-            currentUserData?.schoolId ||
-            currentUserData?.school_id;
+            userData.schoolId ||
+            userData.school_id;
 
         if (!schoolId) {
             throw new Error("Missing school ID. Unable to save recruiting profile.");
