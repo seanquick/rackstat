@@ -657,15 +657,21 @@
 
             await Promise.all([
                 setDoc(doc(db, "recruiting_profiles", viewedUid), {
+                    schoolId: getSchoolIdFromData(latestMergedProfileData),
+                    school_id: getSchoolIdFromData(latestMergedProfileData),
                     ...profilePayload,
                     boardScore: recalculatedBoardScore
                 }, { merge: true }),
+
                 setDoc(doc(db, "users", viewedUid), {
                     fullName,
                     weight,
                     lastSync: serverTimestamp()
                 }, { merge: true }),
+
                 setDoc(doc(db, "recruiting_profiles", viewedUid, "maxes", "latest"), {
+                    schoolId: getSchoolIdFromData(latestMergedProfileData),
+                    school_id: getSchoolIdFromData(latestMergedProfileData),
                     weight,
                     bodyWeight: weight,
                     body_weight: weight,
