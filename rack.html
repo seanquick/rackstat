@@ -605,6 +605,8 @@
 
                 await Promise.all([
                     setDoc(doc(db, "recruiting_profiles", user.uid, "maxes", "latest"), {
+                        schoolId,
+                        school_id: schoolId,
                         bodyWeight: bw,
                         body_weight: bw,
                         weight: bw,
