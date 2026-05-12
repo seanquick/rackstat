@@ -30,7 +30,10 @@ function setCorsHeaders(req, res) {
 
   res.set("Vary", "Origin");
   res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.set(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization",
+  );
 }
 /**
  * Send standardized JSON error response.
@@ -195,7 +198,10 @@ exports.claimParentRegistrationCode = onRequest(async (req, res) => {
  * @param {object} res Express response
  */
 exports.requestParentAccessByAthleteEmail = onRequest(async (req, res) => {
-  setCorsHeaders(req, res);
+  res.set("Access-Control-Allow-Origin", "https://app.rackstatapp.com");
+  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.set("Access-Control-Max-Age", "3600");
 
   if (req.method === "OPTIONS") {
     res.status(204).send("");
@@ -203,7 +209,7 @@ exports.requestParentAccessByAthleteEmail = onRequest(async (req, res) => {
   }
 
   if (req.method !== "POST") {
-    sendError(res, 405, "Method not allowed.");
+    res.status(405).json({error: "Method not allowed."});
     return;
   }
 
@@ -216,7 +222,7 @@ exports.requestParentAccessByAthleteEmail = onRequest(async (req, res) => {
     const athleteEmail = String(body.athleteEmail || "").toLowerCase().trim();
 
     if (!athleteEmail || !parentName || !parentEmail || !relationship) {
-      sendError(res, 400, "Required fields are missing.");
+      res.status(400).json({error: "Required fields are missing."});
       return;
     }
 
@@ -228,7 +234,7 @@ exports.requestParentAccessByAthleteEmail = onRequest(async (req, res) => {
         .get();
 
     if (athleteSnap.empty) {
-      sendError(res, 404, "No athlete account was found.");
+      res.status(404).json({error: "No athlete account was found."});
       return;
     }
 
@@ -237,7 +243,9 @@ exports.requestParentAccessByAthleteEmail = onRequest(async (req, res) => {
     const athleteRole = String(athleteData.role || "").toLowerCase();
 
     if (athleteRole !== "player" && athleteRole !== "athlete") {
-      sendError(res, 400, "Email does not belong to an athlete account.");
+      res.status(400).json({
+        error: "Email does not belong to an athlete account.",
+      });
       return;
     }
 
@@ -245,7 +253,9 @@ exports.requestParentAccessByAthleteEmail = onRequest(async (req, res) => {
     const schoolId = athleteData.schoolId || athleteData.school_id || "";
 
     if (!schoolId) {
-      sendError(res, 400, "Athlete account is missing a school link.");
+      res.status(400).json({
+        error: "Athlete account is missing a school link.",
+      });
       return;
     }
 
@@ -261,7 +271,9 @@ exports.requestParentAccessByAthleteEmail = onRequest(async (req, res) => {
         .get();
 
     if (!existingPending.empty) {
-      sendError(res, 409, "A pending parent access request already exists.");
+      res.status(409).json({
+        error: "A pending parent access request already exists.",
+      });
       return;
     }
 
@@ -287,7 +299,9 @@ exports.requestParentAccessByAthleteEmail = onRequest(async (req, res) => {
     });
   } catch (err) {
     console.error("requestParentAccessByAthleteEmail error:", err);
-    sendError(res, 500, err.message || "Internal server error.");
+    res.status(500).json({
+      error: err.message || "Internal server error.",
+    });
   }
 });
 /**
