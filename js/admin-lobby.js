@@ -673,7 +673,7 @@ async function loadAnnouncements() {
 
             const token = await auth.currentUser.getIdToken();
 
-            const response = await fetch("https://us-central1-rackstat-production.cloudfunctions.net/deleteUserData", {
+            const response = await fetch("https://deleteuserdata-vpe4h6evja-uc.a.run.app", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

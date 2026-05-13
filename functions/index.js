@@ -10,31 +10,11 @@ admin.initializeApp();
 
 setGlobalOptions({maxInstances: 10});
 
-const allowedOrigins = [
-  "https://rackstat-production.web.app",
-  "https://rackstat-production.firebaseapp.com",
-  "http://localhost:5000",
-  "http://localhost:5173",
-];
 /**
  * Apply CORS headers for allowed origins.
  * @param {object} req Express request
  * @param {object} res Express response
  */
-function setCorsHeaders(req, res) {
-  const origin = req.headers.origin;
-
-  if (allowedOrigins.includes(origin)) {
-    res.set("Access-Control-Allow-Origin", origin);
-  }
-
-  res.set("Vary", "Origin");
-  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.set(
-      "Access-Control-Allow-Headers",
-      "Content-Type, Authorization",
-  );
-}
 /**
  * Send standardized JSON error response.
  * @param {object} res Express response
@@ -73,7 +53,10 @@ async function verifyBearerToken(req) {
  * @param {object} res Express response
  */
 exports.claimParentRegistrationCode = onRequest(async (req, res) => {
-  setCorsHeaders(req, res);
+  res.set("Access-Control-Allow-Origin", "https://app.rackstatapp.com");
+  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.set("Access-Control-Max-Age", "3600");
 
   if (req.method === "OPTIONS") {
     res.status(204).send("");
@@ -310,7 +293,10 @@ exports.requestParentAccessByAthleteEmail = onRequest(async (req, res) => {
  * @param {object} res Express response
  */
 exports.deleteUserData = onRequest(async (req, res) => {
-  setCorsHeaders(req, res);
+  res.set("Access-Control-Allow-Origin", "https://app.rackstatapp.com");
+  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.set("Access-Control-Max-Age", "3600");
 
   if (req.method === "OPTIONS") {
     res.status(204).send("");
