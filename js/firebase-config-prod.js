@@ -8,4 +8,5 @@ export const firebaseConfig = {
   measurementId: "G-W421R68J54"
 };
 
-export const recaptchaSiteKey = "6LcphMssAAAAAJezPHGp3_BxY6N0DFdD18rKsSPA";
+export const recaptchaSiteKey =
+  "6LcphMssAAAAAJezPHGp3_BxY6N0DFdD18rKsSPA";
