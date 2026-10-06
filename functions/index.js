@@ -175,6 +175,328 @@ exports.claimParentRegistrationCode = onRequest(async (req, res) => {
     sendError(res, 500, err.message || "Internal server error.");
   }
 });
+
+/**
+ * Claim school registration code and create athlete/coach profile.
+ * @param {object} req Express request
+ * @param {object} res Express response
+ */
+exports.claimSchoolRegistrationCode = onRequest(async (req, res) => {
+  res.set("Access-Control-Allow-Origin", "https://app.rackstatapp.com");
+  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.set("Access-Control-Max-Age", "3600");
+
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+
+  if (req.method !== "POST") {
+    sendError(res, 405, "Method not allowed.");
+    return;
+  }
+
+  try {
+    const decodedToken = await verifyBearerToken(req);
+    const uid = decodedToken.uid;
+    const email = String(decodedToken.email || "").toLowerCase().trim();
+
+    const body = req.body || {};
+    const fullName = String(body.fullName || "").trim();
+    const registrationCode = String(body.registrationCode || "")
+        .toUpperCase()
+        .trim();
+    const requestedRole = String(body.role || "").toLowerCase().trim();
+    const gradYear = String(body.gradYear || "").trim();
+
+    const role = requestedRole === "coach" ? "coach" : "player";
+
+    if (!email) {
+      sendError(res, 400, "Account is missing an email.");
+      return;
+    }
+
+    if (!fullName || !registrationCode) {
+      sendError(res, 400, "Missing name or registration code.");
+      return;
+    }
+
+    if (role === "player" && !gradYear) {
+      sendError(res, 400, "Graduation year is required.");
+      return;
+    }
+
+    const db = admin.firestore();
+
+    const existingUser = await db.collection("users").doc(uid).get();
+
+    if (existingUser.exists) {
+      sendError(res, 400, "User profile already exists.");
+      return;
+    }
+
+    let schoolId = "";
+
+    const codeSnap = await db.collection("school_codes")
+        .where("code", "==", registrationCode)
+        .where("role", "==", role)
+        .where("active", "==", true)
+        .limit(1)
+        .get();
+
+    if (!codeSnap.empty) {
+      const codeData = codeSnap.docs[0].data();
+      schoolId = codeData.schoolId || codeData.school_id || "";
+    } else {
+      const codeField = role === "coach" ? "coach_code" : "player_code";
+
+      const schoolSnap = await db.collection("schools")
+          .where(codeField, "==", registrationCode)
+          .limit(1)
+          .get();
+
+      if (schoolSnap.empty) {
+        sendError(res, 404, "Invalid registration code.");
+        return;
+      }
+
+      const schoolData = schoolSnap.docs[0].data();
+
+      if (schoolData.active === false) {
+        sendError(res, 403, "This school is inactive.");
+        return;
+      }
+
+      schoolId = schoolSnap.docs[0].id;
+
+      if (schoolSnap.empty) {
+        sendError(res, 404, "Invalid registration code.");
+        return;
+      }
+
+      schoolId = schoolSnap.docs[0].id;
+    }
+
+    if (!schoolId) {
+      sendError(res, 400, "Registration code is missing a school link.");
+      return;
+    }
+
+    const batch = db.batch();
+
+    batch.set(db.collection("users").doc(uid), {
+      fullName,
+      email,
+      role,
+      schoolId,
+      school_id: schoolId,
+      gradYear: role === "player" ? gradYear : null,
+      termsAccepted: true,
+      termsAcceptedAt: admin.firestore.FieldValue.serverTimestamp(),
+      privacyAccepted: true,
+      privacyAcceptedAt: admin.firestore.FieldValue.serverTimestamp(),
+      parentAcknowledged: role === "player",
+      consentVersion: "v1_2026_04",
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    if (role === "player") {
+      batch.set(db.collection("recruiting_profiles").doc(uid), {
+        fullName,
+        schoolId,
+        school_id: schoolId,
+        gradYear,
+        nextLevelComplete: false,
+        offPrimary: "-",
+        defPrimary: "-",
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
+    batch.set(db.collection("data_access_logs").doc(), {
+      action: "claim_school_registration_code",
+      targetUid: uid,
+      performedBy: uid,
+      performedByRole: role,
+      schoolId,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      source: "signup",
+    });
+
+    await batch.commit();
+
+    res.status(200).json({
+      success: true,
+      schoolId,
+      role,
+    });
+  } catch (err) {
+    console.error("claimSchoolRegistrationCode error:", err);
+    sendError(res, 500, err.message || "Internal server error.");
+  }
+});
+
+exports.logSensitiveDataAccess = onRequest(async (req, res) => {
+  res.set("Access-Control-Allow-Origin", "https://app.rackstatapp.com");
+  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.set("Access-Control-Max-Age", "3600");
+
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+
+  if (req.method !== "POST") {
+    sendError(res, 405, "Method not allowed.");
+    return;
+  }
+
+  try {
+    const decodedToken = await verifyBearerToken(req);
+    const actorUid = decodedToken.uid;
+    const actorEmail = String(decodedToken.email || "")
+        .toLowerCase()
+        .trim();
+
+    const body = req.body || {};
+    const athleteId = String(body.athleteId || "").trim() || null;
+    const action = String(body.action || "").trim();
+    const reason = String(body.reason || "").trim();
+
+    if (!action) {
+      sendError(res, 400, "Missing audit action.");
+      return;
+    }
+
+    const db = admin.firestore();
+
+    const actorDoc = await db.collection("users").doc(actorUid).get();
+
+    if (!actorDoc.exists) {
+      sendError(res, 403, "User profile not found.");
+      return;
+    }
+
+    const actorData = actorDoc.data();
+    const actorRole = String(actorData.role || "").toLowerCase();
+    const schoolId = actorData.schoolId || actorData.school_id || "";
+
+    if (!schoolId) {
+      sendError(res, 403, "User is not linked to a school.");
+      return;
+    }
+
+    let page = "";
+    let source = "";
+    let normalizedReason = reason;
+    let athleteName = null;
+
+    if (
+      action === "view_team_lift_analytics" ||
+      action === "view_team_meal_analytics"
+    ) {
+      if (actorRole !== "coach" && actorRole !== "admin") {
+        sendError(res, 403, "Analytics access is not permitted.");
+        return;
+      }
+
+      if (athleteId && actorRole !== "admin") {
+        const athleteDoc = await db.collection("users").doc(athleteId).get();
+
+        if (!athleteDoc.exists) {
+          sendError(res, 404, "Athlete not found.");
+          return;
+        }
+
+        const athleteData = athleteDoc.data();
+        const athleteSchoolId =
+          athleteData.schoolId || athleteData.school_id || "";
+
+        if (athleteSchoolId !== schoolId) {
+          sendError(res, 403, "Cross-school access is not permitted.");
+          return;
+        }
+      }
+
+      page = "analytics-vault.html";
+      source = "analytics-vault";
+      normalizedReason = normalizedReason || "coach_loaded_analytics_tab";
+    } else if (action === "parent_view_athlete_data") {
+      if (actorRole !== "parent") {
+        sendError(res, 403, "Parent access is required.");
+        return;
+      }
+
+      if (!athleteId) {
+        sendError(res, 400, "Missing athleteId.");
+        return;
+      }
+
+      const linkedAthletes = Array.isArray(actorData.linkedAthletes) ?
+        actorData.linkedAthletes :
+        [];
+
+      if (!linkedAthletes.includes(athleteId)) {
+        sendError(res, 403, "Parent is not linked to this athlete.");
+        return;
+      }
+
+      const athleteDoc = await db.collection("users").doc(athleteId).get();
+
+      if (!athleteDoc.exists) {
+        sendError(res, 404, "Athlete not found.");
+        return;
+      }
+
+      const athleteData = athleteDoc.data();
+      const athleteSchoolId =
+        athleteData.schoolId || athleteData.school_id || "";
+
+      if (athleteSchoolId !== schoolId) {
+        sendError(res, 403, "Cross-school access is not permitted.");
+        return;
+      }
+
+      athleteName =
+        athleteData.fullName ||
+        `${athleteData.firstName || ""} ${athleteData.lastName || ""}`.trim() ||
+        null;
+
+      page = "parent-lobby.html";
+      source = "parent-lobby";
+      normalizedReason = normalizedReason || "parent_viewed_linked_athlete";
+    } else {
+      sendError(res, 400, "Unsupported audit action.");
+      return;
+    }
+
+    const logRef = await db.collection("data_access_logs").add({
+      actorUid,
+      actorId: actorUid,
+      actorRole,
+      actorEmail,
+      schoolId,
+      athleteId,
+      athleteName,
+      action,
+      reason: normalizedReason,
+      page,
+      source,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    res.status(200).json({
+      success: true,
+      logId: logRef.id,
+    });
+  } catch (err) {
+    console.error("logSensitiveDataAccess error:", err);
+    sendError(res, 500, err.message || "Internal server error.");
+  }
+});
+
 /**
  * Submit parent access request using athlete email.
  * @param {object} req Express request

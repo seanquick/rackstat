@@ -229,33 +229,51 @@
         }
     }
 
-    async function logDataAccess({ action, athleteId = null, reason = "analytics_view" }) {
-        try {
-            const user = auth.currentUser;
-            if (!user) return;
+    async function logDataAccess({
+    action,
+    athleteId = null,
+    reason = "analytics_view"
+}) {
+    try {
+        const user = auth.currentUser;
 
-            await appCheckReady;
-
-            const userSnap = await getDoc(doc(db, "users", user.uid));
-            const userData = userSnap.exists() ? userSnap.data() : {};
-            const schoolId = userData.schoolId || userData.school_id || "";
-
-            await addDoc(collection(db, "data_access_logs"), {
-                actorUid: user.uid,
-                actorId: user.uid,
-                actorRole: userData.role || "unknown",
-                actorEmail: user.email || "",
-                schoolId,
-                athleteId,
-                action,
-                reason,
-                page: "analytics-vault.html",
-                createdAt: serverTimestamp()
-            });
-        } catch (err) {
-            console.warn("Audit log failed:", err);
+        if (!user) {
+            console.warn("Audit log skipped: no authenticated user.");
+            return;
         }
+
+        await appCheckReady;
+
+        const token = await user.getIdToken();
+
+        const response = await fetch(
+            "https://us-central1-rackstat-production.cloudfunctions.net/logSensitiveDataAccess",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    action,
+                    athleteId,
+                    reason
+                })
+            }
+        );
+
+        const result = await response.json().catch(() => null);
+
+        if (!response.ok || !result || result.success !== true) {
+            throw new Error(
+                result?.message ||
+                `Audit logging failed with status ${response.status}.`
+            );
+        }
+    } catch (err) {
+        console.warn("Audit log failed:", err);
     }
+}
 
     async function loadData(type) {
         if (!coachSchoolId || !table) return;

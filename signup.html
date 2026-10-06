@@ -498,16 +498,6 @@
 
             await appCheckReady;
 
-            const {
-                doc,
-                collection,
-                query,
-                where,
-                getDocs,
-                writeBatch,
-                serverTimestamp
-            } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
-
             const { createUserWithEmailAndPassword, deleteUser } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
 
             let currentRole = 'player';
@@ -612,70 +602,48 @@
             await appCheckReady;
 
             const normalizedCode = inputCode.toUpperCase().trim();
-
-            const codeQuery = query(
-                collection(db, "school_codes"),
-                where("code", "==", normalizedCode),
-                where("role", "==", currentRole === "coach" ? "coach" : "player"),
-                where("active", "==", true)
-            );
-
-            const codeSnap = await getDocs(codeQuery);
-
-            if (codeSnap.empty) {
-                throw new Error(`Invalid ${currentRole === 'coach' ? 'coach' : 'athlete'} registration code.`);
-            }
-
-            const codeData = codeSnap.docs[0].data();
-            const schoolId = codeData.schoolId || codeData.school_id;
-
-            if (!schoolId) {
-                throw new Error("Registration code is missing a school link.");
-            }
-
             let userCredential = null;
+            let shouldDeleteAuthUser = true;
 
             try {
                 userCredential = await createUserWithEmailAndPassword(auth, email, pass);
                 const user = userCredential.user;
+                const token = await user.getIdToken(true);
 
-                const batch = writeBatch(db);
+                const response = await fetch(
+                    "https://us-central1-rackstat-production.cloudfunctions.net/claimSchoolRegistrationCode",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            fullName,
+                            registrationCode: normalizedCode,
+                            role: currentRole === "coach" ? "coach" : "player",
+                            gradYear
+                        })
+                    }
+                );
 
-                batch.set(doc(db, "users", user.uid), {
-                    fullName,
-                    email,
-                    role: currentRole,
-                    schoolId,
-                    school_id: schoolId,
-                    gradYear: currentRole === 'player' ? gradYear : null,
-                    termsAccepted: true,
-                    termsAcceptedAt: serverTimestamp(),
-                    privacyAccepted: true,
-                    privacyAcceptedAt: serverTimestamp(),
-                    parentAcknowledged: currentRole === 'player',
-                    consentVersion: "v1_2026_04",
-                    createdAt: serverTimestamp()
-                });
+                const result = await response.json().catch(() => null);
 
-                if (currentRole === 'player') {
-                    batch.set(doc(db, "recruiting_profiles", user.uid), {
-                        fullName,
-                        schoolId,
-                        school_id: schoolId,
-                        gradYear,
-                        nextLevelComplete: false,
-                        offPrimary: "-",
-                        defPrimary: "-",
-                        createdAt: serverTimestamp()
-                    });
+                if (!response.ok || !result || result.success !== true) {
+                    await deleteUser(user);
+                    shouldDeleteAuthUser = false;
+                    throw new Error(result?.message || "Registration could not be completed.");
                 }
 
-                await batch.commit();
+                shouldDeleteAuthUser = false;
+
+                await user.reload();
+                await user.getIdToken(true);
 
                 alert(`Welcome, ${fullName}!`);
-                window.location.href = currentRole === 'coach' ? "coach-lobby.html" : "index.html";
+                window.location.href = currentRole === "coach" ? "coach-lobby.html" : "index.html";
             } catch (err) {
-                if (userCredential?.user) {
+                if (shouldDeleteAuthUser && userCredential?.user) {
                     try {
                         await deleteUser(userCredential.user);
                     } catch (cleanupErr) {
@@ -687,55 +655,55 @@
             }
         }
 
-            window.handleSignUp = async () => {
-                const isAgreed = document.getElementById('legal-agree').checked;
-                const fullName = document.getElementById('reg-name').value.trim();
-                const email = document.getElementById('reg-email').value.trim().toLowerCase();
-                const pass = document.getElementById('reg-pass').value;
-                const inputCode = document.getElementById('school-code').value.trim();
-                const gradYear = document.getElementById('reg-grad-year').value.trim();
+        window.handleSignUp = async () => {
+            const isAgreed = document.getElementById('legal-agree').checked;
+            const fullName = document.getElementById('reg-name').value.trim();
+            const email = document.getElementById('reg-email').value.trim().toLowerCase();
+            const pass = document.getElementById('reg-pass').value;
+            const inputCode = document.getElementById('school-code').value.trim();
+            const gradYear = document.getElementById('reg-grad-year').value.trim();
 
-                if (!fullName || !email || !pass || !inputCode) {
-                    alert("All fields are required.");
-                    return;
+            if (!fullName || !email || !pass || !inputCode) {
+                alert("All fields are required.");
+                return;
+            }
+
+            if (currentRole === 'player' && !gradYear) {
+                alert("Please enter graduation year.");
+                return;
+            }
+
+            if (!isAgreed) {
+                alert("Please accept the Terms and Privacy Policy.");
+                return;
+            }
+
+            const signupBtn = document.getElementById('signup-btn');
+            signupBtn.innerText = "VERIFYING...";
+            signupBtn.disabled = true;
+
+            try {
+                if (currentRole === 'parent') {
+                    await handleParentSignup({ fullName, email, pass, inputCode });
+                } else {
+                    await handleAthleteOrCoachSignup({ fullName, email, pass, inputCode, gradYear });
                 }
+            } catch (e) {
+                console.error("Signup Error:", e);
+                alert(e.message || "Signup failed.");
+                signupBtn.innerText = "Create My Profile";
+                signupBtn.disabled = false;
+            }
+        };
 
-                if (currentRole === 'player' && !gradYear) {
-                    alert("Please enter graduation year.");
-                    return;
-                }
-
-                if (!isAgreed) {
-                    alert("Please accept the Terms and Privacy Policy.");
-                    return;
-                }
-
-                const signupBtn = document.getElementById('signup-btn');
-                signupBtn.innerText = "VERIFYING...";
-                signupBtn.disabled = true;
-
-                try {
-                    if (currentRole === 'parent') {
-                        await handleParentSignup({ fullName, email, pass, inputCode });
-                    } else {
-                        await handleAthleteOrCoachSignup({ fullName, email, pass, inputCode, gradYear });
-                    }
-                } catch (e) {
-                    console.error("Signup Error:", e);
-                    alert(e.message);
-                    signupBtn.innerText = "Create My Profile";
-                    signupBtn.disabled = false;
-                }
-            };
-
-            window.setRole('player');
-        } catch (err) {
-            console.error("Initialization failed:", err);
-        }
+        window.setRole('player');
+    } catch (err) {
+        console.error("Initialization failed:", err);
+    }
     }
 
     startSignup();
-</script>
+    </script>
 
 <footer class="app-footer">
     <p class="app-footer-copy">
