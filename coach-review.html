@@ -914,8 +914,14 @@
                         const sets = Array.isArray(ex.sets) ? ex.sets : [];
                         const completedSets = sets.filter(s => s.completed).length;
                         const totalSets = sets.length;
-                        const weights = sets.map(s => parseFloat(s.weight) || 0);
-                        const topWeight = weights.length > 0 ? Math.max(...weights) : 0;
+
+                        const successfulWeights = sets
+                            .filter(s => s.completed)
+                            .map(s => parseFloat(s.weight) || 0);
+
+                        const topWeight = successfulWeights.length > 0
+                            ? Math.max(...successfulWeights)
+                            : 0;
 
                         const exerciseKey = getExerciseReviewKey(ex.name);
                         const previousMax = await getOfficialApprovedMax(athleteId, exerciseKey, ex.name);

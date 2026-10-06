@@ -88,17 +88,15 @@ service cloud.firestore {
         athleteId in getUser().linkedAthletes;
     }
 
-    function parentCanAccessMeal(data) {
-      return userSchoolIsActive() &&
-        data.uid != null &&
-        parentCanAccessAthlete(data.uid);
-    }
-
     function completedWorkoutOwner(data) {
-      return userSchoolIsActive() && (
-        (data.uid != null && data.uid == request.auth.uid) ||
-        (data.athleteId != null && data.athleteId == request.auth.uid)
-      );
+      return isAthlete() &&
+        userSchoolIsActive() &&
+        sameSchoolData(data) &&
+        data.uid != null &&
+        data.athleteId != null &&
+        data.uid == request.auth.uid &&
+        data.athleteId == request.auth.uid &&
+        data.uid == data.athleteId;
     }
 
     function completedWorkoutParent(data) {
@@ -106,18 +104,6 @@ service cloud.firestore {
         (data.uid != null && parentCanAccessAthlete(data.uid)) ||
         (data.athleteId != null && parentCanAccessAthlete(data.athleteId))
       );
-    }
-
-    function validMealOwnerCreate(data) {
-      return userSchoolIsActive() &&
-        data.uid == request.auth.uid &&
-        data.dateKey is string &&
-        data.dateKey.size() == 10;
-    }
-
-    function validMealOwnerExisting(data) {
-      return userSchoolIsActive() &&
-        data.uid == request.auth.uid;
     }
 
     function pendingMaxReviewOwner(data) {
@@ -153,6 +139,7 @@ service cloud.firestore {
         "profileImage",
         "weight",
         "bodyWeight",
+        "body_weight",
         "grade",
         "graduationYear",
         "team",
@@ -166,6 +153,8 @@ service cloud.firestore {
         "hasSeenCoachGuide",
         "hasSeenAthleteGuide",
         "hasSeenParentGuide",
+        "lastSync",
+        "last_sync",
         "updatedAt",
         "updated_at",
         "lastUpdated"
@@ -197,35 +186,14 @@ service cloud.firestore {
       ]);
     }
 
-    function immutableMealOwnership() {
-      return request.resource.data.uid == resource.data.uid;
-    }
-
-    function immutableMetricOwnership() {
-      return request.resource.data.userId == resource.data.userId;
-    }
-
     function immutableWorkoutOwnership() {
       return request.resource.data.uid == resource.data.uid &&
         request.resource.data.athleteId == resource.data.athleteId &&
         docSchoolId(request.resource.data) == docSchoolId(resource.data);
     }
 
-    function validAuditLogCreate(data) {
-      return isAuthenticated() &&
-        userSchoolIsActive() &&
-        sameSchoolData(data) &&
-        (
-          data.actorUid == request.auth.uid ||
-          data.uid == request.auth.uid ||
-          data.userId == request.auth.uid ||
-          data.parentUid == request.auth.uid
-        );
-    }
-
     match /school_codes/{docId} {
-      allow get: if true;
-      allow list: if isAdmin();
+      allow read, list: if isAdmin();
       allow create, update, delete: if isAdmin();
     }
 
@@ -381,16 +349,23 @@ service cloud.firestore {
         (
           isOwner(userId) &&
           userSchoolIsActive() &&
-          sameSchoolData(resource.data) &&
           sameSchoolData(request.resource.data) &&
-          docSchoolId(request.resource.data) == docSchoolId(resource.data)
+          (
+            docSchoolId(resource.data) == null ||
+            docSchoolId(resource.data) == docSchoolId(request.resource.data)
+          )
         ) ||
         (
           isCoach() &&
           userSchoolIsActive() &&
-          sameSchoolData(resource.data) &&
           sameSchoolData(request.resource.data) &&
-          docSchoolId(request.resource.data) == docSchoolId(resource.data)
+          (
+            docSchoolId(resource.data) == null ||
+            (
+              sameSchoolData(resource.data) &&
+              docSchoolId(resource.data) == docSchoolId(request.resource.data)
+            )
+          )
         );
 
       allow delete: if isAdmin() ||
@@ -446,22 +421,8 @@ service cloud.firestore {
       }
 
       match /{allPaths=**} {
-        allow read, list: if isOwner(userId) ||
-          isAdmin() ||
-          parentCanAccessAthlete(userId) ||
-          (
-            isCoach() &&
-            userSchoolIsActive() &&
-            sameSchoolData(get(/databases/$(database)/documents/recruiting_profiles/$(userId)).data)
-          );
-
-        allow write: if isOwner(userId) ||
-          isAdmin() ||
-          (
-            isCoach() &&
-            userSchoolIsActive() &&
-            sameSchoolData(get(/databases/$(database)/documents/recruiting_profiles/$(userId)).data)
-          );
+        allow read, list: if false;
+        allow write: if false;
       }
     }
 
@@ -488,15 +449,7 @@ service cloud.firestore {
           userSchoolIsActive() &&
           sameSchoolData(request.resource.data)
         ) ||
-        (
-          isAuthenticated() &&
-          userSchoolIsActive() &&
-          sameSchoolData(request.resource.data) &&
-          (
-            request.resource.data.uid == request.auth.uid ||
-            request.resource.data.athleteId == request.auth.uid
-          )
-        );
+        completedWorkoutOwner(request.resource.data);
 
       allow read, list: if isAdmin() ||
         (
@@ -514,47 +467,14 @@ service cloud.firestore {
           sameSchoolData(resource.data) &&
           sameSchoolData(request.resource.data) &&
           immutableWorkoutOwnership()
-        ) ||
-        (
-          completedWorkoutOwner(resource.data) &&
-          immutableWorkoutOwnership()
         );
 
-      allow delete: if isAdmin() ||
-        (
-          isCoach() &&
-          userSchoolIsActive() &&
-          sameSchoolData(resource.data)
-        ) ||
-        completedWorkoutOwner(resource.data);
+      allow delete: if isAdmin();
     }
 
     match /meals/{mealId} {
-      allow read, list: if isAdmin() ||
-        (
-          isCoach() &&
-          userSchoolIsActive() &&
-          sameSchoolData(resource.data)
-        ) ||
-        validMealOwnerExisting(resource.data) ||
-        parentCanAccessMeal(resource.data);
-
-      allow create: if isAdmin() ||
-        (
-          validMealOwnerCreate(request.resource.data) &&
-          sameSchoolData(request.resource.data)
-        );
-
-      allow update: if isAdmin() ||
-        (
-          validMealOwnerExisting(resource.data) &&
-          immutableMealOwnership() &&
-          sameSchoolData(resource.data) &&
-          sameSchoolData(request.resource.data)
-        );
-
-      allow delete: if isAdmin() ||
-        validMealOwnerExisting(resource.data);
+      allow read, list: if isAdmin();
+      allow create, update, delete: if false;
     }
 
     match /workouts/{workoutId} {
@@ -587,60 +507,24 @@ service cloud.firestore {
     }
 
     match /metrics/{metricId} {
+      allow read, list: if isAdmin();
+      allow create, update, delete: if false;
+    }
+    
+
+    match /supplement_library/{item} {
       allow read, list: if isAdmin() ||
         (
           isCoach() &&
-          userSchoolIsActive() &&
-          sameSchoolData(resource.data)
-        ) ||
-        (
-          isAuthenticated() &&
-          userSchoolIsActive() &&
-          resource.data.userId == request.auth.uid
-        ) ||
-        (
-          resource.data.userId != null &&
-          parentCanAccessAthlete(resource.data.userId)
+          userSchoolIsActive()
         );
 
-      allow create: if isAuthenticated() &&
-        userSchoolIsActive() &&
-        request.resource.data.userId == request.auth.uid &&
-        sameSchoolData(request.resource.data);
-
-      allow update: if isAdmin() ||
-        (
-          isCoach() &&
-          userSchoolIsActive() &&
-          sameSchoolData(resource.data) &&
-          sameSchoolData(request.resource.data) &&
-          immutableMetricOwnership()
-        ) ||
-        (
-          isAuthenticated() &&
-          userSchoolIsActive() &&
-          resource.data.userId == request.auth.uid &&
-          immutableMetricOwnership() &&
-          sameSchoolData(resource.data) &&
-          sameSchoolData(request.resource.data)
-        );
-
-      allow delete: if isAdmin() ||
-        (
-          isCoach() &&
-          userSchoolIsActive() &&
-          sameSchoolData(resource.data)
-        );
-    }
-
-    match /supplement_library/{item} {
-      allow read: if isAuthenticated() && userSchoolIsActive();
-      allow write: if isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
     match /system_announcements/{docId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow read, list: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
     }
 
     match /approved_max_reviews/{docId} {
@@ -653,7 +537,7 @@ service cloud.firestore {
 
       allow read, list: if isAdmin() ||
         (
-          isCoach() &&
+          (isCoach() || isAthlete()) &&
           userSchoolIsActive() &&
           sameSchoolData(resource.data)
         ) ||
@@ -702,7 +586,11 @@ service cloud.firestore {
           userSchoolIsActive() &&
           sameSchoolData(resource.data) &&
           sameSchoolData(request.resource.data) &&
-          request.resource.data.status in ["approved", "rejected", "pending"]
+          resource.data.status == "pending" &&
+          request.resource.data.status in ["approved", "rejected"] &&
+          request.resource.data.reviewedBy == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["status", "reviewedAt", "reviewedBy"])
         );
 
       allow delete: if isAdmin();
@@ -771,17 +659,8 @@ service cloud.firestore {
     }
 
     match /data_access_logs/{docId} {
-      allow create: if isAdmin() ||
-        validAuditLogCreate(request.resource.data);
-
-      allow read, list: if isAdmin() ||
-        (
-          isCoach() &&
-          userSchoolIsActive() &&
-          sameSchoolData(resource.data)
-        );
-
-      allow update, delete: if isAdmin();
+      allow read: if isAdmin();
+      allow create, update, delete: if false;
     }
 
     match /{document=**} {
