@@ -5,6 +5,7 @@
 const {setGlobalOptions} = require("firebase-functions");
 const {onRequest} = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
+const crypto = require("crypto");
 
 admin.initializeApp();
 
@@ -172,6 +173,189 @@ exports.claimParentRegistrationCode = onRequest(async (req, res) => {
     });
   } catch (err) {
     console.error("claimParentRegistrationCode error:", err);
+    sendError(res, 500, err.message || "Internal server error.");
+  }
+});
+
+/**
+ * Approve a pending parent access request.
+ * Creates the parent link and registration code server-side.
+ * @param {object} req Express request
+ * @param {object} res Express response
+ */
+exports.approveParentAccessRequest = onRequest(async (req, res) => {
+  res.set("Access-Control-Allow-Origin", "https://app.rackstatapp.com");
+  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.set("Access-Control-Max-Age", "3600");
+
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+
+  if (req.method !== "POST") {
+    sendError(res, 405, "Method not allowed.");
+    return;
+  }
+
+  try {
+    const decodedToken = await verifyBearerToken(req);
+    const coachUid = decodedToken.uid;
+
+    const requestId = String(
+        (req.body && req.body.requestId) || "",
+    ).trim();
+
+    if (!requestId) {
+      sendError(res, 400, "Missing parent request ID.");
+      return;
+    }
+
+    const db = admin.firestore();
+
+    // Verify authenticated user is a coach/admin.
+    const coachDoc = await db.collection("users").doc(coachUid).get();
+
+    if (!coachDoc.exists) {
+      sendError(res, 403, "User profile not found.");
+      return;
+    }
+
+    const coachData = coachDoc.data();
+    const coachRole = String(coachData.role || "").toLowerCase();
+    const coachSchoolId =
+      coachData.schoolId || coachData.school_id || "";
+
+    if (coachRole !== "coach" && coachRole !== "admin") {
+      sendError(res, 403, "Coach or admin access required.");
+      return;
+    }
+
+    if (coachRole === "coach" && !coachSchoolId) {
+      sendError(res, 403, "Coach account is missing a school link.");
+      return;
+    }
+
+    // Load the request from Firestore rather than trusting browser data.
+    const requestRef =
+      db.collection("parent_access_requests").doc(requestId);
+
+    const requestSnap = await requestRef.get();
+
+    if (!requestSnap.exists) {
+      sendError(res, 404, "Parent request could not be found.");
+      return;
+    }
+
+    const requestData = requestSnap.data();
+    const requestSchoolId =
+      requestData.schoolId || requestData.school_id || "";
+
+    if (!requestSchoolId) {
+      sendError(res, 400, "Parent request is missing a school link.");
+      return;
+    }
+
+    // Coaches may approve only requests from their own school.
+    if (
+      coachRole !== "admin" &&
+      requestSchoolId !== coachSchoolId
+    ) {
+      sendError(res, 403, "Cross-school approval is not permitted.");
+      return;
+    }
+
+    if (
+      String(requestData.status || "").toLowerCase() !== "pending"
+    ) {
+      sendError(res, 409, "Parent request is no longer pending.");
+      return;
+    }
+
+    const athleteId = String(requestData.athleteId || "").trim();
+
+    if (!athleteId) {
+      sendError(res, 400, "Parent request is missing an athlete.");
+      return;
+    }
+
+    // Defense in depth: verify the athlete still belongs to the
+    // same school represented by the request.
+    const athleteDoc =
+      await db.collection("users").doc(athleteId).get();
+
+    if (!athleteDoc.exists) {
+      sendError(res, 404, "Athlete account could not be found.");
+      return;
+    }
+
+    const athleteData = athleteDoc.data();
+    const athleteRole =
+      String(athleteData.role || "").toLowerCase();
+    const athleteSchoolId =
+      athleteData.schoolId || athleteData.school_id || "";
+
+    if (
+      athleteRole !== "player" &&
+      athleteRole !== "athlete"
+    ) {
+      sendError(res, 400, "Linked account is not an athlete.");
+      return;
+    }
+
+    if (athleteSchoolId !== requestSchoolId) {
+      sendError(res, 403, "Athlete school does not match request.");
+      return;
+    }
+
+    // Generate the credential server-side.
+    const registrationCode =
+      `PARENT-${crypto.randomUUID()
+          .replace(/-/g, "")
+          .substring(0, 8)
+          .toUpperCase()}`;
+
+    const linkRef = db.collection("parent_links").doc();
+
+    const batch = db.batch();
+
+    batch.set(linkRef, {
+      athleteId,
+      athleteName:
+        requestData.athleteName ||
+        athleteData.fullName ||
+        "Unknown Athlete",
+      parentName: requestData.parentName || "",
+      parentEmail: String(requestData.parentEmail || "")
+          .toLowerCase()
+          .trim(),
+      parentPhone: requestData.parentPhone || "",
+      relationship: requestData.relationship || "",
+      schoolId: requestSchoolId,
+      school_id: requestSchoolId,
+      approvedBy: coachUid,
+      approvedAt: admin.firestore.FieldValue.serverTimestamp(),
+      status: "active",
+      registrationCode,
+      registrationCodeUsed: false,
+    });
+
+    batch.update(requestRef, {
+      status: "approved",
+      reviewedAt: admin.firestore.FieldValue.serverTimestamp(),
+      reviewedBy: coachUid,
+      registrationCode,
+    });
+
+    await batch.commit();
+
+    res.status(200).json({
+      success: true,
+      registrationCode,
+    });
+  } catch (err) {
+    console.error("approveParentAccessRequest error:", err);
     sendError(res, 500, err.message || "Internal server error.");
   }
 });

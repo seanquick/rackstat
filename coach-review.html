@@ -1401,41 +1401,45 @@
         setReviewStatus("Approving Parent Access...");
 
         try {
-            const requestRef = doc(db, "parent_access_requests", requestId);
-            const requestSnap = await getDoc(requestRef);
+            await appCheckReady;
 
-            if (!requestSnap.exists()) {
-                throw new Error("Parent request could not be found.");
+            const user = auth.currentUser;
+
+            if (!user) {
+                throw new Error("You must be signed in.");
             }
 
-            const request = requestSnap.data();
+            const token = await user.getIdToken();
 
-            const registrationCode = `PARENT-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+            const response = await fetch(
+                "https://us-central1-rackstat-production.cloudfunctions.net/approveParentAccessRequest",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        requestId
+                    })
+                }
+            );
 
-            await addDoc(collection(db, "parent_links"), {
-                athleteId: request.athleteId,
-                athleteName: request.athleteName || "Unknown Athlete",
-                parentName: request.parentName || "",
-                parentEmail: String(request.parentEmail || "").toLowerCase().trim(),
-                parentPhone: request.parentPhone || "",
-                relationship: request.relationship || "",
-                schoolId: request.schoolId || request.school_id || currentSchoolId,
-                school_id: request.schoolId || request.school_id || currentSchoolId,
-                approvedBy: auth.currentUser?.uid || null,
-                approvedAt: serverTimestamp(),
-                status: "active",
-                registrationCode,
-                registrationCodeUsed: false
-            });
+            const result = await response.json().catch(() => null);
 
-            await updateDoc(requestRef, {
-                status: "approved",
-                reviewedAt: serverTimestamp(),
-                reviewedBy: auth.currentUser?.uid || null,
-                registrationCode
-            });
+            if (!response.ok || !result || result.success !== true) {
+                throw new Error(
+                    result?.message ||
+                    result?.error ||
+                    `Approval failed with status ${response.status}.`
+                );
+            }
 
-            showPageMessage(`Parent access approved. Code: ${registrationCode}`, "success");
+            showPageMessage(
+                `Parent access approved. Code: ${result.registrationCode}`,
+                "success"
+            );
+
             setReviewStatus("Parent Access Approved", "success");
 
             await window.loadParentAccessRequests();
@@ -1443,9 +1447,15 @@
 
         } catch (err) {
             console.error("Parent approval error:", err);
+
             btnElement.innerText = originalText;
             btnElement.disabled = false;
-            showPageMessage(err.message || "Parent access could not be approved.", "error");
+
+            showPageMessage(
+                err.message || "Parent access could not be approved.",
+                "error"
+            );
+
             setReviewStatus("Approval Failed", "error");
         }
     };

@@ -597,50 +597,72 @@ service cloud.firestore {
     }
 
     match /parent_access_requests/{docId} {
-      allow create: if isAuthenticated() &&
-        userSchoolIsActive() &&
-        request.resource.data.athleteId == request.auth.uid &&
-        request.resource.data.status == "pending" &&
-        sameSchoolData(request.resource.data);
 
-      allow read, list: if isAdmin() ||
-        (
-          isCoach() &&
+        // Athlete may create a request for themselves.
+        // Parent-initiated requests are created server-side by Cloud Functions.
+        allow create: if isAuthenticated() &&
           userSchoolIsActive() &&
-          sameSchoolData(resource.data)
-        ) ||
-        (
-          isAuthenticated() &&
-          userSchoolIsActive() &&
-          resource.data.athleteId == request.auth.uid
-        ) ||
-        (
-          isParent() &&
-          userSchoolIsActive() &&
-          resource.data.parentEmail == getUserEmail() &&
-          sameSchoolData(resource.data)
-        );
+          request.resource.data.athleteId == request.auth.uid &&
+          request.resource.data.status == "pending" &&
+          sameSchoolData(request.resource.data);
 
-      allow update: if isAdmin() ||
-        (
-          isCoach() &&
-          userSchoolIsActive() &&
-          sameSchoolData(resource.data) &&
-          sameSchoolData(request.resource.data) &&
-          request.resource.data.status in ["pending", "approved", "rejected"]
-        );
+        // Admin: all requests
+        // Coach: requests belonging to their school
+        // Athlete: their own requests
+        // Parent: requests matching their authenticated email
+        allow read, list: if isAdmin() ||
+          (
+            isCoach() &&
+            userSchoolIsActive() &&
+            sameSchoolData(resource.data)
+          ) ||
+          (
+            isAuthenticated() &&
+            userSchoolIsActive() &&
+            resource.data.athleteId == request.auth.uid
+          ) ||
+          (
+            isParent() &&
+            userSchoolIsActive() &&
+            resource.data.parentEmail == getUserEmail() &&
+            sameSchoolData(resource.data)
+          );
 
-      allow delete: if isAdmin();
-    }
+        allow update: if isAdmin() ||
+          (
+            isCoach() &&
+            userSchoolIsActive() &&
+            sameSchoolData(resource.data) &&
+            sameSchoolData(request.resource.data) &&
+            (
+              // Pending -> Rejected
+              (
+                resource.data.status == "pending" &&
+                request.resource.data.status == "rejected" &&
+                request.resource.data.reviewedBy == request.auth.uid &&
+                request.resource.data.diff(resource.data).affectedKeys()
+                  .hasOnly([
+                    "status",
+                    "reviewedAt",
+                    "reviewedBy"
+                  ])
+              ) ||
+
+              // Approved -> hidden from coach screen
+              (
+                resource.data.status == "approved" &&
+                request.resource.data.status == "approved" &&
+                request.resource.data.hiddenFromCoach == true &&
+                request.resource.data.diff(resource.data).affectedKeys()
+                  .hasOnly(["hiddenFromCoach"])
+              )
+            )
+          );
+
+        allow delete: if isAdmin();
+      }
 
     match /parent_links/{docId} {
-      allow create: if isAdmin() ||
-        (
-          isCoach() &&
-          userSchoolIsActive() &&
-          sameSchoolData(request.resource.data)
-        );
-
       allow read, list: if isAdmin() ||
         (
           isCoach() &&
@@ -655,7 +677,7 @@ service cloud.firestore {
           sameSchoolData(resource.data)
         );
 
-      allow update, delete: if isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
     match /data_access_logs/{docId} {
