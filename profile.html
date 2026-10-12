@@ -267,7 +267,7 @@
 <script type="module">
     import { db, auth, appCheckReady } from './js/firebase-config.js';
     import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { applyTheme } from './js/theme.js';
     import { buildBoardScoreSettings, calculateBoardScore } from './js/board-score.js';
 
@@ -572,6 +572,28 @@
             setProfileStatus('Load Failed', 'error');
         }
     });
+
+    window.handleLogout = async (event) => {
+        const btn = event?.currentTarget;
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = "LOGGING OUT...";
+        }
+
+        try {
+            await signOut(auth);
+            window.location.replace("index.html");
+        } catch (error) {
+            console.error("Logout error:", error);
+            alert("Unable to log out. Please try again.");
+
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = "Logout";
+            }
+        }
+    };
 
     window.saveClubGoal = async () => {
         const user = auth.currentUser;

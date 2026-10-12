@@ -328,7 +328,7 @@
         updateDoc,
         where
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { applyTheme } from './js/theme.js';
 
     let calGoal = 2500;
@@ -594,6 +594,28 @@
         await fetchMealHistory();
     });
 
+    window.handleLogout = async (event) => {
+        const btn = event?.currentTarget;
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = "LOGGING OUT...";
+        }
+
+        try {
+            await signOut(auth);
+            window.location.replace("index.html");
+        } catch (error) {
+            console.error("Logout error:", error);
+            showPageMessage("Unable to log out. Please try again.", "error");
+
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = "Logout";
+            }
+        }
+    };
+    
     window.setTargets = async () => {
         const user = auth.currentUser;
         if (!user) return;

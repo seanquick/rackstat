@@ -132,11 +132,13 @@ service cloud.firestore {
         "displayName",
         "firstName",
         "lastName",
+        "fullName",
         "name",
         "email",
         "phone",
         "photoURL",
         "profileImage",
+        "height",
         "weight",
         "bodyWeight",
         "body_weight",
@@ -166,6 +168,7 @@ service cloud.firestore {
         "displayName",
         "firstName",
         "lastName",
+        "fullName",
         "name",
         "phone",
         "photoURL",
@@ -182,7 +185,8 @@ service cloud.firestore {
         "updated_at",
         "updatedBy",
         "updated_by",
-        "lastUpdated"
+        "lastUpdated",
+        "lastSync"
       ]);
     }
 
@@ -280,12 +284,7 @@ service cloud.firestore {
           sameSchoolData(resource.data)
         );
 
-      allow create: if isAuthenticated() &&
-        request.auth.uid == userId &&
-        request.resource.data.role in ['player', 'athlete', 'coach', 'parent'] &&
-        request.resource.data.role != 'admin' &&
-        request.resource.data.schoolId != null &&
-        isSchoolActive(request.resource.data.schoolId);
+      allow create: if false;
 
       allow update: if isAdmin() ||
         (
